@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\EventCategory;
+use App\Models\User;
+use App\Models\Ticket;
+use App\Models\Order;
 
 class HomeController extends Controller
 {
+    // PAS de middleware auth dans le constructeur pour permettre l'accès public !
+    
     /**
-     * Affichage de la page d'accueil - Style Tikerama
+     * Affichage de la page d'accueil avec statistiques complètes
      */
     public function index(Request $request)
     {
@@ -30,21 +35,29 @@ class HomeController extends Controller
 
             // Recherche par mot-clé
             if ($request->has('search') && $request->search != '') {
-                $query->where(function($q) use ($request) {
-                    $q->where('title', 'like', '%' . $request->search . '%')
-                      ->orWhere('description', 'like', '%' . $request->search . '%')
-                      ->orWhere('venue', 'like', '%' . $request->search . '%');
+                $searchTerm = $request->search;
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('title', 'like', '%' . $searchTerm . '%')
+                      ->orWhere('description', 'like', '%' . $searchTerm . '%')
+                      ->orWhere('venue', 'like', '%' . $searchTerm . '%');
                 });
             }
 
-            $events = $query->limit(12)->get(); // Limiter à 12 pour la page d'accueil
+            // Limiter à 12 événements pour la page d'accueil (ou paginer si nécessaire)
+            $events = $query->limit(12)->get();
             
             // Récupérer les catégories pour les filtres
             $categories = EventCategory::withActiveEvents()->get();
 
-            // Statistiques pour la page - Style Tikerama
+            // Statistiques détaillées pour la page d'accueil
+            $totalEvents = Event::where('status', 'published')->count();
+            $totalTickets = Ticket::where('status', 'sold')->count();
+            $totalUsers = User::where('role', 'acheteur')->count();
+            $totalPromoters = User::where('role', 'promoteur')->count();
+
+            // Statistiques pour les cartes de la page d'accueil
             $stats = [
-                'total_events' => Event::where('status', 'published')->count(),
+                'total_events' => $totalEvents,
                 'total_categories' => $categories->count(),
                 'upcoming_events' => Event::where('status', 'published')
                     ->where('event_date', '>=', now()->toDateString())
@@ -52,236 +65,262 @@ class HomeController extends Controller
                 'today_events' => Event::where('status', 'published')
                     ->where('event_date', now()->toDateString())
                     ->count(),
+                'sold_tickets' => $totalTickets,
+                'active_users' => $totalUsers,
+                'active_promoters' => $totalPromoters,
             ];
 
-            return view('welcome', compact('events', 'categories', 'stats'));
+            // Événements populaires (avec plus de billets vendus)
+            $popularEvents = Event::with(['category', 'ticketTypes'])
+                ->where('status', 'published')
+                ->where('event_date', '>=', now()->toDateString())
+                ->withCount(['ticketTypes as sold_tickets' => function($query) {
+                    $query->join('tickets', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+                          ->where('tickets.status', 'sold');
+                }])
+                ->orderBy('sold_tickets', 'desc')
+                ->limit(6)
+                ->get();
+
+            // Si pas assez d'événements populaires, compléter avec les plus récents
+            if ($popularEvents->count() < 6) {
+                $recentEvents = Event::with(['category', 'ticketTypes'])
+                    ->where('status', 'published')
+                    ->where('event_date', '>=', now()->toDateString())
+                    ->whereNotIn('id', $popularEvents->pluck('id'))
+                    ->orderBy('created_at', 'desc')
+                    ->limit(6 - $popularEvents->count())
+                    ->get();
+                
+                $events = $popularEvents->merge($recentEvents);
+            } else {
+                $events = $popularEvents;
+            }
+
+            return view('welcome', compact(
+                'events', 
+                'categories', 
+                'stats',
+                'totalEvents',
+                'totalTickets', 
+                'totalUsers'
+            ));
             
         } catch (\Exception $e) {
             \Log::error('Erreur page d\'accueil: ' . $e->getMessage());
             
-            // Données par défaut en cas d'erreur
+            // En cas d'erreur, retourner une page basique
             $events = collect();
-            $categories = collect();
+            $categories = EventCategory::all();
             $stats = [
                 'total_events' => 0,
-                'total_categories' => 0,
                 'upcoming_events' => 0,
+                'total_categories' => $categories->count(),
                 'today_events' => 0,
             ];
-
-            return view('welcome', compact('events', 'categories', 'stats'));
+            
+            return view('welcome', compact('events', 'categories', 'stats'))
+                ->with('error', 'Une erreur est survenue lors du chargement de la page.');
         }
     }
 
     /**
-     * Affichage du détail d'un événement - Style Tikerama
+     * Affichage du détail d'un événement
      */
     public function show(Event $event)
     {
-        try {
-            // Vérifier que l'événement est publié
-            if ($event->status !== 'published') {
-                abort(404, 'Événement non trouvé');
-            }
-
-            // Charger les relations nécessaires
-            $event->load(['category', 'promoteur', 'ticketTypes' => function($query) {
-                $query->where('is_active', true)
-                      ->where('sale_start_date', '<=', now())
-                      ->where('sale_end_date', '>=', now())
-                      ->orderBy('price', 'asc');
-            }]);
-
-            // Événements similaires (même catégorie) - Style Tikerama
-            $similarEvents = Event::with(['category', 'ticketTypes'])
-                ->where('category_id', $event->category_id)
-                ->where('id', '!=', $event->id)
-                ->where('status', 'published')
-                ->where('event_date', '>=', now()->toDateString())
-                ->limit(3)
-                ->get();
-
-            // Statistiques de l'événement
-            $eventStats = [
-                'tickets_sold' => $event->getTicketsSoldCount(),
-                'tickets_available' => $event->totalTicketsAvailable(),
-                'progress_percentage' => $event->getProgressPercentage(),
-                'is_sold_out' => $event->isSoldOut(),
-                'lowest_price' => $event->getLowestPrice(),
-                'highest_price' => $event->getHighestPrice(),
-            ];
-
-            return view('events.show', compact('event', 'similarEvents', 'eventStats'));
-            
-        } catch (\Exception $e) {
-            \Log::error('Erreur détail événement: ' . $e->getMessage());
-            abort(404, 'Événement non trouvé');
+        // Vérifier que l'événement est publié
+        if ($event->status !== 'published') {
+            abort(404, 'Événement non trouvé ou non publié');
         }
+
+        // Charger les relations nécessaires
+        $event->load(['category', 'promoteur', 'ticketTypes' => function($query) {
+            $query->where('is_active', true)
+                  ->where('sale_start_date', '<=', now())
+                  ->where('sale_end_date', '>=', now())
+                  ->orderBy('price', 'asc');
+        }]);
+
+        // Vérifier que l'événement a des billets disponibles
+        $hasAvailableTickets = $event->ticketTypes->filter(function($ticketType) {
+            return $ticketType->remainingTickets() > 0;
+        })->count() > 0;
+
+        // Événements similaires (même catégorie)
+        $similarEvents = Event::with(['category', 'ticketTypes'])
+            ->where('category_id', $event->category_id)
+            ->where('id', '!=', $event->id)
+            ->where('status', 'published')
+            ->where('event_date', '>=', now()->toDateString())
+            ->limit(4)
+            ->get();
+
+        // Statistiques de l'événement
+        $eventStats = [
+            'total_tickets' => $event->ticketTypes->sum('quantity_available'),
+            'sold_tickets' => $event->ticketTypes->sum('quantity_sold'),
+            'available_tickets' => $event->ticketTypes->sum(function($type) {
+                return $type->remainingTickets();
+            }),
+            'min_price' => $event->ticketTypes->min('price'),
+            'max_price' => $event->ticketTypes->max('price'),
+        ];
+
+        return view('events.show', compact(
+            'event', 
+            'similarEvents', 
+            'hasAvailableTickets',
+            'eventStats'
+        ));
     }
 
     /**
-     * Affichage des événements par catégorie - Style Tikerama
+     * Affichage des événements par catégorie
      */
     public function category(EventCategory $category, Request $request)
     {
-        try {
-            $query = Event::with(['category', 'ticketTypes', 'promoteur'])
-                ->where('category_id', $category->id)
+        $query = Event::with(['category', 'ticketTypes', 'promoteur'])
+            ->where('category_id', $category->id)
+            ->where('status', 'published')
+            ->where('event_date', '>=', now()->toDateString())
+            ->orderBy('event_date', 'asc');
+
+        // Recherche dans la catégorie
+        if ($request->has('search') && $request->search != '') {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('title', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('description', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('venue', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        $events = $query->paginate(12);
+        $categories = EventCategory::withActiveEvents()->get();
+
+        // Statistiques de la catégorie
+        $categoryStats = [
+            'total_events' => Event::where('category_id', $category->id)
+                ->where('status', 'published')
+                ->count(),
+            'upcoming_events' => Event::where('category_id', $category->id)
                 ->where('status', 'published')
                 ->where('event_date', '>=', now()->toDateString())
-                ->orderBy('event_date', 'asc');
+                ->count(),
+            'this_month' => Event::where('category_id', $category->id)
+                ->where('status', 'published')
+                ->whereBetween('event_date', [
+                    now()->startOfMonth(),
+                    now()->endOfMonth()
+                ])
+                ->count(),
+        ];
 
-            // Recherche dans la catégorie
-            if ($request->has('search') && $request->search != '') {
-                $query->where(function($q) use ($request) {
-                    $q->where('title', 'like', '%' . $request->search . '%')
-                      ->orWhere('description', 'like', '%' . $request->search . '%')
-                      ->orWhere('venue', 'like', '%' . $request->search . '%');
-                });
-            }
-
-            $events = $query->paginate(12);
-            $categories = EventCategory::withActiveEvents()->get();
-
-            // Statistiques de la catégorie
-            $categoryStats = [
-                'total_events' => $category->events()->where('status', 'published')->count(),
-                'upcoming_events' => $events->total(),
-                'category_name' => $category->name,
-            ];
-
-            return view('categories.show', compact('category', 'events', 'categories', 'categoryStats'));
-            
-        } catch (\Exception $e) {
-            \Log::error('Erreur catégorie: ' . $e->getMessage());
-            abort(404, 'Catégorie non trouvée');
-        }
+        return view('categories.show', compact(
+            'category', 
+            'events', 
+            'categories',
+            'categoryStats'
+        ));
     }
 
     /**
-     * Page de recherche globale - Style Tikerama
+     * API pour récupérer les événements (pour filtres AJAX)
      */
-    public function search(Request $request)
+    public function getEvents(Request $request)
     {
-        $searchTerm = $request->get('q', '');
-        
-        if (empty($searchTerm)) {
-            return redirect()->route('home');
+        $query = Event::with(['category', 'ticketTypes'])
+            ->where('status', 'published')
+            ->where('event_date', '>=', now()->toDateString());
+
+        // Filtres
+        if ($request->has('category') && $request->category != 'all') {
+            $query->whereHas('category', function($q) use ($request) {
+                $q->where('slug', $request->category);
+            });
         }
 
-        try {
-            $query = Event::with(['category', 'ticketTypes', 'promoteur'])
-                ->where('status', 'published')
-                ->where('event_date', '>=', now()->toDateString())
-                ->where(function($q) use ($searchTerm) {
-                    $q->where('title', 'like', '%' . $searchTerm . '%')
-                      ->orWhere('description', 'like', '%' . $searchTerm . '%')
-                      ->orWhere('venue', 'like', '%' . $searchTerm . '%')
-                      ->orWhereHas('category', function($categoryQuery) use ($searchTerm) {
-                          $categoryQuery->where('name', 'like', '%' . $searchTerm . '%');
-                      });
-                });
-
-            // Filtres additionnels
-            if ($request->has('category') && $request->category != '') {
-                $query->where('category_id', $request->category);
-            }
-
-            if ($request->has('date') && $request->date != '') {
-                $query->whereDate('event_date', $request->date);
-            }
-
-            if ($request->has('city') && $request->city != '') {
-                $query->where('address', 'like', '%' . $request->city . '%');
-            }
-
-            $events = $query->orderBy('event_date', 'asc')->paginate(12);
-            $categories = EventCategory::withActiveEvents()->get();
-
-            // Statistiques de recherche
-            $searchStats = [
-                'total_results' => $events->total(),
-                'search_term' => $searchTerm,
-                'has_filters' => $request->hasAny(['category', 'date', 'city']),
-            ];
-
-            return view('search.results', compact('events', 'categories', 'searchStats', 'searchTerm'));
-            
-        } catch (\Exception $e) {
-            \Log::error('Erreur recherche: ' . $e->getMessage());
-            
-            $events = collect();
-            $categories = collect();
-            $searchStats = ['total_results' => 0, 'search_term' => $searchTerm, 'has_filters' => false];
-            
-            return view('search.results', compact('events', 'categories', 'searchStats', 'searchTerm'));
-        }
-    }
-
-    /**
-     * API pour la recherche en temps réel (AJAX)
-     */
-    public function apiSearch(Request $request)
-    {
-        $searchTerm = $request->get('q', '');
-        
-        if (strlen($searchTerm) < 2) {
-            return response()->json(['results' => []]);
+        if ($request->has('search') && $request->search != '') {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('title', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('venue', 'like', '%' . $searchTerm . '%');
+            });
         }
 
-        try {
-            $events = Event::where('status', 'published')
-                ->where('event_date', '>=', now()->toDateString())
-                ->where('title', 'like', '%' . $searchTerm . '%')
-                ->with(['category'])
-                ->limit(5)
-                ->get(['id', 'title', 'venue', 'event_date', 'category_id']);
+        // Tri
+        $sortBy = $request->get('sort', 'date');
+        switch ($sortBy) {
+            case 'price_asc':
+                $query->join('ticket_types', 'events.id', '=', 'ticket_types.event_id')
+                      ->orderBy('ticket_types.price', 'asc')
+                      ->select('events.*')
+                      ->distinct();
+                break;
+            case 'price_desc':
+                $query->join('ticket_types', 'events.id', '=', 'ticket_types.event_id')
+                      ->orderBy('ticket_types.price', 'desc')
+                      ->select('events.*')
+                      ->distinct();
+                break;
+            case 'name':
+                $query->orderBy('title', 'asc');
+                break;
+            default:
+                $query->orderBy('event_date', 'asc');
+                break;
+        }
 
-            $results = $events->map(function($event) {
+        $events = $query->limit(12)->get();
+
+        return response()->json([
+            'success' => true,
+            'events' => $events->map(function($event) {
                 return [
                     'id' => $event->id,
                     'title' => $event->title,
                     'venue' => $event->venue,
-                    'date' => $event->event_date->format('d/m/Y'),
-                    'category' => $event->category->name ?? '',
+                    'event_date' => $event->event_date->format('d/m/Y'),
+                    'event_time' => $event->event_time ? $event->event_time->format('H:i') : null,
+                    'category' => $event->category->name,
+                    'category_slug' => $event->category->slug,
+                    'min_price' => $event->ticketTypes->min('price'),
+                    'max_price' => $event->ticketTypes->max('price'),
+                    'image_url' => $event->image ? asset('storage/' . $event->image) : null,
                     'url' => route('events.show', $event),
                 ];
-            });
-
-            return response()->json(['results' => $results]);
-            
-        } catch (\Exception $e) {
-            \Log::error('Erreur API recherche: ' . $e->getMessage());
-            return response()->json(['results' => []]);
-        }
+            })
+        ]);
     }
 
     /**
-     * Page des événements populaires
+     * Recherche globale d'événements
      */
-    public function popular()
+    public function search(Request $request)
     {
-        try {
-            $events = Event::with(['category', 'ticketTypes', 'promoteur'])
-                ->where('status', 'published')
-                ->where('event_date', '>=', now()->toDateString())
-                ->withCount(['orders' => function($query) {
-                    $query->where('payment_status', 'paid');
-                }])
-                ->orderByDesc('orders_count')
-                ->paginate(12);
+        $request->validate([
+            'q' => 'required|string|min:2|max:100'
+        ]);
 
-            $categories = EventCategory::withActiveEvents()->get();
+        $searchTerm = $request->q;
+        
+        $events = Event::with(['category', 'ticketTypes'])
+            ->where('status', 'published')
+            ->where('event_date', '>=', now()->toDateString())
+            ->where(function($query) use ($searchTerm) {
+                $query->where('title', 'like', '%' . $searchTerm . '%')
+                      ->orWhere('description', 'like', '%' . $searchTerm . '%')
+                      ->orWhere('venue', 'like', '%' . $searchTerm . '%')
+                      ->orWhereHas('category', function($q) use ($searchTerm) {
+                          $q->where('name', 'like', '%' . $searchTerm . '%');
+                      });
+            })
+            ->orderBy('event_date', 'asc')
+            ->paginate(12);
 
-            return view('events.popular', compact('events', 'categories'));
-            
-        } catch (\Exception $e) {
-            \Log::error('Erreur événements populaires: ' . $e->getMessage());
-            
-            $events = collect();
-            $categories = collect();
-            
-            return view('events.popular', compact('events', 'categories'));
-        }
+        $categories = EventCategory::withActiveEvents()->get();
+
+        return view('search.results', compact('events', 'categories', 'searchTerm'));
     }
 }

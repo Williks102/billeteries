@@ -28,7 +28,7 @@ class RegisterController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/home';
+    protected $redirectTo = '/dashboard';
 
     /**
      * Create a new controller instance.
@@ -51,7 +51,20 @@ class RegisterController extends Controller
         return Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'phone' => ['required', 'string', 'max:20'],
+            'role' => ['required', 'in:acheteur,promoteur'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'name.required' => 'Le nom est obligatoire.',
+            'email.required' => 'L\'email est obligatoire.',
+            'email.email' => 'L\'email doit être valide.',
+            'email.unique' => 'Cet email est déjà utilisé.',
+            'phone.required' => 'Le numéro de téléphone est obligatoire.',
+            'role.required' => 'Vous devez choisir un type de compte.',
+            'role.in' => 'Le type de compte doit être Acheteur ou Promoteur.',
+            'password.required' => 'Le mot de passe est obligatoire.',
+            'password.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
+            'password.confirmed' => 'Les mots de passe ne correspondent pas.',
         ]);
     }
 
@@ -63,10 +76,66 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
+        // Nettoyer le numéro de téléphone
+        $phone = $this->cleanPhoneNumber($data['phone']);
+        
         return User::create([
             'name' => $data['name'],
             'email' => $data['email'],
+            'phone' => $phone,
+            'role' => $data['role'],
             'password' => Hash::make($data['password']),
         ]);
+    }
+
+    /**
+     * Nettoyer et formater le numéro de téléphone
+     *
+     * @param string $phone
+     * @return string
+     */
+    private function cleanPhoneNumber($phone)
+    {
+        // Supprimer tous les espaces et caractères non numériques sauf le +
+        $clean = preg_replace('/[^\d+]/', '', $phone);
+        
+        // Si le numéro commence par +225, le garder tel quel
+        if (strpos($clean, '+225') === 0) {
+            return $clean;
+        }
+        
+        // Si le numéro commence par 225, ajouter le +
+        if (strpos($clean, '225') === 0) {
+            return '+' . $clean;
+        }
+        
+        // Si le numéro commence par 0, remplacer par +225
+        if (strpos($clean, '0') === 0) {
+            return '+225' . substr($clean, 1);
+        }
+        
+        // Sinon, ajouter +225 devant
+        return '+225' . $clean;
+    }
+
+    /**
+     * The user has been registered.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  mixed  $user
+     * @return mixed
+     */
+    protected function registered(\Illuminate\Http\Request $request, $user)
+    {
+        // Redirection personnalisée selon le rôle
+        if ($user->isAdmin()) {
+            return redirect()->route('admin.dashboard');
+        } elseif ($user->isPromoteur()) {
+            return redirect()->route('promoteur.dashboard');
+        } elseif ($user->isAcheteur()) {
+            return redirect()->route('acheteur.dashboard');
+        }
+        
+        return redirect($this->redirectPath());
     }
 }

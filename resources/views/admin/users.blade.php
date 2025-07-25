@@ -1,422 +1,453 @@
-@extends('layouts.admin')
+@extends('layouts.app')
+
+@section('title', 'Gestion des utilisateurs - Admin')
+@section('body-class', 'admin-page')
+
+@section('content')
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Sidebar Admin -->
+        <div class="col-md-3 col-lg-2">
+            <div class="admin-sidebar bg-dark text-white rounded p-3 sticky-top">
+                <h5 class="mb-4">
+                    <i class="fas fa-shield-alt text-orange me-2"></i>
+                    Administration
+                </h5>
+                
+                <nav class="nav flex-column">
+                    <a class="nav-link text-light" href="{{ route('admin.dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link active text-white" href="{{ route('admin.users') }}">
+                        <i class="fas fa-users me-2"></i>Utilisateurs
+                    </a>
+                    <a class="nav-link text-light" href="{{ route('admin.events') }}">
+                        <i class="fas fa-calendar me-2"></i>Événements
+                    </a>
+                    <a class="nav-link text-light" href="{{ route('admin.orders') }}">
+                        <i class="fas fa-shopping-cart me-2"></i>Commandes
+                    </a>
+                    <a class="nav-link text-light" href="{{ route('admin.commissions') }}">
+                        <i class="fas fa-coins me-2"></i>Commissions
+                    </a>
+                    
+                    <hr class="my-3" style="border-color: #444;">
+                    
+                    <a class="nav-link text-light" href="{{ route('home') }}">
+                        <i class="fas fa-eye me-2"></i>Voir le site
+                    </a>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Contenu principal -->
+        <div class="col-md-9 col-lg-10">
+            <!-- En-tête avec filtres -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">Gestion des utilisateurs</h2>
+                    <p class="text-muted mb-0">Gérez tous les utilisateurs de la plateforme</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter me-2"></i>Filtrer par rôle
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('admin.users') }}">Tous les rôles</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.users', ['role' => 'admin']) }}">Administrateurs</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.users', ['role' => 'promoteur']) }}">Promoteurs</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.users', ['role' => 'acheteur']) }}">Acheteurs</a></li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-orange" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                        <i class="fas fa-plus me-2"></i>Nouvel utilisateur
+                    </button>
+                </div>
+            </div>
+
+            <!-- Statistiques rapides -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-primary">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info ms-3">
+                                <h4 class="mb-0">{{ $users->total() }}</h4>
+                                <p class="text-muted mb-0">Total utilisateurs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-danger">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="stat-info ms-3">
+                                <h4 class="mb-0">{{ $users->where('role', 'admin')->count() }}</h4>
+                                <p class="text-muted mb-0">Administrateurs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-warning">
+                                <i class="fas fa-bullhorn"></i>
+                            </div>
+                            <div class="stat-info ms-3">
+                                <h4 class="mb-0">{{ $users->where('role', 'promoteur')->count() }}</h4>
+                                <p class="text-muted mb-0">Promoteurs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-success">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <div class="stat-info ms-3">
+                                <h4 class="mb-0">{{ $users->where('role', 'acheteur')->count() }}</h4>
+                                <p class="text-muted mb-0">Acheteurs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barre de recherche -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('admin.users') }}" class="row align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Rechercher</label>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Nom, email..." value="{{ request('search') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Rôle</label>
+                            <select name="role" class="form-select">
+                                <option value="">Tous les rôles</option>
+                                <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Administrateur</option>
+                                <option value="promoteur" {{ request('role') == 'promoteur' ? 'selected' : '' }}>Promoteur</option>
+                                <option value="acheteur" {{ request('role') == 'acheteur' ? 'selected' : '' }}>Acheteur</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Statut</label>
+                            <select name="status" class="form-select">
+                                <option value="">Tous</option>
+                                <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Actifs</option>
+                                <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactifs</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Table des utilisateurs -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users text-orange me-2"></i>
+                            Liste des utilisateurs
+                        </h5>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-download me-1"></i>Exporter
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel me-2"></i>Excel</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i>CSV</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i>PDF</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    @if($users->count() > 0)
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Utilisateur</th>
+                                        <th>Email</th>
+                                        <th>Téléphone</th>
+                                        <th>Rôle</th>
+                                        <th>Inscription</th>
+                                        <th>Statut</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($users as $user)
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="user-avatar me-3">
+                                                        @if($user->isAdmin())
+                                                            <i class="fas fa-shield-alt text-danger"></i>
+                                                        @elseif($user->isPromoteur())
+                                                            <i class="fas fa-bullhorn text-warning"></i>
+                                                        @else
+                                                            <i class="fas fa-user text-primary"></i>
+                                                        @endif
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0">{{ $user->name }}</h6>
+                                                        <small class="text-muted">ID: {{ $user->id }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ $user->email }}</td>
+                                            <td>{{ $user->phone ?? '-' }}</td>
+                                            <td>
+                                                <span class="badge bg-{{ $user->isAdmin() ? 'danger' : ($user->isPromoteur() ? 'warning' : 'success') }}">
+                                                    {{ ucfirst($user->role) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small>{{ $user->created_at->format('d/m/Y') }}</small><br>
+                                                <small class="text-muted">{{ $user->created_at->diffForHumans() }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ $user->updated_at > now()->subDays(30) ? 'success' : 'secondary' }}">
+                                                    {{ $user->updated_at > now()->subDays(30) ? 'Actif' : 'Inactif' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#viewUserModal{{ $user->id }}">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-warning" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#editUserModal{{ $user->id }}">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    @if(!$user->isAdmin() || auth()->user()->id != $user->id)
+                                                        <button class="btn btn-outline-danger" 
+                                                                onclick="deleteUser({{ $user->id }})">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="card-footer bg-white">
+                            {{ $users->links() }}
+                        </div>
+                    @else
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucun utilisateur trouvé</h5>
+                            <p class="text-muted">Modifiez vos critères de recherche ou créez un nouvel utilisateur</p>
+                            <button class="btn btn-orange" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                                <i class="fas fa-plus me-2"></i>Créer un utilisateur
+                            </button>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Créer utilisateur -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Créer un nouvel utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ route('admin.users.store') }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nom complet</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Téléphone</label>
+                        <input type="tel" name="phone" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rôle</label>
+                        <select name="role" class="form-select" required>
+                            <option value="acheteur">Acheteur</option>
+                            <option value="promoteur">Promoteur</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirmer le mot de passe</label>
+                        <input type="password" name="password_confirmation" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-orange">Créer l'utilisateur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @push('styles')
 <style>
-    .page-header {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
-        color: white;
-        padding: 2rem;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    .btn-black {
-        background-color: #000;
-        border-color: #000;
-        color: white;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-black:hover {
-        background-color: #333;
-        border-color: #333;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    
-    .table-container {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
-        overflow: hidden;
-    }
-    
-    .table-orange thead th {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
-        color: white;
-        border: none;
-        font-weight: 600;
-        padding: 1rem;
-    }
-    
-    .table tbody tr {
-        transition: all 0.3s ease;
-    }
-    
-    .table tbody tr:hover {
-        background-color: rgba(255, 107, 53, 0.05);
-        transform: translateX(5px);
-    }
-    
-    .table td {
-        padding: 1rem;
-        vertical-align: middle;
-        border-bottom: 1px solid #eee;
-    }
-    
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        margin-right: 1rem;
-    }
-    
-    .user-info {
-        display: flex;
-        align-items: center;
-    }
-    
-    .user-name {
-        font-weight: 600;
-        color: #000;
-        margin-bottom: 0;
-    }
-    
-    .user-email {
-        color: #666;
-        font-size: 0.9rem;
-        margin-bottom: 0;
-    }
-    
-    .role-badge {
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-    
-    .role-admin {
-        background: linear-gradient(135deg, #dc3545, #c82333);
-        color: white;
-    }
-    
-    .role-promoteur {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
-        color: white;
-    }
-    
-    .role-acheteur {
-        background: linear-gradient(135deg, #28a745, #20c997);
-        color: white;
-    }
-    
-    .filter-card {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    .search-box, .filter-select {
-        border: 2px solid #ddd;
-        border-radius: 8px;
-        padding: 0.75rem;
-        transition: all 0.3s ease;
-    }
-    
-    .search-box:focus, .filter-select:focus {
-        border-color: #FF6B35;
-        outline: none;
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
-    }
-    
-    .stats-row {
+.admin-page {
+    background-color: #f8f9fa;
+}
+
+.admin-sidebar {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.admin-sidebar .nav-link {
+    color: rgba(255,255,255,0.8) !important;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    transition: all 0.3s ease;
+}
+
+.admin-sidebar .nav-link:hover,
+.admin-sidebar .nav-link.active {
+    background: var(--primary-orange) !important;
+    color: white !important;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border: none;
+    height: 100%;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+}
+
+.stat-info h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark-blue);
+}
+
+.user-avatar {
+    width: 35px;
+    height: 35px;
+    background: rgba(255, 107, 53, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.card-header {
+    border-radius: 12px 12px 0 0 !important;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.4em 0.8em;
+}
+
+@media (max-width: 768px) {
+    .admin-sidebar {
         margin-bottom: 2rem;
     }
     
     .stat-card {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
+        margin-bottom: 1rem;
     }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .stat-card.admin {
-        border-left: 4px solid #dc3545;
-    }
-    
-    .stat-card.promoteur {
-        border-left: 4px solid #FF6B35;
-    }
-    
-    .stat-card.acheteur {
-        border-left: 4px solid #28a745;
-    }
-    
-    .stat-card.total {
-        border-left: 4px solid #007bff;
-    }
-    
-    .status-active {
-        color: #28a745;
-        font-weight: 600;
-    }
-    
-    .status-inactive {
-        color: #dc3545;
-        font-weight: 600;
-    }
-    
-    .join-date {
-        color: #666;
-        font-size: 0.9rem;
-    }
+}
 </style>
 @endpush
 
-@section('content')
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="mb-2">
-                <i class="fas fa-users me-3"></i>
-                Gestion des Utilisateurs
-            </h1>
-            <p class="mb-0 opacity-75">Administration de tous les utilisateurs de la plateforme</p>
-        </div>
-        <div>
-            <a href="#" class="btn btn-black btn-lg">
-                <i class="fas fa-user-plus me-2"></i>Nouvel Utilisateur
-            </a>
-        </div>
-    </div>
-</div>
-
-<!-- Statistiques -->
-<div class="row stats-row">
-    <div class="col-md-3">
-        <div class="stat-card total">
-            <i class="fas fa-users fa-2x text-primary mb-3"></i>
-            <h3 class="text-primary">{{ $totalUsers ?? 0 }}</h3>
-            <p class="text-muted mb-0">Total Utilisateurs</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card admin">
-            <i class="fas fa-user-shield fa-2x text-danger mb-3"></i>
-            <h3 class="text-danger">{{ $adminUsers ?? 0 }}</h3>
-            <p class="text-muted mb-0">Administrateurs</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card promoteur">
-            <i class="fas fa-user-tie fa-2x" style="color: #FF6B35;" ></i>
-            <h3 style="color: #FF6B35;">{{ $promoteurUsers ?? 0 }}</h3>
-            <p class="text-muted mb-0">Promoteurs</p>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card acheteur">
-            <i class="fas fa-user fa-2x text-success mb-3"></i>
-            <h3 class="text-success">{{ $acheteurUsers ?? 0 }}</h3>
-            <p class="text-muted mb-0">Acheteurs</p>
-        </div>
-    </div>
-</div>
-
-<!-- Filtres -->
-<div class="filter-card">
-    <div class="row">
-        <div class="col-md-4">
-            <label class="form-label fw-bold">Rechercher</label>
-            <input type="text" class="form-control search-box" placeholder="Nom, email...">
-        </div>
-        <div class="col-md-3">
-            <label class="form-label fw-bold">Rôle</label>
-            <select class="form-select filter-select">
-                <option value="">Tous les rôles</option>
-                <option value="admin">Administrateur</option>
-                <option value="promoteur">Promoteur</option>
-                <option value="acheteur">Acheteur</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label fw-bold">Statut</label>
-            <select class="form-select filter-select">
-                <option value="">Tous les statuts</option>
-                <option value="active">Actif</option>
-                <option value="inactive">Inactif</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label fw-bold">&nbsp;</label>
-            <button class="btn btn-black w-100">
-                <i class="fas fa-filter me-2"></i>Filtrer
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Tableau des utilisateurs -->
-<div class="table-container">
-    <table class="table table-orange table-hover mb-0">
-        <thead>
-            <tr>
-                <th><i class="fas fa-user me-2"></i>Utilisateur</th>
-                <th><i class="fas fa-envelope me-2"></i>Email</th>
-                <th><i class="fas fa-user-tag me-2"></i>Rôle</th>
-                <th><i class="fas fa-phone me-2"></i>Téléphone</th>
-                <th><i class="fas fa-calendar-plus me-2"></i>Inscrit le</th>
-                <th><i class="fas fa-circle me-2"></i>Statut</th>
-                <th><i class="fas fa-cogs me-2"></i>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($users as $user)
-            <tr>
-                <td>
-                    <div class="user-info">
-                        <div class="user-avatar">
-                            {{ strtoupper(substr($user->name, 0, 1)) }}
-                        </div>
-                        <div>
-                            <div class="user-name">{{ $user->name }}</div>
-                            @if($user->email_verified_at)
-                                <small class="text-success">
-                                    <i class="fas fa-check-circle me-1"></i>Vérifié
-                                </small>
-                            @else
-                                <small class="text-warning">
-                                    <i class="fas fa-exclamation-circle me-1"></i>Non vérifié
-                                </small>
-                            @endif
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <div class="user-email">{{ $user->email }}</div>
-                </td>
-                <td>
-                    @switch($user->role)
-                        @case('admin')
-                            <span class="role-badge role-admin">
-                                <i class="fas fa-shield-alt me-1"></i>Admin
-                            </span>
-                            @break
-                        @case('promoteur')
-                            <span class="role-badge role-promoteur">
-                                <i class="fas fa-user-tie me-1"></i>Promoteur
-                            </span>
-                            @break
-                        @case('acheteur')
-                            <span class="role-badge role-acheteur">
-                                <i class="fas fa-user me-1"></i>Acheteur
-                            </span>
-                            @break
-                        @default
-                            <span class="role-badge" style="background: #6c757d;">
-                                <i class="fas fa-question me-1"></i>{{ ucfirst($user->role) }}
-                            </span>
-                    @endswitch
-                </td>
-                <td>
-                    @if($user->phone)
-                        <i class="fas fa-phone me-2 text-muted"></i>{{ $user->phone }}
-                    @else
-                        <span class="text-muted">Non renseigné</span>
-                    @endif
-                </td>
-                <td>
-                    <div class="fw-bold">{{ $user->created_at->format('d/m/Y') }}</div>
-                    <div class="join-date">{{ $user->created_at->diffForHumans() }}</div>
-                </td>
-                <td>
-                    @if($user->email_verified_at && !$user->deleted_at)
-                        <span class="status-active">
-                            <i class="fas fa-circle me-1"></i>Actif
-                        </span>
-                    @else
-                        <span class="status-inactive">
-                            <i class="fas fa-circle me-1"></i>Inactif
-                        </span>
-                    @endif
-                </td>
-                <td>
-                    <div class="btn-group" role="group">
-                        <a href="#" class="btn btn-sm btn-black" title="Voir le profil">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <button class="btn btn-sm btn-outline-dark" title="Modifier">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        @if($user->role !== 'admin')
-                        <button class="btn btn-sm btn-outline-warning" title="Changer le rôle">
-                            <i class="fas fa-user-tag"></i>
-                        </button>
-                        @endif
-                        @if($user->id !== auth()->id())
-                        <button class="btn btn-sm btn-outline-danger" title="Désactiver">
-                            <i class="fas fa-ban"></i>
-                        </button>
-                        @endif
-                    </div>
-                </td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="7" class="text-center py-5">
-                    <i class="fas fa-users fa-4x text-muted mb-3"></i>
-                    <h5>Aucun utilisateur trouvé</h5>
-                    <p class="text-muted">Il n'y a pas d'utilisateurs correspondant aux critères.</p>
-                </td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
-
-@if(isset($users) && $users->hasPages())
-<div class="d-flex justify-content-center mt-4">
-    {{ $users->links('pagination::bootstrap-4') }}
-</div>
-@endif
-@endsection
-
 @push('scripts')
 <script>
-    // Recherche en temps réel
-    document.querySelector('.search-box').addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-            const name = row.querySelector('.user-name')?.textContent.toLowerCase() || '';
-            const email = row.querySelector('.user-email')?.textContent.toLowerCase() || '';
-            
-            if (name.includes(searchTerm) || email.includes(searchTerm)) {
-                row.style.display = '';
+function deleteUser(userId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+        fetch(`/admin/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
             } else {
-                row.style.display = 'none';
+                alert('Erreur lors de la suppression');
             }
         });
-    });
-    
-    // Confirmation de désactivation
-    document.querySelectorAll('.btn-outline-danger').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            if (!confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?')) {
-                e.preventDefault();
-            }
-        });
-    });
+    }
+}
 </script>
 @endpush
+@endsection

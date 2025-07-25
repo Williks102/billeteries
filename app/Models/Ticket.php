@@ -1,7 +1,5 @@
 <?php
 
-// ========== MISE À JOUR DU MODÈLE TICKET ==========
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -19,11 +17,20 @@ class Ticket extends Model
         'holder_email',
         'holder_phone',
         'used_at',
-        'qr_code_path'
+        'qr_code_path',
+        'validation_data',
+        'created_ip',
+        'sent_at',
+        'downloaded_at',
+        'download_count',
+        'seat_number'  // Gardé de l'ancien modèle
     ];
 
     protected $casts = [
         'used_at' => 'datetime',
+        'sent_at' => 'datetime',
+        'downloaded_at' => 'datetime',
+        'validation_data' => 'array'
     ];
 
     /**
@@ -42,6 +49,24 @@ class Ticket extends Model
     public function order()
     {
         return $this->hasOneThrough(Order::class, OrderItem::class, 'id', 'id', 'order_item_id', 'order_id');
+    }
+
+    /**
+     * Scopes
+     */
+    public function scopeAvailable($query)
+    {
+        return $query->where('status', 'available');
+    }
+
+    public function scopeSold($query)
+    {
+        return $query->where('status', 'sold');
+    }
+
+    public function scopeUsed($query)
+    {
+        return $query->where('status', 'used');
     }
 
     /**
@@ -176,35 +201,12 @@ class Ticket extends Model
             'holder_email' => $this->holder_email,
             'event_title' => $this->ticketType->event->title,
             'event_date' => $this->ticketType->event->event_date->format('d/m/Y'),
-            'event_time' => $this->ticketType->event->event_time ? $this->ticketType->event->event_time->format('H:i') : null,
-            'venue' => $this->ticketType->event->venue,
-            'address' => $this->ticketType->event->address,
+            'event_time' => $this->ticketType->event->event_time ? 
+                $this->ticketType->event->event_time->format('H:i') : null,
+            'event_location' => $this->ticketType->event->location,
             'ticket_type' => $this->ticketType->name,
-            'price' => $this->orderItem->unit_price,
-            'category' => $this->ticketType->event->category->name ?? 'Événement',
+            'price' => $this->ticketType->formatted_price,
             'used_at' => $this->used_at ? $this->used_at->format('d/m/Y H:i') : null,
-            'qr_code_url' => $this->qr_code_url,
         ];
-    }
-
-    /**
-     * Scopes
-     */
-    public function scopeSold($query)
-    {
-        return $query->where('status', 'sold');
-    }
-
-    public function scopeUsed($query)
-    {
-        return $query->where('status', 'used');
-    }
-
-    public function scopeValid($query)
-    {
-        return $query->where('status', 'sold')
-                    ->whereHas('ticketType.event', function($q) {
-                        $q->where('event_date', '>=', now()->toDateString());
-                    });
     }
 }

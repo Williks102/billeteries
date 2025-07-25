@@ -36,9 +36,10 @@ class EventCategory extends Model
      * Scope pour les catégories ayant des événements actifs
      */
     public function scopeWithActiveEvents($query)
-    {
-        return $query->whereHas('events', function ($q) {
-            $q->where('status', 'published');
-        });
+{
+    return $query->whereHas('events', function($q) {
+        $q->where('status', 'published')
+          ->where('event_date', '>=', now()->toDateString());
+    });
     }
 }

@@ -18,9 +18,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password',
-        'role',
         'phone',
+        'role',
+        'password',
     ];
 
     /**
@@ -47,41 +47,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relation : Un promoteur a plusieurs événements
-     */
-    public function events()
-    {
-        return $this->hasMany(Event::class, 'promoteur_id');
-    }
-
-    /**
-     * Relation : Un utilisateur a plusieurs commandes
-     */
-    public function orders()
-    {
-        return $this->hasMany(Order::class);
-    }
-
-    /**
-     * Relation : Un promoteur a plusieurs commissions
-     */
-    public function commissions()
-    {
-        return $this->hasMany(Commission::class, 'promoteur_id');
-    }
-
-    /**
-     * Relation : Tickets achetés par l'utilisateur
-     */
-    public function tickets()
-    {
-        return $this->hasManyThrough(Ticket::class, Order::class)
-            ->join('order_tickets', 'tickets.id', '=', 'order_tickets.ticket_id')
-            ->where('orders.payment_status', 'paid');
-    }
-
-    /**
-     * Vérifications de rôles
+     * Vérification des rôles
      */
     public function isAdmin()
     {
@@ -99,22 +65,42 @@ class User extends Authenticatable
     }
 
     /**
-     * Statistiques pour promoteur
+     * Relations
      */
-    public function totalRevenue()
+    public function events()
     {
-        return $this->commissions()->where('status', 'paid')->sum('net_amount');
+        return $this->hasMany(Event::class, 'promoteur_id');
     }
 
-    public function pendingRevenue()
+    public function orders()
     {
-        return $this->commissions()->where('status', 'pending')->sum('net_amount');
+        return $this->hasMany(Order::class);
     }
 
-    public function totalTicketsSold()
-    {
-        return $this->events()->withCount(['orders' => function ($query) {
+    // Dans le modèle User
+public function totalRevenue()
+{
+    return $this->events()
+        ->whereHas('orders', function($query) {
             $query->where('payment_status', 'paid');
-        }])->get()->sum('orders_count');
-    }
+        })
+        ->with('orders')
+        ->get()
+        ->sum(function($event) {
+            return $event->orders->sum('total_amount');
+        });
+}
+
+public function pendingRevenue()
+{
+    return $this->events()
+        ->whereHas('orders', function($query) {
+            $query->where('payment_status', 'pending');
+        })
+        ->with('orders')
+        ->get()
+        ->sum(function($event) {
+            return $event->orders->sum('total_amount');
+        });
+}
 }

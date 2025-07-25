@@ -15,6 +15,9 @@ use App\Http\Controllers\Admin\AdminController;
 
 // Page d'accueil avec liste des événements (SANS AUTHENTIFICATION)
 Route::get('/', [HomeController::class, 'index'])->name('home');
+// Ajoutez ces routes après vos routes existantes
+Route::get('/api/events', [HomeController::class, 'getEvents'])->name('api.events');
+Route::get('/search', [HomeController::class, 'search'])->name('search');
 
 // Détail d'un événement (SANS AUTHENTIFICATION)
 Route::get('/events/{event}', [HomeController::class, 'show'])->name('events.show');
@@ -33,6 +36,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::delete('/remove', [CartController::class, 'remove'])->name('remove');
     Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
     Route::get('/data', [CartController::class, 'getCartData'])->name('data');
+});
 
 // Routes publiques pour vérification des billets
 Route::get('/tickets/{ticket}', [App\Http\Controllers\TicketController::class, 'show'])
@@ -42,7 +46,7 @@ Route::get('/verify-ticket/{ticketCode}', [App\Http\Controllers\TicketController
 Route::get('/tickets/{ticket}/download', [App\Http\Controllers\TicketController::class, 'download'])
     ->middleware('auth')
     ->name('tickets.download');
-});
+
 
 // Route de vérification des billets (PUBLIQUE - pour scanner QR codes)
 Route::get('/verify-ticket/{ticketCode}', function ($ticketCode) {
@@ -101,6 +105,13 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
         // Dashboard principal
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/users', [AdminController::class, 'users'])->name('users');
+        Route::get('/events', [AdminController::class, 'events'])->name('events');
+        Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
+        Route::get('/orders/{order}', [AdminController::class, 'orderDetail'])->name('orders.show');
+        Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
+        Route::post('/commissions/{commission}/pay', [AdminController::class, 'payCommission'])->name('commissions.pay');
+        Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
         
         // Gestion des commissions
         Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');

@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Gate;
+use App\Models\Ticket;
+use App\Observers\TicketObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
         
         Gate::define('acheteur-access', function ($user) {
             return $user && ($user->isAcheteur() || $user->isAdmin());
+
         });
+
+        //Ticket::observe(TicketObserver::class);
     }
+
 }

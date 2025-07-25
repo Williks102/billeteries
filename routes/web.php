@@ -33,6 +33,15 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::delete('/remove', [CartController::class, 'remove'])->name('remove');
     Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
     Route::get('/data', [CartController::class, 'getCartData'])->name('data');
+
+// Routes publiques pour vérification des billets
+Route::get('/tickets/{ticket}', [App\Http\Controllers\TicketController::class, 'show'])
+    ->name('tickets.show');
+Route::get('/verify-ticket/{ticketCode}', [App\Http\Controllers\TicketController::class, 'verify'])
+    ->name('tickets.verify');
+Route::get('/tickets/{ticket}/download', [App\Http\Controllers\TicketController::class, 'download'])
+    ->middleware('auth')
+    ->name('tickets.download');
 });
 
 // Route de vérification des billets (PUBLIQUE - pour scanner QR codes)
@@ -185,7 +194,17 @@ Route::middleware(['auth'])->group(function () {
             ->name('scanner');
         Route::post('/scanner/verify', [App\Http\Controllers\Promoteur\PromoteurController::class, 'verifyTicket'])
             ->name('scanner.verify');
-        
+
+            
+        // Dans le groupe promoteur
+        Route::post('/scanner/verify', [PromoteurController::class, 'verifyTicket'])
+            ->name('scanner.verify');
+        Route::get('/scanner/stats', [PromoteurController::class, 'getScanStats'])
+            ->name('scanner.stats');
+        Route::get('/scanner/recent', [PromoteurController::class, 'getRecentScans'])
+            ->name('scanner.recent');
+        Route::get('/scanner/search', [PromoteurController::class, 'searchTicket'])
+             ->name('scanner.search');
         // Ventes
         Route::get('/sales', [App\Http\Controllers\Promoteur\PromoteurController::class, 'sales'])
             ->name('sales');

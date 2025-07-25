@@ -1,62 +1,47 @@
 <?php
 
+// ========== MISE À JOUR DU MODÈLE TICKET ==========
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Str;
 
 class Ticket extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
+        'order_item_id',
         'ticket_type_id',
         'ticket_code',
-        'qr_code',
         'status',
-        'seat_number'
+        'holder_name',
+        'holder_email',
+        'holder_phone',
+        'used_at',
+        'qr_code_path'
+    ];
+
+    protected $casts = [
+        'used_at' => 'datetime',
     ];
 
     /**
      * Relations
      */
+    public function orderItem()
+    {
+        return $this->belongsTo(OrderItem::class);
+    }
+
     public function ticketType()
     {
         return $this->belongsTo(TicketType::class);
     }
 
-    public function event()
-    {
-        return $this->hasOneThrough(Event::class, TicketType::class, 'id', 'id', 'ticket_type_id', 'event_id');
-    }
-
-    public function orderTickets()
-    {
-        return $this->hasMany(OrderTicket::class);
-    }
-
     public function order()
     {
-        return $this->belongsToMany(Order::class, 'order_tickets');
-    }
-
-    /**
-     * Scopes
-     */
-    public function scopeAvailable($query)
-    {
-        return $query->where('status', 'available');
-    }
-
-    public function scopeSold($query)
-    {
-        return $query->where('status', 'sold');
-    }
-
-    public function scopeUsed($query)
-    {
-        return $query->where('status', 'used');
+        return $this->hasOneThrough(Order::class, OrderItem::class, 'id', 'id', 'order_item_id', 'order_id');
     }
 
     /**
@@ -67,108 +52,159 @@ class Ticket extends Model
         do {
             $code = 'TKT-' . strtoupper(Str::random(8));
         } while (self::where('ticket_code', $code)->exists());
-        
+
         return $code;
     }
 
     /**
- * Générer le QR code pour ce billet
- */
-public function generateQRCode()
-{
-    // URL de vérification du billet
-    $verificationUrl = url("/verify-ticket/{$this->ticket_code}");
-    
-    // Pour l'instant, on stocke juste l'URL (on ajoutera le vrai QR code plus tard)
-    $this->qr_code = $verificationUrl;
-    $this->save();
-    
-    return $this->qr_code;
-}
-
-    /**
-     * Marquer le billet comme vendu
+     * Générer le QR code du billet
      */
-    public function markAsSold()
+    public function generateQrCode()
     {
-        $this->status = 'sold';
-        $this->save();
+        if (!$this->ticket_code) {
+            return null;
+        }
+
+        // URL de vérification du billet
+        $verificationUrl = route('tickets.verify', $this->ticket_code);
+        
+        // Données à encoder dans le QR code
+        $qrData = json_encode([
+            'ticket_code' => $this->ticket_code,
+            'event_id' => $this->ticketType->event_id,
+            'holder_name' => $this->holder_name,
+            'verification_url' => $verificationUrl,
+            'generated_at' => now()->toISOString(),
+        ]);
+
+        try {
+            // Générer le QR code en SVG (plus léger et vectoriel)
+            $qrCode = QrCode::size(300)
+                ->style('round')
+                ->eye('circle')
+                ->gradient(50, 150, 200, 100, 100, 255, 'diagonal')
+                ->margin(2)
+                ->errorCorrection('M')
+                ->generate($qrData);
+
+            // Sauvegarder en tant que SVG
+            $filename = 'qr_' . $this->ticket_code . '.svg';
+            $path = 'tickets/qr_codes/' . $filename;
+            
+            \Storage::disk('public')->put($path, $qrCode);
+            
+            // Mettre à jour le chemin dans la base de données
+            $this->update(['qr_code_path' => $path]);
+            
+            return $path;
+            
+        } catch (\Exception $e) {
+            \Log::error('Erreur génération QR code: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
-     * Marquer le billet comme utilisé (scanné à l'entrée)
+     * Obtenir l'URL du QR code
+     */
+    public function getQrCodeUrlAttribute()
+    {
+        if ($this->qr_code_path && \Storage::disk('public')->exists($this->qr_code_path)) {
+            return \Storage::url($this->qr_code_path);
+        }
+        
+        // Générer le QR code s'il n'existe pas
+        $path = $this->generateQrCode();
+        return $path ? \Storage::url($path) : null;
+    }
+
+    /**
+     * Obtenir le QR code en tant que string SVG
+     */
+    public function getQrCodeSvg()
+    {
+        $verificationUrl = route('tickets.verify', $this->ticket_code);
+        
+        $qrData = json_encode([
+            'ticket_code' => $this->ticket_code,
+            'event_id' => $this->ticketType->event_id,
+            'holder_name' => $this->holder_name,
+            'verification_url' => $verificationUrl,
+        ]);
+
+        return QrCode::size(200)
+            ->style('round')
+            ->eye('circle')
+            ->color(255, 107, 53) // Orange ClicBillet
+            ->backgroundColor(255, 255, 255)
+            ->margin(1)
+            ->errorCorrection('M')
+            ->generate($qrData);
+    }
+
+    /**
+     * Marquer le billet comme utilisé
      */
     public function markAsUsed()
     {
-        $this->status = 'used';
-        $this->save();
+        $this->update([
+            'status' => 'used',
+            'used_at' => now()
+        ]);
     }
 
     /**
-     * Annuler le billet
+     * Vérifier si le billet est valide pour utilisation
      */
-    public function cancel()
+    public function isValid()
     {
-        $this->status = 'cancelled';
-        $this->save();
+        return $this->status === 'sold' && 
+               $this->ticketType->event->event_date >= now()->toDateString();
     }
 
     /**
-     * Remettre le billet disponible
-     */
-    public function makeAvailable()
-    {
-        $this->status = 'available';
-        $this->save();
-    }
-
-    /**
-     * Vérifications d'état
-     */
-    public function isAvailable()
-    {
-        return $this->status === 'available';
-    }
-
-    public function isSold()
-    {
-        return $this->status === 'sold';
-    }
-
-    public function isUsed()
-    {
-        return $this->status === 'used';
-    }
-
-    public function isCancelled()
-    {
-        return $this->status === 'cancelled';
-    }
-
-    /**
-     * Obtenir le propriétaire du billet (acheteur)
-     */
-    public function owner()
-    {
-        $order = $this->order()->where('payment_status', 'paid')->first();
-        return $order ? $order->user : null;
-    }
-
-    /**
-     * Obtenir les informations complètes du billet
+     * Obtenir toutes les informations du billet pour affichage
      */
     public function getFullTicketInfo()
     {
+        $this->load(['ticketType.event.category', 'orderItem.order.user']);
+        
         return [
             'ticket_code' => $this->ticket_code,
-            'event_title' => $this->event->title ?? 'N/A',
-            'ticket_type' => $this->ticketType->name ?? 'N/A',
-            'venue' => $this->event->venue ?? 'N/A',
-            'event_date' => $this->event->formatted_event_date ?? 'N/A',
-            'event_time' => $this->event->formatted_event_time ?? 'N/A',
-            'seat_number' => $this->seat_number,
             'status' => $this->status,
-            'price' => $this->ticketType->formatted_price ?? 'N/A'
+            'holder_name' => $this->holder_name,
+            'holder_email' => $this->holder_email,
+            'event_title' => $this->ticketType->event->title,
+            'event_date' => $this->ticketType->event->event_date->format('d/m/Y'),
+            'event_time' => $this->ticketType->event->event_time ? $this->ticketType->event->event_time->format('H:i') : null,
+            'venue' => $this->ticketType->event->venue,
+            'address' => $this->ticketType->event->address,
+            'ticket_type' => $this->ticketType->name,
+            'price' => $this->orderItem->unit_price,
+            'category' => $this->ticketType->event->category->name ?? 'Événement',
+            'used_at' => $this->used_at ? $this->used_at->format('d/m/Y H:i') : null,
+            'qr_code_url' => $this->qr_code_url,
         ];
+    }
+
+    /**
+     * Scopes
+     */
+    public function scopeSold($query)
+    {
+        return $query->where('status', 'sold');
+    }
+
+    public function scopeUsed($query)
+    {
+        return $query->where('status', 'used');
+    }
+
+    public function scopeValid($query)
+    {
+        return $query->where('status', 'sold')
+                    ->whereHas('ticketType.event', function($q) {
+                        $q->where('event_date', '>=', now()->toDateString());
+                    });
     }
 }

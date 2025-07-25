@@ -187,58 +187,254 @@ public function show(Event $event)
         return back()->with('success', 'Événement dépublié.');
     }
 
-    public function scanner() { return view('promoteur.scanner'); }
-
-    public function verifyTicket(Request $request)
+    /**
+ * Afficher la page du scanner QR
+ */
+/**
+ * Afficher la page du scanner QR
+ */
+public function scanner()
 {
-    $request->validate(['ticket_code' => 'required|string']);
-    
+    return view('promoteur.scanner');
+}
+
+/**
+ * Vérifier un billet via le scanner QR
+ */
+public function verifyTicket(Request $request)
+{
+    $request->validate([
+        'ticket_code' => 'required|string'
+    ]);
+
     try {
+        // Rechercher le billet par son code
         $ticket = \App\Models\Ticket::where('ticket_code', $request->ticket_code)
-            ->with('ticketType.event')
+            ->with(['ticketType.event', 'orderItem.order.user'])
             ->first();
 
         if (!$ticket) {
             return response()->json([
                 'success' => false, 
-                'message' => 'Billet non trouvé'
+                'message' => 'Billet non trouvé',
+                'error_type' => 'not_found'
             ], 404);
         }
 
-        // Vérifier que le promoteur peut scanner ce billet
-        if (!$ticket->ticketType || !$ticket->ticketType->event) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Événement associé non trouvé'
-            ], 404);
-        }
-
+        // Vérifier que le promoteur peut scanner ce billet (sécurité)
         if ($ticket->ticketType->event->promoteur_id !== Auth::id()) {
             return response()->json([
                 'success' => false, 
-                'message' => 'Vous n\'êtes pas autorisé à scanner ce billet'
+                'message' => 'Vous n\'êtes pas autorisé à scanner ce billet',
+                'error_type' => 'unauthorized'
             ], 403);
         }
 
-        if ($ticket->status === 'sold') {
-            $ticket->markAsUsed();
-            return response()->json([
-                'success' => true, 
-                'message' => 'Billet validé avec succès', 
-                'ticket' => $ticket->getFullTicketInfo()
-            ]);
-        } else {
+        // Vérifier si le billet est déjà utilisé
+        if ($ticket->status === 'used') {
             return response()->json([
                 'success' => false, 
-                'message' => 'Billet déjà utilisé ou invalide (statut: ' . $ticket->status . ')', 
+                'message' => 'Billet déjà utilisé le ' . $ticket->used_at->format('d/m/Y à H:i'),
+                'error_type' => 'already_used',
                 'ticket' => $ticket->getFullTicketInfo()
             ]);
         }
+
+        // Vérifier si le billet est valide (statut 'sold')
+        if ($ticket->status !== 'sold') {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Billet non valide (statut: ' . $ticket->status . ')',
+                'error_type' => 'invalid_status',
+                'ticket' => $ticket->getFullTicketInfo()
+            ]);
+        }
+
+        // Vérifier que l'événement n'est pas expiré
+        if ($ticket->ticketType->event->event_date < now()->toDateString()) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Événement expiré',
+                'error_type' => 'expired_event',
+                'ticket' => $ticket->getFullTicketInfo()
+            ]);
+        }
+
+        // ✅ BILLET VALIDE - Marquer comme utilisé
+        $ticket->update([
+            'status' => 'used',
+            'used_at' => now()
+        ]);
+
+        // Log de l'action
+        \Log::info('Billet scanné avec succès', [
+            'ticket_code' => $ticket->ticket_code,
+            'promoteur_id' => Auth::id(),
+            'event_id' => $ticket->ticketType->event->id,
+            'scanned_at' => now()
+        ]);
+
+        return response()->json([
+            'success' => true, 
+            'message' => '✅ Billet validé avec succès !',
+            'ticket' => $ticket->getFullTicketInfo(),
+            'validation_time' => now()->format('d/m/Y H:i')
+        ]);
+        
     } catch (\Exception $e) {
-        \Log::error('Erreur lors de la vérification du billet: ' . $e->getMessage());
+        \Log::error('Erreur lors de la vérification du billet', [
+            'ticket_code' => $request->ticket_code,
+            'promoteur_id' => Auth::id(),
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
         return response()->json([
             'success' => false, 
-            'message' => 'Erreur lors de la vérification du billet'
+            'message' => 'Erreur technique lors de la vérification',
+            'error_type' => 'technical_error'
+        ], 500);
+    }
+}
+
+/**
+ * Obtenir les statistiques de scan en temps réel
+ */
+public function getScanStats(Request $request)
+{
+    $promoteur = Auth::user();
+    $eventId = $request->get('event_id');
+    
+    try {
+        $query = \App\Models\Ticket::whereHas('ticketType.event', function($q) use ($promoteur) {
+            $q->where('promoteur_id', $promoteur->id);
+        });
+        
+        if ($eventId) {
+            $query->whereHas('ticketType', function($q) use ($eventId) {
+                $q->where('event_id', $eventId);
+            });
+        }
+        
+        $stats = [
+            'total_tickets' => $query->count(),
+            'sold_tickets' => $query->where('status', 'sold')->count(),
+            'used_tickets' => $query->where('status', 'used')->count(),
+            'scans_today' => $query->where('status', 'used')
+                                  ->whereDate('used_at', now()->toDateString())
+                                  ->count(),
+            'scans_last_hour' => $query->where('status', 'used')
+                                      ->where('used_at', '>=', now()->subHour())
+                                      ->count(),
+        ];
+        
+        $stats['remaining_tickets'] = $stats['sold_tickets'] - $stats['used_tickets'];
+        $stats['usage_percentage'] = $stats['sold_tickets'] > 0 
+            ? round(($stats['used_tickets'] / $stats['sold_tickets']) * 100, 1)
+            : 0;
+        
+        return response()->json($stats);
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur récupération stats scan: ' . $e->getMessage());
+        
+        return response()->json([
+            'error' => 'Impossible de récupérer les statistiques'
+        ], 500);
+    }
+}
+
+/**
+ * Historique des scans récents
+ */
+public function getRecentScans(Request $request)
+{
+    $promoteur = Auth::user();
+    $eventId = $request->get('event_id');
+    $limit = $request->get('limit', 20);
+    
+    try {
+        $query = \App\Models\Ticket::whereHas('ticketType.event', function($q) use ($promoteur) {
+            $q->where('promoteur_id', $promoteur->id);
+        })
+        ->where('status', 'used')
+        ->with(['ticketType.event', 'orderItem.order.user']);
+        
+        if ($eventId) {
+            $query->whereHas('ticketType', function($q) use ($eventId) {
+                $q->where('event_id', $eventId);
+            });
+        }
+        
+        $recentScans = $query->orderBy('used_at', 'desc')
+                           ->limit($limit)
+                           ->get()
+                           ->map(function($ticket) {
+                               return [
+                                   'ticket_code' => $ticket->ticket_code,
+                                   'holder_name' => $ticket->holder_name,
+                                   'event_title' => $ticket->ticketType->event->title,
+                                   'ticket_type' => $ticket->ticketType->name,
+                                   'used_at' => $ticket->used_at->format('d/m/Y H:i'),
+                                   'used_at_human' => $ticket->used_at->diffForHumans(),
+                               ];
+                           });
+        
+        return response()->json($recentScans);
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur récupération historique scans: ' . $e->getMessage());
+        
+        return response()->json([
+            'error' => 'Impossible de récupérer l\'historique'
+        ], 500);
+    }
+}
+
+/**
+ * Rechercher un billet spécifique (pour vérification manuelle)
+ */
+public function searchTicket(Request $request)
+{
+    $request->validate([
+        'search' => 'required|string|min:3'
+    ]);
+    
+    $promoteur = Auth::user();
+    $search = $request->search;
+    
+    try {
+        $tickets = \App\Models\Ticket::whereHas('ticketType.event', function($q) use ($promoteur) {
+            $q->where('promoteur_id', $promoteur->id);
+        })
+        ->with(['ticketType.event', 'orderItem.order.user'])
+        ->where(function($query) use ($search) {
+            $query->where('ticket_code', 'like', '%' . $search . '%')
+                  ->orWhere('holder_name', 'like', '%' . $search . '%')
+                  ->orWhere('holder_email', 'like', '%' . $search . '%');
+        })
+        ->limit(10)
+        ->get()
+        ->map(function($ticket) {
+            return [
+                'ticket_code' => $ticket->ticket_code,
+                'holder_name' => $ticket->holder_name,
+                'holder_email' => $ticket->holder_email,
+                'event_title' => $ticket->ticketType->event->title,
+                'ticket_type' => $ticket->ticketType->name,
+                'status' => $ticket->status,
+                'used_at' => $ticket->used_at ? $ticket->used_at->format('d/m/Y H:i') : null,
+                'event_date' => $ticket->ticketType->event->event_date->format('d/m/Y'),
+            ];
+        });
+        
+        return response()->json($tickets);
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur recherche billet: ' . $e->getMessage());
+        
+        return response()->json([
+            'error' => 'Erreur lors de la recherche'
         ], 500);
     }
 }

@@ -70,6 +70,60 @@ public function dashboard()
     return view('acheteur.dashboard', compact('stats', 'recentOrders', 'upcomingEvents'));
 }
 
+
+/**
+ * Récupérer les QR codes d'une commande
+ */
+public function getOrderQRCodes(Order $order)
+{
+    // Vérifier que l'utilisateur peut voir cette commande
+    if ($order->user_id !== Auth::id() && !Auth::user()->isAdmin()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Accès non autorisé'
+        ], 403);
+    }
+
+    try {
+        $order->load(['tickets.ticketType.event']);
+        $tickets = [];
+        
+        foreach ($order->tickets as $ticket) {
+            $qrBase64 = null;
+            
+            try {
+                // Utiliser le nouveau service QR
+                $qrService = app(\App\Services\QRCodeService::class);
+                $qrBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
+            } catch (\Exception $e) {
+                \Log::error("Erreur QR pour ticket {$ticket->ticket_code}: " . $e->getMessage());
+            }
+            
+            $tickets[] = [
+                'ticket_code' => $ticket->ticket_code,
+                'qr_code' => $qrBase64,
+                'event_title' => $ticket->ticketType->event->title ?? 'N/A',
+                'ticket_type' => $ticket->ticketType->name ?? 'N/A',
+                'status' => $ticket->status,
+                'seat_number' => $ticket->seat_number
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'tickets' => $tickets
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur getOrderQRCodes: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la génération des QR codes'
+        ], 500);
+    }
+}
+
     /**
      * Mes billets
      */

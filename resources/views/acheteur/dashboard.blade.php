@@ -8,7 +8,7 @@
     <div class="row">
         <!-- Sidebar navigation -->
         <div class="col-md-3 col-lg-2">
-            <div class="sidebar bg-light rounded p-3">
+            <div class="sidebar bg-dark rounded p-3">
                 <h6 class="text-muted text-uppercase mb-3">Mon compte</h6>
                 <nav class="nav flex-column">
                     <a class="nav-link active" href="{{ route('acheteur.dashboard') }}">

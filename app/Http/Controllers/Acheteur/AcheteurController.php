@@ -76,30 +76,36 @@ public function dashboard()
  */
 public function getOrderQRCodes(Order $order)
 {
-    // Vérifier que l'utilisateur peut voir cette commande
-    if ($order->user_id !== Auth::id() && !Auth::user()->isAdmin()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Accès non autorisé'
-        ], 403);
-    }
-
     try {
-        $order->load(['tickets.ticketType.event']);
+        // Vérifier l'autorisation
+        if ($order->user_id !== Auth::id() && !Auth::user()->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Non autorisé'
+            ], 403);
+        }
+        
+        $order->load(['tickets.ticketType', 'event']);
+        
         $tickets = [];
         
         foreach ($order->tickets as $ticket) {
             $qrBase64 = null;
             
             try {
-                // Utiliser le nouveau service QR
                 $qrService = app(\App\Services\QRCodeService::class);
                 $qrBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
+                
+                \Log::info("QR généré pour ticket {$ticket->ticket_code}: " . 
+                    ($qrBase64 ? 'SUCCESS' : 'FAILED'));
+                    
             } catch (\Exception $e) {
-                \Log::error("Erreur QR pour ticket {$ticket->ticket_code}: " . $e->getMessage());
+                \Log::error("Erreur génération QR pour {$ticket->ticket_code}: " . 
+                    $e->getMessage());
             }
             
             $tickets[] = [
+                'id' => $ticket->id,
                 'ticket_code' => $ticket->ticket_code,
                 'qr_code' => $qrBase64,
                 'event_title' => $ticket->ticketType->event->title ?? 'N/A',
@@ -111,7 +117,8 @@ public function getOrderQRCodes(Order $order)
         
         return response()->json([
             'success' => true,
-            'tickets' => $tickets
+            'tickets' => $tickets,
+            'order_number' => $order->order_number
         ]);
         
     } catch (\Exception $e) {
@@ -119,7 +126,8 @@ public function getOrderQRCodes(Order $order)
         
         return response()->json([
             'success' => false,
-            'message' => 'Erreur lors de la génération des QR codes'
+            'message' => 'Erreur lors de la génération des QR codes',
+            'error' => config('app.debug') ? $e->getMessage() : null
         ], 500);
     }
 }

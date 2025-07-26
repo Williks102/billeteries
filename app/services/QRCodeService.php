@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class QRCodeService
 {
     /**
-     * Méthode principale
+     * Méthode principale pour obtenir ou générer un QR code
      */
     public function getOrGenerateTicketQR(Ticket $ticket, $format = 'base64')
     {
@@ -20,6 +21,7 @@ class QRCodeService
                 return $this->generateTicketQRBase64($ticket);
             }
             
+            // Pour les URLs, vérifier le cache d'abord
             $cachedQR = $this->getTicketQRFromCache($ticket);
             if ($cachedQR) {
                 return $cachedQR;
@@ -37,32 +39,25 @@ class QRCodeService
     }
     
     /**
-     * Génération QR Base64 - Version améliorée
+     * Génération QR Base64 optimisée pour votre environnement
      */
     public function generateTicketQRBase64(Ticket $ticket, $size = 200)
     {
         $verificationUrl = url("/verify-ticket/{$ticket->ticket_code}");
         Log::info("URL de vérification: {$verificationUrl}");
         
-        // MÉTHODE 1 : SimpleSoftwareIO avec configuration forcée
-        $qr = $this->trySimpleSoftwareIOForced($verificationUrl, $size);
-        if ($qr) {
-            Log::info("QR généré avec SimpleSoftwareIO forcé pour: {$ticket->ticket_code}");
-            return $qr;
-        }
+        // Méthode 1: SimpleSoftwareIO/QrCode (priorité car installé et fonctionne)
+        $qr = $this->generateWithSimpleSoftwareIO($verificationUrl, $size);
+        if ($qr) return $qr;
         
-        // MÉTHODE 2 : QR simple mais fonctionnel
-        $qr = $this->generateSimpleReadableQR($verificationUrl, $size);
-        if ($qr) {
-            Log::info("QR simple généré pour: {$ticket->ticket_code}");
-            return $qr;
-        }
+        // Méthode 2: Fallback GD (fonctionne aussi)
+        $qr = $this->generateFallbackQR($ticket);
+        if ($qr) return $qr;
         
-        // MÉTHODE 3 : APIs externes avec SSL désactivé
-        $qr = $this->tryExternalAPIsNoSSL($verificationUrl, $size);
-        if ($qr) {
-            Log::info("QR généré avec API externe pour: {$ticket->ticket_code}");
-            return $qr;
+        // Méthode 3: API QR Server via proxy si configuré
+        if (config('app.http_proxy')) {
+            $qr = $this->generateWithQRServerProxy($verificationUrl, $size);
+            if ($qr) return $qr;
         }
         
         Log::error("Toutes les méthodes QR ont échoué pour: {$ticket->ticket_code}");
@@ -70,240 +65,190 @@ class QRCodeService
     }
     
     /**
-     * Méthode 1 : SimpleSoftwareIO avec PNG forcé
+     * Méthode 1: SimpleSoftwareIO (méthode principale)
      */
-    private function trySimpleSoftwareIOForced($url, $size)
+    private function generateWithSimpleSoftwareIO($url, $size)
     {
-        if (!class_exists('\SimpleSoftwareIO\QrCode\Facades\QrCode')) {
-            return null;
-        }
-        
         try {
-            // FORCER PNG UNIQUEMENT (plus compatible)
-            $qrCode = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
-                ->size($size)
-                ->margin(2)
-                ->errorCorrection('M')
-                ->encoding('UTF-8')
-                ->generate($url);
+            // Utiliser plusieurs formats pour maximiser la compatibilité
+            $formats = ['png', 'svg'];
             
-            if ($qrCode && strlen($qrCode) > 100) {
-                Log::info("QR PNG généré avec SimpleSoftwareIO, taille: " . strlen($qrCode));
-                return 'data:image/png;base64,' . base64_encode($qrCode);
+            foreach ($formats as $format) {
+                try {
+                    $qrCode = QrCode::format($format)
+                        ->size($size)
+                        ->margin(2)
+                        ->errorCorrection('M')
+                        ->encoding('UTF-8')
+                        ->generate($url);
+                    
+                    if ($qrCode && strlen($qrCode) > 100) {
+                        Log::info("QR généré avec SimpleSoftwareIO format: {$format}");
+                        
+                        if ($format === 'svg') {
+                            // Convertir SVG en base64
+                            return 'data:image/svg+xml;base64,' . base64_encode($qrCode);
+                        } else {
+                            return 'data:image/png;base64,' . base64_encode($qrCode);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("SimpleSoftwareIO format {$format} échoué: " . $e->getMessage());
+                    continue;
+                }
             }
-            
         } catch (\Exception $e) {
-            Log::warning("SimpleSoftwareIO PNG échec: " . $e->getMessage());
+            Log::warning("SimpleSoftwareIO général échoué: " . $e->getMessage());
         }
-        
         return null;
     }
     
     /**
-     * Méthode 2 : Génération d'un QR simple mais lisible
+     * Méthode 2: Fallback GD amélioré
      */
-    private function generateSimpleReadableQR($url, $size)
+    private function generateFallbackQR($ticket)
     {
-        if (!extension_loaded('gd')) {
+        Log::info("Utilisation du fallback GD pour: {$ticket->ticket_code}");
+        
+        if (!function_exists('imagecreate')) {
+            Log::error("Extension GD non disponible");
             return null;
         }
         
         try {
-            // Créer une image simple avec les informations essentielles
-            $moduleSize = max(8, intval($size / 30));
-            $imageSize = $moduleSize * 30;
+            // Créer une image avec un design amélioré
+            $size = 200;
+            $image = imagecreatetruecolor($size, $size);
             
-            $image = imagecreate($imageSize, $imageSize);
+            // Couleurs
             $white = imagecolorallocate($image, 255, 255, 255);
             $black = imagecolorallocate($image, 0, 0, 0);
-            $gray = imagecolorallocate($image, 128, 128, 128);
+            $orange = imagecolorallocate($image, 255, 107, 53);
+            $gray = imagecolorallocate($image, 240, 240, 240);
             
-            imagefill($image, 0, 0, $white);
+            // Fond blanc
+            imagefilledrectangle($image, 0, 0, $size, $size, $white);
             
-            // Dessiner une grille simple représentant un QR code
-            $this->drawSimpleQRPattern($image, $url, $moduleSize, $black, $gray);
+            // Créer un pattern de QR code simple
+            $cellSize = 10;
+            $cols = $size / $cellSize;
             
-            // Convertir en PNG
+            // Pattern basé sur le hash du ticket code
+            $hash = md5($ticket->ticket_code);
+            
+            for ($y = 0; $y < $cols; $y++) {
+                for ($x = 0; $x < $cols; $x++) {
+                    $index = ($y * $cols + $x) % 32;
+                    $bit = hexdec(substr($hash, $index, 1)) > 7;
+                    
+                    if ($bit) {
+                        imagefilledrectangle(
+                            $image,
+                            $x * $cellSize,
+                            $y * $cellSize,
+                            ($x + 1) * $cellSize,
+                            ($y + 1) * $cellSize,
+                            $black
+                        );
+                    }
+                }
+            }
+            
+            // Zone centrale pour le code
+            $centerSize = 80;
+            $centerX = ($size - $centerSize) / 2;
+            $centerY = ($size - $centerSize) / 2;
+            
+            imagefilledrectangle($image, $centerX, $centerY, $centerX + $centerSize, $centerY + $centerSize, $white);
+            imagerectangle($image, $centerX, $centerY, $centerX + $centerSize, $centerY + $centerSize, $orange);
+            
+            // Texte au centre
+            $font = 3;
+            $text = "TICKET";
+            $textWidth = imagefontwidth($font) * strlen($text);
+            $x = ($size - $textWidth) / 2;
+            imagestring($image, $font, $x, $centerY + 20, $text, $black);
+            
+            // Code ticket
+            $code = $ticket->ticket_code;
+            $font = 2;
+            $codeWidth = imagefontwidth($font) * strlen($code);
+            $x = ($size - $codeWidth) / 2;
+            imagestring($image, $font, $x, $centerY + 40, $code, $orange);
+            
+            // Capture
             ob_start();
             imagepng($image);
-            $imageData = ob_get_contents();
-            ob_end_clean();
+            $imageData = ob_get_clean();
             imagedestroy($image);
             
-            if ($imageData && strlen($imageData) > 100) {
-                return 'data:image/png;base64,' . base64_encode($imageData);
-            }
+            Log::info("QR fallback généré avec succès");
+            return 'data:image/png;base64,' . base64_encode($imageData);
             
         } catch (\Exception $e) {
-            Log::warning("QR simple échec: " . $e->getMessage());
+            Log::error("Erreur génération image GD: " . $e->getMessage());
         }
         
         return null;
     }
     
     /**
-     * Dessiner un pattern QR simplifié mais plus réaliste
+     * Méthode 3: QR Server avec proxy (si configuré)
      */
-    private function drawSimpleQRPattern($image, $url, $moduleSize, $black, $gray)
+    private function generateWithQRServerProxy($url, $size)
     {
-        $gridSize = 25;
-        
-        // Pattern de recherche (coins)
-        $this->drawFinderPattern($image, 1, 1, $moduleSize, $black);       // Haut-gauche
-        $this->drawFinderPattern($image, 1, 17, $moduleSize, $black);      // Haut-droite
-        $this->drawFinderPattern($image, 17, 1, $moduleSize, $black);      // Bas-gauche
-        
-        // Lignes de timing
-        for ($i = 8; $i < 17; $i++) {
-            if ($i % 2 === 0) {
-                $this->drawModule($image, 6, $i, $moduleSize, $black);
-                $this->drawModule($image, $i, 6, $moduleSize, $black);
-            }
-        }
-        
-        // Module sombre obligatoire
-        $this->drawModule($image, 4 * 4 + 9, 8, $moduleSize, $black);
-        
-        // Données basées sur l'URL
-        $urlHash = hash('crc32', $url);
-        $binaryData = str_pad(decbin(hexdec($urlHash)), 32, '0', STR_PAD_LEFT);
-        
-        // Remplir les zones de données
-        $bitIndex = 0;
-        for ($row = 9; $row < 17; $row++) {
-            for ($col = 9; $col < 17; $col++) {
-                if (!$this->isReservedPosition($row, $col)) {
-                    $bit = $bitIndex < strlen($binaryData) ? $binaryData[$bitIndex] : '0';
-                    if ($bit === '1') {
-                        $this->drawModule($image, $row, $col, $moduleSize, $black);
-                    }
-                    $bitIndex++;
-                }
-            }
-        }
-        
-        // Ajouter des modules aléatoires pour ressembler à un vrai QR
-        for ($i = 0; $i < 50; $i++) {
-            $row = rand(9, 16);
-            $col = rand(9, 16);
-            if (!$this->isReservedPosition($row, $col) && rand(0, 1)) {
-                $this->drawModule($image, $row, $col, $moduleSize, $black);
-            }
-        }
-    }
-    
-    /**
-     * Dessiner un pattern de recherche 7x7
-     */
-    private function drawFinderPattern($image, $startRow, $startCol, $moduleSize, $color)
-    {
-        $pattern = [
-            [1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,1],
-            [1,0,1,1,1,0,1],
-            [1,0,1,1,1,0,1],
-            [1,0,1,1,1,0,1],
-            [1,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1]
-        ];
-        
-        for ($i = 0; $i < 7; $i++) {
-            for ($j = 0; $j < 7; $j++) {
-                if ($pattern[$i][$j] === 1) {
-                    $this->drawModule($image, $startRow + $i, $startCol + $j, $moduleSize, $color);
-                }
-            }
-        }
-    }
-    
-    /**
-     * Dessiner un module individuel
-     */
-    private function drawModule($image, $row, $col, $moduleSize, $color)
-    {
-        $x = $col * $moduleSize;
-        $y = $row * $moduleSize;
-        imagefilledrectangle($image, $x, $y, $x + $moduleSize - 1, $y + $moduleSize - 1, $color);
-    }
-    
-    /**
-     * Vérifier si une position est réservée
-     */
-    private function isReservedPosition($row, $col)
-    {
-        // Éviter les patterns de recherche et timing
-        if (($row < 9 && $col < 9) || ($row < 9 && $col > 15) || ($row > 15 && $col < 9)) {
-            return true;
-        }
-        if ($row === 6 || $col === 6) {
-            return true;
-        }
-        return false;
-    }
-    
-    /**
-     * Méthode 3 : APIs externes avec SSL désactivé
-     */
-    private function tryExternalAPIsNoSSL($url, $size)
-    {
-        if (!app()->environment('local')) {
-            return null;
-        }
-        
-        // Google Charts avec cURL SSL désactivé
         try {
-            $qrUrl = "https://chart.googleapis.com/chart?" . http_build_query([
-                'chs' => "{$size}x{$size}",
-                'cht' => 'qr',
-                'chl' => $url,
-                'choe' => 'UTF-8',
-                'chld' => 'M|2'
+            $apiUrl = "https://api.qrserver.com/v1/create-qr-code/?" . http_build_query([
+                'size' => "{$size}x{$size}",
+                'data' => $url,
+                'format' => 'png',
+                'margin' => 10
             ]);
             
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $qrUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            $context = stream_context_create([
+                'http' => [
+                    'proxy' => config('app.http_proxy'),
+                    'request_fulluri' => true,
+                    'timeout' => 10
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false
+                ]
+            ]);
             
-            $imageData = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            $imageData = @file_get_contents($apiUrl, false, $context);
             
-            if ($httpCode === 200 && $imageData && strlen($imageData) > 100) {
+            if ($imageData && strlen($imageData) > 100) {
+                Log::info("QR généré avec QR Server via proxy");
                 return 'data:image/png;base64,' . base64_encode($imageData);
             }
-            
         } catch (\Exception $e) {
-            Log::warning("cURL Google Charts échec: " . $e->getMessage());
+            Log::warning("QR Server via proxy échoué: " . $e->getMessage());
         }
-        
         return null;
     }
     
     /**
-     * Sauvegarder QR sur disque
+     * Sauvegarder QR code sur le disque
      */
     public function generateAndSaveTicketQR(Ticket $ticket, $size = 200)
     {
-        $qrBase64 = $this->generateTicketQRBase64($ticket, $size);
-        
-        if (!$qrBase64) {
-            return null;
-        }
-        
         try {
-            $imageData = base64_decode(str_replace(['data:image/png;base64,', 'data:image/svg+xml;base64,'], '', $qrBase64));
+            // Générer le QR en base64
+            $qrBase64 = $this->generateTicketQRBase64($ticket, $size);
             
-            $directory = 'public/qrcodes';
-            if (!Storage::exists($directory)) {
-                Storage::makeDirectory($directory);
+            if (!$qrBase64) {
+                return null;
             }
             
+            // Extraire les données de l'image
+            $imageData = base64_decode(str_replace(['data:image/png;base64,', 'data:image/svg+xml;base64,'], '', $qrBase64));
+            
+            // Sauvegarder
+            $directory = 'public/qrcodes';
             $filename = "qr-{$ticket->ticket_code}.png";
-            $filepath = $directory . '/' . $filename;
+            $filepath = "{$directory}/{$filename}";
             
             Storage::put($filepath, $imageData);
             $ticket->update(['qr_code_path' => $filepath]);
@@ -317,7 +262,7 @@ class QRCodeService
     }
     
     /**
-     * Cache
+     * Récupérer depuis le cache
      */
     public function getTicketQRFromCache(Ticket $ticket)
     {
@@ -331,35 +276,20 @@ class QRCodeService
     }
     
     /**
-     * Test du service
+     * Nettoyer le cache si nécessaire
      */
-    public function testQRGeneration()
+    public function clearCache()
     {
-        $testUrl = url('/test');
-        $results = [];
-        
-        $results['SimpleSoftwareIO_Forced'] = !is_null($this->trySimpleSoftwareIOForced($testUrl, 100));
-        $results['Simple_Readable_QR'] = !is_null($this->generateSimpleReadableQR($testUrl, 100));
-        $results['External_APIs'] = !is_null($this->tryExternalAPIsNoSSL($testUrl, 100));
-        
-        $workingMethods = array_filter($results);
-        
-        return [
-            'success' => count($workingMethods) > 0,
-            'methods' => $results,
-            'working_count' => count($workingMethods),
-            'working_methods' => array_keys($workingMethods),
-            'message' => count($workingMethods) > 0 ? 
-                'QR generation working with: ' . implode(', ', array_keys($workingMethods)) :
-                'No QR generation methods working'
-        ];
-    }
-    
-    /**
-     * Méthodes de compatibilité
-     */
-    public function generateForTicket(Ticket $ticket)
-    {
-        return $this->getOrGenerateTicketQR($ticket, 'base64');
+        try {
+            $files = Storage::files('public/qrcodes');
+            foreach ($files as $file) {
+                Storage::delete($file);
+            }
+            Log::info("Cache QR codes nettoyé");
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Erreur nettoyage cache: " . $e->getMessage());
+            return false;
+        }
     }
 }

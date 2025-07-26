@@ -29,96 +29,98 @@ Route::get('/categories/{category}', [HomeController::class, 'category'])->name(
 
 // Routes d'authentification (générées par Laravel UI)
 Auth::routes();
-
-Route::get('/debug-qr/{ticketCode}', function($ticketCode) {
-    $ticket = \App\Models\Ticket::where('ticket_code', $ticketCode)->first();
-    
-    if (!$ticket) {
-        return "Ticket non trouvé : $ticketCode";
+Route::get('/test-qr-diagnostic', function() {
+    if (!auth()->check() || !auth()->user()->isAdmin()) {
+        abort(403);
     }
     
-    echo "<h1>Debug QR Code pour : $ticketCode</h1>";
-    echo "<hr>";
+    $results = [];
     
-    // Test 1: Vérifier les extensions PHP
-    echo "<h2>1. Extensions PHP</h2>";
-    echo "GD : " . (extension_loaded('gd') ? "✅ Activé" : "❌ Manquant") . "<br>";
-    echo "Imagick : " . (extension_loaded('imagick') ? "✅ Activé" : "⚠️ Manquant") . "<br>";
-    echo "OpenSSL : " . (extension_loaded('openssl') ? "✅ Activé" : "❌ Manquant") . "<br>";
-    echo "<hr>";
+    // 1. Test des extensions PHP
+    $results['extensions'] = [
+        'gd' => extension_loaded('gd'),
+        'imagick' => extension_loaded('imagick'),
+        'curl' => extension_loaded('curl'),
+        'openssl' => extension_loaded('openssl')
+    ];
     
-    // Test 2: SimpleSoftwareIO
-    echo "<h2>2. Test SimpleSoftwareIO</h2>";
-    if (class_exists('\SimpleSoftwareIO\QrCode\Facades\QrCode')) {
-        echo "✅ Classe disponible<br>";
-        try {
-            $testQr = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(100)->generate('test');
-            echo "✅ Génération réussie - Taille: " . strlen($testQr) . " bytes<br>";
-            echo "<img src='data:image/png;base64," . base64_encode($testQr) . "' style='border:1px solid #ccc;'><br>";
-        } catch (Exception $e) {
-            echo "❌ Erreur: " . $e->getMessage() . "<br>";
-        }
-    } else {
-        echo "❌ SimpleSoftwareIO non installé<br>";
-    }
-    echo "<hr>";
+    // 2. Test SimpleSoftwareIO/QrCode
+    $results['packages'] = [
+        'simplesoftwareio/simple-qrcode' => class_exists('\SimpleSoftwareIO\QrCode\Facades\QrCode')
+    ];
     
-    // Test 3: Google Charts API
-    echo "<h2>3. Test Google Charts API</h2>";
-    try {
-        $testUrl = "https://chart.googleapis.com/chart?chs=100x100&cht=qr&chl=test";
-        $context = stream_context_create([
-            'http' => ['timeout' => 10, 'method' => 'GET']
-        ]);
-        $result = @file_get_contents($testUrl, false, $context);
-        
-        if ($result && strlen($result) > 100) {
-            echo "✅ Google Charts accessible - Taille: " . strlen($result) . " bytes<br>";
-            echo "<img src='data:image/png;base64," . base64_encode($result) . "' style='border:1px solid #ccc;'><br>";
-        } else {
-            echo "❌ Google Charts inaccessible<br>";
-        }
-    } catch (Exception $e) {
-        echo "❌ Erreur Google Charts: " . $e->getMessage() . "<br>";
-    }
-    echo "<hr>";
-    
-    // Test 4: Service QRCodeService
-    echo "<h2>4. Test Service QRCodeService</h2>";
+    // 3. Test du service QRCodeService
     try {
         $qrService = app(\App\Services\QRCodeService::class);
-        echo "✅ Service chargé<br>";
-        
-        $qrBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
-        
-        if ($qrBase64) {
-            echo "✅ QR généré avec succès !<br>";
-            echo "Taille: " . strlen($qrBase64) . " caractères<br>";
-            echo "<img src='$qrBase64' style='border:1px solid #ccc; max-width:200px;'><br>";
-        } else {
-            echo "❌ Service retourne NULL<br>";
+        $results['service_test'] = $qrService->testAllMethods();
+    } catch (\Exception $e) {
+        $results['service_test'] = [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+    
+    // 4. Test avec un vrai ticket
+    try {
+        $ticket = \App\Models\Ticket::first();
+        if ($ticket) {
+            $qrBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
+            $results['real_ticket_test'] = [
+                'ticket_code' => $ticket->ticket_code,
+                'qr_generated' => $qrBase64 !== null,
+                'qr_length' => $qrBase64 ? strlen($qrBase64) : 0,
+                'qr_preview' => $qrBase64 ? substr($qrBase64, 0, 100) . '...' : null
+            ];
         }
-    } catch (Exception $e) {
-        echo "❌ Erreur service: " . $e->getMessage() . "<br>";
-        echo "<pre>" . $e->getTraceAsString() . "</pre>";
-    }
-    echo "<hr>";
-    
-    // Test 5: Logs récents
-    echo "<h2>5. Logs récents</h2>";
-    $logPath = storage_path('logs/laravel.log');
-    if (file_exists($logPath)) {
-        $logs = file($logPath);
-        $recentLogs = array_slice($logs, -10);
-        echo "<pre style='background:#f5f5f5; padding:10px; font-size:11px; max-height:200px; overflow:auto;'>";
-        echo htmlspecialchars(implode('', $recentLogs));
-        echo "</pre>";
-    } else {
-        echo "❌ Fichier de log non trouvé<br>";
+    } catch (\Exception $e) {
+        $results['real_ticket_test'] = [
+            'error' => $e->getMessage()
+        ];
     }
     
-    return "";
+    // 5. Test des permissions de stockage
+    try {
+        $testFile = 'public/qrcodes/test.txt';
+        \Storage::put($testFile, 'test');
+        $results['storage_test'] = [
+            'writable' => true,
+            'path' => storage_path('app/public/qrcodes')
+        ];
+        \Storage::delete($testFile);
+    } catch (\Exception $e) {
+        $results['storage_test'] = [
+            'writable' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+    
+    // 6. Test de connectivité externe
+    $apis = [
+        'google_charts' => 'https://chart.googleapis.com/chart?chs=100x100&cht=qr&chl=test',
+        'qr_server' => 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=test'
+    ];
+    
+    foreach ($apis as $name => $url) {
+        try {
+            $response = \Http::timeout(5)->get($url);
+            $results['api_connectivity'][$name] = [
+                'accessible' => $response->successful(),
+                'status' => $response->status(),
+                'size' => strlen($response->body())
+            ];
+        } catch (\Exception $e) {
+            $results['api_connectivity'][$name] = [
+                'accessible' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    // Retourner la vue de diagnostic
+    return view('diagnostic.qr', compact('results'));
 });
+
+// Vue correspondante : resources/views/diagnostic/qr.blade.php
 
 // Routes du panier (ACCESSIBLES SANS AUTHENTIFICATION)
 Route::prefix('cart')->name('cart.')->group(function () {

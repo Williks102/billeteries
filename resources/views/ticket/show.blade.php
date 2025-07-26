@@ -1,313 +1,351 @@
-{{-- resources/views/tickets/show.blade.php - Affichage d'un billet --}}
 @extends('layouts.app')
+
+@section('title', 'Billet ' . $ticket->ticket_code . ' - ClicBillet CI')
+
+@section('content')
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Ticket Card -->
+            <div class="ticket-container">
+                <!-- Status Badge -->
+                <div class="ticket-status">
+                    @if($ticket->status === 'sold')
+                        <span class="status-badge status-valid">
+                            <i class="fas fa-check-circle me-1"></i>Valide
+                        </span>
+                    @elseif($ticket->status === 'used')
+                        <span class="status-badge status-used">
+                            <i class="fas fa-check-double me-1"></i>Utilisé
+                        </span>
+                    @else
+                        <span class="status-badge status-{{ $ticket->status }}">
+                            {{ ucfirst($ticket->status) }}
+                        </span>
+                    @endif
+                </div>
+                
+                <!-- Header -->
+                <div class="ticket-header">
+                    <h1 class="ticket-brand">🎫 CLICBILLET</h1>
+                    <h2 class="event-title">{{ $ticket->ticketType->event->title }}</h2>
+                    <p class="ticket-type">{{ $ticket->ticketType->name }}</p>
+                </div>
+                
+                <!-- Body -->
+                <div class="ticket-body">
+                    <!-- QR Code Section -->
+                    <div class="qr-section">
+                        <h5>Code QR - Présentez à l'entrée</h5>
+                        
+                        <div class="qr-code-container">
+                            @if($ticket->qr_code_url)
+                                <img src="{{ $ticket->qr_code_url }}" alt="QR Code" class="qr-image">
+                            @else
+                                <div class="qr-svg-container">
+                                    {!! $ticket->getQrCodeSvg() !!}
+                                </div>
+                            @endif
+                        </div>
+                        
+                        <p class="ticket-code">
+                            <strong>Code :</strong> 
+                            <code>{{ $ticket->ticket_code }}</code>
+                        </p>
+                    </div>
+                    
+                    <!-- Perforations -->
+                    <div class="ticket-perforations"></div>
+                    
+                    <!-- Ticket Details -->
+                    <div class="ticket-details">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="detail-group">
+                                    <h6><i class="fas fa-user me-2"></i>Titulaire</h6>
+                                    <p>{{ $ticket->holder_name ?: 'Non spécifié' }}</p>
+                                    @if($ticket->holder_email)
+                                        <small class="text-muted">{{ $ticket->holder_email }}</small>
+                                    @endif
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="detail-group">
+                                    <h6><i class="fas fa-calendar me-2"></i>Date</h6>
+                                    <p>{{ $ticket->ticketType->event->event_date->format('d/m/Y') }}</p>
+                                    @if($ticket->ticketType->event->event_time)
+                                        <small class="text-muted">{{ $ticket->ticketType->event->event_time->format('H:i') }}</small>
+                                    @endif
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="detail-group">
+                                    <h6><i class="fas fa-map-marker-alt me-2"></i>Lieu</h6>
+                                    <p>{{ $ticket->ticketType->event->venue }}</p>
+                                    @if($ticket->ticketType->event->address)
+                                        <small class="text-muted">{{ $ticket->ticketType->event->address }}</small>
+                                    @endif
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="detail-group">
+                                    <h6><i class="fas fa-ticket-alt me-2"></i>Type & Prix</h6>
+                                    <p>{{ $ticket->ticketType->name }}</p>
+                                    <small class="text-muted">{{ number_format($ticket->ticketType->price, 0, ',', ' ') }} FCFA</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="ticket-footer">
+                    <div class="instructions">
+                        <h6>📱 Instructions importantes</h6>
+                        <ul>
+                            <li>Présentez ce QR code à l'entrée (sur téléphone ou imprimé)</li>
+                            <li>Arrivez 30 minutes avant le début de l'événement</li>
+                            <li>Gardez une pièce d'identité avec vous</li>
+                            <li>Ce billet est nominatif et non transférable</li>
+                        </ul>
+                    </div>
+                    
+                    @if($ticket->status === 'used')
+                        <div class="usage-info">
+                            <small class="text-muted">
+                                <i class="fas fa-check me-1"></i>
+                                Billet utilisé le {{ $ticket->used_at->format('d/m/Y à H:i') }}
+                            </small>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="ticket-actions text-center mt-4">
+                <a href="{{ route('acheteur.tickets') }}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Retour à mes billets
+                </a>
+                
+                @if($ticket->status === 'sold')
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print me-2"></i>Imprimer
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
 
 @push('styles')
 <style>
+/* Ticket Styles */
+.ticket-container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+    position: relative;
+    border: 2px dashed #e9ecef;
+}
+
+.ticket-status {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+}
+
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.status-valid {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.status-used {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+}
+
+.ticket-header {
+    background: linear-gradient(135deg, #FF6B35, #ff8c61);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+
+.ticket-brand {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.event-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.ticket-type {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.ticket-body {
+    padding: 2rem;
+}
+
+.qr-section {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.qr-section h5 {
+    color: #495057;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.qr-code-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.qr-image {
+    max-width: 200px;
+    height: auto;
+}
+
+.qr-svg-container {
+    display: inline-block;
+}
+
+.ticket-code {
+    margin-top: 1rem;
+}
+
+.ticket-code code {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    color: #FF6B35;
+    font-weight: 600;
+}
+
+.ticket-perforations {
+    height: 20px;
+    background-image: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 10px,
+        #e9ecef 10px,
+        #e9ecef 20px
+    );
+    margin: 1.5rem 0;
+}
+
+.detail-group {
+    margin-bottom: 1.5rem;
+}
+
+.detail-group h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.detail-group p {
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.ticket-footer {
+    background: #f8f9fa;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.instructions h6 {
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.instructions ul {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.instructions li {
+    margin-bottom: 0.5rem;
+    color: #6c757d;
+}
+
+.usage-info {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+    text-align: center;
+}
+
+/* Actions */
+.ticket-actions {
+    margin-bottom: 2rem;
+}
+
+/* Print Styles */
+@media print {
+    .ticket-actions,
+    nav,
+    footer {
+        display: none !important;
+    }
+    
     .ticket-container {
-        max-width: 600px;
-        margin: 2rem auto;
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        overflow: hidden;
-        position: relative;
+        box-shadow: none;
+        border: 2px solid #000;
     }
     
     .ticket-header {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
-        color: white;
-        padding: 2rem;
-        text-align: center;
+        background: #FF6B35 !important;
+        -webkit-print-color-adjust: exact;
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .ticket-container {
+        margin: 1rem;
+        border-radius: 15px;
+    }
+    
+    .ticket-header {
+        padding: 1.5rem;
     }
     
     .ticket-body {
-        padding: 2rem;
+        padding: 1.5rem;
     }
     
-    .qr-code-section {
-        text-align: center;
-        padding: 2rem;
-        background: #f8f9fa;
-        border-radius: 10px;
-        margin: 1rem 0;
+    .event-title {
+        font-size: 1.5rem;
     }
     
-    .ticket-info {
-        border-left: 4px solid #FF6B35;
-        padding: 1rem;
-        background: #f8f9fa;
-        margin: 1rem 0;
-        border-radius: 0 8px 8px 0;
+    .ticket-brand {
+        font-size: 1.3rem;
     }
-    
-    .status-badge {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-    }
-    
-    .status-sold {
-        background: #28a745;
-        color: white;
-    }
-    
-    .status-used {
-        background: #6c757d;
-        color: white;
-    }
-    
-    .ticket-perforations {
-        position: relative;
-        margin: 1rem 0;
-    }
-    
-    .ticket-perforations::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: -10px;
-        right: -10px;
-        height: 2px;
-        background: repeating-linear-gradient(
-            to right,
-            #ddd 0px,
-            #ddd 10px,
-            transparent 10px,
-            transparent 20px
-        );
-    }
-    
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-        .ticket-container, .ticket-container * {
-            visibility: visible;
-        }
-        .ticket-container {
-            position: absolute;
-            left: 0;
-            top: 0;
-            box-shadow: none;
-        }
-        .no-print {
-            display: none !important;
-        }
-    }
+}
 </style>
 @endpush
-
-@section('content')
-<div class="container">
-    <div class="ticket-container">
-        <!-- Statut Badge -->
-        <div class="status-badge status-{{ $ticket->status }}">
-            @if($ticket->status === 'sold')
-                <i class="fas fa-check-circle me-1"></i>Valide
-            @else
-                <i class="fas fa-times-circle me-1"></i>Utilisé
-            @endif
-        </div>
-        
-        <!-- Header -->
-        <div class="ticket-header">
-            <h1 class="h3 mb-2">🎫 CLICBILLET</h1>
-            <h2 class="h4 mb-0">{{ $ticket->ticketType->event->title }}</h2>
-            <p class="mb-0 opacity-75">{{ $ticket->ticketType->name }}</p>
-        </div>
-        
-        <!-- Body -->
-        <div class="ticket-body">
-            <!-- QR Code -->
-            <div class="qr-code-section">
-                <h5 class="mb-3">Code QR - Présentez à l'entrée</h5>
-                
-                @if($ticket->qr_code_url)
-                    <img src="{{ $ticket->qr_code_url }}" alt="QR Code" style="max-width: 200px;">
-                @else
-                    <div style="width: 200px; height: 200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; border: 2px dashed #ddd; border-radius: 8px;">
-                        {!! $ticket->getQrCodeSvg() !!}
-                    </div>
-                @endif
-                
-                <p class="mt-3 mb-0">
-                    <strong>Code billet :</strong> 
-                    <code class="bg-light px-2 py-1 rounded">{{ $ticket->ticket_code }}</code>
-                </p>
-            </div>
-            
-            <!-- Perforations -->
-            <div class="ticket-perforations"></div>
-            
-            <!-- Informations du billet -->
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="ticket-info">
-                        <h6><i class="fas fa-user me-2"></i>Titulaire</h6>
-                        <p class="mb-0">{{ $ticket->holder_name }}</p>
-                        @if($ticket->holder_email)
-                            <small class="text-muted">{{ $ticket->holder_email }}</small>
-                        @endif
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="ticket-info">
-                        <h6><i class="fas fa-calendar me-2"></i>Date et Heure</h6>
-                        <p class="mb-0">{{ $ticket->ticketType->event->event_date->format('d/m/Y') }}</p>
-                        @if($ticket->ticketType->event->event_time)
-                            <small class="text-muted">{{ $ticket->ticketType->event->event_time->format('H:i') }}</small>
-                        @endif
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="ticket-info">
-                        <h6><i class="fas fa-map-marker-alt me-2"></i>Lieu</h6>
-                        <p class="mb-0">{{ $ticket->ticketType->event->venue }}</p>
-                        <small class="text-muted">{{ $ticket->ticketType->event->address }}</small>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="ticket-info">
-                        <h6><i class="fas fa-tag me-2"></i>Prix</h6>
-                        <p class="mb-0">{{ number_format($ticket->orderItem->unit_price) }} FCFA</p>
-                        <small class="text-muted">{{ $ticket->ticketType->name }}</small>
-                    </div>
-                </div>
-            </div>
-            
-            @if($ticket->used_at)
-                <div class="alert alert-warning mt-3">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Billet utilisé</strong> le {{ $ticket->used_at->format('d/m/Y à H:i') }}
-                </div>
-            @endif
-            
-            <!-- Actions -->
-            <div class="text-center mt-4 no-print">
-                <button onclick="window.print()" class="btn btn-primary me-2">
-                    <i class="fas fa-print me-2"></i>Imprimer
-                </button>
-                
-                <a href="{{ route('tickets.download', $ticket) }}" class="btn btn-outline-primary me-2">
-                    <i class="fas fa-download me-2"></i>Télécharger PDF
-                </a>
-                
-                @if(auth()->check() && auth()->user()->isAcheteur())
-                    <a href="{{ route('acheteur.tickets') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Mes billets
-                    </a>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
-
-{{-- resources/views/tickets/verify.blade.php - Page de vérification publique --}}
-@extends('layouts.app')
-
-@section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white text-center">
-                    <h4><i class="fas fa-qrcode me-2"></i>Vérification de billet</h4>
-                </div>
-                
-                <div class="card-body text-center">
-                    @if($ticket && $ticket->isValid())
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle fa-3x mb-3"></i>
-                            <h5>✅ Billet valide</h5>
-                            <p>Ce billet est authentique et valide pour l'entrée.</p>
-                        </div>
-                        
-                        <div class="ticket-details bg-light p-3 rounded">
-                            <h6>Détails du billet :</h6>
-                            <ul class="list-unstyled">
-                                <li><strong>Événement :</strong> {{ $ticket->ticketType->event->title }}</li>
-                                <li><strong>Date :</strong> {{ $ticket->ticketType->event->event_date->format('d/m/Y') }}</li>
-                                <li><strong>Lieu :</strong> {{ $ticket->ticketType->event->venue }}</li>
-                                <li><strong>Type :</strong> {{ $ticket->ticketType->name }}</li>
-                                <li><strong>Titulaire :</strong> {{ $ticket->holder_name }}</li>
-                            </ul>
-                        </div>
-                    @elseif($ticket && $ticket->status === 'used')
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-                            <h5>⚠️ Billet déjà utilisé</h5>
-                            <p>Ce billet a déjà été scanné le {{ $ticket->used_at->format('d/m/Y à H:i') }}</p>
-                        </div>
-                    @else
-                        <div class="alert alert-danger">
-                            <i class="fas fa-times-circle fa-3x mb-3"></i>
-                            <h5>❌ Billet invalide</h5>
-                            <p>Ce billet n'existe pas ou n'est pas valide.</p>
-                        </div>
-                    @endif
-                    
-                    <a href="{{ route('home') }}" class="btn btn-primary mt-3">
-                        <i class="fas fa-home me-2"></i>Retour à l'accueil
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
-
-{{-- resources/views/emails/ticket.blade.php - Email avec billet --}}
-@extends('layouts.email')
-
-@section('content')
-<div style="text-align: center; padding: 2rem; background: #f8f9fa;">
-    <h1 style="color: #FF6B35;">🎫 Votre billet ClicBillet</h1>
-    <p>Merci pour votre achat ! Voici votre billet électronique.</p>
-</div>
-
-<div style="padding: 2rem;">
-    <h2>{{ $ticket->ticketType->event->title }}</h2>
-    
-    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-        <strong>Informations importantes :</strong>
-        <ul>
-            <li>📅 Date : {{ $ticket->ticketType->event->event_date->format('d/m/Y') }}</li>
-            <li>🕐 Heure : {{ $ticket->ticketType->event->event_time->format('H:i') }}</li>
-            <li>📍 Lieu : {{ $ticket->ticketType->event->venue }}</li>
-            <li>🎫 Type : {{ $ticket->ticketType->name }}</li>
-        </ul>
-    </div>
-    
-    <div style="text-align: center; margin: 2rem 0;">
-        <h3>Code QR - Présentez à l'entrée</h3>
-        {!! $ticket->getQrCodeSvg() !!}
-        <p><strong>Code billet :</strong> {{ $ticket->ticket_code }}</p>
-    </div>
-    
-    <div style="background: #fff3cd; padding: 1rem; border-radius: 8px; border-left: 4px solid #ffc107;">
-        <strong>⚠️ Instructions importantes :</strong>
-        <ul>
-            <li>Présentez ce QR code à l'entrée de l'événement</li>
-            <li>Vous pouvez l'afficher sur votre téléphone ou l'imprimer</li>
-            <li>Arrivez 30 minutes avant le début de l'événement</li>
-            <li>En cas de problème, contactez l'organisateur</li>
-        </ul>
-    </div>
-</div>
-
-<div style="text-align: center; padding: 1rem; background: #f8f9fa;">
-    <a href="{{ route('tickets.show', $ticket) }}" 
-       style="background: #FF6B35; color: white; padding: 1rem 2rem; text-decoration: none; border-radius: 25px;">
-        Voir mon billet en ligne
-    </a>
-</div>
 @endsection

@@ -502,4 +502,18 @@ class AdminController extends Controller
         
         return view('admin.event-detail', compact('event'));
     }
+
+    
+public function updateOrderStatus(Order $order, Request $request) {
+    $order->update(['payment_status' => $request->status]);
+    return response()->json(['success' => true]);
+}
+
+public function bulkUpdateOrders(Request $request) {
+    Order::whereIn('id', $request->order_ids)
+         ->update(['payment_status' => $request->status]);
+    return response()->json(['success' => true]);
+}
+
+
 }

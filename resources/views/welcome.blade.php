@@ -266,7 +266,7 @@
         <!-- Bouton voir plus -->
         <div class="row mt-4">
             <div class="col-12 text-center">
-                <a href="#" class="btn btn-outline-orange btn-lg">
+                <a href="{{ route('events.all') }}" class="btn btn-outline-orange btn-lg">
                     <i class="fas fa-plus me-2"></i>Voir tous les événements
                 </a>
             </div>

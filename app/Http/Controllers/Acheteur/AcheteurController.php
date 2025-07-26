@@ -21,49 +21,54 @@ class AcheteurController extends Controller
             return $next($request);
         });
     }
-
-    /**
-     * Dashboard acheteur
-     */
-    public function dashboard()
-    {
-        $user = Auth::user();
-        
-        // Statistiques
-        $stats = [
-            'total_orders' => $user->orders()->count(),
-            'total_tickets' => $user->orders()->where('payment_status', 'paid')
-                ->withCount('tickets')->get()->sum('tickets_count'),
-            'upcoming_events' => $user->orders()->where('payment_status', 'paid')
-                ->whereHas('event', function($q) {
-                    $q->where('event_date', '>=', now()->toDateString());
-                })->count(),
-            'past_events' => $user->orders()->where('payment_status', 'paid')
-                ->whereHas('event', function($q) {
-                    $q->where('event_date', '<', now()->toDateString());
-                })->count(),
-        ];
-
-        // Commandes récentes
-        $recentOrders = $user->orders()
-            ->with(['event.category', 'orderItems.ticketType'])
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
-
-        // Événements à venir
-        $upcomingEvents = $user->orders()
-            ->where('payment_status', 'paid')
-            ->with(['event.category', 'event.ticketTypes'])
-            ->whereHas('event', function($q) {
-                $q->where('event_date', '>=', now()->toDateString());
-            })
-            ->orderBy('created_at', 'desc')
-            ->limit(3)
-            ->get();
-
-        return view('acheteur.dashboard', compact('stats', 'recentOrders', 'upcomingEvents'));
+/**
+ * Dashboard acheteur - VERSION CORRIGÉE
+ */
+public function dashboard()
+{
+    $user = Auth::user();
+    
+    // Statistiques corrigées
+    $totalOrders = $user->orders()->count();
+    $paidOrders = $user->orders()->where('payment_status', 'paid');
+    
+    // Calculer le nombre total de billets
+    $totalTickets = 0;
+    foreach ($paidOrders->get() as $order) {
+        $totalTickets += $order->orderItems->sum('quantity');
     }
+    
+    $stats = [
+        'total_orders' => $totalOrders,
+        'total_tickets' => $totalTickets,
+        'upcoming_events' => $paidOrders->whereHas('event', function($q) {
+            $q->where('event_date', '>=', now()->toDateString());
+        })->count(),
+        'past_events' => $paidOrders->whereHas('event', function($q) {
+            $q->where('event_date', '<', now()->toDateString());
+        })->count(),
+    ];
+
+    // Commandes récentes
+    $recentOrders = $user->orders()
+        ->with(['event.category', 'orderItems.ticketType'])
+        ->orderBy('created_at', 'desc')
+        ->limit(5)
+        ->get();
+
+    // Événements à venir
+    $upcomingEvents = $user->orders()
+        ->where('payment_status', 'paid')
+        ->with(['event.category', 'event.ticketTypes'])
+        ->whereHas('event', function($q) {
+            $q->where('event_date', '>=', now()->toDateString());
+        })
+        ->orderBy('created_at', 'desc')
+        ->limit(3)
+        ->get();
+
+    return view('acheteur.dashboard', compact('stats', 'recentOrders', 'upcomingEvents'));
+}
 
     /**
      * Mes billets

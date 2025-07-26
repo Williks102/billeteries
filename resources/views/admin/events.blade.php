@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Gestion des événements - Admin')
+@extends('layouts.app')
+
+@section('title', 'Administration - ClicBillet CI')
 @section('body-class', 'admin-page')
 
 @section('content')

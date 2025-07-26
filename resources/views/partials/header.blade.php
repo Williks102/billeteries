@@ -23,8 +23,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('home') }}#events">
-                        <i class="fas fa-calendar me-1 d-lg-none"></i>Événements
+                    <a class="nav-link {{ request()->routeIs('events.all') ? 'active' : '' }}" 
+                       href="{{ route('events.all') }}">
+                        <i class="fas fa-calendar-alt me-1"></i>Tous les événements
                     </a>
                 </li>
             </ul>

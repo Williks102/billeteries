@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class Ticket extends Model
 {
@@ -23,7 +24,7 @@ class Ticket extends Model
         'sent_at',
         'downloaded_at',
         'download_count',
-        'seat_number'  // Gardé de l'ancien modèle
+        'seat_number'
     ];
 
     protected $casts = [
@@ -90,35 +91,31 @@ class Ticket extends Model
             return null;
         }
 
-        // URL de vérification du billet
-        $verificationUrl = route('tickets.verify', $this->ticket_code);
-        
-        // Données à encoder dans le QR code
-        $qrData = json_encode([
-            'ticket_code' => $this->ticket_code,
-            'event_id' => $this->ticketType->event_id,
-            'holder_name' => $this->holder_name,
-            'verification_url' => $verificationUrl,
-            'generated_at' => now()->toISOString(),
-        ]);
-
         try {
-            // Générer le QR code en SVG (plus léger et vectoriel)
+            // URL de vérification simple
+            $verificationUrl = route('tickets.verify', $this->ticket_code);
+
+            // Générer le QR code
             $qrCode = QrCode::size(300)
-                ->style('round')
-                ->eye('circle')
-                ->gradient(50, 150, 200, 100, 100, 255, 'diagonal')
+                ->color(255, 107, 53) // Orange ClicBillet
+                ->backgroundColor(255, 255, 255)
                 ->margin(2)
                 ->errorCorrection('M')
-                ->generate($qrData);
+                ->generate($verificationUrl);
 
-            // Sauvegarder en tant que SVG
+            // Créer le dossier s'il n'existe pas
+            $directory = 'tickets/qr_codes';
+            if (!Storage::disk('public')->exists($directory)) {
+                Storage::disk('public')->makeDirectory($directory);
+            }
+
+            // Sauvegarder
             $filename = 'qr_' . $this->ticket_code . '.svg';
-            $path = 'tickets/qr_codes/' . $filename;
+            $path = $directory . '/' . $filename;
             
-            \Storage::disk('public')->put($path, $qrCode);
+            Storage::disk('public')->put($path, $qrCode);
             
-            // Mettre à jour le chemin dans la base de données
+            // Mettre à jour le chemin
             $this->update(['qr_code_path' => $path]);
             
             return $path;
@@ -134,37 +131,42 @@ class Ticket extends Model
      */
     public function getQrCodeUrlAttribute()
     {
-        if ($this->qr_code_path && \Storage::disk('public')->exists($this->qr_code_path)) {
-            return \Storage::url($this->qr_code_path);
+        // Si le QR code existe
+        if ($this->qr_code_path && Storage::disk('public')->exists($this->qr_code_path)) {
+            return Storage::url($this->qr_code_path);
         }
         
-        // Générer le QR code s'il n'existe pas
+        // Générer si manquant
         $path = $this->generateQrCode();
-        return $path ? \Storage::url($path) : null;
+        return $path ? Storage::url($path) : null;
     }
 
     /**
-     * Obtenir le QR code en tant que string SVG
+     * Obtenir le QR code en SVG pour affichage direct
      */
     public function getQrCodeSvg()
     {
-        $verificationUrl = route('tickets.verify', $this->ticket_code);
-        
-        $qrData = json_encode([
-            'ticket_code' => $this->ticket_code,
-            'event_id' => $this->ticketType->event_id,
-            'holder_name' => $this->holder_name,
-            'verification_url' => $verificationUrl,
-        ]);
+        try {
+            // Si le fichier existe, le lire
+            if ($this->qr_code_path && Storage::disk('public')->exists($this->qr_code_path)) {
+                return Storage::disk('public')->get($this->qr_code_path);
+            }
 
-        return QrCode::size(200)
-            ->style('round')
-            ->eye('circle')
-            ->color(255, 107, 53) // Orange ClicBillet
-            ->backgroundColor(255, 255, 255)
-            ->margin(1)
-            ->errorCorrection('M')
-            ->generate($qrData);
+            // Sinon générer directement
+            $verificationUrl = route('tickets.verify', $this->ticket_code);
+
+            return QrCode::size(200)
+                ->color(255, 107, 53)
+                ->backgroundColor(255, 255, 255)
+                ->margin(1)
+                ->generate($verificationUrl);
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur QR SVG: ' . $e->getMessage());
+            
+            // QR code minimal en cas d'erreur
+            return QrCode::size(200)->generate($this->ticket_code);
+        }
     }
 
     /**
@@ -179,7 +181,7 @@ class Ticket extends Model
     }
 
     /**
-     * Vérifier si le billet est valide pour utilisation
+     * Vérifier si le billet est valide
      */
     public function isValid()
     {
@@ -188,7 +190,7 @@ class Ticket extends Model
     }
 
     /**
-     * Obtenir toutes les informations du billet pour affichage
+     * Informations complètes du billet
      */
     public function getFullTicketInfo()
     {
@@ -199,14 +201,39 @@ class Ticket extends Model
             'status' => $this->status,
             'holder_name' => $this->holder_name,
             'holder_email' => $this->holder_email,
-            'event_title' => $this->ticketType->event->title,
-            'event_date' => $this->ticketType->event->event_date->format('d/m/Y'),
+            'event_title' => $this->ticketType->event->title ?? 'N/A',
+            'event_date' => $this->ticketType->event->event_date ? 
+                $this->ticketType->event->event_date->format('d/m/Y') : 'N/A',
             'event_time' => $this->ticketType->event->event_time ? 
                 $this->ticketType->event->event_time->format('H:i') : null,
-            'event_location' => $this->ticketType->event->location,
-            'ticket_type' => $this->ticketType->name,
-            'price' => $this->ticketType->formatted_price,
+            'event_location' => $this->ticketType->event->venue ?? 'N/A',
+            'ticket_type' => $this->ticketType->name ?? 'N/A',
+            'price' => $this->ticketType->price ? 
+                number_format($this->ticketType->price, 0, ',', ' ') . ' FCFA' : 'N/A',
             'used_at' => $this->used_at ? $this->used_at->format('d/m/Y H:i') : null,
         ];
+    }
+
+    /**
+     * Vérifications d'état
+     */
+    public function isAvailable()
+    {
+        return $this->status === 'available';
+    }
+
+    public function isSold()
+    {
+        return $this->status === 'sold';
+    }
+
+    public function isUsed()
+    {
+        return $this->status === 'used';
+    }
+
+    public function isCancelled()
+    {
+        return $this->status === 'cancelled';
     }
 }

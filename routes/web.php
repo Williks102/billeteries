@@ -15,6 +15,8 @@ use App\Http\Controllers\Admin\AdminController;
 
 // Page d'accueil avec liste des événements (SANS AUTHENTIFICATION)
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/all-events', [HomeController::class, 'allEvents'])->name('events.all');
+
 // Ajoutez ces routes après vos routes existantes
 Route::get('/api/events', [HomeController::class, 'getEvents'])->name('api.events');
 Route::get('/search', [HomeController::class, 'search'])->name('search');
@@ -101,67 +103,62 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/profile', [AcheteurController::class, 'updateProfile'])->name('profile.update');
     });
     
-    // Routes admin avec middleware admin
-    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
-        // Dashboard principal
-        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-        Route::get('/users', [AdminController::class, 'users'])->name('users');
-        Route::get('/events', [AdminController::class, 'events'])->name('events');
-        Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
-        Route::get('/orders/{order}', [AdminController::class, 'orderDetail'])->name('orders.show');
-        Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
-        Route::post('/commissions/{commission}/pay', [AdminController::class, 'payCommission'])->name('commissions.pay');
-        Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
-        
-        // Gestion des commissions
-        Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
-        Route::post('/commissions/{commission}/pay', [AdminController::class, 'payCommission'])->name('commissions.pay');
-        Route::get('/commissions/export', [AdminController::class, 'exportCommissions'])->name('export.commissions');
-        Route::get('/revenues/export/{period}', [AdminController::class, 'exportRevenues'])->name('export.revenues');
-        Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('export.orders');
-        Route::get('/promoters/export', [AdminController::class, 'exportPromoters'])->name('export.promoters');
-        Route::get('/accounting/export/{period}', [AdminController::class, 'exportAccounting'])->name('export.accounting');
-        Route::get('/admin/events/{id}', [AdminController::class, 'eventDetail'])->name('admin.events.detail');
-        Route::get('/admin/events/{id}', [AdminController::class, 'eventDetail'])->name('admin.events.detail');
+    // Dans routes/web.php, à l'intérieur du groupe admin
 
-        
-        // Routes temporaires (à développer)
-        // Vue avec utilisateurs dynamiques
-        Route::get('/users', [AdminController::class, 'users'])->name('users');
-
-        // Vue avec événements dynamiques
-        Route::get('/events', [AdminController::class, 'events'])->name('events');
-
-        // Vue avec commandes dynamiques
-        Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
-
-        // Détail d'une commande
-        Route::get('/orders/{order}', [AdminController::class, 'orderDetail'])->name('orders.show');
-
-        Route::get('/reports', function () { return view('admin.reports'); })->name('reports');
-        Route::get('/settings', function () { return view('admin.settings'); })->name('settings');
-        
-        // Routes pour les liens du dashboard
-        Route::get('/commissions/pending', function () { 
-            return redirect()->route('admin.commissions', ['status' => 'pending']); 
-        })->name('commissions.pending');
-        
-        Route::get('/events/no-sales', function () { 
-            return view('admin.events-no-sales'); 
-        })->name('events.no-sales');
-        
-        Route::get('/promoters/inactive', function () { 
-            return view('admin.promoters-inactive'); 
-        })->name('promoters.inactive');
-        
-        Route::get('/promoters/{user}', function ($user) { 
-            return view('admin.promoter-detail', ['promoter' => \App\Models\User::findOrFail($user)]); 
-        })->name('promoters.show');
-        
-        Route::get('/orders/{order}', function ($order) { 
-            return view('admin.order-detail', ['order' => \App\Models\Order::findOrFail($order)]); 
-        })->name('orders.show');
-    });
+Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard principal
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/users', [AdminController::class, 'users'])->name('users');
+    Route::get('/events', [AdminController::class, 'events'])->name('events');
+    Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
+    Route::get('/orders/{order}', [AdminController::class, 'orderDetail'])->name('orders.show');
+    Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
+    Route::post('/commissions/{commission}/pay', [AdminController::class, 'payCommission'])->name('commissions.pay');
+    Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
+    Route::patch('/orders/{order}/status', [AdminController::class, 'updateOrderStatus'])->name('orders.updateStatus');
+    Route::post('/orders/bulk-update', [AdminController::class, 'bulkUpdateOrders'])->name('orders.bulkUpdate');
+    Route::get('/orders/{order}/pdf', [AdminController::class, 'downloadOrderPDF'])->name('orders.pdf');
+    Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('orders.export');
+    Route::get('/tickets/{ticket}', [AdminController::class, 'showTicket'])->name('tickets.show');
+    Route::patch('/tickets/{ticket}/mark-used', [AdminController::class, 'markTicketUsed'])->name('tickets.markUsed');
+    Route::get('/tickets/{ticket}/download', [AdminController::class, 'downloadTicketPDF'])->name('tickets.download');
+    
+    // CORRECTION : Enlever le préfixe /admin puisqu'il est déjà dans le groupe
+    Route::get('/events/{id}', [AdminController::class, 'eventDetail'])->name('events.detail');
+    
+    // Gestion des commissions (exports)
+    Route::get('/commissions/export', [AdminController::class, 'exportCommissions'])->name('export.commissions');
+    Route::get('/revenues/export/{period}', [AdminController::class, 'exportRevenues'])->name('export.revenues');
+    Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('export.orders');
+    Route::get('/promoters/export', [AdminController::class, 'exportPromoters'])->name('export.promoters');
+    Route::get('/accounting/export/{period}', [AdminController::class, 'exportAccounting'])->name('export.accounting');
+    
+    // Routes temporaires
+    Route::get('/reports', function () { 
+        return view('admin.reports'); 
+    })->name('reports');
+    
+    Route::get('/settings', function () { 
+        return view('admin.settings'); 
+    })->name('settings');
+    
+    // Routes pour les liens du dashboard
+    Route::get('/commissions/pending', function () { 
+        return redirect()->route('admin.commissions', ['status' => 'pending']); 
+    })->name('commissions.pending');
+    
+    Route::get('/events/no-sales', function () { 
+        return view('admin.events-no-sales'); 
+    })->name('events.no-sales');
+    
+    Route::get('/promoters/inactive', function () { 
+        return view('admin.promoters-inactive'); 
+    })->name('promoters.inactive');
+    
+    Route::get('/promoters/{user}', function ($user) { 
+        return view('admin.promoter-detail', ['promoter' => \App\Models\User::findOrFail($user)]); 
+    })->name('promoters.show');
+});
     
  // Routes promoteur avec middleware promoteur
     Route::middleware(['auth', 'promoteur'])->prefix('promoteur')->name('promoteur.')->group(function () {

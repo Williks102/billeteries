@@ -1,125 +1,30 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $event->title }} - Billetterie CI</title>
-    
-    <!-- Bootstrap CSS -->
-     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<!-- NOUVEAU : Thème Orange & Noir -->
-<link href="{{ asset('css/theme.css') }}" rel="stylesheet">
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">    
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
-    <style>
-        .event-hero {
-            background: linear-gradient(135deg, #0d0e14ff 0%, #0a090aff 100%);
-            color: white;
-            padding: 100px 0 60px;
-        }
-        
-        .ticket-card {
-            border: 2px solid #e9ecef;
-            border-radius: 15px;
-            transition: all 0.3s ease;
-        }
-        
-        .ticket-card:hover {
-            border-color: #667eea;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
-        }
-        
-        .ticket-card.popular {
-            border-color: #FF6B35;
-            position: relative;
-        }
-        
-        .popular-badge {
-            position: absolute;
-            top: -10px;
-            left: 20px;
-            background: #FF6B35;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        
-        .btn-primary-custom {
-            background: #FF6B35;
-            border: none;
-            border-radius: 25px;
-            padding: 12px 30px;
-            font-weight: 600;
-        }
-        
-        .btn-primary-custom:hover {
-            background: #E55A2B;
-        }
-        
-        .info-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #ee5c07ff;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-        }
-        
-        .similar-event-card {
-            transition: transform 0.3s ease;
-        }
-        
-        .similar-event-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .navbar-custom {
-            background: rgba(255, 255, 255, 0.95) !important;
-            backdrop-filter: blur(10px);
-        }
-    </style>
-</head>
+@extends('layouts.app')
 
-<body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light fixed-top navbar-custom">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ route('home') }}">
-                <i class="fas fa-ticket-alt me-2"></i>
-                Billetterie CI
-            </a>
-            
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link position-relative me-3" href="{{ route('cart.show') }}">
-                    <i class="fas fa-shopping-cart"></i>
-                    <span class="cart-badge badge bg-danger position-absolute top-0 start-100 translate-middle" 
-                          style="display: none; font-size: 0.7rem;">0</span>
-                </a>
-                <a class="nav-link" href="{{ route('home') }}">
-                    <i class="fas fa-arrow-left me-1"></i> Retour aux événements
-                </a>
-            </div>
-        </div>
-    </nav>
+@section('title', $event->title . ' - ClicBillet CI')
+@section('body-class', 'event-page')
 
-    <!-- Hero Section -->
-    <section class="event-hero">
+@section('content')
+
+<!-- Hero Section avec image de l'événement -->
+<section class="event-hero">
+    <div class="hero-background">
+        @if($event->image)
+            <img src="{{ asset('storage/' . $event->image) }}" alt="{{ $event->title }}" class="hero-image">
+        @endif
+        <div class="hero-overlay"></div>
+    </div>
+    
+    <div class="hero-content">
         <div class="container">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-lg-8">
                     <!-- Breadcrumb -->
-                    <nav aria-label="breadcrumb" class="mb-4">
+                    <nav aria-label="breadcrumb" class="mb-3">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item">
-                                <a href="{{ route('home') }}" class="text-white-50">Accueil</a>
+                                <a href="{{ route('home') }}" class="text-white-50">
+                                    <i class="fas fa-home me-1"></i>Accueil
+                                </a>
                             </li>
                             <li class="breadcrumb-item">
                                 <a href="{{ route('categories.show', $event->category) }}" class="text-white-50">
@@ -131,423 +36,1087 @@
                     </nav>
                     
                     <!-- Catégorie -->
-                    <span class="badge bg-light text-dark mb-3 fs-6">
-                        <i class="{{ $event->category->icon }} me-1"></i>
-                        {{ $event->category->name }}
-                    </span>
+                    <div class="event-category mb-3">
+                        <span class="badge category-badge">
+                            <i class="{{ $event->category->icon ?? 'fas fa-calendar' }} me-2"></i>
+                            {{ $event->category->name }}
+                        </span>
+                    </div>
                     
                     <!-- Titre -->
-                    <h1 class="display-4 fw-bold mb-4">{{ $event->title }}</h1>
+                    <h1 class="event-title">{{ $event->title }}</h1>
                     
-                    <!-- Infos principales -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="info-icon">
-                                    <i class="fas fa-calendar"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0">Date & Heure</h6>
-                                    <p class="mb-0">{{ $event->formatted_event_date }} à {{ $event->formatted_event_time }}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="info-icon">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0">Lieu</h6>
-                                    <p class="mb-0">{{ $event->venue }}</p>
-                                    <small class="text-white-50">{{ $event->address }}</small>
-                                </div>
-                            </div>
+                    <!-- Informations rapides -->
+                    <div class="event-quick-info">
+                        <div class="info-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>{{ $event->event_date ? $event->event_date->format('d/m/Y') : 'Date à déterminer' }}</span>
                         </div>
                         
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="info-icon">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0">Organisateur</h6>
-                                    <p class="mb-0">{{ $event->promoteur->name }}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="info-icon">
-                                    <i class="fas fa-ticket-alt"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0">Billets disponibles</h6>
-                                    <p class="mb-0">{{ $event->availableTicketsCount() }} / {{ $event->totalTicketsAvailable() }}</p>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-success" style="width: {{ 100 - $event->getProgressPercentage() }}%"></div>
-                                    </div>
-                                </div>
-                            </div>
+                        @if($event->event_time)
+                        <div class="info-item">
+                            <i class="fas fa-clock"></i>
+                            <span>{{ $event->event_time->format('H:i') }}</span>
                         </div>
-                    </div>
-                    
-                    <!-- Prix à partir de -->
-                    <div class="alert alert-light d-inline-block">
-                        <i class="fas fa-tag me-2"></i>
-                        <strong>À partir de {{ number_format($event->getLowestPrice(), 0, ',', ' ') }} FCFA</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Description et Types de billets -->
-    <section class="py-5">
-        <div class="container">
-            <div class="row">
-                <!-- Description -->
-                <div class="col-lg-8">
-                    <div class="mb-5">
-                        <h3 class="mb-4"><i class="fas fa-info-circle me-2"></i>À propos de cet événement</h3>
-                        <div class="bg-light p-4 rounded">
-                            <p class="lead">{{ $event->description }}</p>
-                            
-                            @if($event->terms_conditions)
-                                <hr>
-                                <h6><i class="fas fa-file-contract me-2"></i>Conditions particulières</h6>
-                                <p class="small text-muted">{{ $event->terms_conditions }}</p>
-                            @endif
-                        </div>
-                    </div>
-                    
-                    <!-- Types de billets -->
-                    <div class="mb-5">
-                        <h3 class="mb-4"><i class="fas fa-tickets me-2"></i>Choisir vos billets</h3>
-                        
-                        @if($event->ticketTypes->count() > 0 && $event->isOnSale())
-                            <div class="row">
-                                @foreach($event->ticketTypes as $index => $ticketType)
-                                    <div class="col-lg-6 mb-4">
-                                        <div class="ticket-card p-4 h-100 {{ $index == 1 ? 'popular' : '' }}">
-                                            @if($index == 1)
-                                                <div class="popular-badge">Populaire</div>
-                                            @endif
-                                            
-                                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                                <div>
-                                                    <h5 class="fw-bold mb-1">{{ $ticketType->name }}</h5>
-                                                    <p class="text-muted small mb-0">{{ $ticketType->description }}</p>
-                                                </div>
-                                                <div class="text-end">
-                                                    <h4 class="fw-bold text-primary mb-0">
-                                                        {{ number_format($ticketType->price, 0, ',', ' ') }} FCFA
-                                                    </h4>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Infos stock -->
-                                            <div class="mb-3">
-                                                @if($ticketType->remainingTickets() > 0)
-                                                    <small class="text-success">
-                                                        <i class="fas fa-check-circle me-1"></i>
-                                                        {{ $ticketType->remainingTickets() }} places disponibles
-                                                    </small>
-                                                @else
-                                                    <small class="text-danger">
-                                                        <i class="fas fa-times-circle me-1"></i>
-                                                        Complet
-                                                    </small>
-                                                @endif
-                                                
-                                                @if($ticketType->max_per_order < 10)
-                                                    <small class="text-muted d-block">
-                                                        Limité à {{ $ticketType->max_per_order }} billet(s) par commande
-                                                    </small>
-                                                @endif
-                                            </div>
-                                            
-                                            <!-- Bouton réservation -->
-                                            @if($ticketType->isAvailable())
-                                                <button class="btn btn-primary-custom w-100" 
-                                                        onclick="selectTicket({{ $ticketType->id }}, '{{ $ticketType->name }}', {{ $ticketType->price }}, {{ $ticketType->max_per_order }})">
-                                                    <i class="fas fa-cart-plus me-2"></i>
-                                                    Sélectionner
-                                                </button>
-                                            @else
-                                                <button class="btn btn-secondary w-100" disabled>
-                                                    @if($ticketType->isSoldOut())
-                                                        Complet
-                                                    @elseif(!$ticketType->isSaleStarted())
-                                                        Vente pas encore ouverte
-                                                    @elseif($ticketType->isSaleEnded())
-                                                        Vente terminée
-                                                    @else
-                                                        Non disponible
-                                                    @endif
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @elseif(!$event->isOnSale())
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Les billets ne sont pas encore en vente pour cet événement.
-                            </div>
-                        @else
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Aucun type de billet n'est actuellement disponible.
-                            </div>
                         @endif
+                        
+                        <div class="info-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ $event->venue ?? 'Lieu à confirmer' }}</span>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="fas fa-user"></i>
+                            <span>Par {{ $event->promoteur->name ?? 'Organisateur' }}</span>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- Sidebar -->
-                <div class="col-lg-4">
-                    <!-- Partage -->
-                    <div class="card mb-4">
-                        <div class="card-body text-center">
-                            <h6 class="card-title"><i class="fas fa-share-alt me-2"></i>Partager</h6>
-                            <div class="d-flex justify-content-center gap-2">
-                                <a href="#" class="btn btn-primary btn-sm">
-                                    <i class="fab fa-facebook-f"></i>
-                                </a>
-                                <a href="#" class="btn btn-info btn-sm">
-                                    <i class="fab fa-twitter"></i>
-                                </a>
-                                <a href="#" class="btn btn-success btn-sm">
-                                    <i class="fab fa-whatsapp"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Contact organisateur -->
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <h6 class="card-title"><i class="fas fa-user-tie me-2"></i>Organisateur</h6>
-                            <p class="fw-bold mb-1">{{ $event->promoteur->name }}</p>
-                            <p class="text-muted small mb-2">{{ $event->promoteur->phone }}</p>
-                            <button class="btn btn-outline-primary btn-sm w-100">
-                                <i class="fas fa-envelope me-1"></i>
-                                Contacter
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Événements similaires -->
-    @if($similarEvents->count() > 0)
-        <section class="py-5 bg-light">
-            <div class="container">
-                <h3 class="text-center mb-5">Événements similaires</h3>
-                <div class="row">
-                    @foreach($similarEvents as $similar)
-                        <div class="col-lg-4 mb-4">
-                            <div class="card similar-event-card h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title">{{ $similar->title }}</h6>
-                                    <p class="card-text small text-muted">
-                                        <i class="fas fa-calendar me-1"></i>{{ $similar->formatted_event_date }}
-                                        <br>
-                                        <i class="fas fa-map-marker-alt me-1"></i>{{ $similar->venue }}
-                                    </p>
-                                    <p class="fw-bold text-primary">
-                                        À partir de {{ number_format($similar->getLowestPrice(), 0, ',', ' ') }} FCFA
-                                    </p>
-                                </div>
-                                <div class="card-footer bg-transparent">
-                                    <a href="{{ route('events.show', $similar) }}" class="btn btn-outline-primary btn-sm w-100">
-                                        Voir détails
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-    <!-- Modal sélection de billets -->
-    <div class="modal fade" id="ticketModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Sélectionner vos billets</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p><strong id="selectedTicketName"></strong></p>
-                    <p>Prix unitaire : <span id="selectedTicketPrice"></span> FCFA</p>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Nombre de billets</label>
-                        <select id="ticketQuantity" class="form-select">
-                            <!-- Options ajoutées dynamiquement -->
-                        </select>
-                    </div>
-                    
-                    <div class="alert alert-info">
-                        <strong>Total : <span id="totalPrice">0</span> FCFA</strong>
-                    </div>
-                    
-                    @guest
-                        <div class="alert alert-warning">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Vous devez être connecté pour acheter des billets.
-                        </div>
-                    @endguest
-                </div>
-                <div class="modal-footer">
-                    @auth
-                        <button type="button" class="btn btn-primary-custom" onclick="addToCart()">
-                            <i class="fas fa-shopping-cart me-1"></i>
-                            Ajouter au panier
-                        </button>
-                    @else
-                        <a href="{{ route('login') }}" class="btn btn-primary-custom">
-                            <i class="fas fa-sign-in-alt me-1"></i>
-                            Se connecter pour acheter
+                <!-- Quick action sur mobile -->
+                <div class="col-lg-4 d-lg-none">
+                    <div class="mobile-cta">
+                        <a href="#tickets" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-ticket-alt me-2"></i>Réserver maintenant
                         </a>
-                    @endauth
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</section>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Section principale -->
+<div class="main-content">
+    <div class="container py-5">
+        <div class="row">
+            <!-- Contenu principal -->
+            <div class="col-lg-8">
+                <!-- Statistiques rapides -->
+                <div class="row mb-5">
+                    @php
+                        $totalAvailable = $event->ticketTypes->where('is_active', true)->sum('quantity_available');
+                        $totalSold = $event->ticketTypes->where('is_active', true)->sum('quantity_sold');
+                        $remainingTotal = $totalAvailable - $totalSold;
+                        $minPrice = $event->ticketTypes->where('is_active', true)->min('price') ?? 0;
+                    @endphp
+                    
+                    <div class="col-6 col-md-3 mb-3">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon bg-primary">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <h4 class="stat-number">{{ $remainingTotal }}</h4>
+                            <p class="stat-label">Places disponibles</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-6 col-md-3 mb-3">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon bg-success">
+                                <i class="fas fa-euro-sign"></i>
+                            </div>
+                            <h4 class="stat-number">{{ number_format($minPrice, 0, ',', ' ') }}</h4>
+                            <p class="stat-label">À partir de (FCFA)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-6 col-md-3 mb-3">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon bg-warning">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <h4 class="stat-number">
+                                @if($event->event_date)
+                                    {{ max(0, $event->event_date->diffInDays(now())) }}
+                                @else
+                                    --
+                                @endif
+                            </h4>
+                            <p class="stat-label">Jours restants</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-6 col-md-3 mb-3">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon bg-info">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h4 class="stat-number">{{ $totalSold }}</h4>
+                            <p class="stat-label">Participants</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description de l'événement -->
+                <div class="content-card mb-5">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-info-circle text-orange me-2"></i>
+                            À propos de cet événement
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="event-description">
+                            {!! nl2br(e($event->description ?? 'Description non disponible.')) !!}
+                        </div>
+                        
+                        @if($event->address)
+                        <div class="venue-info mt-4">
+                            <h5><i class="fas fa-map-marker-alt me-2"></i>Lieu exact</h5>
+                            <p class="text-muted">{{ $event->address }}</p>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Programme (si disponible) -->
+                @if($event->program)
+                <div class="content-card mb-5">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-list-ul text-orange me-2"></i>
+                            Programme
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="program-content">
+                            {!! nl2br(e($event->program)) !!}
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Organisateur -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-user-tie text-orange me-2"></i>
+                            Organisateur
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="organizer-info">
+                            <div class="d-flex align-items-center">
+                                <div class="organizer-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <h5 class="mb-1">{{ $event->promoteur->name ?? 'Organisateur' }}</h5>
+                                    <p class="text-muted mb-0">Promoteur d'événements</p>
+                                </div>
+                            </div>
+                            
+                            @if($event->promoteur && $event->promoteur->bio)
+                            <div class="organizer-bio mt-3">
+                                <p>{{ $event->promoteur->bio }}</p>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar droite - Réservation -->
+            <div class="col-lg-4">
+                <div class="booking-sidebar sticky-top">
+                    <!-- Widget de réservation -->
+                    <div class="booking-card" id="tickets">
+                        <div class="card-header">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-ticket-alt text-orange me-2"></i>
+                                Réserver vos billets
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            @if($event->ticketTypes->where('is_active', true)->count() > 0)
+                                <form id="ticketForm" action="{{ route('cart.add') }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="event_id" value="{{ $event->id }}">
+                                    
+                                    <div class="ticket-types">
+                                        @foreach($event->ticketTypes->where('is_active', true) as $ticketType)
+                                            @php
+                                                $remainingTickets = $ticketType->quantity_available - $ticketType->quantity_sold;
+                                                $maxPerOrder = min($remainingTickets, $ticketType->max_per_order ?? 10);
+                                            @endphp
+                                            
+                                            <div class="ticket-type-item">
+                                                <div class="ticket-info">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <div>
+                                                            <h6 class="ticket-name">{{ $ticketType->name }}</h6>
+                                                            @if($ticketType->description)
+                                                            <p class="ticket-description">{{ $ticketType->description }}</p>
+                                                            @endif
+                                                        </div>
+                                                        <div class="ticket-price">
+                                                            <span class="price">{{ number_format($ticketType->price, 0, ',', ' ') }}</span>
+                                                            <small class="currency">FCFA</small>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="ticket-actions">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <small class="text-muted">{{ $remainingTickets }} restants</small>
+                                                            
+                                                            @if($remainingTickets > 0)
+                                                                <div class="quantity-control">
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                                                            onclick="changeQuantity({{ $ticketType->id }}, -1)"
+                                                                            id="minus_{{ $ticketType->id }}">
+                                                                        <i class="fas fa-minus"></i>
+                                                                    </button>
+                                                                    
+                                                                    <span class="quantity-display mx-2" id="display_{{ $ticketType->id }}">0</span>
+                                                                    
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                                                            onclick="changeQuantity({{ $ticketType->id }}, 1)"
+                                                                            id="plus_{{ $ticketType->id }}">
+                                                                        <i class="fas fa-plus"></i>
+                                                                    </button>
+                                                                    
+                                                                    <input type="hidden" 
+                                                                           name="tickets[{{ $ticketType->id }}]" 
+                                                                           id="qty_{{ $ticketType->id }}" 
+                                                                           value="0" 
+                                                                           max="{{ $maxPerOrder }}"
+                                                                           data-price="{{ $ticketType->price }}">
+                                                                </div>
+                                                            @else
+                                                                <span class="btn btn-secondary btn-sm disabled">Épuisé</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    
+                                    <!-- Total et bouton d'ajout au panier -->
+                                    <div class="booking-total">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <strong>Total :</strong>
+                                            <strong class="total-amount" id="totalAmount">0 FCFA</strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" id="addToCartBtn" disabled>
+                                        <i class="fas fa-cart-plus me-2"></i>Ajouter au panier
+                                    </button>
+                                </form>
+                                
+                                <!-- Bouton partage -->
+                                <div class="booking-actions">
+                                    <button type="button" class="btn btn-outline-primary w-100" onclick="shareEvent()">
+                                        <i class="fas fa-share-alt me-2"></i>Partager
+                                    </button>
+                                </div>
+                            @else
+                                <div class="no-tickets-available">
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                                        <h5>Billets non disponibles</h5>
+                                        <p class="text-muted">Les billets pour cet événement ne sont pas encore en vente.</p>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Informations pratiques -->
+                    <div class="info-card mt-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info text-orange me-2"></i>
+                                Informations pratiques
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="info-list">
+                                <div class="info-item">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <div>
+                                        <strong>Date</strong>
+                                        <p>{{ $event->event_date ? $event->event_date->format('l d F Y') : 'À déterminer' }}</p>
+                                    </div>
+                                </div>
+                                
+                                @if($event->event_time)
+                                <div class="info-item">
+                                    <i class="fas fa-clock"></i>
+                                    <div>
+                                        <strong>Heure</strong>
+                                        <p>{{ $event->event_time->format('H:i') }}
+                                        @if($event->end_time)
+                                            - {{ $event->end_time->format('H:i') }}
+                                        @endif
+                                        </p>
+                                    </div>
+                                </div>
+                                @endif
+                                
+                                <div class="info-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <div>
+                                        <strong>Lieu</strong>
+                                        <p>{{ $event->venue ?? 'À confirmer' }}</p>
+                                    </div>
+                                </div>
+                                
+                                @if($event->age_restriction)
+                                <div class="info-item">
+                                    <i class="fas fa-user-check"></i>
+                                    <div>
+                                        <strong>Âge requis</strong>
+                                        <p>{{ $event->age_restriction }}</p>
+                                    </div>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section événements similaires -->
+@if(isset($similarEvents) && $similarEvents->count() > 0)
+<section class="similar-events py-5 bg-light">
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3 class="section-title">Événements similaires</h3>
+                <p class="section-subtitle">Découvrez d'autres événements dans la même catégorie</p>
+            </div>
+        </div>
+        
+        <div class="row">
+            @foreach($similarEvents as $similarEvent)
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="event-card">
+                    <a href="{{ route('events.show', $similarEvent) }}" class="card-link">
+                        @if($similarEvent->image)
+                            <img src="{{ asset('storage/' . $similarEvent->image) }}" class="card-img-top" alt="{{ $similarEvent->title }}">
+                        @else
+                            <div class="card-img-placeholder">
+                                <i class="{{ $similarEvent->category->icon ?? 'fas fa-calendar' }} fa-3x"></i>
+                            </div>
+                        @endif
+                        
+                        <div class="card-body">
+                            <span class="badge category-badge mb-2">{{ $similarEvent->category->name }}</span>
+                            <h5 class="card-title">{{ Str::limit($similarEvent->title, 50) }}</h5>
+                            
+                            <div class="event-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>{{ $similarEvent->event_date ? $similarEvent->event_date->format('d/m/Y') : 'Date TBD' }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>{{ Str::limit($similarEvent->venue, 30) }}</span>
+                                </div>
+                            </div>
+                            
+                            @if($similarEvent->ticketTypes->where('is_active', true)->count() > 0)
+                            <div class="card-footer">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="price">
+                                        À partir de <strong>{{ number_format($similarEvent->ticketTypes->where('is_active', true)->min('price'), 0, ',', ' ') }} FCFA</strong>
+                                    </span>
+                                    <span class="btn btn-outline-primary btn-sm">Voir</span>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                    </a>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+@endif
+
+@push('styles')
+<style>
+/* Variables CSS */
+:root {
+    --primary-orange: #FF6B35;
+    --secondary-orange: #ff8c61;
+    --dark-blue: #1a237e;
+    --light-gray: #f8f9fa;
+}
+
+.event-page {
+    background-color: #f8f9fa;
+}
+
+/* Hero Section */
+.event-hero {
+    position: relative;
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    color: white;
+    overflow: hidden;
+}
+
+.hero-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+}
+
+.hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(255,107,53,0.3));
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.event-title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.category-badge {
+    background: linear-gradient(135deg, var(--primary-orange), var(--secondary-orange));
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.event-quick-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255,255,255,0.9);
+}
+
+.info-item i {
+    color: var(--primary-orange);
+    width: 20px;
+}
+
+/* Cards */
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border: none;
+    height: 100%;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    margin: 0 auto 1rem;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark-blue);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.content-card,
+.booking-card,
+.info-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border: none;
+    margin-bottom: 2rem;
+}
+
+.card-header {
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 1.5rem;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--dark-blue);
+    margin: 0;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Booking sidebar */
+.booking-sidebar {
+    top: 2rem;
+}
+
+.ticket-type-item {
+    padding: 1.5rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.ticket-type-item:hover {
+    border-color: var(--primary-orange);
+    background: rgba(255,107,53,0.02);
+}
+
+.ticket-name {
+    font-weight: 600;
+    color: var(--dark-blue);
+    margin-bottom: 0.25rem;
+}
+
+.ticket-description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.ticket-price {
+    text-align: right;
+}
+
+.price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-orange);
+}
+
+.currency {
+    color: #6c757d;
+}
+
+.ticket-actions {
+    margin-top: 1rem;
+}
+
+.quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quantity-control button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.quantity-display {
+    min-width: 20px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--dark-blue);
+}
+
+.quantity-display.selected {
+    color: var(--primary-orange);
+}
+
+.booking-total {
+    background: var(--light-gray);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+}
+
+.total-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-orange);
+}
+
+.organizer-avatar {
+    width: 60px;
+    height: 60px;
+    background: rgba(255,107,53,0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-orange);
+    font-size: 1.5rem;
+}
+
+.info-list .info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.info-list .info-item:last-child {
+    border-bottom: none;
+}
+
+.info-list .info-item i {
+    color: var(--primary-orange);
+    width: 20px;
+    margin-top: 4px;
+}
+
+.info-list .info-item strong {
+    color: var(--dark-blue);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.info-list .info-item p {
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* Événements similaires */
+.event-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.event-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+.card-img-placeholder {
+    height: 200px;
+    background: linear-gradient(135deg, var(--primary-orange), var(--secondary-orange));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.event-meta {
+    margin: 1rem 0;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.meta-item i {
+    color: var(--primary-orange);
+    width: 16px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .event-title {
+        font-size: 2rem;
+    }
     
-    <script>
-        let selectedTicketId = null;
-        let selectedTicketPrice = 0;
-        
-        // Charger le nombre d'articles dans le panier au chargement de la page
-        document.addEventListener('DOMContentLoaded', function() {
-            fetch('/cart/data')
-                .then(response => response.json())
-                .then(data => {
-                    updateCartBadge(data.cart_count);
-                })
-                .catch(error => console.error('Erreur lors du chargement du panier:', error));
+    .event-quick-info {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+    
+    .booking-sidebar {
+        position: static;
+        margin-top: 2rem;
+    }
+    
+    .mobile-cta {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 1rem;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+    }
+}
+
+@media (max-width: 576px) {
+    .quantity-control {
+        justify-content: center;
+        margin-top: 8px;
+    }
+    
+    .ticket-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .ticket-actions > div:first-child {
+        margin-bottom: 8px;
+    }
+    
+    .ticket-type-item {
+        padding: 1rem;
+    }
+}
+</style>
+@endpush
+
+@push('scripts')
+<script>
+// Gestion des quantités de billets
+function changeQuantity(ticketTypeId, change) {
+    console.log('changeQuantity appelée:', ticketTypeId, change); // Debug
+    
+    const input = document.getElementById('qty_' + ticketTypeId);
+    const display = document.getElementById('display_' + ticketTypeId);
+    
+    if (!input || !display) {
+        console.error('Éléments non trouvés:', {
+            input: !!input,
+            display: !!display,
+            ticketTypeId: ticketTypeId
         });
-        
-        function selectTicket(ticketId, ticketName, price, maxQuantity) {
-            selectedTicketId = ticketId;
-            document.getElementById('selectedTicketName').textContent = ticketName;
-            document.getElementById('selectedTicketPrice').textContent = price.toLocaleString();
-            selectedTicketPrice = price;
-            
-            // Remplir les options de quantité
-            const quantitySelect = document.getElementById('ticketQuantity');
-            quantitySelect.innerHTML = '';
-            
-            for (let i = 1; i <= maxQuantity; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i + (i === 1 ? ' billet' : ' billets');
-                quantitySelect.appendChild(option);
+        return;
+    }
+    
+    const currentValue = parseInt(input.value) || 0;
+    const maxValue = parseInt(input.getAttribute('max')) || 0;
+    const newValue = Math.max(0, Math.min(currentValue + change, maxValue));
+    
+    console.log('Valeurs:', { currentValue, maxValue, newValue }); // Debug
+    
+    input.value = newValue;
+    display.textContent = newValue;
+    
+    // Ajouter une classe visuelle si quantité > 0
+    if (newValue > 0) {
+        display.classList.add('selected');
+    } else {
+        display.classList.remove('selected');
+    }
+    
+    updateTotal();
+}
+
+// Mise à jour du total
+function updateTotal() {
+    let total = 0;
+    let hasItems = false;
+    
+    // Parcourir tous les inputs cachés pour calculer le total
+    const ticketInputs = document.querySelectorAll('input[name^="tickets"]');
+    ticketInputs.forEach(input => {
+        const quantity = parseInt(input.value) || 0;
+        const price = parseInt(input.getAttribute('data-price')) || 0;
+        total += quantity * price;
+        if (quantity > 0) hasItems = true;
+    });
+    
+    document.getElementById('totalAmount').textContent = total.toLocaleString() + ' FCFA';
+    
+    const addToCartBtn = document.getElementById('addToCartBtn');
+    if (addToCartBtn) {
+        addToCartBtn.disabled = !hasItems;
+    }
+}
+
+// Gestion des changements de quantité via input
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les affichages de quantité
+    const quantityDisplays = document.querySelectorAll('.quantity-display');
+    quantityDisplays.forEach(display => {
+        display.textContent = '0';
+    });
+    
+    // Initialiser le total
+    updateTotal();
+    
+    // Scroll smooth vers la section billets
+    const bookingLinks = document.querySelectorAll('a[href="#tickets"]');
+    bookingLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('tickets').scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
+    });
+    
+    // Animation des statistiques au scroll
+    const observerOptions = {
+        threshold: 0.5,
+        rootMargin: '0px 0px -100px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const statNumbers = entry.target.querySelectorAll('.stat-number');
+                statNumbers.forEach(number => {
+                    animateNumber(number);
+                });
+                observer.unobserve(entry.target);
             }
+        });
+    }, observerOptions);
+    
+    const statsSection = document.querySelector('.row.mb-5');
+    if (statsSection) {
+        observer.observe(statsSection);
+    }
+    
+    // Debug: vérifier que les boutons sont bien attachés
+    console.log('Boutons +/- trouvés:', document.querySelectorAll('.quantity-control button').length);
+    console.log('Inputs cachés trouvés:', document.querySelectorAll('input[name^="tickets"]').length);
+    
+    // Gestion du formulaire de billets
+    const ticketForm = document.getElementById('ticketForm');
+    if (ticketForm) {
+        ticketForm.addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            updateTotal();
+            // Vérifier qu'au moins un billet est sélectionné
+            let hasTickets = false;
+            const ticketInputs = this.querySelectorAll('input[name^="tickets"]');
+            ticketInputs.forEach(input => {
+                if (parseInt(input.value) > 0) {
+                    hasTickets = true;
+                }
+            });
             
-            // Ouvrir le modal
-            new bootstrap.Modal(document.getElementById('ticketModal')).show();
-        }
-        
-        function updateTotal() {
-            const quantity = parseInt(document.getElementById('ticketQuantity').value) || 1;
-            const total = selectedTicketPrice * quantity;
-            document.getElementById('totalPrice').textContent = total.toLocaleString();
-        }
-        
-        function addToCart() {
-            if (!selectedTicketId) {
-                alert('Veuillez sélectionner un type de billet');
+            if (!hasTickets) {
+                showNotification('Veuillez sélectionner au moins un billet', 'error');
                 return;
             }
             
-            const quantity = parseInt(document.getElementById('ticketQuantity').value);
+            const formData = new FormData(this);
+            const submitBtn = document.getElementById('addToCartBtn');
+            const originalText = submitBtn.innerHTML;
             
-            // Afficher un indicateur de chargement
-            const button = event.target;
-            const originalText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Ajout en cours...';
-            button.disabled = true;
+            // État de chargement
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Ajout en cours...';
             
-            fetch('{{ route("cart.add") }}', {
+            fetch(this.action, {
                 method: 'POST',
+                body: formData,
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({
-                    ticket_type_id: selectedTicketId,
-                    quantity: quantity
-                })
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
-                    // Succès - fermer le modal et afficher un message
-                    bootstrap.Modal.getInstance(document.getElementById('ticketModal')).hide();
+                    showNotification('Billets ajoutés au panier avec succès!', 'success');
                     
-                    // Afficher une notification de succès
-                    showNotification('Billets ajoutés au panier avec succès !', 'success');
+                    // Mettre à jour le badge du panier si présent
+                    const cartBadge = document.querySelector('.cart-badge');
+                    if (cartBadge && data.cartCount) {
+                        cartBadge.textContent = data.cartCount;
+                        cartBadge.style.display = 'block';
+                    }
                     
-                    // Mettre à jour le compteur du panier
-                    updateCartBadge(data.cart_count);
+                    // Réinitialiser les quantités
+                    ticketInputs.forEach(input => {
+                        input.value = 0;
+                        const ticketId = input.name.match(/\d+/)[0];
+                        const display = document.getElementById('display_' + ticketId);
+                        if (display) {
+                            display.textContent = '0';
+                            display.classList.remove('selected');
+                        }
+                    });
+                    updateTotal();
                 } else {
-                    showNotification(data.message, 'error');
+                    showNotification(data.message || 'Erreur lors de l\'ajout au panier', 'error');
                 }
             })
             .catch(error => {
                 console.error('Erreur:', error);
-                showNotification('Une erreur est survenue. Veuillez réessayer.', 'error');
+                showNotification('Erreur lors de l\'ajout au panier. Veuillez réessayer.', 'error');
             })
             .finally(() => {
-                // Restaurer le bouton
-                button.innerHTML = originalText;
-                button.disabled = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
             });
+        });
+    }
+});
+
+// Animation des chiffres
+function animateNumber(element) {
+    const finalValue = parseInt(element.textContent.replace(/\D/g, '')) || 0;
+    if (finalValue === 0) return;
+    
+    let currentValue = 0;
+    const increment = finalValue / 30;
+    
+    const timer = setInterval(() => {
+        currentValue += increment;
+        if (currentValue >= finalValue) {
+            currentValue = finalValue;
+            clearInterval(timer);
         }
-        
-        function showNotification(message, type) {
-            // Créer une notification Bootstrap
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
-            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 350px;';
-            alertDiv.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.body.appendChild(alertDiv);
-            
-            // Supprimer automatiquement après 5 secondes
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 5000);
+        element.textContent = Math.floor(currentValue).toLocaleString();
+    }, 50);
+}
+
+// Partage de l'événement
+function shareEvent() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ addslashes($event->title) }}',
+            text: 'Découvrez cet événement sur ClicBillet CI',
+            url: window.location.href
+        }).catch(console.error);
+    } else {
+        // Fallback pour les navigateurs sans support natif
+        const shareModal = document.getElementById('shareModal');
+        if (shareModal) {
+            const modal = new bootstrap.Modal(shareModal);
+            modal.show();
+        } else {
+            copyLink();
         }
-        
-        function updateCartBadge(count) {
-            // Mettre à jour le badge du panier dans la navigation
-            const cartBadge = document.querySelector('.cart-badge');
-            if (cartBadge) {
-                cartBadge.textContent = count;
-                cartBadge.style.display = count > 0 ? 'inline' : 'none';
-            }
+    }
+}
+
+// Copier le lien dans le presse-papiers
+function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        showNotification('Lien copié dans le presse-papiers!', 'success');
+    }).catch(() => {
+        showNotification('Erreur lors de la copie du lien', 'error');
+    });
+}
+
+// Fonction de notification
+function showNotification(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        <i class="fas ${iconClass} me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
         }
-        
-        // Mettre à jour le total quand la quantité change
-        document.getElementById('ticketQuantity').addEventListener('change', updateTotal);
-    </script>
-</body>
-</html>
+    }, 3000);
+}
+</script>
+@endpush
+
+<!-- Modal de partage (pour les navigateurs sans support natif) -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Partager cet événement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="share-options">
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(request()->url()) }}" 
+                       target="_blank" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fab fa-facebook-f me-2"></i>Partager sur Facebook
+                    </a>
+                    <a href="https://twitter.com/intent/tweet?text={{ urlencode($event->title) }}&url={{ urlencode(request()->url()) }}" 
+                       target="_blank" class="btn btn-outline-info w-100 mb-2">
+                        <i class="fab fa-twitter me-2"></i>Partager sur Twitter
+                    </a>
+                    <a href="https://wa.me/?text={{ urlencode($event->title . ' - ' . request()->url()) }}" 
+                       target="_blank" class="btn btn-outline-success w-100 mb-2">
+                        <i class="fab fa-whatsapp me-2"></i>Partager sur WhatsApp
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary w-100" onclick="copyLink()">
+                        <i class="fas fa-copy me-2"></i>Copier le lien
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@endsection

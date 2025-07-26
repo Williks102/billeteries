@@ -70,32 +70,11 @@ class HomeController extends Controller
                 'active_promoters' => $totalPromoters,
             ];
 
-            // Événements populaires (avec plus de billets vendus)
-            $popularEvents = Event::with(['category', 'ticketTypes'])
-                ->where('status', 'published')
-                ->where('event_date', '>=', now()->toDateString())
-                ->withCount(['ticketTypes as sold_tickets' => function($query) {
-                    $query->join('tickets', 'ticket_types.id', '=', 'tickets.ticket_type_id')
-                          ->where('tickets.status', 'sold');
-                }])
-                ->orderBy('sold_tickets', 'desc')
-                ->limit(6)
-                ->get();
-
-            // Si pas assez d'événements populaires, compléter avec les plus récents
-            if ($popularEvents->count() < 6) {
-                $recentEvents = Event::with(['category', 'ticketTypes'])
-                    ->where('status', 'published')
-                    ->where('event_date', '>=', now()->toDateString())
-                    ->whereNotIn('id', $popularEvents->pluck('id'))
-                    ->orderBy('created_at', 'desc')
-                    ->limit(6 - $popularEvents->count())
-                    ->get();
-                
-                $events = $popularEvents->merge($recentEvents);
-            } else {
-                $events = $popularEvents;
-            }
+        // CORRECTION : Afficher les événements les plus récents en premier
+$events = $query->orderBy('created_at', 'desc')
+              ->orderBy('event_date', 'asc')
+              ->limit(12)
+              ->get();
 
             return view('welcome', compact(
                 'events', 
@@ -323,4 +302,99 @@ class HomeController extends Controller
 
         return view('search.results', compact('events', 'categories', 'searchTerm'));
     }
+    /**
+ * NOUVELLE MÉTHODE : Page avec tous les événements
+ */
+public function allEvents(Request $request)
+{
+    $query = Event::with(['category', 'ticketTypes', 'promoteur'])
+        ->where('status', 'published')
+        ->where('event_date', '>=', now()->toDateString());
+
+    // Filtrer par catégorie
+    if ($request->has('category') && $request->category != '' && $request->category != 'all') {
+        $query->whereHas('category', function($q) use ($request) {
+            $q->where('slug', $request->category);
+        });
+    }
+
+    // Recherche par mot-clé
+    if ($request->has('search') && $request->search != '') {
+        $searchTerm = $request->search;
+        $query->where(function($q) use ($searchTerm) {
+            $q->where('title', 'like', '%' . $searchTerm . '%')
+              ->orWhere('description', 'like', '%' . $searchTerm . '%')
+              ->orWhere('venue', 'like', '%' . $searchTerm . '%');
+        });
+    }
+
+    // Filtrer par date
+    if ($request->has('date_filter')) {
+        switch ($request->date_filter) {
+            case 'today':
+                $query->where('event_date', now()->toDateString());
+                break;
+            case 'this_week':
+                $query->whereBetween('event_date', [
+                    now()->startOfWeek(),
+                    now()->endOfWeek()
+                ]);
+                break;
+            case 'this_month':
+                $query->whereBetween('event_date', [
+                    now()->startOfMonth(),
+                    now()->endOfMonth()
+                ]);
+                break;
+            case 'next_month':
+                $query->whereBetween('event_date', [
+                    now()->addMonth()->startOfMonth(),
+                    now()->addMonth()->endOfMonth()
+                ]);
+                break;
+        }
+    }
+
+    // Tri
+    $sortBy = $request->get('sort', 'newest');
+    switch ($sortBy) {
+        case 'newest':
+            $query->orderBy('created_at', 'desc');
+            break;
+        case 'oldest':
+            $query->orderBy('created_at', 'asc');
+            break;
+        case 'date_asc':
+            $query->orderBy('event_date', 'asc');
+            break;
+        case 'date_desc':
+            $query->orderBy('event_date', 'desc');
+            break;
+        case 'title':
+            $query->orderBy('title', 'asc');
+            break;
+    }
+
+    $events = $query->paginate(20)->withQueryString();
+    $categories = EventCategory::withActiveEvents()->get();
+
+    // Statistiques
+    $stats = [
+        'total_events' => Event::where('status', 'published')
+            ->where('event_date', '>=', now()->toDateString())
+            ->count(),
+        'total_categories' => $categories->count(),
+        'today_events' => Event::where('status', 'published')
+            ->where('event_date', now()->toDateString())
+            ->count(),
+        'this_week_events' => Event::where('status', 'published')
+            ->whereBetween('event_date', [
+                now()->startOfWeek(),
+                now()->endOfWeek()
+            ])
+            ->count(),
+    ];
+
+    return view('events.all', compact('events', 'categories', 'stats'));
+}
 }

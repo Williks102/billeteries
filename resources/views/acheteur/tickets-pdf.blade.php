@@ -138,6 +138,7 @@
             vertical-align: middle;
             text-align: center;
             font-weight: bold;
+            line-height: 1.2;
         }
         
         .price-badge {
@@ -237,6 +238,21 @@
             margin: 20px 0;
             text-align: left;
         }
+        
+        .seat-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 8px;
+            margin: 5px 0;
+            text-align: center;
+        }
+        
+        .ticket-perforations {
+            border-top: 2px dashed #ddd;
+            margin: 20px 0;
+            height: 1px;
+        }
     </style>
 </head>
 
@@ -257,8 +273,8 @@
                         <div class="info-group">
                             <span class="info-label">📅 Date & Heure</span>
                             <div class="info-value fw-bold">
-                                {{ $order->event->formatted_event_date }}<br>
-                                {{ $order->event->formatted_event_time }}
+                                {{ $order->event->formatted_event_date ?? $order->event->event_date }}<br>
+                                {{ $order->event->formatted_event_time ?? $order->event->event_time }}
                                 @if($order->event->end_time)
                                     - {{ $order->event->end_time->format('H:i') }}
                                 @endif
@@ -277,8 +293,8 @@
                         
                         <div class="info-group">
                             <span class="info-label">🎫 Type de billet</span>
-                            <div class="info-value fw-bold">{{ $ticket->ticketType->name }}</div>
-                            @if($ticket->ticketType->description)
+                            <div class="info-value fw-bold">{{ $ticket->ticketType->name ?? 'Billet Standard' }}</div>
+                            @if($ticket->ticketType && $ticket->ticketType->description)
                                 <div class="text-small">{{ $ticket->ticketType->description }}</div>
                             @endif
                         </div>
@@ -286,61 +302,75 @@
                         @if($ticket->seat_number)
                             <div class="info-group">
                                 <span class="info-label">💺 Siège</span>
-                                <div class="info-value fw-bold">{{ $ticket->seat_number }}</div>
-                            </div>
-                        @endif
-                        
-                        <div class="info-group">
-                            <span class="info-label">👤 Organisateur</span>
-                            <div class="info-value">{{ $order->event->promoteur->name }}</div>
-                        </div>
-                        
-                        <div class="price-badge">
-                            {{ \App\Helpers\CurrencyHelper::formatFCFA($ticket->ticketType->price) }}
-                        </div>
-                        
-                        @if(stripos($ticket->ticketType->name, 'étudiant') !== false)
-                            <div class="highlight">
-                                <strong>⚠️ Attention :</strong> Carte étudiant obligatoire à l'entrée
-                            </div>
-                        @endif
-                        
-                        <div class="instructions">
-                            <strong>Instructions importantes :</strong>
-                            <ul>
-                                <li>Présentez ce billet à l'entrée</li>
-                                <li>Arrivez 30 minutes avant le début</li>
-                                <li>Pièce d'identité requise</li>
-                                <li>Conservez pendant tout l'événement</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <!-- QR Code à droite -->
-                    <div class="col-right">
-                        <div class="info-group">
-                            <span class="info-label">🔐 Code d'entrée</span>
-                        </div>
-                        
-                        @php
-                            // Générer le QR code réel avec la nouvelle méthode
-                            $qrService = app(\App\Services\QRCodeService::class);
-                            $qrCodeBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
-                        @endphp
-                        
-                        @if($qrCodeBase64)
-                            <!-- QR Code réel -->
-                            <img src="{{ $qrCodeBase64 }}" alt="QR Code - {{ $ticket->ticket_code }}" class="qr-code">
-                        @else
-                            <!-- Fallback si erreur -->
-                            <div class="qr-placeholder">
-                                <div class="qr-content">
-                                    QR CODE<br>
-                                    SCAN ME
+                                <div class="seat-info">
+                                    <strong>{{ $ticket->seat_number }}</strong>
                                 </div>
                             </div>
                         @endif
                         
+                        <div class="info-group">
+                            <span class="info-label">🎟️ Numéro de commande</span>
+                            <div class="info-value">{{ $order->order_number }}</div>
+                        </div>
+                        
+                        @if($order->event->description)
+                            <div class="info-group">
+                                <span class="info-label">ℹ️ Description</span>
+                                <div class="info-value text-small">
+                                    {{ Str::limit($order->event->description, 200) }}
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                    
+                    <!-- QR Code et informations à droite -->
+                    <div class="col-right">
+                        @php
+                            try {
+                                // Utiliser le service QR code unifié
+                                $qrService = app(\App\Services\QRCodeService::class);
+                                $qrCodeBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
+                                
+                                // Fallback si le service échoue
+                                if (!$qrCodeBase64) {
+                                    // Essayer directement avec Google Charts
+                                    $verificationUrl = url("/verify-ticket/{$ticket->ticket_code}");
+                                    $qrUrl = "https://chart.googleapis.com/chart?" . http_build_query([
+                                        'chs' => '200x200',
+                                        'cht' => 'qr',
+                                        'chl' => $verificationUrl,
+                                        'choe' => 'UTF-8',
+                                        'chld' => 'M|2'
+                                    ]);
+                                    
+                                    $response = \Illuminate\Support\Facades\Http::timeout(10)->get($qrUrl);
+                                    
+                                    if ($response->successful()) {
+                                        $qrCodeBase64 = 'data:image/png;base64,' . base64_encode($response->body());
+                                    }
+                                }
+                                
+                            } catch (\Exception $e) {
+                                \Log::error('Erreur QR PDF pour ticket ' . $ticket->ticket_code . ': ' . $e->getMessage());
+                                $qrCodeBase64 = null;
+                            }
+                        @endphp
+                        
+                        @if($qrCodeBase64)
+                            <!-- QR Code réel généré -->
+                            <img src="{{ $qrCodeBase64 }}" alt="QR Code - {{ $ticket->ticket_code }}" class="qr-code">
+                        @else
+                            <!-- Placeholder si génération échoue -->
+                            <div class="qr-placeholder">
+                                <div class="qr-content">
+                                    <strong>QR CODE</strong><br>
+                                    <small>{{ $ticket->ticket_code }}</small><br>
+                                    <small>SCAN ME</small>
+                                </div>
+                            </div>
+                        @endif
+                        
+                        <!-- Code du billet toujours affiché -->
                         <div class="ticket-code">{{ $ticket->ticket_code }}</div>
                         
                         <div class="text-small">
@@ -358,81 +388,104 @@
                             <div class="status-badge">{{ ucfirst($ticket->status) }}</div>
                         @endif
                         
-                        <div class="text-small" style="margin-top: 15px;">
-                            <strong>Acheteur :</strong><br>
-                            {{ $order->user->name }}<br>
-                            <span class="text-small">{{ $order->billing_email }}</span>
-                        </div>
+                        <!-- Prix du billet -->
+                        @if($ticket->ticketType && $ticket->ticketType->price)
+                            <div class="price-badge">
+                                {{ number_format($ticket->ticketType->price, 0, ',', ' ') }} FCFA
+                            </div>
+                        @endif
                         
-                        <div class="text-small" style="margin-top: 10px;">
-                            <strong>URL de vérification :</strong><br>
-                            <span class="text-small">{{ url("/verify-ticket/{$ticket->ticket_code}") }}</span>
+                        <!-- Instructions d'utilisation -->
+                        <div class="instructions">
+                            <strong>Instructions :</strong>
+                            <ul>
+                                <li>Présentez ce billet à l'entrée</li>
+                                <li>Le QR code sera scanné</li>
+                                <li>Gardez votre billet jusqu'à la fin</li>
+                                @if($ticket->seat_number)
+                                    <li>Rendez-vous à votre siège : {{ $ticket->seat_number }}</li>
+                                @endif
+                            </ul>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Pied de page -->
-            <div class="footer clearfix">
-                <div class="footer-left">
-                    <strong>Billetterie CI</strong><br>
-                    Commande : {{ $order->order_number }}<br>
-                    Émis le : {{ $order->created_at->format('d/m/Y H:i') }}
+                
+                <!-- Séparateur perforé -->
+                <div class="ticket-perforations"></div>
+                
+                <!-- Section acheteur -->
+                <div class="info-group">
+                    <span class="info-label">👤 Informations Acheteur</span>
+                    <div class="info-value">
+                        <strong>Nom :</strong> {{ $order->user->name }}<br>
+                        <strong>Email :</strong> {{ $order->user->email }}<br>
+                        @if($order->user->phone)
+                            <strong>Téléphone :</strong> {{ $order->user->phone }}<br>
+                        @endif
+                        <strong>Date d'achat :</strong> {{ $order->created_at->format('d/m/Y à H:i') }}
+                    </div>
                 </div>
-                <div class="footer-right">
-                    Support : +225 01 02 03 04 05<br>
-                    Email : support@billetterie-ci.com<br>
-                    www.billetterie-ci.com
+                
+                <!-- Informations importantes -->
+                @if($order->event->important_info)
+                    <div class="highlight">
+                        <strong>⚠️ Information importante :</strong><br>
+                        {{ $order->event->important_info }}
+                    </div>
+                @endif
+                
+                <!-- Footer du billet -->
+                <div class="footer clearfix">
+                    <div class="footer-left">
+                        <strong>Billetterie CI</strong><br>
+                        Support : support@billetterie-ci.com<br>
+                        Tél : +225 XX XX XX XX
+                    </div>
+                    <div class="footer-right">
+                        Billet généré le {{ now()->format('d/m/Y à H:i') }}<br>
+                        ID Commande : {{ $order->id }}<br>
+                        Version PDF v1.2
+                    </div>
                 </div>
             </div>
         </div>
     @endforeach
     
-    <!-- Page de récapitulatif -->
-    <div class="summary-page">
-        <h2 style="color: #FF6B35; margin-bottom: 20px;">📋 Récapitulatif de commande</h2>
-        
-        <div class="summary-box">
-            <div style="display: table; width: 100%;">
-                <div style="display: table-cell; width: 50%; padding-right: 20px;">
-                    <h4 style="color: #FF6B35; margin-bottom: 10px;">Détails</h4>
-                    <p><strong>Commande :</strong> {{ $order->order_number }}</p>
-                    <p><strong>Date :</strong> {{ $order->created_at->format('d/m/Y H:i') }}</p>
-                    <p><strong>Statut :</strong> 
-                        @if($order->payment_status == 'paid')
-                            <span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px;">PAYÉ</span>
-                        @else
-                            <span style="background: #ffc107; color: #000; padding: 2px 8px; border-radius: 10px; font-size: 10px;">{{ strtoupper($order->payment_status) }}</span>
-                        @endif
-                    </p>
-                    <p><strong>Email :</strong> {{ $order->billing_email }}</p>
-                </div>
+    <!-- Page de résumé si plusieurs billets -->
+    @if($order->tickets->count() > 1)
+        <div class="summary-page">
+            <h2>Résumé de votre commande</h2>
+            
+            <div class="summary-box">
+                <h4>{{ $order->event->title }}</h4>
+                <p><strong>Date :</strong> {{ $order->event->formatted_event_date ?? $order->event->event_date }}</p>
+                <p><strong>Lieu :</strong> {{ $order->event->venue }}</p>
+                <p><strong>Commande N° :</strong> {{ $order->order_number }}</p>
+                <p><strong>Acheteur :</strong> {{ $order->user->name }}</p>
                 
-                <div style="display: table-cell; width: 50%;">
-                    <h4 style="color: #FF6B35; margin-bottom: 10px;">Billets</h4>
-                    @foreach($order->orderItems as $item)
-                        <div style="display: table; width: 100%; margin-bottom: 5px;">
-                            <div style="display: table-cell;">{{ $item->quantity }}× {{ $item->ticketType->name }}</div>
-                            <div style="display: table-cell; text-align: right;">{{ \App\Helpers\CurrencyHelper::formatFCFA($item->total_price) }}</div>
-                        </div>
-                    @endforeach
-                    
-                    <div style="border-top: 1px solid #ddd; margin: 10px 0; padding-top: 10px;">
-                        <div style="display: table; width: 100%;">
-                            <div style="display: table-cell; font-weight: bold;">Total :</div>
-                            <div style="display: table-cell; text-align: right; font-weight: bold; color: #FF6B35;">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</div>
-                        </div>
+                <h5 style="margin-top: 20px;">Billets achetés :</h5>
+                @foreach($order->tickets as $ticket)
+                    <div style="margin: 10px 0; padding: 8px; background: white; border-radius: 5px;">
+                        <strong>{{ $ticket->ticketType->name ?? 'Billet' }}</strong> - {{ $ticket->ticket_code }}
+                        @if($ticket->seat_number)
+                            <br><small>Siège : {{ $ticket->seat_number }}</small>
+                        @endif
+                        @if($ticket->ticketType && $ticket->ticketType->price)
+                            <br><small>Prix : {{ number_format($ticket->ticketType->price, 0, ',', ' ') }} FCFA</small>
+                        @endif
                     </div>
+                @endforeach
+                
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #FF6B35; text-align: center;">
+                    <h5>Total : {{ number_format($order->total_amount ?? 0, 0, ',', ' ') }} FCFA</h5>
                 </div>
             </div>
+            
+            <div class="highlight" style="margin-top: 30px;">
+                <strong>Important :</strong> Chaque billet doit être présenté individuellement à l'entrée. 
+                Gardez tous vos billets en sécurité jusqu'à l'événement.
+            </div>
         </div>
-        
-        <div style="background: #e7f3ff; border: 1px solid #b3d7ff; border-radius: 8px; padding: 15px; margin: 20px 0;">
-            <p style="margin: 0; color: #0c5aa6; text-align: center;">
-                <strong>💝 Merci d'avoir choisi Billetterie CI !</strong><br>
-                <span style="font-size: 10px;">Support : +225 01 02 03 04 05 • support@billetterie-ci.com</span>
-            </p>
-        </div>
-    </div>
+    @endif
 </body>
 </html>

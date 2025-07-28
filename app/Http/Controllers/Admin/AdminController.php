@@ -252,6 +252,110 @@ private function exportToCSV($data, $filename)
     }
 
     /**
+ * Export global - toutes les données
+ */
+public function exportAll(Request $request)
+{
+    $format = $request->get('format', 'excel');
+    $dataType = $request->get('data_type', 'all');
+    
+    try {
+        switch ($dataType) {
+            case 'financial':
+                return $this->exportFinancial($request);
+            case 'users':
+                return $this->exportUsers($request);
+            case 'events':
+                return $this->exportEvents($request);
+            case 'orders':
+                return $this->exportOrders($request);
+            case 'tickets':
+                return $this->exportTickets($request);
+            case 'all':
+            default:
+                return $this->exportCompleteData($request);
+        }
+    } catch (\Exception $e) {
+        \Log::error('Erreur export global: ' . $e->getMessage());
+        return redirect()->back()
+            ->with('error', 'Erreur lors de l\'export: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Export de toutes les données
+ */
+private function exportCompleteData(Request $request)
+{
+    $filename = 'export_complet_' . now()->format('Y-m-d') . '.csv';
+    
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+    
+    $callback = function() {
+        $file = fopen('php://output', 'w');
+        
+        // Export résumé de toutes les données
+        fputcsv($file, ['=== RÉSUMÉ GÉNÉRAL ===']);
+        fputcsv($file, ['Type', 'Nombre total', 'Dernière mise à jour']);
+        fputcsv($file, ['Utilisateurs', User::count(), User::latest()->first()?->updated_at ?? 'N/A']);
+        fputcsv($file, ['Événements', Event::count(), Event::latest()->first()?->updated_at ?? 'N/A']);
+        fputcsv($file, ['Commandes', Order::count(), Order::latest()->first()?->updated_at ?? 'N/A']);
+        fputcsv($file, ['Commissions', Commission::count(), Commission::latest()->first()?->updated_at ?? 'N/A']);
+        fputcsv($file, []);
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, $headers);
+}
+
+/**
+ * Export des billets
+ */
+public function exportTickets(Request $request)
+{
+    $format = $request->get('format', 'csv');
+    
+    $tickets = Ticket::with(['user', 'ticketType.event'])->get();
+    
+    $filename = 'billets_' . now()->format('Y-m-d') . '.' . $format;
+    
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+    
+    $callback = function() use ($tickets) {
+        $file = fopen('php://output', 'w');
+        
+        fputcsv($file, [
+            'Code Billet', 'Événement', 'Type', 'Acheteur', 
+            'Statut', 'Prix', 'Date Achat', 'Date Utilisation'
+        ]);
+        
+        foreach ($tickets as $ticket) {
+            fputcsv($file, [
+                $ticket->ticket_code,
+                $ticket->ticketType->event->title ?? 'N/A',
+                $ticket->ticketType->name ?? 'N/A',
+                $ticket->user->name ?? 'N/A',
+                $ticket->status,
+                $ticket->ticketType->price ?? 0,
+                $ticket->created_at->format('d/m/Y'),
+                $ticket->used_at ? $ticket->used_at->format('d/m/Y H:i') : 'Non utilisé'
+            ]);
+        }
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, $headers);
+}
+
+    /**
      * Statistiques de revenus
      */
     private function getRevenueStats($dateRange)

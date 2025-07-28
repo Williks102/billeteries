@@ -231,6 +231,7 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     Route::get('/export/events', [AdminController::class, 'exportEvents'])->name('export.events');
     Route::get('/export/orders', [AdminController::class, 'exportOrders'])->name('export.orders');
     Route::get('/export/commissions', [AdminController::class, 'exportCommissions'])->name('export.commissions');
+    
 
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
@@ -245,6 +246,18 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     
     // CORRECTION : Enlever le préfixe /admin puisqu'il est déjà dans le groupe
     Route::get('/events/{id}', [AdminController::class, 'eventDetail'])->name('events.detail');
+    Route::get('/events', [AdminController::class, 'events'])->name('events');
+    Route::get('/events/{event}', [AdminController::class, 'showEvent'])->name('events.show');
+    Route::get('/events/{event}/edit', [AdminController::class, 'editEvent'])->name('events.edit');
+    Route::patch('/events/{event}', [AdminController::class, 'updateEvent'])->name('events.update');
+    Route::delete('/events/{event}', [AdminController::class, 'destroyEvent'])->name('events.destroy');
+    
+    // Routes pour actions sur events
+    Route::patch('/events/{event}/status', [AdminController::class, 'updateEventStatus'])->name('events.updateStatus');
+    Route::post('/events/bulk-update', [AdminController::class, 'bulkUpdateEvents'])->name('events.bulkUpdate');
+    Route::post('/events/bulk-delete', [AdminController::class, 'bulkDeleteEvents'])->name('events.bulkDelete');
+    
+    
     
     // Gestion des commissions (exports)
     Route::get('/commissions/export', [AdminController::class, 'exportCommissions'])->name('export.commissions');
@@ -252,6 +265,7 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('export.orders');
     Route::get('/promoters/export', [AdminController::class, 'exportPromoters'])->name('export.promoters');
     Route::get('/accounting/export/{period}', [AdminController::class, 'exportAccounting'])->name('export.accounting');
+    Route::get('/export/all', [AdminController::class, 'exportAll'])->name('export.all');
 
     
     // Routes temporaires

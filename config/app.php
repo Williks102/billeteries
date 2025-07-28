@@ -108,6 +108,11 @@ return [
         ),
     ],
 
+
+    'providers' => [
+    // ... autres providers
+    App\Providers\ViewServiceProvider::class,
+],
     /*
     |--------------------------------------------------------------------------
     | Maintenance Mode Driver

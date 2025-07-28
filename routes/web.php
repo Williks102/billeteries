@@ -185,7 +185,7 @@ Route::middleware(['auth'])->group(function () {
     });
     
     // Routes acheteur
-    Route::middleware(['acheteur'])->prefix('acheteur')->name('acheteur.')->group(function () {
+    Route::middleware(['acheteur', 'layout:acheteur'])->prefix('acheteur')->name('acheteur.')->group(function () {
         Route::get('/dashboard', [AcheteurController::class, 'dashboard'])->name('dashboard');
         Route::get('/tickets', [AcheteurController::class, 'myTickets'])->name('tickets');
         Route::get('/order/{order}', [AcheteurController::class, 'orderDetail'])->name('order.detail');
@@ -195,11 +195,14 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/profile', [AcheteurController::class, 'updateProfile'])->name('profile.update');
         // Dans la section acheteur
         Route::get('/orders/{order}/qr-codes', [AcheteurController::class, 'getOrderQRCodes'])->name('orders.qr-codes');
+        Route::get('/orders', [AcheteurController::class, 'orders'])->name('orders');
+    Route::get('/favorites', [AcheteurController::class, 'favorites'])->name('favorites');
+    Route::post('/favorites/{event}', [AcheteurController::class, 'addToFavorites'])->name('favorites.add');
+    Route::delete('/favorites/{event}', [AcheteurController::class, 'removeFromFavorites'])->name('favorites.remove');
     });
     
-    // Dans routes/web.php, à l'intérieur du groupe admin
 
-Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard principal
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
@@ -216,6 +219,29 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('/tickets/{ticket}', [AdminController::class, 'showTicket'])->name('tickets.show');
     Route::patch('/tickets/{ticket}/mark-used', [AdminController::class, 'markTicketUsed'])->name('tickets.markUsed');
     Route::get('/tickets/{ticket}/download', [AdminController::class, 'downloadTicketPDF'])->name('tickets.download');
+
+    Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
+    Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
+    Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
+    Route::patch('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+
+    Route::get('/export/financial', [AdminController::class, 'exportFinancial'])->name('export.financial');
+    Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
+    Route::get('/export/events', [AdminController::class, 'exportEvents'])->name('export.events');
+    Route::get('/export/orders', [AdminController::class, 'exportOrders'])->name('export.orders');
+    Route::get('/export/commissions', [AdminController::class, 'exportCommissions'])->name('export.commissions');
+
+    Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
+    Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
+    Route::patch('/orders/{order}/status', [AdminController::class, 'updateOrderStatus'])->name('orders.updateStatus');
+    Route::post('/orders/bulk-update', [AdminController::class, 'bulkUpdateOrders'])->name('orders.bulkUpdate');
+    Route::get('/orders/{order}/pdf', [AdminController::class, 'downloadOrderPDF'])->name('orders.pdf');
+    Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('orders.export');
+    
+    Route::get('/settings', function () { 
+        return view('admin.settings'); 
+    })->name('settings');
     
     // CORRECTION : Enlever le préfixe /admin puisqu'il est déjà dans le groupe
     Route::get('/events/{id}', [AdminController::class, 'eventDetail'])->name('events.detail');
@@ -226,6 +252,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('export.orders');
     Route::get('/promoters/export', [AdminController::class, 'exportPromoters'])->name('export.promoters');
     Route::get('/accounting/export/{period}', [AdminController::class, 'exportAccounting'])->name('export.accounting');
+
     
     // Routes temporaires
     Route::get('/reports', function () { 
@@ -325,6 +352,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::get('/profile', function () {
             return view('promoteur.profile', ['user' => auth()->user()]);
         })->name('profile');
+
+        Route::get('/scanner', [App\Http\Controllers\Promoteur\PromoteurController::class, 'scanner'])->name('scanner');
+    Route::get('/sales', [App\Http\Controllers\Promoteur\PromoteurController::class, 'sales'])->name('sales');
+    Route::get('/commissions', [App\Http\Controllers\Promoteur\PromoteurController::class, 'commissions'])->name('commissions');
+    Route::get('/reports', [App\Http\Controllers\Promoteur\PromoteurController::class, 'reports'])->name('reports');
+    Route::get('/profile', [App\Http\Controllers\Promoteur\PromoteurController::class, 'profile'])->name('profile');
     });
 
     

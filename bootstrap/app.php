@@ -17,9 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'promoteur' => \App\Http\Middleware\PromoteurMiddleware::class,
             'acheteur' => \App\Http\Middleware\AcheteurMiddleware::class,
             'execution.time' => \App\Http\Middleware\SetExecutionTime::class,
+            'layout' => \App\Http\Middleware\SetLayoutMiddleware::class,
         ]);
         $middleware->append(\App\Http\Middleware\SetExecutionTime::class);
+        $middleware->append(\App\Http\Middleware\SetLayoutMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
+
+    

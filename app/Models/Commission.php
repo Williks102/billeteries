@@ -1,10 +1,10 @@
 <?php
+// app/Models/Commission.php - Version corrigée
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Helpers\CurrencyHelper;
 
 class Commission extends Model
 {
@@ -12,47 +12,51 @@ class Commission extends Model
 
     protected $fillable = [
         'order_id',
-        'promoteur_id',
+        'promoter_id',  // CORRECTION: nom de colonne standardisé
         'gross_amount',
         'commission_rate',
         'commission_amount',
         'net_amount',
-        'platform_fee',
-        'payment_processor_fee',
         'status',
-        'paid_at'
+        'paid_at',
+        'notes'
     ];
 
     protected $casts = [
         'paid_at' => 'datetime',
+        'gross_amount' => 'decimal:2',
         'commission_rate' => 'decimal:2',
-        'gross_amount' => 'integer',
-        'commission_amount' => 'integer',
-        'net_amount' => 'integer',
-        'platform_fee' => 'integer',
-        'payment_processor_fee' => 'integer',
+        'commission_amount' => 'decimal:2',
+        'net_amount' => 'decimal:2'
     ];
 
     /**
-     * Relations
+     * SOLUTION: Relation avec le promoteur
+     * Utilise 'promoter_id' comme clé étrangère
+     */
+    public function promoter()
+    {
+        return $this->belongsTo(User::class, 'promoter_id');
+    }
+
+    /**
+     * Alias pour compatibilité (si certains endroits utilisent 'promoteur')
+     */
+    public function promoteur()
+    {
+        return $this->promoter();
+    }
+
+    /**
+     * Relation avec la commande
      */
     public function order()
     {
         return $this->belongsTo(Order::class);
     }
 
-    public function promoteur()
-    {
-        return $this->belongsTo(User::class, 'promoteur_id');
-    }
-
-    public function event()
-    {
-        return $this->hasOneThrough(Event::class, Order::class, 'id', 'id', 'order_id', 'event_id');
-    }
-
     /**
-     * Scopes
+     * Scopes pour filtrer
      */
     public function scopePending($query)
     {
@@ -64,41 +68,58 @@ class Commission extends Model
         return $query->where('status', 'paid');
     }
 
-    public function scopeHeld($query)
+    public function scopeForPeriod($query, $start, $end)
     {
-        return $query->where('status', 'held');
+        return $query->whereBetween('created_at', [$start, $end]);
+    }
+
+    public function scopeForPromoter($query, $promoterId)
+    {
+        return $query->where('promoter_id', $promoterId);
     }
 
     /**
-     * Accessors - Formatage FCFA
+     * Accesseurs formatés
      */
     public function getFormattedGrossAmountAttribute()
     {
-        return CurrencyHelper::formatFCFA($this->gross_amount);
+        return number_format($this->gross_amount, 0, ',', ' ') . ' FCFA';
     }
 
     public function getFormattedCommissionAmountAttribute()
     {
-        return CurrencyHelper::formatFCFA($this->commission_amount);
+        return number_format($this->commission_amount, 0, ',', ' ') . ' FCFA';
     }
 
     public function getFormattedNetAmountAttribute()
     {
-        return CurrencyHelper::formatFCFA($this->net_amount);
+        return number_format($this->net_amount, 0, ',', ' ') . ' FCFA';
     }
 
-    public function getFormattedPlatformFeeAttribute()
+    public function getStatusBadgeAttribute()
     {
-        return CurrencyHelper::formatFCFA($this->platform_fee);
+        return match($this->status) {
+            'pending' => '<span class="badge bg-warning">En attente</span>',
+            'paid' => '<span class="badge bg-success">Payée</span>',
+            'cancelled' => '<span class="badge bg-danger">Annulée</span>',
+            'held' => '<span class="badge bg-secondary">Suspendue</span>',
+            default => '<span class="badge bg-secondary">Inconnu</span>'
+        };
     }
 
-    public function getFormattedCommissionRateAttribute()
+    public function getStatusTextAttribute()
     {
-        return $this->commission_rate . '%';
+        return match($this->status) {
+            'pending' => 'En attente',
+            'paid' => 'Payée',
+            'cancelled' => 'Annulée',
+            'held' => 'Suspendue',
+            default => 'Inconnu'
+        };
     }
 
     /**
-     * Vérifications d'état
+     * Méthodes utilitaires
      */
     public function isPending()
     {
@@ -110,132 +131,179 @@ class Commission extends Model
         return $this->status === 'paid';
     }
 
+    public function isCancelled()
+    {
+        return $this->status === 'cancelled';
+    }
+
     public function isHeld()
     {
         return $this->status === 'held';
     }
 
     /**
-     * Marquer comme payé
+     * Actions sur la commission
      */
     public function markAsPaid()
     {
-        $this->status = 'paid';
-        $this->paid_at = now();
-        $this->save();
+        $this->update([
+            'status' => 'paid',
+            'paid_at' => now()
+        ]);
+    }
+
+    public function markAsHeld($reason = null)
+    {
+        $this->update([
+            'status' => 'held',
+            'notes' => $reason
+        ]);
+    }
+
+    public function cancel($reason = null)
+    {
+        $this->update([
+            'status' => 'cancelled',
+            'notes' => $reason
+        ]);
     }
 
     /**
-     * Mettre en attente (en cas de remboursement)
+     * Calculs automatiques
      */
-    public function hold()
+    public static function calculateCommission($grossAmount, $commissionRate)
     {
-        $this->status = 'held';
-        $this->save();
+        $commissionAmount = ($grossAmount * $commissionRate) / 100;
+        $netAmount = $grossAmount - $commissionAmount;
+
+        return [
+            'commission_amount' => round($commissionAmount, 2),
+            'net_amount' => round($netAmount, 2)
+        ];
     }
 
     /**
-     * Remettre en pending depuis held
+     * Créer une commission pour une commande
      */
-    public function release()
+    public static function createForOrder(Order $order, $commissionRate = 10)
     {
-        if ($this->isHeld()) {
-            $this->status = 'pending';
-            $this->save();
+        // Vérifier si une commission existe déjà
+        $existingCommission = self::where('order_id', $order->id)->first();
+        if ($existingCommission) {
+            return $existingCommission;
         }
-    }
 
-    /**
-     * Calculer le montant réel à verser au promoteur
-     */
-    public function getPayoutAmount()
-    {
-        // Le montant net moins les frais de processeur de paiement
-        return max(0, $this->net_amount - $this->payment_processor_fee);
-    }
+        $calculation = self::calculateCommission($order->total_amount, $commissionRate);
 
-    /**
-     * Obtenir le délai de paiement (en jours)
-     */
-    public function getDaysUntilPayout()
-    {
-        if ($this->isPaid()) {
-            return 0;
-        }
-        
-        // Par défaut, paiement 7 jours après la création
-        $payoutDate = $this->created_at->addDays(7);
-        return max(0, now()->diffInDays($payoutDate, false));
-    }
-
-    /**
-     * Vérifier si la commission est prête à être payée
-     */
-    public function isReadyForPayout()
-    {
-        return $this->isPending() && 
-               $this->getDaysUntilPayout() <= 0 &&
-               $this->order->isPaid();
-    }
-
-    /**
-     * Obtenir toutes les commissions prêtes à être payées
-     */
-    public static function readyForPayout()
-    {
-        return self::pending()
-            ->whereHas('order', function ($query) {
-                $query->where('payment_status', 'paid');
-            })
-            ->where('created_at', '<=', now()->subDays(7))
-            ->get();
+        return self::create([
+            'order_id' => $order->id,
+            'promoter_id' => $order->event->promoteur_id, // Adapter selon votre structure
+            'gross_amount' => $order->total_amount,
+            'commission_rate' => $commissionRate,
+            'commission_amount' => $calculation['commission_amount'],
+            'net_amount' => $calculation['net_amount'],
+            'status' => 'pending'
+        ]);
     }
 
     /**
      * Statistiques par promoteur
      */
-    public static function getPromoteurStats($promoteurId, $startDate = null, $endDate = null)
+    public static function getStatsForPromoter($promoterId, $period = null)
     {
-        $query = self::where('promoteur_id', $promoteurId);
+        $query = self::where('promoter_id', $promoterId);
         
-        if ($startDate) {
-            $query->whereDate('created_at', '>=', $startDate);
+        if ($period) {
+            $dateRange = self::getDateRangeForPeriod($period);
+            $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
         }
-        
-        if ($endDate) {
-            $query->whereDate('created_at', '<=', $endDate);
-        }
-        
+
         return [
-            'total_revenue' => $query->clone()->paid()->sum('net_amount'),
-            'pending_revenue' => $query->clone()->pending()->sum('net_amount'),
-            'held_revenue' => $query->clone()->held()->sum('net_amount'),
-            'total_orders' => $query->clone()->count(),
-            'average_commission_rate' => $query->clone()->avg('commission_rate'),
+            'total' => $query->sum('gross_amount'),
+            'commissions' => $query->sum('commission_amount'),
+            'net' => $query->sum('net_amount'),
+            'pending' => $query->where('status', 'pending')->sum('net_amount'),
+            'paid' => $query->where('status', 'paid')->sum('net_amount'),
+            'count' => $query->count()
         ];
     }
 
     /**
-     * Statistiques globales de la plateforme
+     * Statistiques globales
      */
-    public static function getPlatformStats($startDate = null, $endDate = null)
+    public static function getGlobalStats($period = null)
     {
         $query = self::query();
         
-        if ($startDate) {
-            $query->whereDate('created_at', '>=', $startDate);
+        if ($period) {
+            $dateRange = self::getDateRangeForPeriod($period);
+            $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
         }
-        
-        if ($endDate) {
-            $query->whereDate('created_at', '<=', $endDate);
-        }
-        
+
         return [
-            'total_platform_revenue' => $query->clone()->sum('commission_amount'),
-            'total_promoteur_revenue' => $query->clone()->sum('net_amount'),
-            'total_gross_revenue' => $query->clone()->sum('gross_amount'),
-            'pending_payouts' => $query->clone()->pending()->sum('net_amount'),
-            'total_transactions' => $query->clone()->count(),
+            'total_amount' => $query->sum('commission_amount'),
+            'pending' => $query->where('status', 'pending')->count(),
+            'paid' => $query->where('status', 'paid')->count(),
+            'held' => $query->where('status', 'held')->count(),
+            'cancelled' => $query->where('status', 'cancelled')->count(),
+            'avg_rate' => $query->avg('commission_rate') ?? 0,
+            'total_gross' => $query->sum('gross_amount'),
+            'total_net' => $query->sum('net_amount')
         ];
+    }
+
+    /**
+     * Méthode utilitaire pour les plages de dates
+     */
+    private static function getDateRangeForPeriod($period)
+    {
+        switch ($period) {
+            case 'today':
+                return [
+                    'start' => now()->startOfDay(),
+                    'end' => now()->endOfDay()
+                ];
+            case 'this_week':
+                return [
+                    'start' => now()->startOfWeek(),
+                    'end' => now()->endOfWeek()
+                ];
+            case 'this_month':
+            default:
+                return [
+                    'start' => now()->startOfMonth(),
+                    'end' => now()->endOfMonth()
+                ];
+            case 'this_year':
+                return [
+                    'start' => now()->startOfYear(),
+                    'end' => now()->endOfYear()
+                ];
+        }
+    }
+
+    /**
+     * Commission en attente pour un promoteur
+     */
+    public static function getPendingForPromoter($promoterId)
+    {
+        return self::where('promoter_id', $promoterId)
+            ->where('status', 'pending')
+            ->with(['order.event'])
+            ->latest()
+            ->get();
+    }
+
+    /**
+     * Historique des paiements pour un promoteur
+     */
+    public static function getPaidHistoryForPromoter($promoterId, $limit = 10)
+    {
+        return self::where('promoter_id', $promoterId)
+            ->where('status', 'paid')
+            ->with(['order.event'])
+            ->latest('paid_at')
+            ->limit($limit)
+            ->get();
     }
 }

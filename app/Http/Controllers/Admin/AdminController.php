@@ -12,6 +12,7 @@ use App\Models\EventCategory;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
@@ -29,89 +30,168 @@ class AdminController extends Controller
     /**
      * Dashboard admin principal
      */
-    public function dashboard(Request $request)
-    {
-        try {
-            // Période sélectionnée (par défaut: ce mois)
-            $period = $request->get('period', 'this_month');
-            $dateRange = $this->getDateRange($period);
+   
+public function dashboard(Request $request)
+{
+    try {
+        // Période sélectionnée (par défaut: ce mois)
+        $period = $request->get('period', 'this_month');
+        $dateRange = $this->getDateRange($period);
 
-            // Statistiques principales
-            $stats = $this->getMainStats($dateRange);
-            
-            // Revenus et commissions
-            $revenues = $this->getRevenueStats($dateRange);
-            
-            // Statistiques par catégorie
-            $categoryStats = $this->getCategoryStats($dateRange);
-            
-            // Top promoteurs
-            $topPromoters = $this->getTopPromoters($dateRange);
-            
-            // Commandes récentes
-            $recentOrders = $this->getRecentOrders();
-            
-            // Données pour graphiques
-            $chartData = $this->getChartData($dateRange);
-            
-            // Alertes et notifications
-            $alerts = $this->getAlerts();
-
-            return view('admin.dashboard', compact(
-                'stats', 'revenues', 'categoryStats', 'topPromoters', 
-                'recentOrders', 'chartData', 'alerts', 'period'
-            ));
-            
-        } catch (\Exception $e) {
-            \Log::error('Erreur dashboard admin: ' . $e->getMessage());
-            
-            // Données par défaut en cas d'erreur
-            $stats = $this->getDefaultStats();
-            $period = $request->get('period', 'this_month');
-            
-            return view('admin.dashboard', compact('stats', 'period'))
-                ->with('error', 'Erreur lors du chargement du dashboard');
+        // Statistiques principales avec vérifications
+        $stats = [
+            'total_users' => User::count(),
+            'total_events' => Event::count(),
+            'total_orders' => Order::where('payment_status', 'paid')->count(),
+            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount') ?? 0,
+            'pending_commissions' => Commission::where('status', 'pending')->count(),
+            'active_promoters' => User::where('role', 'promoteur')->whereHas('events')->count(),
+        ];
+        
+        // Commandes récentes avec vérifications
+        $recentOrders = Order::with(['user', 'event'])
+            ->where('payment_status', 'paid')
+            ->latest()
+            ->limit(10)
+            ->get();
+        
+        // Données pour graphiques (éviter les erreurs JS)
+        $chartData = [
+            'labels' => ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
+            'revenue' => [0, 0, 0, 0, 0, 0],
+            'orders' => [0, 0, 0, 0, 0, 0]
+        ];
+        
+        // Alertes système
+        $alerts = [];
+        
+        // Vérifier les commissions en attente
+        $pendingCommissions = Commission::where('status', 'pending')->count();
+        if ($pendingCommissions > 0) {
+            $alerts[] = [
+                'type' => 'warning',
+                'icon' => 'clock',
+                'message' => "$pendingCommissions commissions en attente de paiement"
+            ];
         }
+
+        return view('admin.dashboard', compact(
+            'stats', 'recentOrders', 'chartData', 'alerts', 'period'
+        ));
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur dashboard admin: ' . $e->getMessage());
+        
+        // Données par défaut en cas d'erreur
+        $stats = [
+            'total_users' => 0,
+            'total_events' => 0,
+            'total_orders' => 0,
+            'total_revenue' => 0,
+            'pending_commissions' => 0,
+            'active_promoters' => 0,
+        ];
+        
+        $recentOrders = collect();
+        $chartData = ['labels' => [], 'revenue' => [], 'orders' => []];
+        $alerts = [];
+        $period = 'this_month';
+        
+        return view('admin.dashboard', compact('stats', 'recentOrders', 'chartData', 'alerts', 'period'))
+            ->with('error', 'Erreur lors du chargement des données du dashboard');
     }
+}
 
     /**
      * Obtenir la plage de dates selon la période
      */
-    private function getDateRange($period)
-    {
-        switch ($period) {
-            case 'today':
-                return [
-                    'start' => now()->startOfDay(),
-                    'end' => now()->endOfDay()
-                ];
-            case 'this_week':
-                return [
-                    'start' => now()->startOfWeek(),
-                    'end' => now()->endOfWeek()
-                ];
-            case 'this_month':
-                return [
-                    'start' => now()->startOfMonth(),
-                    'end' => now()->endOfMonth()
-                ];
-            case 'last_month':
-                return [
-                    'start' => now()->subMonth()->startOfMonth(),
-                    'end' => now()->subMonth()->endOfMonth()
-                ];
-            case 'this_year':
-                return [
-                    'start' => now()->startOfYear(),
-                    'end' => now()->endOfYear()
-                ];
-            default:
-                return [
-                    'start' => now()->startOfMonth(),
-                    'end' => now()->endOfMonth()
-                ];
-        }
+   private function getDateRange($period)
+{
+    switch ($period) {
+        case 'today':
+            return [
+                'start' => now()->startOfDay(),
+                'end' => now()->endOfDay()
+            ];
+        case 'this_week':
+            return [
+                'start' => now()->startOfWeek(),
+                'end' => now()->endOfWeek()
+            ];
+        case 'this_month':
+        default:
+            return [
+                'start' => now()->startOfMonth(),
+                'end' => now()->endOfMonth()
+            ];
+        case 'this_year':
+            return [
+                'start' => now()->startOfYear(),
+                'end' => now()->endOfYear()
+            ];
     }
+}
+
+private function exportToCSV($data, $filename)
+{
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+    
+    $callback = function() use ($data) {
+        $file = fopen('php://output', 'w');
+        
+        // En-têtes
+        fputcsv($file, ['Rapport Financier - ' . $data['period']]);
+        fputcsv($file, ['Généré le: ' . now()->format('d/m/Y H:i')]);
+        fputcsv($file, []);
+        
+        // Résumé
+        fputcsv($file, ['RÉSUMÉ']);
+        fputcsv($file, ['Total Revenus', number_format($data['summary']['total_revenue']) . ' FCFA']);
+        fputcsv($file, ['Total Commissions', number_format($data['summary']['total_commissions']) . ' FCFA']);
+        fputcsv($file, ['Revenus Net', number_format($data['summary']['net_revenue']) . ' FCFA']);
+        fputcsv($file, ['Nombre Commandes', $data['summary']['orders_count']]);
+        fputcsv($file, []);
+        
+        // Détail commandes
+        fputcsv($file, ['DÉTAIL COMMANDES']);
+        fputcsv($file, ['Date', 'Client', 'Événement', 'Montant', 'Statut']);
+        
+        foreach ($data['orders'] as $order) {
+            fputcsv($file, [
+                $order->created_at->format('d/m/Y'),
+                $order->user->name ?? 'N/A',
+                $order->event->title ?? 'N/A',
+                number_format($order->total_amount) . ' FCFA',
+                $order->payment_status
+            ]);
+        }
+        
+        fputcsv($file, []);
+        
+        // Détail commissions
+        fputcsv($file, ['DÉTAIL COMMISSIONS']);
+        fputcsv($file, ['Date', 'Promoteur', 'Montant Brut', 'Commission', 'Net', 'Statut']);
+        
+        foreach ($data['commissions'] as $commission) {
+            fputcsv($file, [
+                $commission->created_at->format('d/m/Y'),
+                $commission->promoter->name ?? 'N/A',
+                number_format($commission->gross_amount) . ' FCFA',
+                number_format($commission->commission_amount) . ' FCFA',
+                number_format($commission->net_amount) . ' FCFA',
+                $commission->status
+            ]);
+        }
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, $headers);
+}
+
 
     /**
      * Statistiques principales
@@ -276,6 +356,269 @@ class AdminController extends Controller
         ];
     }
 
+/**
+ * === MÉTHODES MANQUANTES POUR EXPORTS ===
+ */
+
+public function exportFinancial(Request $request)
+{
+    $format = $request->get('format', 'excel');
+    $period = $request->get('period', 'this_month');
+    
+    try {
+        $dateRange = $this->getDateRange($period);
+        
+        // Collecte des données financières
+        $orders = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where('payment_status', 'paid')
+            ->with(['user', 'event'])
+            ->get();
+            
+        $commissions = Commission::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->with(['promoter', 'order.event'])
+            ->get();
+            
+        $totalRevenue = $orders->sum('total_amount');
+        $totalCommissions = $commissions->sum('commission_amount');
+        $netRevenue = $totalRevenue - $totalCommissions;
+        
+        $data = [
+            'period' => $period,
+            'date_range' => $dateRange,
+            'orders' => $orders,
+            'commissions' => $commissions,
+            'summary' => [
+                'total_revenue' => $totalRevenue,
+                'total_commissions' => $totalCommissions,
+                'net_revenue' => $netRevenue,
+                'orders_count' => $orders->count(),
+                'average_order' => $orders->count() > 0 ? $totalRevenue / $orders->count() : 0
+            ]
+        ];
+        
+        $filename = 'rapport_financier_' . $period . '_' . now()->format('Y-m-d');
+        
+        if ($format === 'excel') {
+            // Si vous avez Laravel Excel installé
+            // return Excel::download(new FinancialReportExport($data), $filename . '.xlsx');
+            
+            // Sinon, export CSV simple
+            return $this->exportToCSV($data, $filename . '.csv');
+        } elseif ($format === 'pdf') {
+            // Si vous avez DomPDF installé
+            // $pdf = PDF::loadView('admin.exports.financial-pdf', $data);
+            // return $pdf->download($filename . '.pdf');
+            
+            return $this->exportToCSV($data, $filename . '.csv');
+        }
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur export financier: ' . $e->getMessage());
+        return redirect()->back()
+            ->with('error', 'Erreur lors de l\'export: ' . $e->getMessage());
+    }
+}
+
+public function exportUsers(Request $request)
+{
+    $format = $request->get('format', 'csv');
+    
+    $users = User::with(['events', 'orders'])->get();
+    
+    $filename = 'utilisateurs_' . now()->format('Y-m-d') . '.' . $format;
+    
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+    
+    $callback = function() use ($users) {
+        $file = fopen('php://output', 'w');
+        
+        // En-têtes CSV
+        fputcsv($file, [
+            'ID', 'Nom', 'Email', 'Rôle', 'Téléphone', 
+            'Email vérifié', 'Date inscription', 'Nb événements', 'Nb commandes'
+        ]);
+        
+        // Données
+        foreach ($users as $user) {
+            fputcsv($file, [
+                $user->id,
+                $user->name,
+                $user->email,
+                $user->role,
+                $user->phone,
+                $user->email_verified_at ? 'Oui' : 'Non',
+                $user->created_at->format('d/m/Y'),
+                $user->events ? $user->events->count() : 0,
+                $user->orders ? $user->orders->count() : 0
+            ]);
+        }
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, $headers);
+}
+
+public function exportEvents(Request $request)
+{
+    $format = $request->get('format', 'csv');
+    
+    $events = Event::with(['promoteur', 'category', 'orders', 'ticketTypes'])
+        ->withCount(['orders', 'tickets'])
+        ->get();
+    
+    $filename = 'evenements_' . now()->format('Y-m-d') . '.' . $format;
+    
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+    
+    $callback = function() use ($events) {
+        $file = fopen('php://output', 'w');
+        
+        fputcsv($file, [
+            'ID', 'Titre', 'Promoteur', 'Catégorie', 'Date événement',
+            'Statut', 'Prix min', 'Prix max', 'Nb commandes', 'Nb billets vendus'
+        ]);
+        
+        foreach ($events as $event) {
+            $prices = $event->ticketTypes->pluck('price');
+            
+            fputcsv($file, [
+                $event->id,
+                $event->title,
+                $event->promoteur->name ?? 'N/A',
+                $event->category->name ?? 'N/A',
+                $event->event_date->format('d/m/Y H:i'),
+                $event->status,
+                $prices->min() ?? 0,
+                $prices->max() ?? 0,
+                $event->orders_count,
+                $event->tickets_count
+            ]);
+        }
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, $headers);
+}
+
+public function exportOrders(Request $request)
+{
+    $orders = Order::with(['user', 'event', 'orderItems'])
+        ->latest()
+        ->get();
+    
+    $filename = 'commandes_' . now()->format('Y-m-d') . '.csv';
+    
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+    
+    $callback = function() use ($orders) {
+        $file = fopen('php://output', 'w');
+        
+        fputcsv($file, [
+            'N° Commande', 'Client', 'Email', 'Événement',
+            'Montant', 'Statut', 'Date', 'Quantité billets'
+        ]);
+        
+        foreach ($orders as $order) {
+            fputcsv($file, [
+                $order->order_number ?? $order->id,
+                $order->user->name ?? 'N/A',
+                $order->user->email ?? 'N/A',
+                $order->event->title ?? 'N/A',
+                $order->total_amount,
+                $order->payment_status,
+                $order->created_at->format('d/m/Y H:i'),
+                $order->orderItems->sum('quantity')
+            ]);
+        }
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, $headers);
+}
+
+public function exportCommissions(Request $request)
+{
+    $commissions = Commission::with(['promoter', 'order.event'])
+        ->latest()
+        ->get();
+    
+    $filename = 'commissions_' . now()->format('Y-m-d') . '.csv';
+    
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+    
+    $callback = function() use ($commissions) {
+        $file = fopen('php://output', 'w');
+        
+        fputcsv($file, [
+            'Date', 'Promoteur', 'Événement', 'N° Commande',
+            'Montant brut', 'Taux %', 'Commission', 'Net promoteur', 'Statut'
+        ]);
+        
+        foreach ($commissions as $commission) {
+            fputcsv($file, [
+                $commission->created_at->format('d/m/Y'),
+                $commission->promoter->name ?? 'N/A',
+                $commission->order->event->title ?? 'N/A',
+                $commission->order->order_number ?? $commission->order->id,
+                $commission->gross_amount,
+                $commission->commission_rate,
+                $commission->commission_amount,
+                $commission->net_amount,
+                $commission->status
+            ]);
+        }
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, $headers);
+}
+
+/**
+ * === MÉTHODE POUR RAPPORTS ===
+ */
+
+public function reports(Request $request)
+{
+    $period = $request->get('period', 'this_month');
+    $dateRange = $this->getDateRange($period);
+    
+    // Statistiques du mois
+    $monthlyRevenue = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+        ->where('payment_status', 'paid')
+        ->sum('total_amount');
+        
+    $monthlyOrders = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+        ->where('payment_status', 'paid')
+        ->count();
+        
+    $monthlyEvents = Event::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+        ->where('status', 'published')
+        ->count();
+        
+    $monthlyUsers = User::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+        ->count();
+    
+    return view('admin.reports', compact(
+        'monthlyRevenue', 'monthlyOrders', 'monthlyEvents', 'monthlyUsers', 'period'
+    ));
+}
+    
     /**
      * Alertes et notifications
      */
@@ -344,6 +687,70 @@ class AdminController extends Controller
             'new_users' => 0
         ];
     }
+
+    /**
+ * === MÉTHODES MANQUANTES POUR GESTION UTILISATEURS ===
+ */
+
+public function createUser()
+{
+    return view('admin.users.create');
+}
+
+public function storeUser(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:8|confirmed',
+        'role' => 'required|in:admin,promoteur,acheteur',
+        'phone' => 'nullable|string|max:20',
+    ]);
+
+    $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'role' => $request->role,
+        'phone' => $request->phone,
+        'email_verified_at' => now(), // Auto-vérifier les comptes créés par admin
+    ]);
+
+    return redirect()->route('admin.users')
+        ->with('success', 'Utilisateur créé avec succès');
+}
+
+public function editUser(User $user)
+{
+    return view('admin.users.edit', compact('user'));
+}
+
+public function updateUser(Request $request, User $user)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+        'role' => 'required|in:admin,promoteur,acheteur',
+        'phone' => 'nullable|string|max:20',
+    ]);
+
+    $user->update($request->only(['name', 'email', 'role', 'phone']));
+
+    return redirect()->route('admin.users')
+        ->with('success', 'Utilisateur mis à jour avec succès');
+}
+
+public function destroyUser(User $user)
+{
+    // Empêcher la suppression de son propre compte
+    if ($user->id === auth()->id()) {
+        return response()->json(['success' => false, 'message' => 'Vous ne pouvez pas supprimer votre propre compte']);
+    }
+
+    $user->delete();
+
+    return response()->json(['success' => true, 'message' => 'Utilisateur supprimé avec succès']);
+}
 
     /**
      * Liste des utilisateurs
@@ -459,14 +866,7 @@ class AdminController extends Controller
             ->with('success', 'Commission payée avec succès');
     }
 
-    /**
-     * Export des données
-     */
-    public function exportCommissions()
-    {
-        // Logique d'export des commissions
-        return response()->download(/* fichier export */);
-    }
+   
 
     public function exportRevenues($period)
     {
@@ -474,11 +874,7 @@ class AdminController extends Controller
         return response()->download(/* fichier export */);
     }
 
-    public function exportOrders()
-    {
-        // Logique d'export des commandes
-        return response()->download(/* fichier export */);
-    }
+   
 
     public function exportPromoters()
     {

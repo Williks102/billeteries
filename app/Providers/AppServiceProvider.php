@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Ticket;
 use App\Observers\TicketObserver;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Blade;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,7 +44,36 @@ class AppServiceProvider extends ServiceProvider
 
         });
 
-        //Ticket::observe(TicketObserver::class);
-    }
+           View::composer('*', function ($view) {
+        if (auth()->check()) {
+            $user = auth()->user();
+            $layout = match($user->role) {
+                'admin' => 'layouts.admin',
+                'promoteur' => 'layouts.promoteur',
+                'acheteur' => 'layouts.acheteur',
+                default => 'layouts.app'
+            };
+            $view->with('defaultLayout', $layout);
+        }
+    });
 
+       Blade::directive('autoLayout', function ($expression) {
+        return "<?php 
+            \$user = auth()->user();
+            \$layout = \$user ? match(\$user->role) {
+                'admin' => 'layouts.admin',
+                'promoteur' => 'layouts.promoteur', 
+                'acheteur' => 'layouts.acheteur',
+                default => 'layouts.app'
+            } : 'layouts.app';
+            echo \"@extends('\" . \$layout . \"')\";
+        ?>";
+    });
+     // Directive pour sidebar conditionnelle
+    Blade::directive('adminSidebar', function () {
+        return "<?php if(auth()->check() && auth()->user()->isAdmin()): ?>
+                    @include('partials.admin-sidebar')
+                <?php endif; ?>";
+    });
+}
 }

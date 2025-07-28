@@ -908,28 +908,29 @@ public function destroyUser(User $user)
      * Liste des commandes
      */
     public function orders(Request $request)
-    {
-        $query = Order::with(['user', 'event', 'orderItems']);
-        
-        if ($request->filled('status')) {
-            $query->where('payment_status', $request->status);
-        }
-        
-        if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('order_number', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('user', function($subQ) use ($request) {
-                      $subQ->where('name', 'like', '%' . $request->search . '%')
-                           ->orWhere('email', 'like', '%' . $request->search . '%');
+{
+    $orders = Order::with(['user', 'event'])
+        ->when($request->search, function($query, $search) {
+            $query->where('order_number', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
                   });
-            });
-        }
-        
-        $orders = $query->latest()->paginate(20);
-        
-        return view('admin.orders', compact('orders'));
-    }
+        })
+        ->when($request->status, function($query, $status) {
+            $query->where('status', $status);
+        })
+        ->latest()
+        ->paginate(15);
 
+    $stats = [
+        'completed' => Order::where('status', 'completed')->count(),
+        'pending' => Order::where('status', 'pending')->count(),
+        'cancelled' => Order::where('status', 'cancelled')->count(),
+        'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount')
+    ];
+
+    return view('admin.orders', compact('orders', 'stats'));
+}
     /**
      * Détail d'une commande
      */
@@ -1015,5 +1016,376 @@ public function bulkUpdateOrders(Request $request) {
     return response()->json(['success' => true]);
 }
 
+public function tickets(Request $request)
+    {
+        $query = Ticket::with(['ticketType.event.promoteur', 'orderTickets.order.user'])
+            ->orderBy('created_at', 'desc');
+
+        // Filtrage par recherche
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('ticket_code', 'like', "%{$search}%")
+                  ->orWhereHas('ticketType.event', function($subQ) use ($search) {
+                      $subQ->where('title', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('orderTickets.order.user', function($subQ) use ($search) {
+                      $subQ->where('name', 'like', "%{$search}%")
+                           ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filtrage par statut
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filtrage par événement
+        if ($request->filled('event_id')) {
+            $query->whereHas('ticketType', function($q) use ($request) {
+                $q->where('event_id', $request->event_id);
+            });
+        }
+
+        // Filtrage par date
+        if ($request->filled('date_filter')) {
+            switch ($request->date_filter) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                    break;
+                case 'month':
+                    $query->whereMonth('created_at', Carbon::now()->month)
+                          ->whereYear('created_at', Carbon::now()->year);
+                    break;
+            }
+        }
+
+        $tickets = $query->paginate(20);
+
+        // Statistiques des billets
+        $stats = [
+            'total' => Ticket::count(),
+            'available' => Ticket::where('status', 'available')->count(),
+            'sold' => Ticket::where('status', 'sold')->count(),
+            'used' => Ticket::where('status', 'used')->count(),
+            'cancelled' => Ticket::where('status', 'cancelled')->count(),
+            'total_value' => Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+                           ->where('tickets.status', 'sold')
+                           ->sum('ticket_types.price')
+        ];
+
+        // Liste des événements pour le filtre
+        $events = Event::with('promoteur')->orderBy('title')->get();
+
+        return view('admin.tickets', compact('tickets', 'stats', 'events'));
+    }
+
+    /**
+     * Afficher les détails d'un billet spécifique
+     */
+    public function showTicket(Ticket $ticket)
+    {
+        // Charger toutes les relations nécessaires
+        $ticket->load([
+            'ticketType.event.promoteur',
+            'ticketType.event.category',
+            'orderTickets.order.user',
+            'orderTickets.order.transactions'
+        ]);
+
+        // Informations sur la commande associée
+        $order = $ticket->orderTickets->first()?->order;
+        
+        // Historique d'utilisation du billet
+        $ticketHistory = $this->getTicketHistory($ticket);
+
+        // Billets similaires du même événement
+        $relatedTickets = Ticket::whereHas('ticketType', function($q) use ($ticket) {
+            $q->where('event_id', $ticket->ticketType->event_id);
+        })
+        ->where('id', '!=', $ticket->id)
+        ->with(['ticketType', 'orderTickets.order.user'])
+        ->limit(5)
+        ->get();
+
+        // Statistiques de l'événement
+        $eventStats = $this->getEventTicketStats($ticket->ticketType->event_id);
+
+        return view('admin.tickets.show', compact(
+            'ticket', 
+            'order', 
+            'ticketHistory', 
+            'relatedTickets', 
+            'eventStats'
+        ));
+    }
+
+    /**
+     * Marquer un billet comme utilisé
+     */
+    public function markTicketUsed(Ticket $ticket)
+    {
+        if ($ticket->status !== 'sold') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seuls les billets vendus peuvent être marqués comme utilisés'
+            ], 422);
+        }
+
+        $ticket->update([
+            'status' => 'used',
+            'used_at' => Carbon::now(),
+            'used_by_admin_id' => auth()->id()
+        ]);
+
+        // Log de l'action
+        \Log::info('Billet marqué comme utilisé', [
+            'ticket_id' => $ticket->id,
+            'ticket_code' => $ticket->ticket_code,
+            'admin_id' => auth()->id(),
+            'admin_name' => auth()->user()->name
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Billet marqué comme utilisé avec succès'
+        ]);
+    }
+
+    /**
+     * Annuler un billet
+     */
+    public function cancelTicket(Ticket $ticket, Request $request)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:255'
+        ]);
+
+        if (!in_array($ticket->status, ['available', 'sold'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ce billet ne peut pas être annulé'
+            ], 422);
+        }
+
+        $ticket->update([
+            'status' => 'cancelled',
+            'cancelled_at' => Carbon::now(),
+            'cancellation_reason' => $request->reason,
+            'cancelled_by_admin_id' => auth()->id()
+        ]);
+
+        // Si le billet était vendu, il faut gérer le remboursement
+        if ($ticket->status === 'sold') {
+            // Ici vous pourriez ajouter la logique de remboursement
+            // Par exemple, créer une transaction de remboursement
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Billet annulé avec succès'
+        ]);
+    }
+
+    /**
+     * Télécharger le PDF d'un billet
+     */
+    public function downloadTicketPDF(Ticket $ticket)
+    {
+        $ticket->load(['ticketType.event', 'orderTickets.order.user']);
+        
+        // Vous pouvez utiliser une library comme DomPDF ou TCPDF
+        // Ici un exemple simple avec une vue
+        
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadView('admin.tickets.pdf', compact('ticket'));
+        
+        $filename = 'billet_' . $ticket->ticket_code . '.pdf';
+        
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Réactiver un billet annulé
+     */
+    public function reactivateTicket(Ticket $ticket)
+    {
+        if ($ticket->status !== 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seuls les billets annulés peuvent être réactivés'
+            ], 422);
+        }
+
+        // Déterminer le nouveau statut selon l'historique
+        $newStatus = $ticket->orderTickets->count() > 0 ? 'sold' : 'available';
+
+        $ticket->update([
+            'status' => $newStatus,
+            'cancelled_at' => null,
+            'cancellation_reason' => null,
+            'cancelled_by_admin_id' => null,
+            'reactivated_at' => Carbon::now(),
+            'reactivated_by_admin_id' => auth()->id()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Billet réactivé avec succès'
+        ]);
+    }
+
+    /**
+     * Actions groupées sur les billets
+     */
+    public function bulkTicketAction(Request $request)
+    {
+        $request->validate([
+            'tickets' => 'required|array',
+            'tickets.*' => 'exists:tickets,id',
+            'action' => 'required|in:mark_used,cancel,reactivate,delete'
+        ]);
+
+        $tickets = Ticket::whereIn('id', $request->tickets)->get();
+        $successCount = 0;
+        $errors = [];
+
+        foreach ($tickets as $ticket) {
+            try {
+                switch ($request->action) {
+                    case 'mark_used':
+                        if ($ticket->status === 'sold') {
+                            $ticket->update([
+                                'status' => 'used',
+                                'used_at' => Carbon::now(),
+                                'used_by_admin_id' => auth()->id()
+                            ]);
+                            $successCount++;
+                        }
+                        break;
+
+                    case 'cancel':
+                        if (in_array($ticket->status, ['available', 'sold'])) {
+                            $ticket->update([
+                                'status' => 'cancelled',
+                                'cancelled_at' => Carbon::now(),
+                                'cancellation_reason' => 'Action groupée admin',
+                                'cancelled_by_admin_id' => auth()->id()
+                            ]);
+                            $successCount++;
+                        }
+                        break;
+
+                    case 'reactivate':
+                        if ($ticket->status === 'cancelled') {
+                            $newStatus = $ticket->orderTickets->count() > 0 ? 'sold' : 'available';
+                            $ticket->update([
+                                'status' => $newStatus,
+                                'cancelled_at' => null,
+                                'cancellation_reason' => null,
+                                'cancelled_by_admin_id' => null
+                            ]);
+                            $successCount++;
+                        }
+                        break;
+
+                    case 'delete':
+                        if ($ticket->status === 'available') {
+                            $ticket->delete();
+                            $successCount++;
+                        }
+                        break;
+                }
+            } catch (\Exception $e) {
+                $errors[] = "Erreur avec le billet {$ticket->ticket_code}: " . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "$successCount billet(s) traité(s) avec succès",
+            'errors' => $errors
+        ]);
+    }
+
+    /**
+     * Obtenir l'historique d'un billet
+     */
+    private function getTicketHistory(Ticket $ticket)
+    {
+        $history = collect();
+
+        // Création du billet
+        $history->push([
+            'action' => 'created',
+            'date' => $ticket->created_at,
+            'description' => 'Billet créé',
+            'admin' => null
+        ]);
+
+        // Vente du billet
+        if ($ticket->orderTickets->count() > 0) {
+            $order = $ticket->orderTickets->first()->order;
+            $history->push([
+                'action' => 'sold',
+                'date' => $order->created_at,
+                'description' => "Vendu à {$order->user->name}",
+                'admin' => null,
+                'order_id' => $order->id
+            ]);
+        }
+
+        // Utilisation du billet
+        if ($ticket->used_at) {
+            $history->push([
+                'action' => 'used',
+                'date' => $ticket->used_at,
+                'description' => 'Billet utilisé',
+                'admin' => $ticket->used_by_admin_id ? User::find($ticket->used_by_admin_id) : null
+            ]);
+        }
+
+        // Annulation du billet
+        if ($ticket->cancelled_at) {
+            $history->push([
+                'action' => 'cancelled',
+                'date' => $ticket->cancelled_at,
+                'description' => 'Billet annulé: ' . ($ticket->cancellation_reason ?? 'Aucune raison'),
+                'admin' => $ticket->cancelled_by_admin_id ? User::find($ticket->cancelled_by_admin_id) : null
+            ]);
+        }
+
+        return $history->sortBy('date');
+    }
+
+    /**
+     * Obtenir les statistiques des billets pour un événement
+     */
+    private function getEventTicketStats($eventId)
+    {
+        return [
+            'total_tickets' => Ticket::whereHas('ticketType', function($q) use ($eventId) {
+                $q->where('event_id', $eventId);
+            })->count(),
+            
+            'sold_tickets' => Ticket::whereHas('ticketType', function($q) use ($eventId) {
+                $q->where('event_id', $eventId);
+            })->where('status', 'sold')->count(),
+            
+            'used_tickets' => Ticket::whereHas('ticketType', function($q) use ($eventId) {
+                $q->where('event_id', $eventId);
+            })->where('status', 'used')->count(),
+            
+            'revenue' => DB::table('tickets')
+                ->join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+                ->where('ticket_types.event_id', $eventId)
+                ->where('tickets.status', 'sold')
+                ->sum('ticket_types.price')
+        ];
+    }
 
 }

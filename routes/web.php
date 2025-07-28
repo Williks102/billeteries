@@ -217,8 +217,15 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     Route::get('/orders/{order}/pdf', [AdminController::class, 'downloadOrderPDF'])->name('orders.pdf');
     Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('orders.export');
     Route::get('/tickets/{ticket}', [AdminController::class, 'showTicket'])->name('tickets.show');
-    Route::patch('/tickets/{ticket}/mark-used', [AdminController::class, 'markTicketUsed'])->name('tickets.markUsed');
     Route::get('/tickets/{ticket}/download', [AdminController::class, 'downloadTicketPDF'])->name('tickets.download');
+    Route::get('/tickets', [AdminController::class, 'tickets'])->name('tickets');
+    Route::get('/tickets/{ticket}', [AdminController::class, 'showTicket'])->name('tickets.show');
+    Route::patch('/tickets/{ticket}/mark-used', [AdminController::class, 'markTicketUsed'])->name('tickets.markUsed');
+    Route::patch('/tickets/{ticket}/cancel', [AdminController::class, 'cancelTicket'])->name('tickets.cancel');
+    Route::patch('/tickets/{ticket}/reactivate', [AdminController::class, 'reactivateTicket'])->name('tickets.reactivate');
+    Route::get('/tickets/{ticket}/pdf', [AdminController::class, 'downloadTicketPDF'])->name('tickets.pdf');
+    Route::post('/tickets/bulk-action', [AdminController::class, 'bulkTicketAction'])->name('tickets.bulkAction');
+    Route::get('/tickets/export', [AdminController::class, 'exportTickets'])->name('tickets.export');
 
     Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
     Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
@@ -239,6 +246,8 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     Route::post('/orders/bulk-update', [AdminController::class, 'bulkUpdateOrders'])->name('orders.bulkUpdate');
     Route::get('/orders/{order}/pdf', [AdminController::class, 'downloadOrderPDF'])->name('orders.pdf');
     Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('orders.export');
+    Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
+    Route::get('/orders/{order}', [AdminController::class, 'showOrder'])->name('orders.show');
     
     Route::get('/settings', function () { 
         return view('admin.settings'); 

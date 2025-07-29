@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\Setting;
 use App\Models\Commission;
 use App\Models\EventCategory;
 use App\Models\Ticket;
@@ -1645,41 +1646,40 @@ public function commissions(Request $request)
         return view('admin.tickets', compact('tickets', 'stats', 'events'));
     }
 
-     public function settings()
+public function settings()
     {
-        // Paramètres correspondant exactement à votre vue
+        // Charger les paramètres depuis la base de données
         $settings = [
             // Configuration générale
-            'platform_name' => env('APP_NAME', 'ClicBillet CI'),
-            'platform_email' => env('MAIL_FROM_ADDRESS', 'contact@clicbillet.ci'),
-            'commission_rate' => 10.0, // %
-            'currency' => 'FCFA',
-            'timezone' => 'Africa/Abidjan',
+            'platform_name' => Setting::get('platform_name', env('APP_NAME', 'ClicBillet CI')),
+            'platform_email' => Setting::get('platform_email', env('MAIL_FROM_ADDRESS', 'contact@clicbillet.ci')),
+            'commission_rate' => Setting::get('commission_rate', 10.0),
+            'currency' => Setting::get('currency', 'FCFA'),
+            'timezone' => Setting::get('timezone', 'Africa/Abidjan'),
             
             // Options de la plateforme
-            'maintenance_mode' => false,
-            'registration_enabled' => true,
-            'auto_approval_events' => false,
-            'email_notifications' => true,
-            'sms_notifications' => false,
+            'maintenance_mode' => Setting::get('maintenance_mode', false),
+            'registration_enabled' => Setting::get('registration_enabled', true),
+            'auto_approval_events' => Setting::get('auto_approval_events', false),
+            'email_notifications' => Setting::get('email_notifications', true),
+            'sms_notifications' => Setting::get('sms_notifications', false),
             
-            // Paramètres supplémentaires
-            'platform_fee_fixed' => 500, // FCFA
-            'min_commission' => 1000, // FCFA
-            'payment_delay_days' => 7,
-            'max_tickets_per_order' => 10,
-            'max_file_upload' => '10MB',
-            'allowed_image_types' => 'jpg,jpeg,png,webp',
-            'ticket_qr_size' => 200,
-            'platform_description' => 'Plateforme de billetterie en ligne pour la Côte d\'Ivoire',
-            'support_email' => 'support@clicbillet.ci',
-            'support_phone' => '+225 27 22 XX XX XX',
-            'backup_frequency' => 'daily',
+            // Paramètres supplémentaires (valeurs par défaut si pas en BDD)
+            'platform_fee_fixed' => Setting::get('platform_fee_fixed', 500),
+            'min_commission' => Setting::get('min_commission', 1000),
+            'payment_delay_days' => Setting::get('payment_delay_days', 7),
+            'max_tickets_per_order' => Setting::get('max_tickets_per_order', 10),
+            'max_file_upload' => Setting::get('max_file_upload', '10MB'),
+            'allowed_image_types' => Setting::get('allowed_image_types', 'jpg,jpeg,png,webp'),
+            'ticket_qr_size' => Setting::get('ticket_qr_size', 200),
+            'platform_description' => Setting::get('platform_description', 'Plateforme de billetterie en ligne pour la Côte d\'Ivoire'),
+            'support_email' => Setting::get('support_email', 'support@clicbillet.ci'),
+            'support_phone' => Setting::get('support_phone', '+225 27 22 XX XX XX'),
+            'backup_frequency' => Setting::get('backup_frequency', 'daily'),
         ];
         
-        // Statistiques du système pour votre vue
+        // Statistiques du système (inchangées)
         $systemStats = [
-            // Données basiques
             'total_users' => User::count(),
             'total_events' => Event::count(),
             'total_orders' => Order::count(),
@@ -1687,7 +1687,6 @@ public function commissions(Request $request)
             'pending_commissions' => Commission::where('status', 'pending')->count(),
             'active_promoters' => User::where('role', 'promoteur')->whereHas('events')->count(),
             
-            // Informations système
             'php_version' => PHP_VERSION,
             'laravel_version' => app()->version(),
             'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'N/A',
@@ -1696,10 +1695,7 @@ public function commissions(Request $request)
             'upload_max_filesize' => ini_get('upload_max_filesize'),
             'post_max_size' => ini_get('post_max_size'),
             
-            // Utilisation disque
             'disk_usage' => $this->getDiskUsage(),
-            
-            // Statut des services
             'database_connection' => $this->checkDatabaseConnection(),
             'mail_configured' => $this->checkMailConfiguration(),
             'storage_writable' => $this->checkStorageWritable(),
@@ -1713,23 +1709,18 @@ public function commissions(Request $request)
      */
     public function updateSettings(Request $request)
     {
-        // Validation complète selon votre formulaire
+        // Validation complète
         $request->validate([
-            // Configuration générale
             'platform_name' => 'required|string|max:255',
             'platform_email' => 'required|email|max:255',
             'commission_rate' => 'required|numeric|min:0|max:100',
             'currency' => 'required|in:FCFA,EUR,USD',
             'timezone' => 'required|string',
-            
-            // Options booléennes
             'maintenance_mode' => 'boolean',
             'registration_enabled' => 'boolean',
             'auto_approval_events' => 'boolean',
             'email_notifications' => 'boolean',
             'sms_notifications' => 'boolean',
-            
-            // Paramètres supplémentaires
             'platform_fee_fixed' => 'nullable|integer|min:0',
             'min_commission' => 'nullable|integer|min:0',
             'payment_delay_days' => 'nullable|integer|min:1|max:30',
@@ -1737,7 +1728,6 @@ public function commissions(Request $request)
             'support_email' => 'nullable|email',
             'support_phone' => 'nullable|string|max:20',
         ], [
-            // Messages d'erreur personnalisés
             'platform_name.required' => 'Le nom de la plateforme est obligatoire',
             'platform_email.required' => 'L\'email de contact est obligatoire',
             'platform_email.email' => 'L\'email doit être valide',
@@ -1750,25 +1740,48 @@ public function commissions(Request $request)
         ]);
         
         try {
-            // Traitement des valeurs booléennes
-            $data = $request->all();
-            $data['maintenance_mode'] = $request->has('maintenance_mode');
-            $data['registration_enabled'] = $request->has('registration_enabled');
-            $data['auto_approval_events'] = $request->has('auto_approval_events');
-            $data['email_notifications'] = $request->has('email_notifications');
-            $data['sms_notifications'] = $request->has('sms_notifications');
+            // Préparer les données avec les bonnes valeurs booléennes
+            $settingsData = [
+                'platform_name' => ['value' => $request->platform_name, 'type' => 'string'],
+                'platform_email' => ['value' => $request->platform_email, 'type' => 'string'],
+                'commission_rate' => ['value' => $request->commission_rate, 'type' => 'decimal'],
+                'currency' => ['value' => $request->currency, 'type' => 'string'],
+                'timezone' => ['value' => $request->timezone, 'type' => 'string'],
+                'maintenance_mode' => ['value' => $request->has('maintenance_mode'), 'type' => 'boolean'],
+                'registration_enabled' => ['value' => $request->has('registration_enabled'), 'type' => 'boolean'],
+                'auto_approval_events' => ['value' => $request->has('auto_approval_events'), 'type' => 'boolean'],
+                'email_notifications' => ['value' => $request->has('email_notifications'), 'type' => 'boolean'],
+                'sms_notifications' => ['value' => $request->has('sms_notifications'), 'type' => 'boolean'],
+            ];
             
-            // Ici vous pourriez sauvegarder dans une table settings
-            // ou dans des fichiers de configuration
+            // Ajouter les paramètres optionnels s'ils sont fournis
+            if ($request->filled('platform_fee_fixed')) {
+                $settingsData['platform_fee_fixed'] = ['value' => $request->platform_fee_fixed, 'type' => 'integer'];
+            }
+            if ($request->filled('min_commission')) {
+                $settingsData['min_commission'] = ['value' => $request->min_commission, 'type' => 'integer'];
+            }
+            if ($request->filled('payment_delay_days')) {
+                $settingsData['payment_delay_days'] = ['value' => $request->payment_delay_days, 'type' => 'integer'];
+            }
+            if ($request->filled('max_tickets_per_order')) {
+                $settingsData['max_tickets_per_order'] = ['value' => $request->max_tickets_per_order, 'type' => 'integer'];
+            }
+            if ($request->filled('support_email')) {
+                $settingsData['support_email'] = ['value' => $request->support_email, 'type' => 'string'];
+            }
+            if ($request->filled('support_phone')) {
+                $settingsData['support_phone'] = ['value' => $request->support_phone, 'type' => 'string'];
+            }
             
-            // Exemple de sauvegarde en base de données (optionnel)
-            $this->saveSettingsToDatabase($data);
+            // SAUVEGARDE RÉELLE EN BASE DE DONNÉES
+            Setting::setMany($settingsData);
             
             // Log de l'action
             \Log::info('Paramètres mis à jour par l\'admin', [
                 'admin_id' => auth()->id(),
                 'admin_name' => auth()->user()->name,
-                'updated_fields' => array_keys($data),
+                'updated_settings' => array_keys($settingsData),
                 'timestamp' => now()
             ]);
             
@@ -1776,7 +1789,12 @@ public function commissions(Request $request)
                 ->with('success', 'Paramètres mis à jour avec succès');
                 
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la mise à jour des paramètres: ' . $e->getMessage());
+            \Log::error('Erreur lors de la mise à jour des paramètres: ' . $e->getMessage(), [
+                'admin_id' => auth()->id(),
+                'request_data' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return redirect()->back()
                 ->with('error', 'Erreur lors de la sauvegarde: ' . $e->getMessage())

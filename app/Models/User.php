@@ -12,8 +12,6 @@ class User extends Authenticatable
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
      */
     protected $fillable = [
         'name',
@@ -25,8 +23,6 @@ class User extends Authenticatable
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -35,8 +31,6 @@ class User extends Authenticatable
 
     /**
      * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
      */
     protected function casts(): array
     {
@@ -77,30 +71,118 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
-    // Dans le modèle User
-public function totalRevenue()
-{
-    return $this->events()
-        ->whereHas('orders', function($query) {
-            $query->where('payment_status', 'paid');
-        })
-        ->with('orders')
-        ->get()
-        ->sum(function($event) {
-            return $event->orders->sum('total_amount');
-        });
-}
+    /**
+     * CORRECTION: Ajouter la relation commissions manquante
+     * Utilise 'promoteur_id' pour correspondre à votre table commissions existante
+     */
+    public function commissions()
+    {
+        return $this->hasMany(Commission::class, 'promoteur_id');
+    }
 
-public function pendingRevenue()
-{
-    return $this->events()
-        ->whereHas('orders', function($query) {
-            $query->where('payment_status', 'pending');
-        })
-        ->with('orders')
-        ->get()
-        ->sum(function($event) {
-            return $event->orders->sum('total_amount');
-        });
-}
+    /**
+     * Relation : Tickets achetés par l'utilisateur
+     */
+    public function tickets()
+    {
+        return $this->hasManyThrough(Ticket::class, Order::class)
+            ->join('order_tickets', 'tickets.id', '=', 'order_tickets.ticket_id')
+            ->where('orders.payment_status', 'paid');
+    }
+
+    /**
+     * Statistiques pour promoteur - Version améliorée
+     */
+    public function totalRevenue()
+    {
+        // Utilise les commissions payées pour plus de précision
+        return $this->commissions()->where('status', 'paid')->sum('net_amount');
+    }
+
+    public function pendingRevenue()
+    {
+        // Utilise les commissions en attente
+        return $this->commissions()->where('status', 'pending')->sum('net_amount');
+    }
+
+    public function totalTicketsSold()
+    {
+        return $this->events()->withCount(['orders' => function ($query) {
+            $query->where('payment_status', 'paid');
+        }])->get()->sum('orders_count');
+    }
+
+    /**
+     * NOUVELLES MÉTHODES UTILES
+     */
+    
+    /**
+     * Revenus totaux générés (brut, avant commission)
+     */
+    public function totalGrossRevenue()
+    {
+        return $this->commissions()->sum('gross_amount');
+    }
+
+    /**
+     * Total des commissions versées à la plateforme
+     */
+    public function totalPlatformCommissions()
+    {
+        return $this->commissions()->sum('commission_amount');
+    }
+
+    /**
+     * Nombre d'événements publiés
+     */
+    public function publishedEventsCount()
+    {
+        return $this->events()->where('status', 'published')->count();
+    }
+
+    /**
+     * Dernier événement créé
+     */
+    public function latestEvent()
+    {
+        return $this->events()->latest()->first();
+    }
+
+    /**
+     * Vérifier si le promoteur a des commissions impayées
+     */
+    public function hasPendingCommissions()
+    {
+        return $this->commissions()->where('status', 'pending')->exists();
+    }
+
+    /**
+     * Commissions du mois en cours
+     */
+    public function currentMonthCommissions()
+    {
+        return $this->commissions()
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year);
+    }
+
+    /**
+     * Performance du promoteur (taux de conversion approximatif)
+     */
+    public function getPerformanceStats()
+    {
+        $totalEvents = $this->events()->count();
+        $publishedEvents = $this->publishedEventsCount();
+        $eventsWithSales = $this->events()->whereHas('orders', function($query) {
+            $query->where('payment_status', 'paid');
+        })->count();
+
+        return [
+            'total_events' => $totalEvents,
+            'published_events' => $publishedEvents,
+            'events_with_sales' => $eventsWithSales,
+            'publication_rate' => $totalEvents > 0 ? round(($publishedEvents / $totalEvents) * 100, 1) : 0,
+            'conversion_rate' => $publishedEvents > 0 ? round(($eventsWithSales / $publishedEvents) * 100, 1) : 0
+        ];
+    }
 }

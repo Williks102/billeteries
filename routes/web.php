@@ -258,9 +258,14 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     Route::get('/events/{event}', [AdminController::class, 'showEvent'])->name('events.show');
    
     
-    Route::get('/settings', function () { 
-        return view('admin.settings'); 
-    })->name('settings');
+    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+    Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+    // Dans la section admin de routes/web.php
+Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+Route::patch('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+Route::post('/settings/test-email', [AdminController::class, 'testEmail'])->name('settings.test-email');
+Route::post('/settings/backup', [AdminController::class, 'backupSystem'])->name('settings.backup');
+Route::post('/settings/clear-cache', [AdminController::class, 'clearCache'])->name('settings.clear-cache');
     
     // CORRECTION : Enlever le préfixe /admin puisqu'il est déjà dans le groupe
     Route::get('/events/{id}', [AdminController::class, 'eventDetail'])->name('events.detail');
@@ -291,9 +296,7 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
         return view('admin.reports'); 
     })->name('reports');
     
-    Route::get('/settings', function () { 
-        return view('admin.settings'); 
-    })->name('settings');
+    
     
     // Routes pour les liens du dashboard
     Route::get('/commissions/pending', function () { 

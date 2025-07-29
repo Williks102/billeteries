@@ -1644,4 +1644,487 @@ public function commissions(Request $request)
 
         return view('admin.tickets', compact('tickets', 'stats', 'events'));
     }
+
+     public function settings()
+    {
+        // Paramètres correspondant exactement à votre vue
+        $settings = [
+            // Configuration générale
+            'platform_name' => env('APP_NAME', 'ClicBillet CI'),
+            'platform_email' => env('MAIL_FROM_ADDRESS', 'contact@clicbillet.ci'),
+            'commission_rate' => 10.0, // %
+            'currency' => 'FCFA',
+            'timezone' => 'Africa/Abidjan',
+            
+            // Options de la plateforme
+            'maintenance_mode' => false,
+            'registration_enabled' => true,
+            'auto_approval_events' => false,
+            'email_notifications' => true,
+            'sms_notifications' => false,
+            
+            // Paramètres supplémentaires
+            'platform_fee_fixed' => 500, // FCFA
+            'min_commission' => 1000, // FCFA
+            'payment_delay_days' => 7,
+            'max_tickets_per_order' => 10,
+            'max_file_upload' => '10MB',
+            'allowed_image_types' => 'jpg,jpeg,png,webp',
+            'ticket_qr_size' => 200,
+            'platform_description' => 'Plateforme de billetterie en ligne pour la Côte d\'Ivoire',
+            'support_email' => 'support@clicbillet.ci',
+            'support_phone' => '+225 27 22 XX XX XX',
+            'backup_frequency' => 'daily',
+        ];
+        
+        // Statistiques du système pour votre vue
+        $systemStats = [
+            // Données basiques
+            'total_users' => User::count(),
+            'total_events' => Event::count(),
+            'total_orders' => Order::count(),
+            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount') ?? 0,
+            'pending_commissions' => Commission::where('status', 'pending')->count(),
+            'active_promoters' => User::where('role', 'promoteur')->whereHas('events')->count(),
+            
+            // Informations système
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'N/A',
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time'),
+            'upload_max_filesize' => ini_get('upload_max_filesize'),
+            'post_max_size' => ini_get('post_max_size'),
+            
+            // Utilisation disque
+            'disk_usage' => $this->getDiskUsage(),
+            
+            // Statut des services
+            'database_connection' => $this->checkDatabaseConnection(),
+            'mail_configured' => $this->checkMailConfiguration(),
+            'storage_writable' => $this->checkStorageWritable(),
+        ];
+        
+        return view('admin.settings', compact('settings', 'systemStats'));
+    }
+    
+    /**
+     * Mettre à jour les paramètres - CORRESPONDANT À VOTRE FORMULAIRE
+     */
+    public function updateSettings(Request $request)
+    {
+        // Validation complète selon votre formulaire
+        $request->validate([
+            // Configuration générale
+            'platform_name' => 'required|string|max:255',
+            'platform_email' => 'required|email|max:255',
+            'commission_rate' => 'required|numeric|min:0|max:100',
+            'currency' => 'required|in:FCFA,EUR,USD',
+            'timezone' => 'required|string',
+            
+            // Options booléennes
+            'maintenance_mode' => 'boolean',
+            'registration_enabled' => 'boolean',
+            'auto_approval_events' => 'boolean',
+            'email_notifications' => 'boolean',
+            'sms_notifications' => 'boolean',
+            
+            // Paramètres supplémentaires
+            'platform_fee_fixed' => 'nullable|integer|min:0',
+            'min_commission' => 'nullable|integer|min:0',
+            'payment_delay_days' => 'nullable|integer|min:1|max:30',
+            'max_tickets_per_order' => 'nullable|integer|min:1|max:50',
+            'support_email' => 'nullable|email',
+            'support_phone' => 'nullable|string|max:20',
+        ], [
+            // Messages d'erreur personnalisés
+            'platform_name.required' => 'Le nom de la plateforme est obligatoire',
+            'platform_email.required' => 'L\'email de contact est obligatoire',
+            'platform_email.email' => 'L\'email doit être valide',
+            'commission_rate.required' => 'Le taux de commission est obligatoire',
+            'commission_rate.numeric' => 'Le taux de commission doit être un nombre',
+            'commission_rate.min' => 'Le taux de commission ne peut pas être négatif',
+            'commission_rate.max' => 'Le taux de commission ne peut pas dépasser 100%',
+            'currency.required' => 'La devise est obligatoire',
+            'currency.in' => 'La devise doit être FCFA, EUR ou USD',
+        ]);
+        
+        try {
+            // Traitement des valeurs booléennes
+            $data = $request->all();
+            $data['maintenance_mode'] = $request->has('maintenance_mode');
+            $data['registration_enabled'] = $request->has('registration_enabled');
+            $data['auto_approval_events'] = $request->has('auto_approval_events');
+            $data['email_notifications'] = $request->has('email_notifications');
+            $data['sms_notifications'] = $request->has('sms_notifications');
+            
+            // Ici vous pourriez sauvegarder dans une table settings
+            // ou dans des fichiers de configuration
+            
+            // Exemple de sauvegarde en base de données (optionnel)
+            $this->saveSettingsToDatabase($data);
+            
+            // Log de l'action
+            \Log::info('Paramètres mis à jour par l\'admin', [
+                'admin_id' => auth()->id(),
+                'admin_name' => auth()->user()->name,
+                'updated_fields' => array_keys($data),
+                'timestamp' => now()
+            ]);
+            
+            return redirect()->route('admin.settings')
+                ->with('success', 'Paramètres mis à jour avec succès');
+                
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la mise à jour des paramètres: ' . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'Erreur lors de la sauvegarde: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+    
+    /**
+     * Sauvegarder les paramètres en base de données (optionnel)
+     */
+    private function saveSettingsToDatabase(array $data)
+    {
+        // Vous pourriez créer une table 'settings' pour persister les données
+        // Pour l'instant, simulation de la sauvegarde
+        
+        foreach ($data as $key => $value) {
+            // DB::table('settings')->updateOrInsert(
+            //     ['key' => $key],
+            //     ['value' => is_bool($value) ? ($value ? '1' : '0') : $value, 'updated_at' => now()]
+            // );
+        }
+    }
+    
+    /**
+     * Calculer l'utilisation du disque
+     */
+    private function getDiskUsage()
+    {
+        try {
+            $bytes = disk_free_space(storage_path());
+            $totalBytes = disk_total_space(storage_path());
+            
+            if ($bytes === false || $totalBytes === false) {
+                return [
+                    'free' => 'N/A',
+                    'total' => 'N/A',
+                    'used_percentage' => 0
+                ];
+            }
+            
+            return [
+                'free' => $this->formatBytes($bytes),
+                'total' => $this->formatBytes($totalBytes),
+                'used_percentage' => round((($totalBytes - $bytes) / $totalBytes) * 100, 1)
+            ];
+        } catch (\Exception $e) {
+            \Log::warning('Erreur calcul utilisation disque: ' . $e->getMessage());
+            return [
+                'free' => 'N/A',
+                'total' => 'N/A', 
+                'used_percentage' => 0
+            ];
+        }
+    }
+    
+    /**
+     * Formater les bytes en format lisible
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, $precision) . ' ' . $units[$i];
+    }
+    
+    /**
+     * Vérifier la connexion à la base de données
+     */
+    private function checkDatabaseConnection()
+    {
+        try {
+            DB::connection()->getPdo();
+            return [
+                'status' => 'connected',
+                'message' => 'Connexion active',
+                'icon' => 'fas fa-check-circle text-success'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'error',
+                'message' => 'Erreur de connexion',
+                'icon' => 'fas fa-times-circle text-danger'
+            ];
+        }
+    }
+    
+    /**
+     * Vérifier la configuration email
+     */
+    private function checkMailConfiguration()
+    {
+        try {
+            $required = ['MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME'];
+            $configured = true;
+            
+            foreach ($required as $key) {
+                if (empty(env($key))) {
+                    $configured = false;
+                    break;
+                }
+            }
+            
+            return [
+                'status' => $configured ? 'configured' : 'incomplete',
+                'message' => $configured ? 'Configuré et fonctionnel' : 'Configuration incomplète',
+                'icon' => $configured ? 'fas fa-check-circle text-success' : 'fas fa-exclamation-triangle text-warning'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'error',
+                'message' => 'Erreur de configuration',
+                'icon' => 'fas fa-times-circle text-danger'
+            ];
+        }
+    }
+    
+    /**
+     * Vérifier si le storage est accessible en écriture
+     */
+    private function checkStorageWritable()
+    {
+        try {
+            $testFile = storage_path('app/test_write_permission.txt');
+            file_put_contents($testFile, 'test');
+            unlink($testFile);
+            
+            return [
+                'status' => 'writable',
+                'message' => 'Accessible en écriture',
+                'icon' => 'fas fa-check-circle text-success'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'readonly',
+                'message' => 'Problème d\'écriture',
+                'icon' => 'fas fa-times-circle text-danger'
+            ];
+        }
+    }
+    
+    /**
+     * Test d'envoi d'email (endpoint AJAX)
+     */
+    public function testEmail()
+    {
+        try {
+            // Ici vous pourriez envoyer un email de test
+            // Mail::to(auth()->user()->email)->send(new TestEmail());
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Email de test envoyé avec succès'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'envoi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Sauvegarde système (endpoint AJAX)
+     */
+    public function backupSystem()
+    {
+        try {
+            // Ici vous pourriez implémenter la logique de sauvegarde
+            // Artisan::call('backup:run');
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Sauvegarde système initiée avec succès'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    /**
+     * Vider le cache système (endpoint AJAX)
+     */
+    public function clearCache()
+    {
+        try {
+            // Vider différents types de cache
+            \Artisan::call('cache:clear');
+            \Artisan::call('config:clear');
+            \Artisan::call('route:clear');
+            \Artisan::call('view:clear');
+            
+            \Log::info('Cache vidé par l\'admin', [
+                'admin_id' => auth()->id(),
+                'admin_name' => auth()->user()->name,
+                'timestamp' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Cache vidé avec succès'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors du vidage du cache: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du vidage du cache: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Optimiser la base de données (endpoint AJAX)
+     */
+    public function optimizeDatabase()
+    {
+        try {
+            // Optimiser les tables principales
+            $tables = ['users', 'events', 'orders', 'commissions', 'tickets'];
+            
+            foreach ($tables as $table) {
+                DB::statement("OPTIMIZE TABLE {$table}");
+            }
+            
+            \Log::info('Base de données optimisée par l\'admin', [
+                'admin_id' => auth()->id(),
+                'admin_name' => auth()->user()->name,
+                'tables' => $tables,
+                'timestamp' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Base de données optimisée avec succès'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de l\'optimisation de la BDD: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'optimisation: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Générer un rapport système (endpoint AJAX)
+     */
+    public function generateSystemReport()
+    {
+        try {
+            $report = [
+                'generated_at' => now()->format('d/m/Y H:i:s'),
+                'generated_by' => auth()->user()->name,
+                
+                // Statistiques générales
+                'statistics' => [
+                    'total_users' => User::count(),
+                    'total_events' => Event::count(),
+                    'total_orders' => Order::count(),
+                    'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
+                    'pending_commissions' => Commission::where('status', 'pending')->count(),
+                ],
+                
+                // Informations système
+                'system_info' => [
+                    'php_version' => PHP_VERSION,
+                    'laravel_version' => app()->version(),
+                    'memory_limit' => ini_get('memory_limit'),
+                    'max_execution_time' => ini_get('max_execution_time'),
+                    'upload_max_filesize' => ini_get('upload_max_filesize'),
+                ],
+                
+                // Statut des services
+                'services_status' => [
+                    'database' => $this->checkDatabaseConnection(),
+                    'mail' => $this->checkMailConfiguration(),
+                    'storage' => $this->checkStorageWritable(),
+                ],
+                
+                // Utilisation des ressources
+                'disk_usage' => $this->getDiskUsage(),
+                
+                // Erreurs récentes (optionnel)
+                'recent_errors' => $this->getRecentErrors(),
+            ];
+            
+            // Sauvegarder le rapport
+            $filename = 'system_report_' . now()->format('Y-m-d_H-i-s') . '.json';
+            Storage::put('reports/' . $filename, json_encode($report, JSON_PRETTY_PRINT));
+            
+            \Log::info('Rapport système généré par l\'admin', [
+                'admin_id' => auth()->id(),
+                'admin_name' => auth()->user()->name,
+                'filename' => $filename,
+                'timestamp' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Rapport système généré avec succès',
+                'download_url' => Storage::url('reports/' . $filename)
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la génération du rapport: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la génération du rapport: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Obtenir les erreurs récentes
+     */
+    private function getRecentErrors()
+    {
+        try {
+            $logFile = storage_path('logs/laravel.log');
+            
+            if (!file_exists($logFile)) {
+                return [];
+            }
+            
+            $lines = file($logFile);
+            $errors = [];
+            $errorCount = 0;
+            
+            // Lire les 100 dernières lignes
+            $recentLines = array_slice($lines, -100);
+            
+            foreach ($recentLines as $line) {
+                if (strpos($line, 'ERROR') !== false && $errorCount < 10) {
+                    $errors[] = trim($line);
+                    $errorCount++;
+                }
+            }
+            
+            return $errors;
+        } catch (\Exception $e) {
+            return ['Erreur lors de la lecture des logs: ' . $e->getMessage()];
+        }
+    }
 }

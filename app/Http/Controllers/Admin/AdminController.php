@@ -38,19 +38,20 @@ public function dashboard(Request $request)
         $period = $request->get('period', 'this_month');
         $dateRange = $this->getDateRange($period);
 
-        // Statistiques principales avec vérifications
+        // STATISTIQUES CORRIGÉES
         $stats = [
             'total_users' => User::count(),
             'total_events' => Event::count(),
+            // CORRECTION: utiliser payment_status au lieu de status
             'total_orders' => Order::where('payment_status', 'paid')->count(),
             'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount') ?? 0,
             'pending_commissions' => Commission::where('status', 'pending')->count(),
             'active_promoters' => User::where('role', 'promoteur')->whereHas('events')->count(),
         ];
         
-        // Commandes récentes avec vérifications
+        // COMMANDES RÉCENTES CORRIGÉES
         $recentOrders = Order::with(['user', 'event'])
-            ->where('payment_status', 'paid')
+            ->where('payment_status', 'paid') // CORRECTION
             ->latest()
             ->limit(10)
             ->get();
@@ -82,7 +83,7 @@ public function dashboard(Request $request)
     } catch (\Exception $e) {
         \Log::error('Erreur dashboard admin: ' . $e->getMessage());
         
-        // Données par défaut en cas d'erreur
+        // Retourner des valeurs par défaut en cas d'erreur
         $stats = [
             'total_users' => 0,
             'total_events' => 0,
@@ -95,10 +96,10 @@ public function dashboard(Request $request)
         $recentOrders = collect();
         $chartData = ['labels' => [], 'revenue' => [], 'orders' => []];
         $alerts = [];
-        $period = 'this_month';
         
-        return view('admin.dashboard', compact('stats', 'recentOrders', 'chartData', 'alerts', 'period'))
-            ->with('error', 'Erreur lors du chargement des données du dashboard');
+        return view('admin.dashboard', compact(
+            'stats', 'recentOrders', 'chartData', 'alerts'
+        ));
     }
 }
 
@@ -905,9 +906,9 @@ public function destroyUser(User $user)
     }
 
     /**
-     * Liste des commandes
-     */
-    public function orders(Request $request)
+ * Liste des commandes (CORRIGER)
+ */
+public function orders(Request $request)
 {
     $orders = Order::with(['user', 'event'])
         ->when($request->search, function($query, $search) {
@@ -917,15 +918,22 @@ public function destroyUser(User $user)
                   });
         })
         ->when($request->status, function($query, $status) {
-            $query->where('status', $status);
+            // CORRECTION: utiliser payment_status au lieu de status
+            $query->where('payment_status', $status);
+        })
+        ->when($request->payment_status, function($query, $payment_status) {
+            // Ajouter filtre spécifique pour payment_status
+            $query->where('payment_status', $payment_status);
         })
         ->latest()
         ->paginate(15);
 
+    // STATISTIQUES CORRIGÉES
     $stats = [
-        'completed' => Order::where('status', 'completed')->count(),
-        'pending' => Order::where('status', 'pending')->count(),
-        'cancelled' => Order::where('status', 'cancelled')->count(),
+        'paid' => Order::where('payment_status', 'paid')->count(),
+        'pending' => Order::where('payment_status', 'pending')->count(),
+        'failed' => Order::where('payment_status', 'failed')->count(),
+        'refunded' => Order::where('payment_status', 'refunded')->count(),
         'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount')
     ];
 
@@ -1005,10 +1013,56 @@ public function destroyUser(User $user)
     }
 
     
-public function updateOrderStatus(Order $order, Request $request) {
-    $order->update(['payment_status' => $request->status]);
-    return response()->json(['success' => true]);
+public function updateOrderStatus(Request $request, Order $order)
+{
+    $request->validate([
+        'payment_status' => 'required|in:pending,paid,failed,refunded'
+    ]);
+    
+    $oldStatus = $order->payment_status;
+    $newStatus = $request->payment_status;
+    
+    // Mise à jour du payment_status
+    $order->update([
+        'payment_status' => $newStatus
+    ]);
+    
+    // Actions spécifiques selon le nouveau statut
+    switch ($newStatus) {
+        case 'paid':
+            // Marquer les billets comme vendus
+            $order->tickets()->update(['status' => 'sold']);
+            
+            // Créer la commission si elle n'existe pas
+            if (!$order->commission) {
+                $order->createCommission();
+            }
+            break;
+            
+        case 'refunded':
+            // Annuler les billets
+            $order->tickets()->update(['status' => 'cancelled']);
+            
+            // Mettre la commission en attente
+            if ($order->commission) {
+                $order->commission->update(['status' => 'held']);
+            }
+            break;
+            
+        case 'failed':
+            // Remettre les billets disponibles
+            $order->tickets()->update(['status' => 'available']);
+            break;
+    }
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Statut de la commande mis à jour avec succès',
+        'old_status' => $oldStatus,
+        'new_status' => $newStatus
+    ]);
 }
+
 
 public function bulkUpdateOrders(Request $request) {
     Order::whereIn('id', $request->order_ids)

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Helpers\CurrencyHelper;
 
 class Commission extends Model
 {
@@ -12,7 +11,7 @@ class Commission extends Model
 
     protected $fillable = [
         'order_id',
-        'promoteur_id',  // GARDER le nom de votre table existante
+        'promoter_id',  // FINAL: Utilise promoter_id de votre table
         'gross_amount',
         'commission_rate',
         'commission_amount',
@@ -43,19 +42,19 @@ class Commission extends Model
     }
 
     /**
-     * Relation principale avec le promoteur (utilise promoteur_id)
-     */
-    public function promoteur()
-    {
-        return $this->belongsTo(User::class, 'promoteur_id');
-    }
-
-    /**
-     * Alias pour compatibilité avec le code utilisant 'promoter'
+     * Relation principale avec le promoteur (utilise promoter_id)
      */
     public function promoter()
     {
-        return $this->promoteur();
+        return $this->belongsTo(User::class, 'promoter_id');
+    }
+
+    /**
+     * Alias pour compatibilité avec le code utilisant 'promoteur'
+     */
+    public function promoteur()
+    {
+        return $this->promoter();
     }
 
     /**
@@ -91,7 +90,7 @@ class Commission extends Model
 
     public function scopeForPromoter($query, $promoterId)
     {
-        return $query->where('promoteur_id', $promoterId);
+        return $query->where('promoter_id', $promoterId);
     }
 
     public function scopeCurrentMonth($query)
@@ -101,37 +100,25 @@ class Commission extends Model
     }
 
     /**
-     * Accessors - Formatage FCFA (si CurrencyHelper existe)
+     * Accessors - Formatage FCFA
      */
     public function getFormattedGrossAmountAttribute()
     {
-        if (class_exists('App\Helpers\CurrencyHelper')) {
-            return CurrencyHelper::formatFCFA($this->gross_amount);
-        }
         return number_format($this->gross_amount, 0, ',', ' ') . ' FCFA';
     }
 
     public function getFormattedCommissionAmountAttribute()
     {
-        if (class_exists('App\Helpers\CurrencyHelper')) {
-            return CurrencyHelper::formatFCFA($this->commission_amount);
-        }
         return number_format($this->commission_amount, 0, ',', ' ') . ' FCFA';
     }
 
     public function getFormattedNetAmountAttribute()
     {
-        if (class_exists('App\Helpers\CurrencyHelper')) {
-            return CurrencyHelper::formatFCFA($this->net_amount);
-        }
         return number_format($this->net_amount, 0, ',', ' ') . ' FCFA';
     }
 
     public function getFormattedPlatformFeeAttribute()
     {
-        if (class_exists('App\Helpers\CurrencyHelper')) {
-            return CurrencyHelper::formatFCFA($this->platform_fee);
-        }
         return number_format($this->platform_fee, 0, ',', ' ') . ' FCFA';
     }
 

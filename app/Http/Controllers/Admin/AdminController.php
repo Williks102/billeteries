@@ -1009,7 +1009,7 @@ public function commissions(Request $request)
     
     // Ajouter des statistiques supplémentaires
     $stats['total_transactions'] = Commission::count();
-    $stats['active_promoters'] = Commission::distinct('promoteur_id')->count();
+    $stats['active_promoters'] = Commission::distinct('promoter_id')->count();
     
     // Calcul du pourcentage de commissions payées
     if ($stats['total_transactions'] > 0) {

@@ -72,12 +72,11 @@ class User extends Authenticatable
     }
 
     /**
-     * CORRECTION: Ajouter la relation commissions manquante
-     * Utilise 'promoteur_id' pour correspondre à votre table commissions existante
+     * CORRECTION FINALE: Relation commissions avec promoter_id
      */
     public function commissions()
     {
-        return $this->hasMany(Commission::class, 'promoteur_id');
+        return $this->hasMany(Commission::class, 'promoter_id');
     }
 
     /**
@@ -91,18 +90,16 @@ class User extends Authenticatable
     }
 
     /**
-     * Statistiques pour promoteur - Version améliorée
+     * Statistiques pour promoteur
      */
     public function totalRevenue()
     {
-        // Utilise les commissions payées pour plus de précision
-        return $this->commissions()->where('status', 'paid')->sum('net_amount');
+        return $this->commissions()->where('status', 'paid')->sum('net_amount') ?? 0;
     }
 
     public function pendingRevenue()
     {
-        // Utilise les commissions en attente
-        return $this->commissions()->where('status', 'pending')->sum('net_amount');
+        return $this->commissions()->where('status', 'pending')->sum('net_amount') ?? 0;
     }
 
     public function totalTicketsSold()
@@ -121,7 +118,7 @@ class User extends Authenticatable
      */
     public function totalGrossRevenue()
     {
-        return $this->commissions()->sum('gross_amount');
+        return $this->commissions()->sum('gross_amount') ?? 0;
     }
 
     /**
@@ -129,7 +126,7 @@ class User extends Authenticatable
      */
     public function totalPlatformCommissions()
     {
-        return $this->commissions()->sum('commission_amount');
+        return $this->commissions()->sum('commission_amount') ?? 0;
     }
 
     /**

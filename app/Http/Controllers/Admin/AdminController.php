@@ -30,169 +30,167 @@ class AdminController extends Controller
     /**
      * Dashboard admin principal
      */
-   
-public function dashboard(Request $request)
-{
-    try {
-        // Période sélectionnée (par défaut: ce mois)
-        $period = $request->get('period', 'this_month');
-        $dateRange = $this->getDateRange($period);
+    public function dashboard(Request $request)
+    {
+        try {
+            // Période sélectionnée (par défaut: ce mois)
+            $period = $request->get('period', 'this_month');
+            $dateRange = $this->getDateRange($period);
 
-        // STATISTIQUES CORRIGÉES
-        $stats = [
-            'total_users' => User::count(),
-            'total_events' => Event::count(),
-            // CORRECTION: utiliser payment_status au lieu de status
-            'total_orders' => Order::where('payment_status', 'paid')->count(),
-            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount') ?? 0,
-            'pending_commissions' => Commission::where('status', 'pending')->count(),
-            'active_promoters' => User::where('role', 'promoteur')->whereHas('events')->count(),
-        ];
-        
-        // COMMANDES RÉCENTES CORRIGÉES
-        $recentOrders = Order::with(['user', 'event'])
-            ->where('payment_status', 'paid') // CORRECTION
-            ->latest()
-            ->limit(10)
-            ->get();
-        
-        // Données pour graphiques (éviter les erreurs JS)
-        $chartData = [
-            'labels' => ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
-            'revenue' => [0, 0, 0, 0, 0, 0],
-            'orders' => [0, 0, 0, 0, 0, 0]
-        ];
-        
-        // Alertes système
-        $alerts = [];
-        
-        // Vérifier les commissions en attente
-        $pendingCommissions = Commission::where('status', 'pending')->count();
-        if ($pendingCommissions > 0) {
-            $alerts[] = [
-                'type' => 'warning',
-                'icon' => 'clock',
-                'message' => "$pendingCommissions commissions en attente de paiement"
+            // STATISTIQUES CORRIGÉES
+            $stats = [
+                'total_users' => User::count(),
+                'total_events' => Event::count(),
+                // CORRECTION: utiliser payment_status au lieu de status
+                'total_orders' => Order::where('payment_status', 'paid')->count(),
+                'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount') ?? 0,
+                'pending_commissions' => Commission::where('status', 'pending')->count(),
+                'active_promoters' => User::where('role', 'promoteur')->whereHas('events')->count(),
             ];
-        }
+            
+            // COMMANDES RÉCENTES CORRIGÉES
+            $recentOrders = Order::with(['user', 'event'])
+                ->where('payment_status', 'paid') // CORRECTION
+                ->latest()
+                ->limit(10)
+                ->get();
+            
+            // Données pour graphiques (éviter les erreurs JS)
+            $chartData = [
+                'labels' => ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
+                'revenue' => [0, 0, 0, 0, 0, 0],
+                'orders' => [0, 0, 0, 0, 0, 0]
+            ];
+            
+            // Alertes système
+            $alerts = [];
+            
+            // Vérifier les commissions en attente
+            $pendingCommissions = Commission::where('status', 'pending')->count();
+            if ($pendingCommissions > 0) {
+                $alerts[] = [
+                    'type' => 'warning',
+                    'icon' => 'clock',
+                    'message' => "$pendingCommissions commissions en attente de paiement"
+                ];
+            }
 
-        return view('admin.dashboard', compact(
-            'stats', 'recentOrders', 'chartData', 'alerts', 'period'
-        ));
-        
-    } catch (\Exception $e) {
-        \Log::error('Erreur dashboard admin: ' . $e->getMessage());
-        
-        // Retourner des valeurs par défaut en cas d'erreur
-        $stats = [
-            'total_users' => 0,
-            'total_events' => 0,
-            'total_orders' => 0,
-            'total_revenue' => 0,
-            'pending_commissions' => 0,
-            'active_promoters' => 0,
-        ];
-        
-        $recentOrders = collect();
-        $chartData = ['labels' => [], 'revenue' => [], 'orders' => []];
-        $alerts = [];
-        
-        return view('admin.dashboard', compact(
-            'stats', 'recentOrders', 'chartData', 'alerts'
-        ));
+            return view('admin.dashboard', compact(
+                'stats', 'recentOrders', 'chartData', 'alerts', 'period'
+            ));
+            
+        } catch (\Exception $e) {
+            \Log::error('Erreur dashboard admin: ' . $e->getMessage());
+            
+            // Retourner des valeurs par défaut en cas d'erreur
+            $stats = [
+                'total_users' => 0,
+                'total_events' => 0,
+                'total_orders' => 0,
+                'total_revenue' => 0,
+                'pending_commissions' => 0,
+                'active_promoters' => 0,
+            ];
+            
+            $recentOrders = collect();
+            $chartData = ['labels' => [], 'revenue' => [], 'orders' => []];
+            $alerts = [];
+            
+            return view('admin.dashboard', compact(
+                'stats', 'recentOrders', 'chartData', 'alerts'
+            ));
+        }
     }
-}
 
     /**
      * Obtenir la plage de dates selon la période
      */
-   private function getDateRange($period)
-{
-    switch ($period) {
-        case 'today':
-            return [
-                'start' => now()->startOfDay(),
-                'end' => now()->endOfDay()
-            ];
-        case 'this_week':
-            return [
-                'start' => now()->startOfWeek(),
-                'end' => now()->endOfWeek()
-            ];
-        case 'this_month':
-        default:
-            return [
-                'start' => now()->startOfMonth(),
-                'end' => now()->endOfMonth()
-            ];
-        case 'this_year':
-            return [
-                'start' => now()->startOfYear(),
-                'end' => now()->endOfYear()
-            ];
+    private function getDateRange($period)
+    {
+        switch ($period) {
+            case 'today':
+                return [
+                    'start' => now()->startOfDay(),
+                    'end' => now()->endOfDay()
+                ];
+            case 'this_week':
+                return [
+                    'start' => now()->startOfWeek(),
+                    'end' => now()->endOfWeek()
+                ];
+            case 'this_month':
+            default:
+                return [
+                    'start' => now()->startOfMonth(),
+                    'end' => now()->endOfMonth()
+                ];
+            case 'this_year':
+                return [
+                    'start' => now()->startOfYear(),
+                    'end' => now()->endOfYear()
+                ];
+        }
     }
-}
 
-private function exportToCSV($data, $filename)
-{
-    $headers = [
-        'Content-Type' => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"$filename\"",
-    ];
-    
-    $callback = function() use ($data) {
-        $file = fopen('php://output', 'w');
+    private function exportToCSV($data, $filename)
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
         
-        // En-têtes
-        fputcsv($file, ['Rapport Financier - ' . $data['period']]);
-        fputcsv($file, ['Généré le: ' . now()->format('d/m/Y H:i')]);
-        fputcsv($file, []);
+        $callback = function() use ($data) {
+            $file = fopen('php://output', 'w');
+            
+            // En-têtes
+            fputcsv($file, ['Rapport Financier - ' . $data['period']]);
+            fputcsv($file, ['Généré le: ' . now()->format('d/m/Y H:i')]);
+            fputcsv($file, []);
+            
+            // Résumé
+            fputcsv($file, ['RÉSUMÉ']);
+            fputcsv($file, ['Total Revenus', number_format($data['summary']['total_revenue']) . ' FCFA']);
+            fputcsv($file, ['Total Commissions', number_format($data['summary']['total_commissions']) . ' FCFA']);
+            fputcsv($file, ['Revenus Net', number_format($data['summary']['net_revenue']) . ' FCFA']);
+            fputcsv($file, ['Nombre Commandes', $data['summary']['orders_count']]);
+            fputcsv($file, []);
+            
+            // Détail commandes
+            fputcsv($file, ['DÉTAIL COMMANDES']);
+            fputcsv($file, ['Date', 'Client', 'Événement', 'Montant', 'Statut']);
+            
+            foreach ($data['orders'] as $order) {
+                fputcsv($file, [
+                    $order->created_at->format('d/m/Y'),
+                    $order->user->name ?? 'N/A',
+                    $order->event->title ?? 'N/A',
+                    number_format($order->total_amount) . ' FCFA',
+                    $order->payment_status
+                ]);
+            }
+            
+            fputcsv($file, []);
+            
+            // Détail commissions
+            fputcsv($file, ['DÉTAIL COMMISSIONS']);
+            fputcsv($file, ['Date', 'Promoteur', 'Montant Brut', 'Commission', 'Net', 'Statut']);
+            
+            foreach ($data['commissions'] as $commission) {
+                fputcsv($file, [
+                    $commission->created_at->format('d/m/Y'),
+                    $commission->promoter->name ?? 'N/A',
+                    number_format($commission->gross_amount) . ' FCFA',
+                    number_format($commission->commission_amount) . ' FCFA',
+                    number_format($commission->net_amount) . ' FCFA',
+                    $commission->status
+                ]);
+            }
+            
+            fclose($file);
+        };
         
-        // Résumé
-        fputcsv($file, ['RÉSUMÉ']);
-        fputcsv($file, ['Total Revenus', number_format($data['summary']['total_revenue']) . ' FCFA']);
-        fputcsv($file, ['Total Commissions', number_format($data['summary']['total_commissions']) . ' FCFA']);
-        fputcsv($file, ['Revenus Net', number_format($data['summary']['net_revenue']) . ' FCFA']);
-        fputcsv($file, ['Nombre Commandes', $data['summary']['orders_count']]);
-        fputcsv($file, []);
-        
-        // Détail commandes
-        fputcsv($file, ['DÉTAIL COMMANDES']);
-        fputcsv($file, ['Date', 'Client', 'Événement', 'Montant', 'Statut']);
-        
-        foreach ($data['orders'] as $order) {
-            fputcsv($file, [
-                $order->created_at->format('d/m/Y'),
-                $order->user->name ?? 'N/A',
-                $order->event->title ?? 'N/A',
-                number_format($order->total_amount) . ' FCFA',
-                $order->payment_status
-            ]);
-        }
-        
-        fputcsv($file, []);
-        
-        // Détail commissions
-        fputcsv($file, ['DÉTAIL COMMISSIONS']);
-        fputcsv($file, ['Date', 'Promoteur', 'Montant Brut', 'Commission', 'Net', 'Statut']);
-        
-        foreach ($data['commissions'] as $commission) {
-            fputcsv($file, [
-                $commission->created_at->format('d/m/Y'),
-                $commission->promoter->name ?? 'N/A',
-                number_format($commission->gross_amount) . ' FCFA',
-                number_format($commission->commission_amount) . ' FCFA',
-                number_format($commission->net_amount) . ' FCFA',
-                $commission->status
-            ]);
-        }
-        
-        fclose($file);
-    };
-    
-    return response()->stream($callback, 200, $headers);
-}
-
+        return response()->stream($callback, 200, $headers);
+    }
 
     /**
      * Statistiques principales
@@ -253,108 +251,108 @@ private function exportToCSV($data, $filename)
     }
 
     /**
- * Export global - toutes les données
- */
-public function exportAll(Request $request)
-{
-    $format = $request->get('format', 'excel');
-    $dataType = $request->get('data_type', 'all');
-    
-    try {
-        switch ($dataType) {
-            case 'financial':
-                return $this->exportFinancial($request);
-            case 'users':
-                return $this->exportUsers($request);
-            case 'events':
-                return $this->exportEvents($request);
-            case 'orders':
-                return $this->exportOrders($request);
-            case 'tickets':
-                return $this->exportTickets($request);
-            case 'all':
-            default:
-                return $this->exportCompleteData($request);
+     * Export global - toutes les données
+     */
+    public function exportAll(Request $request)
+    {
+        $format = $request->get('format', 'excel');
+        $dataType = $request->get('data_type', 'all');
+        
+        try {
+            switch ($dataType) {
+                case 'financial':
+                    return $this->exportFinancial($request);
+                case 'users':
+                    return $this->exportUsers($request);
+                case 'events':
+                    return $this->exportEvents($request);
+                case 'orders':
+                    return $this->exportOrders($request);
+                case 'tickets':
+                    return $this->exportTickets($request);
+                case 'all':
+                default:
+                    return $this->exportCompleteData($request);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Erreur export global: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Erreur lors de l\'export: ' . $e->getMessage());
         }
-    } catch (\Exception $e) {
-        \Log::error('Erreur export global: ' . $e->getMessage());
-        return redirect()->back()
-            ->with('error', 'Erreur lors de l\'export: ' . $e->getMessage());
     }
-}
 
-/**
- * Export de toutes les données
- */
-private function exportCompleteData(Request $request)
-{
-    $filename = 'export_complet_' . now()->format('Y-m-d') . '.csv';
-    
-    $headers = [
-        'Content-Type' => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"$filename\"",
-    ];
-    
-    $callback = function() {
-        $file = fopen('php://output', 'w');
+    /**
+     * Export de toutes les données
+     */
+    private function exportCompleteData(Request $request)
+    {
+        $filename = 'export_complet_' . now()->format('Y-m-d') . '.csv';
         
-        // Export résumé de toutes les données
-        fputcsv($file, ['=== RÉSUMÉ GÉNÉRAL ===']);
-        fputcsv($file, ['Type', 'Nombre total', 'Dernière mise à jour']);
-        fputcsv($file, ['Utilisateurs', User::count(), User::latest()->first()?->updated_at ?? 'N/A']);
-        fputcsv($file, ['Événements', Event::count(), Event::latest()->first()?->updated_at ?? 'N/A']);
-        fputcsv($file, ['Commandes', Order::count(), Order::latest()->first()?->updated_at ?? 'N/A']);
-        fputcsv($file, ['Commissions', Commission::count(), Commission::latest()->first()?->updated_at ?? 'N/A']);
-        fputcsv($file, []);
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
         
-        fclose($file);
-    };
-    
-    return response()->stream($callback, 200, $headers);
-}
+        $callback = function() {
+            $file = fopen('php://output', 'w');
+            
+            // Export résumé de toutes les données
+            fputcsv($file, ['=== RÉSUMÉ GÉNÉRAL ===']);
+            fputcsv($file, ['Type', 'Nombre total', 'Dernière mise à jour']);
+            fputcsv($file, ['Utilisateurs', User::count(), User::latest()->first()?->updated_at ?? 'N/A']);
+            fputcsv($file, ['Événements', Event::count(), Event::latest()->first()?->updated_at ?? 'N/A']);
+            fputcsv($file, ['Commandes', Order::count(), Order::latest()->first()?->updated_at ?? 'N/A']);
+            fputcsv($file, ['Commissions', Commission::count(), Commission::latest()->first()?->updated_at ?? 'N/A']);
+            fputcsv($file, []);
+            
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, $headers);
+    }
 
-/**
- * Export des billets
- */
-public function exportTickets(Request $request)
-{
-    $format = $request->get('format', 'csv');
-    
-    $tickets = Ticket::with(['user', 'ticketType.event'])->get();
-    
-    $filename = 'billets_' . now()->format('Y-m-d') . '.' . $format;
-    
-    $headers = [
-        'Content-Type' => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"$filename\"",
-    ];
-    
-    $callback = function() use ($tickets) {
-        $file = fopen('php://output', 'w');
+    /**
+     * Export des billets
+     */
+    public function exportTickets(Request $request)
+    {
+        $format = $request->get('format', 'csv');
         
-        fputcsv($file, [
-            'Code Billet', 'Événement', 'Type', 'Acheteur', 
-            'Statut', 'Prix', 'Date Achat', 'Date Utilisation'
-        ]);
+        $tickets = Ticket::with(['user', 'ticketType.event'])->get();
         
-        foreach ($tickets as $ticket) {
+        $filename = 'billets_' . now()->format('Y-m-d') . '.' . $format;
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+        
+        $callback = function() use ($tickets) {
+            $file = fopen('php://output', 'w');
+            
             fputcsv($file, [
-                $ticket->ticket_code,
-                $ticket->ticketType->event->title ?? 'N/A',
-                $ticket->ticketType->name ?? 'N/A',
-                $ticket->user->name ?? 'N/A',
-                $ticket->status,
-                $ticket->ticketType->price ?? 0,
-                $ticket->created_at->format('d/m/Y'),
-                $ticket->used_at ? $ticket->used_at->format('d/m/Y H:i') : 'Non utilisé'
+                'Code Billet', 'Événement', 'Type', 'Acheteur', 
+                'Statut', 'Prix', 'Date Achat', 'Date Utilisation'
             ]);
-        }
+            
+            foreach ($tickets as $ticket) {
+                fputcsv($file, [
+                    $ticket->ticket_code,
+                    $ticket->ticketType->event->title ?? 'N/A',
+                    $ticket->ticketType->name ?? 'N/A',
+                    $ticket->user->name ?? 'N/A',
+                    $ticket->status,
+                    $ticket->ticketType->price ?? 0,
+                    $ticket->created_at->format('d/m/Y'),
+                    $ticket->used_at ? $ticket->used_at->format('d/m/Y H:i') : 'Non utilisé'
+                ]);
+            }
+            
+            fclose($file);
+        };
         
-        fclose($file);
-    };
-    
-    return response()->stream($callback, 200, $headers);
-}
+        return response()->stream($callback, 200, $headers);
+    }
 
     /**
      * Statistiques de revenus
@@ -461,269 +459,269 @@ public function exportTickets(Request $request)
         ];
     }
 
-/**
- * === MÉTHODES MANQUANTES POUR EXPORTS ===
- */
+    /**
+     * === MÉTHODES MANQUANTES POUR EXPORTS ===
+     */
 
-public function exportFinancial(Request $request)
-{
-    $format = $request->get('format', 'excel');
-    $period = $request->get('period', 'this_month');
-    
-    try {
-        $dateRange = $this->getDateRange($period);
+    public function exportFinancial(Request $request)
+    {
+        $format = $request->get('format', 'excel');
+        $period = $request->get('period', 'this_month');
         
-        // Collecte des données financières
-        $orders = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-            ->where('payment_status', 'paid')
-            ->with(['user', 'event'])
-            ->get();
+        try {
+            $dateRange = $this->getDateRange($period);
             
-        $commissions = Commission::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-            ->with(['promoter', 'order.event'])
-            ->get();
+            // Collecte des données financières
+            $orders = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                ->where('payment_status', 'paid')
+                ->with(['user', 'event'])
+                ->get();
+                
+            $commissions = Commission::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                ->with(['promoter', 'order.event'])
+                ->get();
+                
+            $totalRevenue = $orders->sum('total_amount');
+            $totalCommissions = $commissions->sum('commission_amount');
+            $netRevenue = $totalRevenue - $totalCommissions;
             
-        $totalRevenue = $orders->sum('total_amount');
-        $totalCommissions = $commissions->sum('commission_amount');
-        $netRevenue = $totalRevenue - $totalCommissions;
+            $data = [
+                'period' => $period,
+                'date_range' => $dateRange,
+                'orders' => $orders,
+                'commissions' => $commissions,
+                'summary' => [
+                    'total_revenue' => $totalRevenue,
+                    'total_commissions' => $totalCommissions,
+                    'net_revenue' => $netRevenue,
+                    'orders_count' => $orders->count(),
+                    'average_order' => $orders->count() > 0 ? $totalRevenue / $orders->count() : 0
+                ]
+            ];
+            
+            $filename = 'rapport_financier_' . $period . '_' . now()->format('Y-m-d');
+            
+            if ($format === 'excel') {
+                // Si vous avez Laravel Excel installé
+                // return Excel::download(new FinancialReportExport($data), $filename . '.xlsx');
+                
+                // Sinon, export CSV simple
+                return $this->exportToCSV($data, $filename . '.csv');
+            } elseif ($format === 'pdf') {
+                // Si vous avez DomPDF installé
+                // $pdf = PDF::loadView('admin.exports.financial-pdf', $data);
+                // return $pdf->download($filename . '.pdf');
+                
+                return $this->exportToCSV($data, $filename . '.csv');
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erreur export financier: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Erreur lors de l\'export: ' . $e->getMessage());
+        }
+    }
+
+    public function exportUsers(Request $request)
+    {
+        $format = $request->get('format', 'csv');
         
-        $data = [
-            'period' => $period,
-            'date_range' => $dateRange,
-            'orders' => $orders,
-            'commissions' => $commissions,
-            'summary' => [
-                'total_revenue' => $totalRevenue,
-                'total_commissions' => $totalCommissions,
-                'net_revenue' => $netRevenue,
-                'orders_count' => $orders->count(),
-                'average_order' => $orders->count() > 0 ? $totalRevenue / $orders->count() : 0
-            ]
+        $users = User::with(['events', 'orders'])->get();
+        
+        $filename = 'utilisateurs_' . now()->format('Y-m-d') . '.' . $format;
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
         ];
         
-        $filename = 'rapport_financier_' . $period . '_' . now()->format('Y-m-d');
-        
-        if ($format === 'excel') {
-            // Si vous avez Laravel Excel installé
-            // return Excel::download(new FinancialReportExport($data), $filename . '.xlsx');
+        $callback = function() use ($users) {
+            $file = fopen('php://output', 'w');
             
-            // Sinon, export CSV simple
-            return $this->exportToCSV($data, $filename . '.csv');
-        } elseif ($format === 'pdf') {
-            // Si vous avez DomPDF installé
-            // $pdf = PDF::loadView('admin.exports.financial-pdf', $data);
-            // return $pdf->download($filename . '.pdf');
+            // En-têtes CSV
+            fputcsv($file, [
+                'ID', 'Nom', 'Email', 'Rôle', 'Téléphone', 
+                'Email vérifié', 'Date inscription', 'Nb événements', 'Nb commandes'
+            ]);
             
-            return $this->exportToCSV($data, $filename . '.csv');
-        }
+            // Données
+            foreach ($users as $user) {
+                fputcsv($file, [
+                    $user->id,
+                    $user->name,
+                    $user->email,
+                    $user->role,
+                    $user->phone,
+                    $user->email_verified_at ? 'Oui' : 'Non',
+                    $user->created_at->format('d/m/Y'),
+                    $user->events ? $user->events->count() : 0,
+                    $user->orders ? $user->orders->count() : 0
+                ]);
+            }
+            
+            fclose($file);
+        };
         
-    } catch (\Exception $e) {
-        \Log::error('Erreur export financier: ' . $e->getMessage());
-        return redirect()->back()
-            ->with('error', 'Erreur lors de l\'export: ' . $e->getMessage());
+        return response()->stream($callback, 200, $headers);
     }
-}
 
-public function exportUsers(Request $request)
-{
-    $format = $request->get('format', 'csv');
-    
-    $users = User::with(['events', 'orders'])->get();
-    
-    $filename = 'utilisateurs_' . now()->format('Y-m-d') . '.' . $format;
-    
-    $headers = [
-        'Content-Type' => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"$filename\"",
-    ];
-    
-    $callback = function() use ($users) {
-        $file = fopen('php://output', 'w');
+    public function exportEvents(Request $request)
+    {
+        $format = $request->get('format', 'csv');
         
-        // En-têtes CSV
-        fputcsv($file, [
-            'ID', 'Nom', 'Email', 'Rôle', 'Téléphone', 
-            'Email vérifié', 'Date inscription', 'Nb événements', 'Nb commandes'
-        ]);
+        $events = Event::with(['promoteur', 'category', 'orders', 'ticketTypes'])
+            ->withCount(['orders', 'tickets'])
+            ->get();
         
-        // Données
-        foreach ($users as $user) {
-            fputcsv($file, [
-                $user->id,
-                $user->name,
-                $user->email,
-                $user->role,
-                $user->phone,
-                $user->email_verified_at ? 'Oui' : 'Non',
-                $user->created_at->format('d/m/Y'),
-                $user->events ? $user->events->count() : 0,
-                $user->orders ? $user->orders->count() : 0
-            ]);
-        }
+        $filename = 'evenements_' . now()->format('Y-m-d') . '.' . $format;
         
-        fclose($file);
-    };
-    
-    return response()->stream($callback, 200, $headers);
-}
-
-public function exportEvents(Request $request)
-{
-    $format = $request->get('format', 'csv');
-    
-    $events = Event::with(['promoteur', 'category', 'orders', 'ticketTypes'])
-        ->withCount(['orders', 'tickets'])
-        ->get();
-    
-    $filename = 'evenements_' . now()->format('Y-m-d') . '.' . $format;
-    
-    $headers = [
-        'Content-Type' => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"$filename\"",
-    ];
-    
-    $callback = function() use ($events) {
-        $file = fopen('php://output', 'w');
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
         
-        fputcsv($file, [
-            'ID', 'Titre', 'Promoteur', 'Catégorie', 'Date événement',
-            'Statut', 'Prix min', 'Prix max', 'Nb commandes', 'Nb billets vendus'
-        ]);
-        
-        foreach ($events as $event) {
-            $prices = $event->ticketTypes->pluck('price');
+        $callback = function() use ($events) {
+            $file = fopen('php://output', 'w');
             
             fputcsv($file, [
-                $event->id,
-                $event->title,
-                $event->promoteur->name ?? 'N/A',
-                $event->category->name ?? 'N/A',
-                $event->event_date->format('d/m/Y H:i'),
-                $event->status,
-                $prices->min() ?? 0,
-                $prices->max() ?? 0,
-                $event->orders_count,
-                $event->tickets_count
+                'ID', 'Titre', 'Promoteur', 'Catégorie', 'Date événement',
+                'Statut', 'Prix min', 'Prix max', 'Nb commandes', 'Nb billets vendus'
             ]);
-        }
+            
+            foreach ($events as $event) {
+                $prices = $event->ticketTypes->pluck('price');
+                
+                fputcsv($file, [
+                    $event->id,
+                    $event->title,
+                    $event->promoteur->name ?? 'N/A',
+                    $event->category->name ?? 'N/A',
+                    $event->event_date->format('d/m/Y H:i'),
+                    $event->status,
+                    $prices->min() ?? 0,
+                    $prices->max() ?? 0,
+                    $event->orders_count,
+                    $event->tickets_count
+                ]);
+            }
+            
+            fclose($file);
+        };
         
-        fclose($file);
-    };
-    
-    return response()->stream($callback, 200, $headers);
-}
+        return response()->stream($callback, 200, $headers);
+    }
 
-public function exportOrders(Request $request)
-{
-    $orders = Order::with(['user', 'event', 'orderItems'])
-        ->latest()
-        ->get();
-    
-    $filename = 'commandes_' . now()->format('Y-m-d') . '.csv';
-    
-    $headers = [
-        'Content-Type' => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"$filename\"",
-    ];
-    
-    $callback = function() use ($orders) {
-        $file = fopen('php://output', 'w');
+    public function exportOrders(Request $request)
+    {
+        $orders = Order::with(['user', 'event', 'orderItems'])
+            ->latest()
+            ->get();
         
-        fputcsv($file, [
-            'N° Commande', 'Client', 'Email', 'Événement',
-            'Montant', 'Statut', 'Date', 'Quantité billets'
-        ]);
+        $filename = 'commandes_' . now()->format('Y-m-d') . '.csv';
         
-        foreach ($orders as $order) {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+        
+        $callback = function() use ($orders) {
+            $file = fopen('php://output', 'w');
+            
             fputcsv($file, [
-                $order->order_number ?? $order->id,
-                $order->user->name ?? 'N/A',
-                $order->user->email ?? 'N/A',
-                $order->event->title ?? 'N/A',
-                $order->total_amount,
-                $order->payment_status,
-                $order->created_at->format('d/m/Y H:i'),
-                $order->orderItems->sum('quantity')
+                'N° Commande', 'Client', 'Email', 'Événement',
+                'Montant', 'Statut', 'Date', 'Quantité billets'
             ]);
-        }
+            
+            foreach ($orders as $order) {
+                fputcsv($file, [
+                    $order->order_number ?? $order->id,
+                    $order->user->name ?? 'N/A',
+                    $order->user->email ?? 'N/A',
+                    $order->event->title ?? 'N/A',
+                    $order->total_amount,
+                    $order->payment_status,
+                    $order->created_at->format('d/m/Y H:i'),
+                    $order->orderItems->sum('quantity')
+                ]);
+            }
+            
+            fclose($file);
+        };
         
-        fclose($file);
-    };
-    
-    return response()->stream($callback, 200, $headers);
-}
+        return response()->stream($callback, 200, $headers);
+    }
 
-public function exportCommissions(Request $request)
-{
-    $commissions = Commission::with(['promoter', 'order.event'])
-        ->latest()
-        ->get();
-    
-    $filename = 'commissions_' . now()->format('Y-m-d') . '.csv';
-    
-    $headers = [
-        'Content-Type' => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"$filename\"",
-    ];
-    
-    $callback = function() use ($commissions) {
-        $file = fopen('php://output', 'w');
+    public function exportCommissions(Request $request)
+    {
+        $commissions = Commission::with(['promoter', 'order.event'])
+            ->latest()
+            ->get();
         
-        fputcsv($file, [
-            'Date', 'Promoteur', 'Événement', 'N° Commande',
-            'Montant brut', 'Taux %', 'Commission', 'Net promoteur', 'Statut'
-        ]);
+        $filename = 'commissions_' . now()->format('Y-m-d') . '.csv';
         
-        foreach ($commissions as $commission) {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+        
+        $callback = function() use ($commissions) {
+            $file = fopen('php://output', 'w');
+            
             fputcsv($file, [
-                $commission->created_at->format('d/m/Y'),
-                $commission->promoter->name ?? 'N/A',
-                $commission->order->event->title ?? 'N/A',
-                $commission->order->order_number ?? $commission->order->id,
-                $commission->gross_amount,
-                $commission->commission_rate,
-                $commission->commission_amount,
-                $commission->net_amount,
-                $commission->status
+                'Date', 'Promoteur', 'Événement', 'N° Commande',
+                'Montant brut', 'Taux %', 'Commission', 'Net promoteur', 'Statut'
             ]);
-        }
+            
+            foreach ($commissions as $commission) {
+                fputcsv($file, [
+                    $commission->created_at->format('d/m/Y'),
+                    $commission->promoter->name ?? 'N/A',
+                    $commission->order->event->title ?? 'N/A',
+                    $commission->order->order_number ?? $commission->order->id,
+                    $commission->gross_amount,
+                    $commission->commission_rate,
+                    $commission->commission_amount,
+                    $commission->net_amount,
+                    $commission->status
+                ]);
+            }
+            
+            fclose($file);
+        };
         
-        fclose($file);
-    };
-    
-    return response()->stream($callback, 200, $headers);
-}
+        return response()->stream($callback, 200, $headers);
+    }
 
-/**
- * === MÉTHODE POUR RAPPORTS ===
- */
+    /**
+     * === MÉTHODE POUR RAPPORTS ===
+     */
 
-public function reports(Request $request)
-{
-    $period = $request->get('period', 'this_month');
-    $dateRange = $this->getDateRange($period);
-    
-    // Statistiques du mois
-    $monthlyRevenue = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-        ->where('payment_status', 'paid')
-        ->sum('total_amount');
+    public function reports(Request $request)
+    {
+        $period = $request->get('period', 'this_month');
+        $dateRange = $this->getDateRange($period);
         
-    $monthlyOrders = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-        ->where('payment_status', 'paid')
-        ->count();
+        // Statistiques du mois
+        $monthlyRevenue = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where('payment_status', 'paid')
+            ->sum('total_amount');
+            
+        $monthlyOrders = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where('payment_status', 'paid')
+            ->count();
+            
+        $monthlyEvents = Event::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where('status', 'published')
+            ->count();
+            
+        $monthlyUsers = User::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->count();
         
-    $monthlyEvents = Event::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-        ->where('status', 'published')
-        ->count();
+        return view('admin.reports', compact(
+            'monthlyRevenue', 'monthlyOrders', 'monthlyEvents', 'monthlyUsers', 'period'
+        ));
+    }
         
-    $monthlyUsers = User::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-        ->count();
-    
-    return view('admin.reports', compact(
-        'monthlyRevenue', 'monthlyOrders', 'monthlyEvents', 'monthlyUsers', 'period'
-    ));
-}
-    
     /**
      * Alertes et notifications
      */
@@ -794,68 +792,74 @@ public function reports(Request $request)
     }
 
     /**
- * === MÉTHODES MANQUANTES POUR GESTION UTILISATEURS ===
- */
+     * === MÉTHODES MANQUANTES POUR GESTION UTILISATEURS ===
+     */
 
-public function createUser()
-{
-    return view('admin.users.create');
-}
-
-public function storeUser(Request $request)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:users',
-        'password' => 'required|string|min:8|confirmed',
-        'role' => 'required|in:admin,promoteur,acheteur',
-        'phone' => 'nullable|string|max:20',
-    ]);
-
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'role' => $request->role,
-        'phone' => $request->phone,
-        'email_verified_at' => now(), // Auto-vérifier les comptes créés par admin
-    ]);
-
-    return redirect()->route('admin.users')
-        ->with('success', 'Utilisateur créé avec succès');
-}
-
-public function editUser(User $user)
-{
-    return view('admin.users.edit', compact('user'));
-}
-
-public function updateUser(Request $request, User $user)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-        'role' => 'required|in:admin,promoteur,acheteur',
-        'phone' => 'nullable|string|max:20',
-    ]);
-
-    $user->update($request->only(['name', 'email', 'role', 'phone']));
-
-    return redirect()->route('admin.users')
-        ->with('success', 'Utilisateur mis à jour avec succès');
-}
-
-public function destroyUser(User $user)
-{
-    // Empêcher la suppression de son propre compte
-    if ($user->id === auth()->id()) {
-        return response()->json(['success' => false, 'message' => 'Vous ne pouvez pas supprimer votre propre compte']);
+    public function createUser()
+    {
+        return view('admin.users.create');
     }
 
-    $user->delete();
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'role' => 'required|in:admin,promoteur,acheteur',
+            'phone' => 'nullable|string|max:20',
+        ]);
 
-    return response()->json(['success' => true, 'message' => 'Utilisateur supprimé avec succès']);
-}
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => $request->role,
+            'phone' => $request->phone,
+            'email_verified_at' => now(), // Auto-vérifier les comptes créés par admin
+        ]);
+
+        return redirect()->route('admin.users')
+            ->with('success', 'Utilisateur créé avec succès');
+    }
+
+    public function editUser(User $user)
+    {
+        return view('admin.users.edit', compact('user'));
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'role' => 'required|in:admin,promoteur,acheteur',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $user->update($request->only(['name', 'email', 'role', 'phone']));
+
+        return redirect()->route('admin.users')
+            ->with('success', 'Utilisateur mis à jour avec succès');
+    }
+
+    public function destroyUser(User $user)
+    {
+        // Empêcher la suppression de son propre compte
+        if ($user->id === auth()->id()) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Vous ne pouvez pas supprimer votre propre compte'
+            ]);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Utilisateur supprimé avec succès'
+        ]);
+    }
 
     /**
      * Liste des utilisateurs
@@ -906,39 +910,40 @@ public function destroyUser(User $user)
     }
 
     /**
- * Liste des commandes (CORRIGER)
- */
-public function orders(Request $request)
-{
-    $orders = Order::with(['user', 'event'])
-        ->when($request->search, function($query, $search) {
-            $query->where('order_number', 'like', "%{$search}%")
-                  ->orWhereHas('user', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  });
-        })
-        ->when($request->status, function($query, $status) {
-            // CORRECTION: utiliser payment_status au lieu de status
-            $query->where('payment_status', $status);
-        })
-        ->when($request->payment_status, function($query, $payment_status) {
-            // Ajouter filtre spécifique pour payment_status
-            $query->where('payment_status', $payment_status);
-        })
-        ->latest()
-        ->paginate(15);
+     * Liste des commandes (CORRIGER)
+     */
+    public function orders(Request $request)
+    {
+        $orders = Order::with(['user', 'event'])
+            ->when($request->search, function($query, $search) {
+                $query->where('order_number', 'like', "%{$search}%")
+                      ->orWhereHas('user', function($q) use ($search) {
+                          $q->where('name', 'like', "%{$search}%");
+                      });
+            })
+            ->when($request->status, function($query, $status) {
+                // CORRECTION: utiliser payment_status au lieu de status
+                $query->where('payment_status', $status);
+            })
+            ->when($request->payment_status, function($query, $payment_status) {
+                // Ajouter filtre spécifique pour payment_status
+                $query->where('payment_status', $payment_status);
+            })
+            ->latest()
+            ->paginate(15);
 
-    // STATISTIQUES CORRIGÉES
-    $stats = [
-        'paid' => Order::where('payment_status', 'paid')->count(),
-        'pending' => Order::where('payment_status', 'pending')->count(),
-        'failed' => Order::where('payment_status', 'failed')->count(),
-        'refunded' => Order::where('payment_status', 'refunded')->count(),
-        'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount')
-    ];
+        // STATISTIQUES CORRIGÉES
+        $stats = [
+            'paid' => Order::where('payment_status', 'paid')->count(),
+            'pending' => Order::where('payment_status', 'pending')->count(),
+            'failed' => Order::where('payment_status', 'failed')->count(),
+            'refunded' => Order::where('payment_status', 'refunded')->count(),
+            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount')
+        ];
 
-    return view('admin.orders', compact('orders', 'stats'));
-}
+        return view('admin.orders', compact('orders', 'stats'));
+    }
+
     /**
      * Détail d'une commande
      */
@@ -949,21 +954,78 @@ public function orders(Request $request)
         return view('admin.order-detail', compact('order'));
     }
 
-    /**
-     * Gestion des commissions
-     */
-    public function commissions(Request $request)
-    {
-        $query = Commission::with(['promoter', 'order']);
-        
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        
-        $commissions = $query->latest()->paginate(20);
-        
-        return view('admin.commissions', compact('commissions'));
+   /**
+ * Gestion des commissions (MÉTHODE CORRIGÉE)
+ */
+public function commissions(Request $request)
+{
+    // Construction de la requête avec relations
+    $query = Commission::with(['promoteur', 'order.event']);
+    
+    // Filtres
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
     }
+    
+    if ($request->filled('promoter')) {
+        $query->where('promoteur_id', $request->promoter);
+    }
+    
+    if ($request->filled('period')) {
+        $dateRange = $this->getDateRange($request->period);
+        $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
+    }
+    
+    if ($request->filled('search')) {
+        $query->whereHas('promoteur', function($q) use ($request) {
+            $q->where('name', 'like', '%' . $request->search . '%');
+        })->orWhereHas('order.event', function($q) use ($request) {
+            $q->where('title', 'like', '%' . $request->search . '%');
+        });
+    }
+    
+    // Pagination
+    $commissions = $query->latest()->paginate(20);
+    
+    // STATISTIQUES CORRIGÉES (le problème principal)
+    $stats = [
+        // Compteurs par statut
+        'pending' => Commission::where('status', 'pending')->count(),
+        'paid' => Commission::where('status', 'paid')->count(),
+        'held' => Commission::where('status', 'held')->count(),
+        'cancelled' => Commission::where('status', 'cancelled')->count(),
+        
+        // Montants financiers
+        'total_amount' => Commission::sum('commission_amount'), // Total commissions plateforme
+        'total_pending_amount' => Commission::where('status', 'pending')->sum('net_amount'), // À payer aux promoteurs
+        'total_paid_amount' => Commission::where('status', 'paid')->sum('net_amount'), // Payé aux promoteurs
+        'total_held_amount' => Commission::where('status', 'held')->sum('net_amount'), // Suspendu
+        
+        // Statistiques calculées
+        'avg_rate' => round(Commission::avg('commission_rate') ?? 0, 1),
+        'total_gross' => Commission::sum('gross_amount'), // Total des ventes
+        'conversion_rate' => 0, // À calculer si nécessaire
+    ];
+    
+    // Ajouter des statistiques supplémentaires
+    $stats['total_transactions'] = Commission::count();
+    $stats['active_promoters'] = Commission::distinct('promoteur_id')->count();
+    
+    // Calcul du pourcentage de commissions payées
+    if ($stats['total_transactions'] > 0) {
+        $stats['paid_percentage'] = round(($stats['paid'] / $stats['total_transactions']) * 100, 1);
+    } else {
+        $stats['paid_percentage'] = 0;
+    }
+    
+    // Liste des promoteurs pour le filtre
+    $promoters = User::where('role', 'promoteur')
+        ->whereHas('commissions')
+        ->orderBy('name')
+        ->get();
+    
+    return view('admin.commissions', compact('commissions', 'stats', 'promoters'));
+}
 
     /**
      * Payer une commission
@@ -979,15 +1041,11 @@ public function orders(Request $request)
             ->with('success', 'Commission payée avec succès');
     }
 
-   
-
     public function exportRevenues($period)
     {
         // Logique d'export des revenus
         return response()->download(/* fichier export */);
     }
-
-   
 
     public function exportPromoters()
     {
@@ -1012,130 +1070,207 @@ public function orders(Request $request)
         return view('admin.event-detail', compact('event'));
     }
 
-    
-public function updateOrderStatus(Request $request, Order $order)
-{
-    $request->validate([
-        'payment_status' => 'required|in:pending,paid,failed,refunded'
-    ]);
-    
-    $oldStatus = $order->payment_status;
-    $newStatus = $request->payment_status;
-    
-    // Mise à jour du payment_status
-    $order->update([
-        'payment_status' => $newStatus
-    ]);
-    
-    // Actions spécifiques selon le nouveau statut
-    switch ($newStatus) {
-        case 'paid':
-            // Marquer les billets comme vendus
-            $order->tickets()->update(['status' => 'sold']);
-            
-            // Créer la commission si elle n'existe pas
-            if (!$order->commission) {
-                $order->createCommission();
-            }
-            break;
-            
-        case 'refunded':
-            // Annuler les billets
-            $order->tickets()->update(['status' => 'cancelled']);
-            
-            // Mettre la commission en attente
-            if ($order->commission) {
-                $order->commission->update(['status' => 'held']);
-            }
-            break;
-            
-        case 'failed':
-            // Remettre les billets disponibles
-            $order->tickets()->update(['status' => 'available']);
-            break;
+    public function updateOrderStatus(Request $request, Order $order)
+    {
+        $request->validate([
+            'payment_status' => 'required|in:pending,paid,failed,refunded'
+        ]);
+        
+        $oldStatus = $order->payment_status;
+        $newStatus = $request->payment_status;
+        
+        // Mise à jour du payment_status
+        $order->update([
+            'payment_status' => $newStatus
+        ]);
+        
+        // Actions spécifiques selon le nouveau statut
+        switch ($newStatus) {
+            case 'paid':
+                // Marquer les billets comme vendus
+                $order->tickets()->update(['status' => 'sold']);
+                
+                // Créer la commission si elle n'existe pas
+                if (!$order->commission) {
+                    $order->createCommission();
+                }
+                break;
+                
+            case 'refunded':
+                // Annuler les billets
+                $order->tickets()->update(['status' => 'cancelled']);
+                
+                // Mettre la commission en attente
+                if ($order->commission) {
+                    $order->commission->update(['status' => 'held']);
+                }
+                break;
+                
+            case 'failed':
+                // Remettre les billets disponibles
+                $order->tickets()->update(['status' => 'available']);
+                break;
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Statut de la commande mis à jour avec succès',
+            'old_status' => $oldStatus,
+            'new_status' => $newStatus
+        ]);
+    }
+
+    public function bulkUpdateOrders(Request $request) 
+    {
+        Order::whereIn('id', $request->order_ids)
+             ->update(['payment_status' => $request->status]);
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Supprimer une commande (si nécessaire)
+     */
+    public function destroyOrder(Order $order)
+    {
+        // Vérifier que la commande peut être supprimée
+        if ($order->payment_status === 'paid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer une commande payée'
+            ], 422);
+        }
+        
+        $order->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Commande supprimée avec succès'
+        ]);
+    }
+
+    /**
+     * Renvoyer l'email de commande
+     */
+    public function resendOrderEmail(Order $order)
+    {
+        // Logique pour renvoyer l'email
+        // Mail::to($order->user)->send(new OrderConfirmation($order));
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Email renvoyé avec succès'
+        ]);
+    }
+
+    /**
+     * Rembourser une commande
+     */
+    public function refundOrder(Request $request, Order $order)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:255'
+        ]);
+        
+        if ($order->payment_status !== 'paid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seules les commandes payées peuvent être remboursées'
+            ], 422);
+        }
+        
+        $order->refund();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Commande remboursée avec succès'
+        ]);
     }
     
-    return response()->json([
-        'success' => true,
-        'message' => 'Statut de la commande mis à jour avec succès',
-        'old_status' => $oldStatus,
-        'new_status' => $newStatus
-    ]);
-}
-
-
-public function bulkUpdateOrders(Request $request) {
-    Order::whereIn('id', $request->order_ids)
-         ->update(['payment_status' => $request->status]);
-    return response()->json(['success' => true]);
-}
-
-public function tickets(Request $request)
+    /**
+     * Suppression en lot
+     */
+    public function bulkDeleteOrders(Request $request)
     {
-        $query = Ticket::with(['ticketType.event.promoteur', 'orderTickets.order.user'])
-            ->orderBy('created_at', 'desc');
-
-        // Filtrage par recherche
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('ticket_code', 'like', "%{$search}%")
-                  ->orWhereHas('ticketType.event', function($subQ) use ($search) {
-                      $subQ->where('title', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('orderTickets.order.user', function($subQ) use ($search) {
-                      $subQ->where('name', 'like', "%{$search}%")
-                           ->orWhere('email', 'like', "%{$search}%");
-                  });
-            });
+        $request->validate([
+            'order_ids' => 'required|array',
+            'order_ids.*' => 'exists:orders,id'
+        ]);
+        
+        $orders = Order::whereIn('id', $request->order_ids)
+            ->where('payment_status', '!=', 'paid')
+            ->get();
+        
+        foreach ($orders as $order) {
+            $order->delete();
         }
+        
+        return response()->json([
+            'success' => true,
+            'message' => count($orders) . ' commande(s) supprimée(s)'
+        ]);
+    }
 
-        // Filtrage par statut
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filtrage par événement
-        if ($request->filled('event_id')) {
-            $query->whereHas('ticketType', function($q) use ($request) {
-                $q->where('event_id', $request->event_id);
-            });
-        }
-
-        // Filtrage par date
-        if ($request->filled('date_filter')) {
-            switch ($request->date_filter) {
-                case 'today':
-                    $query->whereDate('created_at', Carbon::today());
-                    break;
-                case 'week':
-                    $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
-                    break;
-                case 'month':
-                    $query->whereMonth('created_at', Carbon::now()->month)
-                          ->whereYear('created_at', Carbon::now()->year);
-                    break;
-            }
-        }
-
-        $tickets = $query->paginate(20);
-
-        // Statistiques des billets
-        $stats = [
-            'total' => Ticket::count(),
-            'available' => Ticket::where('status', 'available')->count(),
-            'sold' => Ticket::where('status', 'sold')->count(),
-            'used' => Ticket::where('status', 'used')->count(),
-            'cancelled' => Ticket::where('status', 'cancelled')->count(),
-            'total_value' => Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
-                           ->where('tickets.status', 'sold')
-                           ->sum('ticket_types.price')
+    /**
+     * Export en lot
+     */
+    public function bulkExportOrders(Request $request)
+    {
+        $request->validate([
+            'order_ids' => 'required|array',
+            'order_ids.*' => 'exists:orders,id'
+        ]);
+        
+        $orders = Order::with(['user', 'event'])
+            ->whereIn('id', $request->order_ids)
+            ->get();
+        
+        // Générer le CSV des commandes sélectionnées
+        $filename = 'commandes_selection_' . now()->format('Y-m-d') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
         ];
-
-        // Liste des événements pour le filtre
-        $events = Event::with('promoteur')->orderBy('title')->get();
-
-        return view('admin.tickets', compact('tickets', 'stats', 'events'));
+        
+        $callback = function() use ($orders) {
+            $file = fopen('php://output', 'w');
+            
+            fputcsv($file, [
+                'N° Commande', 'Client', 'Email', 'Événement',
+                'Montant', 'Statut', 'Date'
+            ]);
+            
+            foreach ($orders as $order) {
+                fputcsv($file, [
+                    $order->order_number ?? $order->id,
+                    $order->user->name ?? 'N/A',
+                    $order->user->email ?? 'N/A',
+                    $order->event->title ?? 'N/A',
+                    $order->total_amount,
+                    $order->payment_status,
+                    $order->created_at->format('d/m/Y H:i')
+                ]);
+            }
+            
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, $headers);
+    }
+    
+    /**
+     * Afficher un utilisateur (si pas déjà créée)
+     */
+    public function showUser(User $user)
+    {
+        $user->load(['events', 'orders', 'commissions']);
+        
+        $stats = [
+            'account_created' => $user->created_at->format('d/m/Y'),
+            'last_activity' => $user->updated_at->format('d/m/Y H:i'),
+        ];
+        
+        return view('admin.users.show', compact('user', 'stats'));
     }
 
     /**
@@ -1442,4 +1577,71 @@ public function tickets(Request $request)
         ];
     }
 
+    public function tickets(Request $request)
+    {
+        $query = Ticket::with(['ticketType.event.promoteur', 'orderTickets.order.user'])
+            ->orderBy('created_at', 'desc');
+
+        // Filtrage par recherche
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('ticket_code', 'like', "%{$search}%")
+                  ->orWhereHas('ticketType.event', function($subQ) use ($search) {
+                      $subQ->where('title', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('orderTickets.order.user', function($subQ) use ($search) {
+                      $subQ->where('name', 'like', "%{$search}%")
+                           ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filtrage par statut
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filtrage par événement
+        if ($request->filled('event_id')) {
+            $query->whereHas('ticketType', function($q) use ($request) {
+                $q->where('event_id', $request->event_id);
+            });
+        }
+
+        // Filtrage par date
+        if ($request->filled('date_filter')) {
+            switch ($request->date_filter) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                    break;
+                case 'month':
+                    $query->whereMonth('created_at', Carbon::now()->month)
+                          ->whereYear('created_at', Carbon::now()->year);
+                    break;
+            }
+        }
+
+        $tickets = $query->paginate(20);
+
+        // Statistiques des billets
+        $stats = [
+            'total' => Ticket::count(),
+            'available' => Ticket::where('status', 'available')->count(),
+            'sold' => Ticket::where('status', 'sold')->count(),
+            'used' => Ticket::where('status', 'used')->count(),
+            'cancelled' => Ticket::where('status', 'cancelled')->count(),
+            'total_value' => Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+                           ->where('tickets.status', 'sold')
+                           ->sum('ticket_types.price')
+        ];
+
+        // Liste des événements pour le filtre
+        $events = Event::with('promoteur')->orderBy('title')->get();
+
+        return view('admin.tickets', compact('tickets', 'stats', 'events'));
+    }
 }

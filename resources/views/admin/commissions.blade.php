@@ -23,61 +23,68 @@
     </div>
 
     <!-- Statistiques des commissions -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon warning me-3">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h4>{{ $stats['pending'] ?? 0 }}</h4>
-                        <p class="text-muted mb-0">En attente</p>
-                    </div>
+    {{-- Statistiques des commissions CORRIGÉES --}}
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon warning me-3">
+                    <i class="fas fa-clock"></i>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon success me-3">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h4>{{ $stats['paid'] ?? 0 }}</h4>
-                        <p class="text-muted mb-0">Payées</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon info me-3">
-                        <i class="fas fa-money-bill-wave"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h4>{{ number_format($stats['total_amount'] ?? 0) }} FCFA</h4>
-                        <p class="text-muted mb-0">Total commissions</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon primary me-3">
-                        <i class="fas fa-percentage"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h4>{{ $stats['avg_rate'] ?? 0 }}%</h4>
-                        <p class="text-muted mb-0">Taux moyen</p>
-                    </div>
+                <div class="stat-info">
+                    <h4>{{ $stats['pending'] ?? 0 }}</h4>
+                    <p class="text-muted mb-0">En attente</p>
+                    <small class="text-warning">{{ number_format($stats['total_pending_amount'] ?? 0) }} FCFA</small>
                 </div>
             </div>
         </div>
     </div>
-
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon success me-3">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="stat-info">
+                    <h4>{{ $stats['paid'] ?? 0 }}</h4>
+                    <p class="text-muted mb-0">Payées</p>
+                    <small class="text-success">{{ number_format($stats['total_paid_amount'] ?? 0) }} FCFA</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon info me-3">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="stat-info">
+                    <h4>{{ number_format($stats['total_amount'] ?? 0) }}</h4>
+                    <p class="text-muted mb-0">Total commission</p>
+                    <small class="text-info">Revenus plateforme</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon primary me-3">
+                    <i class="fas fa-percentage"></i>
+                </div>
+                <div class="stat-info">
+                    <h4>{{ $stats['avg_rate'] ?? 0 }}%</h4>
+                    <p class="text-muted mb-0">Taux moyen</p>
+                    <small class="text-primary">{{ $stats['paid_percentage'] ?? 0 }}% payées</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
     <!-- Filtres -->
     <div class="card mb-4">
         <div class="card-body">

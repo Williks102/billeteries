@@ -228,59 +228,65 @@ class Commission extends Model
         ];
     }
 
-    /**
-     * Statistiques globales
-     */
-    public static function getGlobalStats($period = null)
-    {
-        $query = self::query();
-        
-        if ($period) {
-            $dateRange = self::getDateRangeForPeriod($period);
-            $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
-        }
-
-        return [
-            'total_amount' => $query->sum('commission_amount'),
-            'pending' => $query->where('status', 'pending')->count(),
-            'paid' => $query->where('status', 'paid')->count(),
-            'held' => $query->where('status', 'held')->count(),
-            'cancelled' => $query->where('status', 'cancelled')->count(),
-            'avg_rate' => $query->avg('commission_rate') ?? 0,
-            'total_gross' => $query->sum('gross_amount'),
-            'total_net' => $query->sum('net_amount')
-        ];
+   /**
+ * Obtenir les statistiques globales (méthode statique)
+ */
+public static function getGlobalStats($period = null)
+{
+    $query = self::query();
+    
+    if ($period) {
+        $dateRange = self::getDateRangeForPeriod($period);
+        $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
     }
 
+    return [
+        'total_amount' => $query->sum('commission_amount'),
+        'total_net_amount' => $query->sum('net_amount'),
+        'total_gross_amount' => $query->sum('gross_amount'),
+        'pending' => $query->clone()->where('status', 'pending')->count(),
+        'paid' => $query->clone()->where('status', 'paid')->count(),
+        'held' => $query->clone()->where('status', 'held')->count(),
+        'cancelled' => $query->clone()->where('status', 'cancelled')->count(),
+        'avg_rate' => $query->avg('commission_rate') ?? 0,
+        'total_transactions' => $query->count(),
+        'pending_amount' => $query->clone()->where('status', 'pending')->sum('net_amount'),
+        'paid_amount' => $query->clone()->where('status', 'paid')->sum('net_amount'),
+    ];
+}
     /**
-     * Méthode utilitaire pour les plages de dates
-     */
-    private static function getDateRangeForPeriod($period)
-    {
-        switch ($period) {
-            case 'today':
-                return [
-                    'start' => now()->startOfDay(),
-                    'end' => now()->endOfDay()
-                ];
-            case 'this_week':
-                return [
-                    'start' => now()->startOfWeek(),
-                    'end' => now()->endOfWeek()
-                ];
-            case 'this_month':
-            default:
-                return [
-                    'start' => now()->startOfMonth(),
-                    'end' => now()->endOfMonth()
-                ];
-            case 'this_year':
-                return [
-                    'start' => now()->startOfYear(),
-                    'end' => now()->endOfYear()
-                ];
-        }
+ * Obtenir les plages de dates pour les filtres
+ */
+private static function getDateRangeForPeriod($period)
+{
+    switch ($period) {
+        case 'today':
+            return [
+                'start' => now()->startOfDay(),
+                'end' => now()->endOfDay()
+            ];
+        case 'this_week':
+            return [
+                'start' => now()->startOfWeek(),
+                'end' => now()->endOfWeek()
+            ];
+        case 'this_month':
+            return [
+                'start' => now()->startOfMonth(),
+                'end' => now()->endOfMonth()
+            ];
+        case 'last_month':
+            return [
+                'start' => now()->subMonth()->startOfMonth(),
+                'end' => now()->subMonth()->endOfMonth()
+            ];
+        default:
+            return [
+                'start' => now()->startOfMonth(),
+                'end' => now()->endOfMonth()
+            ];
     }
+}
 
     /**
      * Commission en attente pour un promoteur

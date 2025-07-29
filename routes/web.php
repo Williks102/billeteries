@@ -206,6 +206,7 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     // Dashboard principal
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
+    Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
     Route::get('/events', [AdminController::class, 'events'])->name('events');
     Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
     Route::get('/orders/{order}', [AdminController::class, 'orderDetail'])->name('orders.show');
@@ -247,7 +248,15 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     Route::get('/orders/{order}/pdf', [AdminController::class, 'downloadOrderPDF'])->name('orders.pdf');
     Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('orders.export');
     Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
-    Route::get('/orders/{order}', [AdminController::class, 'showOrder'])->name('orders.show');
+     Route::delete('/orders/{order}', [AdminController::class, 'destroyOrder'])->name('orders.destroy');
+    Route::patch('/orders/{order}/refund', [AdminController::class, 'refundOrder'])->name('orders.refund');
+    Route::post('/orders/bulk-delete', [AdminController::class, 'bulkDeleteOrders'])->name('orders.bulkDelete');
+    Route::post('/orders/bulk-export', [AdminController::class, 'bulkExportOrders'])->name('orders.bulkExport');
+    Route::post('/orders/{order}/resend-email', [AdminController::class, 'resendOrderEmail'])->name('orders.resendEmail');
+    
+    // NAVIGATION
+    Route::get('/events/{event}', [AdminController::class, 'showEvent'])->name('events.show');
+   
     
     Route::get('/settings', function () { 
         return view('admin.settings'); 

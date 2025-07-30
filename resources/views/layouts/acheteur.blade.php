@@ -137,18 +137,261 @@
             color: white;
         }
         
+        .btn-outline-acheteur {
+            border: 2px solid var(--dark-blue);
+            color: var(--dark-blue);
+            background: transparent;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-acheteur:hover {
+            background: var(--dark-blue);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        /* === STAT CARDS === */
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary-orange);
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+        
+        .stat-icon.primary {
+            background: linear-gradient(135deg, var(--primary-orange), #ff8c42);
+        }
+        
+        .stat-icon.success {
+            background: linear-gradient(135deg, #28a745, #34d058);
+        }
+        
+        .stat-icon.info {
+            background: linear-gradient(135deg, var(--dark-blue), #0066cc);
+        }
+        
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+        }
+        
+        /* === BREADCRUMB === */
+        .acheteur-breadcrumb {
+            background: rgba(255, 107, 53, 0.1) !important;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+        }
+        
+        .acheteur-breadcrumb .breadcrumb-item a {
+            color: var(--primary-orange);
+            text-decoration: none;
+        }
+        
+        .acheteur-breadcrumb .breadcrumb-item.active {
+            color: var(--dark-gray);
+            font-weight: 500;
+        }
+        
         /* === RESPONSIVE === */
         @media (max-width: 768px) {
-            body { padding-top: 60px; }
-            .acheteur-navbar { height: 60px; }
+            body { 
+                padding-top: 60px; 
+            }
+            
+            .acheteur-navbar { 
+                height: 60px; 
+            }
+            
             .acheteur-sidebar {
                 position: relative !important;
                 top: auto;
                 max-height: none;
                 margin-bottom: 20px;
             }
+            
+            .acheteur-content {
+                padding: 10px;
+            }
         }
     </style>
     
     @stack('styles')
-    </head>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg acheteur-navbar">
+        <div class="container-fluid px-4">
+            <!-- Brand -->
+            <a class="navbar-brand" href="{{ route('home') }}">
+                <i class="fas fa-ticket-alt me-2"></i>ClicBillet CI
+            </a>
+            
+            <!-- Mobile toggle -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- Navigation -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('home') }}">
+                            <i class="fas fa-home me-1"></i>Accueil
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('events.all') }}">
+                            <i class="fas fa-calendar-alt me-1"></i>Événements
+                        </a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <!-- Panier -->
+                    <li class="nav-item">
+                        <a class="nav-link position-relative" href="{{ route('cart.show') }}">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">
+                                0
+                            </span>
+                        </a>
+                    </li>
+                    
+                    <!-- Profil utilisateur -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>
+                            {{ Auth::user()->name }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{{ route('acheteur.profile') }}">
+                                    <i class="fas fa-user me-2"></i>Mon profil
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ route('logout') }}"
+                                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Contenu principal -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                @include('partials.acheteur-sidebar')
+            </div>
+            
+            <!-- Contenu -->
+            <div class="col-md-9 col-lg-10 acheteur-content">
+                <!-- Breadcrumb (optionnel) -->
+                @hasSection('breadcrumb')
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb acheteur-breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('acheteur.dashboard') }}">Dashboard</a>
+                        </li>
+                        @yield('breadcrumb')
+                    </ol>
+                </nav>
+                @endif
+                
+                <!-- Messages flash -->
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+                
+                <!-- Contenu de la page -->
+                @yield('content')
+            </div>
+        </div>
+    </div>
+    
+    <!-- Formulaire de déconnexion -->
+    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+        @csrf
+    </form>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script pour le compteur panier -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fonction pour mettre à jour le compteur du panier
+            function updateCartCount() {
+                fetch('{{ route("cart.data") }}')
+                    .then(response => response.json())
+                    .then(data => {
+                        const cartCount = document.getElementById('cart-count');
+                        const sidebarCartCount = document.getElementById('sidebar-cart-count');
+                        
+                        if (cartCount) {
+                            cartCount.textContent = data.count || 0;
+                            cartCount.style.display = data.count > 0 ? 'inline' : 'none';
+                        }
+                        
+                        if (sidebarCartCount) {
+                            sidebarCartCount.textContent = data.count || 0;
+                            sidebarCartCount.style.display = data.count > 0 ? 'inline' : 'none';
+                        }
+                    })
+                    .catch(error => console.log('Erreur lors de la mise à jour du panier:', error));
+            }
+            
+            // Mettre à jour le compteur au chargement
+            updateCartCount();
+            
+            // Mettre à jour le compteur toutes les 30 secondes
+            setInterval(updateCartCount, 30000);
+        });
+    </script>
+    
+    @stack('scripts')
+</body>
+</html>

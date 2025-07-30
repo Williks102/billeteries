@@ -1,21 +1,27 @@
-// app/Http/Controllers/TicketVerificationController.php
+<?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Contrôleur pour la vérification publique des tickets
+ * Utilisé pour les QR codes publics et l'API de vérification
+ */
 class TicketVerificationController extends Controller
 {
     /**
      * Page de vérification publique (via QR code ou URL)
+     * Route: GET /verify-ticket/{ticketCode}
      */
     public function verify($ticketCode)
     {
-        Log::info("Tentative vérification ticket : {$ticketCode}");
+        Log::info("Vérification publique ticket : {$ticketCode}");
         
         try {
-            $ticket = Ticket::where('ticket_code', $ticketCode)
+            $ticket = Ticket::where('ticket_code', strtoupper(trim($ticketCode)))
                 ->with(['ticketType.event.category', 'orderItem.order.user'])
                 ->first();
 
@@ -44,7 +50,8 @@ class TicketVerificationController extends Controller
             
         } catch (\Exception $e) {
             Log::error("Erreur vérification ticket {$ticketCode}", [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return view('tickets.verify', [
@@ -57,13 +64,14 @@ class TicketVerificationController extends Controller
 
     /**
      * API de vérification pour scanner (AJAX/Mobile)
+     * Route: GET /api/verify-ticket/{ticketCode}
      */
     public function verifyApi($ticketCode)
     {
         Log::info("API vérification ticket : {$ticketCode}");
         
         try {
-            $ticket = Ticket::where('ticket_code', $ticketCode)
+            $ticket = Ticket::where('ticket_code', strtoupper(trim($ticketCode)))
                 ->with(['ticketType.event', 'orderItem.order.user'])
                 ->first();
 
@@ -85,7 +93,8 @@ class TicketVerificationController extends Controller
             
         } catch (\Exception $e) {
             Log::error("Erreur API vérification ticket {$ticketCode}", [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return response()->json([
@@ -98,16 +107,21 @@ class TicketVerificationController extends Controller
 
     /**
      * Scanner un ticket (marquer comme utilisé)
+     * Route: POST /api/scan-ticket
+     * 
+     * ATTENTION: Cette méthode est publique et ne vérifie PAS l'authentification.
+     * Elle est destinée aux applications externes ou aux scanners anonymes.
+     * Pour un scanner avec authentification promoteur, utiliser PromoteurController::verifyTicket()
      */
     public function scan(Request $request)
     {
         $request->validate([
-            'ticket_code' => 'required|string'
+            'ticket_code' => 'required|string|max:50'
         ]);
 
         $ticketCode = strtoupper(trim($request->ticket_code));
         
-        Log::info("Tentative scan ticket : {$ticketCode}", [
+        Log::info("Tentative scan public ticket : {$ticketCode}", [
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent()
         ]);
@@ -156,39 +170,57 @@ class TicketVerificationController extends Controller
             }
 
             // Scanner le ticket
-            $scannedBy = auth()->user() ? auth()->user()->name : 'Système';
+            $scannedBy = auth()->check() ? auth()->user()->name : 'Scanner Public';
             
             if ($ticket->markAsUsed($scannedBy)) {
-                Log::info("Scan réussi : {$ticketCode}", [
+                Log::info("Scan public réussi : {$ticketCode}", [
                     'scanned_by' => $scannedBy
                 ]);
                 
                 return response()->json([
                     'success' => true,
                     'message' => 'Billet scanné avec succès !',
-                    'ticket' => $ticket->getVerificationInfo(),
-                    'scanned_at' => $ticket->used_at
+                    'ticket' => [
+                        'ticket_code' => $ticket->ticket_code,
+                        'event' => [
+                            'title' => $ticket->ticketType->event->title,
+                            'date' => $ticket->ticketType->event->event_date
+                        ],
+                        'ticket_type' => $ticket->ticketType->name,
+                        'holder' => [
+                            'name' => $ticket->orderItem->order->user->name ?? 'N/A'
+                        ],
+                        'status' => 'used'
+                    ],
+                    'scanned_at' => now()->toISOString(),
+                    'scanned_by' => $scannedBy
                 ]);
             } else {
-                Log::error("Scan échoué - erreur markAsUsed : {$ticketCode}");
+                Log::error("Échec marquage ticket comme utilisé : {$ticketCode}");
                 
                 return response()->json([
                     'success' => false,
-                    'error' => 'Erreur lors du scan',
-                    'ticket_code' => $ticketCode
+                    'error' => 'Erreur lors du marquage du ticket'
                 ], 500);
             }
             
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Données invalides : ' . implode(', ', $e->validator->errors()->all()),
+                'errors' => $e->validator->errors()
+            ], 422);
+            
         } catch (\Exception $e) {
-            Log::error("Erreur scan ticket {$ticketCode}", [
+            Log::error('Erreur scan public ticket', [
+                'ticket_code' => $ticketCode,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur serveur lors du scan',
-                'ticket_code' => $ticketCode
+                'error' => 'Erreur serveur. Veuillez réessayer.'
             ], 500);
         }
     }

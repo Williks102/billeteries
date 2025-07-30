@@ -203,17 +203,28 @@ public function scanner()
  */
 public function verifyTicket(Request $request)
 {
+    // Log pour debug
+    \Log::info('Scanner verify request', [
+        'ticket_code' => $request->ticket_code,
+        'user_id' => Auth::id(),
+        'ip' => $request->ip()
+    ]);
+
     $request->validate([
-        'ticket_code' => 'required|string'
+        'ticket_code' => 'required|string|min:1|max:50'
     ]);
 
     try {
+        $ticketCode = strtoupper(trim($request->ticket_code));
+        
         // Rechercher le billet par son code
-        $ticket = \App\Models\Ticket::where('ticket_code', $request->ticket_code)
+        $ticket = \App\Models\Ticket::where('ticket_code', $ticketCode)
             ->with(['ticketType.event', 'orderItem.order.user'])
             ->first();
 
         if (!$ticket) {
+            \Log::warning('Ticket not found', ['ticket_code' => $ticketCode]);
+            
             return response()->json([
                 'success' => false, 
                 'message' => 'Billet non trouvé',
@@ -223,6 +234,12 @@ public function verifyTicket(Request $request)
 
         // Vérifier que le promoteur peut scanner ce billet (sécurité)
         if ($ticket->ticketType->event->promoteur_id !== Auth::id()) {
+            \Log::warning('Unauthorized scan attempt', [
+                'ticket_code' => $ticketCode,
+                'promoteur_id' => Auth::id(),
+                'event_promoteur_id' => $ticket->ticketType->event->promoteur_id
+            ]);
+            
             return response()->json([
                 'success' => false, 
                 'message' => 'Vous n\'êtes pas autorisé à scanner ce billet',
@@ -236,7 +253,14 @@ public function verifyTicket(Request $request)
                 'success' => false, 
                 'message' => 'Billet déjà utilisé le ' . $ticket->used_at->format('d/m/Y à H:i'),
                 'error_type' => 'already_used',
-                'ticket' => $ticket->getFullTicketInfo()
+                'ticket' => [
+                    'ticket_code' => $ticket->ticket_code,
+                    'event' => [
+                        'title' => $ticket->ticketType->event->title
+                    ],
+                    'status' => $ticket->status,
+                    'used_at' => $ticket->used_at
+                ]
             ]);
         }
 
@@ -246,53 +270,61 @@ public function verifyTicket(Request $request)
                 'success' => false, 
                 'message' => 'Billet non valide (statut: ' . $ticket->status . ')',
                 'error_type' => 'invalid_status',
-                'ticket' => $ticket->getFullTicketInfo()
+                'ticket' => [
+                    'ticket_code' => $ticket->ticket_code,
+                    'status' => $ticket->status
+                ]
             ]);
         }
 
-        // Vérifier que l'événement n'est pas expiré
-        if ($ticket->ticketType->event->event_date < now()->toDateString()) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Événement expiré',
-                'error_type' => 'expired_event',
-                'ticket' => $ticket->getFullTicketInfo()
-            ]);
-        }
-
-        // ✅ BILLET VALIDE - Marquer comme utilisé
+        // Marquer le billet comme utilisé
         $ticket->update([
             'status' => 'used',
-            'used_at' => now()
+            'used_at' => now(),
+            'scanned_by' => Auth::user()->name
         ]);
 
-        // Log de l'action
-        \Log::info('Billet scanné avec succès', [
-            'ticket_code' => $ticket->ticket_code,
-            'promoteur_id' => Auth::id(),
-            'event_id' => $ticket->ticketType->event->id,
-            'scanned_at' => now()
+        \Log::info('Ticket successfully scanned', [
+            'ticket_code' => $ticketCode,
+            'scanned_by' => Auth::user()->name
         ]);
 
         return response()->json([
-            'success' => true, 
-            'message' => '✅ Billet validé avec succès !',
-            'ticket' => $ticket->getFullTicketInfo(),
-            'validation_time' => now()->format('d/m/Y H:i')
+            'success' => true,
+            'message' => 'Billet scanné avec succès !',
+            'ticket' => [
+                'ticket_code' => $ticket->ticket_code,
+                'event' => [
+                    'title' => $ticket->ticketType->event->title,
+                    'date' => $ticket->ticketType->event->event_date
+                ],
+                'ticket_type' => $ticket->ticketType->name,
+                'holder' => [
+                    'name' => $ticket->orderItem->order->user->name ?? 'N/A'
+                ],
+                'status' => 'used'
+            ],
+            'scanned_at' => now()->toISOString()
         ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Données invalides : ' . implode(', ', $e->validator->errors()->all()),
+            'error_type' => 'validation'
+        ], 422);
         
     } catch (\Exception $e) {
-        \Log::error('Erreur lors de la vérification du billet', [
-            'ticket_code' => $request->ticket_code,
-            'promoteur_id' => Auth::id(),
+        \Log::error('Scanner error', [
+            'ticket_code' => $request->ticket_code ?? 'unknown',
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
         ]);
-        
+
         return response()->json([
-            'success' => false, 
-            'message' => 'Erreur technique lors de la vérification',
-            'error_type' => 'technical_error'
+            'success' => false,
+            'message' => 'Erreur serveur. Veuillez réessayer.',
+            'error_type' => 'server_error'
         ], 500);
     }
 }

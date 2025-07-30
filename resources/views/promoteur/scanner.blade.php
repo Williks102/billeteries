@@ -1,5 +1,4 @@
-{{-- resources/views/promoteur/scanner.blade.php --}}
-{{-- Interface scanner pour promoteurs --}}
+
 {{-- =============================================== --}}
 @extends('layouts.promoteur')
 
@@ -239,36 +238,49 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function scanTicket() {
-    const ticketCode = document.getElementById('ticketCode').value.trim();
+    const ticketCodeInput = document.getElementById('ticketCode');
+    const ticketCode = ticketCodeInput.value.trim().toUpperCase();
     const scanBtn = document.getElementById('scanBtn');
-    const scanResult = document.getElementById('scanResult');
-    
+
     if (!ticketCode) {
         showError('Veuillez saisir un code de billet');
         return;
     }
-    
-    // Disable button et show loading
+
+    // Désactiver le bouton pendant le scan
     scanBtn.disabled = true;
-    scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Scan en cours...';
-    
-    // API Call
-    fetch('/api/scan-ticket', {
+    scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Scanning...';
+
+    console.log('Scanning ticket:', ticketCode); // Debug
+
+    // CORRECTION : Utiliser la route Laravel correcte
+    fetch('{{ route("promoteur.scanner.verify") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json' // Ajout pour s'assurer d'obtenir du JSON
         },
         body: JSON.stringify({ ticket_code: ticketCode })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status); // Debug
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return response.json();
+    })
     .then(data => {
+        console.log('Response data:', data); // Debug
+        
         if (data.success) {
             showSuccess(data);
             validScans++;
             addToHistory(data.ticket, 'valid');
         } else {
-            showError(data.error, data.ticket);
+            showError(data.message || data.error, data.ticket);
             invalidScans++;
             addToHistory(data.ticket || { ticket_code: ticketCode }, 'invalid');
         }
@@ -277,8 +289,22 @@ function scanTicket() {
         clearInput();
     })
     .catch(error => {
-        console.error('Erreur:', error);
-        showError('Erreur de connexion');
+        console.error('Erreur détaillée:', error);
+        
+        // Messages d'erreur plus spécifiques
+        let errorMessage = 'Erreur de connexion';
+        
+        if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
+        } else if (error.message.includes('HTTP error! status: 419')) {
+            errorMessage = 'Session expirée. Veuillez recharger la page.';
+        } else if (error.message.includes('HTTP error! status: 403')) {
+            errorMessage = 'Accès non autorisé. Vérifiez vos permissions.';
+        } else if (error.message.includes('HTTP error! status: 500')) {
+            errorMessage = 'Erreur serveur. Contactez l\'administrateur.';
+        }
+        
+        showError(errorMessage);
         invalidScans++;
         updateStats();
     })

@@ -184,15 +184,40 @@ class Ticket extends Model
     }
 
     /**
-     * Marquer le billet comme utilisé
-     */
-    public function markAsUsed()
-    {
-        $this->update([
-            'status' => 'used',
-            'used_at' => now()
-        ]);
+ * AJOUT 5 : Marquer le ticket comme utilisé (gestion du scan)
+ */
+public function markAsUsed($scannedBy = null)
+{
+    if ($this->status === 'used') {
+        \Log::warning("Tentative scan ticket déjà utilisé : {$this->ticket_code}");
+        return false;
     }
+
+    if (!$this->isValidForUse()) {
+        \Log::warning("Tentative scan ticket invalide : {$this->ticket_code}");
+        return false;
+    }
+
+    // Utiliser les champs de votre structure
+    $updateData = [
+        'status' => 'used'
+    ];
+    
+    // Si le champ used_at existe dans votre structure
+    if (in_array('used_at', $this->fillable) || $this->hasGetMutator('used_at')) {
+        $updateData['used_at'] = now();
+    }
+
+    $this->update($updateData);
+
+    \Log::info("Ticket scanné avec succès : {$this->ticket_code}", [
+        'scanned_by' => $scannedBy,
+        'used_at' => $updateData['used_at'] ?? now()
+    ]);
+
+    return true;
+}
+
 
     /**
      * Vérifier si le billet est valide
@@ -299,5 +324,77 @@ public function belongsToUser($userId)
     return $this->orders()->where('user_id', $userId)
                           ->where('payment_status', 'paid')
                           ->exists();
-}
+    }
+/**
+ * AJOUT 3 : Obtenir la commande principale (compatible avec votre structure)
+ */
+public function getMainOrder()
+{
+    // Priorité : utiliser order_item_id si disponible
+    if ($this->order_item_id && $this->orderItem) {
+        return $this->orderItem->order;
+    }
+    
+    // Fallback : via la table pivot
+    return $this->orders()->where('payment_status', 'paid')->first();
+    }
+
+    /**
+ * AJOUT 4 : Vérifier si le ticket est valide pour utilisation
+ */
+public function isValidForUse()
+{
+    // Vérifications de base
+    if ($this->status !== 'sold') {
+        return false;
+    }
+    
+    if ($this->status === 'used' || $this->status === 'cancelled') {
+        return false;
+    }
+    
+    // Vérifier qu'il y a une commande payée
+    $order = $this->getMainOrder();
+    if (!$order || $order->payment_status !== 'paid') {
+        return false;
+    }
+    
+    // Vérifier que l'événement n'est pas passé
+    if ($this->event && $this->event->event_date < now()->toDateString()) {
+        return false;
+    }
+    
+    return true;
+    }
+   /**
+ * AJOUT 6 : Informations complètes pour vérification (compatible avec votre structure)
+ */
+public function getVerificationInfo()
+{
+    $order = $this->getMainOrder();
+    
+    return [
+        'ticket_code' => $this->ticket_code,
+        'status' => $this->status,
+        'is_valid' => $this->isValidForUse(),
+        'used_at' => $this->used_at ?? null,
+        'event' => [
+            'title' => $this->event->title ?? 'N/A',
+            'date' => $this->event->formatted_event_date ?? 'N/A',
+            'time' => $this->event->formatted_event_time ?? 'N/A',
+            'venue' => $this->event->venue ?? 'N/A'
+        ],
+        'ticket_type' => $this->ticketType->name ?? 'N/A',
+        'holder' => [
+            // Utiliser vos champs holder_name et holder_email s'ils existent
+            'name' => $this->holder_name ?? ($order ? $order->user->name : 'N/A'),
+            'email' => $this->holder_email ?? ($order ? $order->user->email : 'N/A')
+        ],
+        'order' => $order ? [
+            'number' => $order->order_number ?? $order->id,
+            'payment_status' => $order->payment_status
+        ] : null
+    ];
+    } 
+
 }

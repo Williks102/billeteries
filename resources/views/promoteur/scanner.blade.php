@@ -1,358 +1,477 @@
-{{-- resources/views/promoteur/scanner.blade.php - VERSION CORRIGÉE --}}
+{{-- resources/views/promoteur/scanner.blade.php --}}
+{{-- Interface scanner pour promoteurs --}}
+{{-- =============================================== --}}
 @extends('layouts.promoteur')
 
-@push('styles')
-<style>
-    .scanner-container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .scanner-card {
-        background: white;
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
-        margin-bottom: 2rem;
-    }
-    
-    .scanner-input {
-        border: 3px solid #e9ecef;
-        border-radius: 10px;
-        padding: 1rem;
-        font-size: 1.25rem;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-    
-    .scanner-input:focus {
-        border-color: #FF6B35;
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
-    }
-    
-    .btn-scan {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
-        border: none;
-        color: white;
-        padding: 1rem 2rem;
-        font-size: 1.1rem;
-        border-radius: 10px;
-        width: 100%;
-    }
-    
-    .btn-scan:hover {
-        background: linear-gradient(135deg, #E55A2B, #D4491F);
-        color: white;
-    }
-    
-    .result-card {
-        border-radius: 15px;
-        padding: 2rem;
-        margin-top: 2rem;
-        display: none;
-    }
-    
-    .result-success {
-        background: linear-gradient(135deg, #d4edda, #c3e6cb);
-        border: 2px solid #28a745;
-    }
-    
-    .result-error {
-        background: linear-gradient(135deg, #f8d7da, #f1b0b7);
-        border: 2px solid #dc3545;
-    }
-    
-    .qr-instructions {
-        background: linear-gradient(135deg, #e2e3e5, #d6d8db);
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    .loading-spinner {
-        display: none;
-        text-align: center;
-        padding: 1rem;
-    }
-</style>
-@endpush
+@section('title', 'Scanner de Billets - ClicBillet CI')
 
 @section('content')
-<div class="container-fluid">
-    <div class="scanner-container">
-        <!-- En-tête -->
-        <div class="text-center mb-4">
-            <h1 class="h2" style="color: #FF6B35;">
+<div class="scanner-page">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-1">
                 <i class="fas fa-qrcode me-3"></i>
                 Scanner de Billets
             </h1>
             <p class="text-muted">Scannez ou saisissez le code des billets pour validation</p>
         </div>
+        <div class="scanner-stats">
+            <span id="scan-count" class="badge bg-success fs-6 me-2">0 scannés aujourd'hui</span>
+            <button class="btn btn-outline-primary" onclick="showStats()">
+                <i class="fas fa-chart-bar me-2"></i>Statistiques
+            </button>
+        </div>
+    </div>
 
-        <!-- Instructions -->
-        <div class="qr-instructions">
+    <!-- Instructions -->
+    <div class="card mb-4 border-info">
+        <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h5 class="fw-bold mb-2">
+                    <h5 class="fw-bold mb-2 text-info">
                         <i class="fas fa-info-circle me-2"></i>
                         Comment utiliser le scanner
                     </h5>
-                    <ul class="mb-0 small">
+                    <ul class="mb-0">
                         <li>Scannez le QR code avec votre appareil photo</li>
-                        <li>Ou saisissez manuellement le code du billet</li>
+                        <li>Ou saisissez manuellement le code du billet (format: TKT-XXXXXXXX)</li>
                         <li>Le système vérifiera automatiquement la validité</li>
-                        <li>Les billets utilisés ne peuvent pas être re-scannés</li>
+                        <li>⚠️ Les billets utilisés ne peuvent pas être re-scannés</li>
                     </ul>
                 </div>
                 <div class="col-md-4 text-center">
-                    <i class="fas fa-mobile-alt fa-4x text-muted"></i>
+                    <i class="fas fa-mobile-alt fa-4x text-info"></i>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Scanner principal -->
-        <div class="scanner-card">
-            <form id="scannerForm">
-                @csrf
-                <div class="row">
-                    <div class="col-md-8 mb-3">
-                        <label for="ticketCode" class="form-label fw-bold">
-                            <i class="fas fa-ticket-alt me-2"></i>
-                            Code du Billet
-                        </label>
-                        <input 
-                            type="text" 
-                            id="ticketCode" 
-                            name="ticket_code" 
-                            class="form-control scanner-input" 
-                            placeholder="TKT-XXXXXXXX"
-                            autocomplete="off"
-                            autofocus
-                            required
-                        >
-                        <small class="text-muted">Scannez le QR code ou saisissez le code manuellement</small>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">&nbsp;</label>
-                        <button type="submit" class="btn btn-scan">
-                            <i class="fas fa-search me-2"></i>
-                            Vérifier
+    <!-- Scanner principal -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-scan me-2"></i>
+                        Scanner Principal
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="scannerForm">
+                        @csrf
+                        <div class="row">
+                            <div class="col-md-9 mb-3">
+                                <label for="ticketCode" class="form-label fw-bold">
+                                    <i class="fas fa-ticket-alt me-2"></i>
+                                    Code du Billet
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="ticketCode" 
+                                    name="ticket_code" 
+                                    class="form-control form-control-lg" 
+                                    placeholder="TKT-XXXXXXXX ou scannez le QR code"
+                                    autocomplete="off"
+                                    autofocus
+                                    required
+                                    style="font-family: 'Courier New', monospace; letter-spacing: 1px;"
+                                >
+                                <small class="form-text text-muted">
+                                    Saisissez le code ou utilisez un scanner QR
+                                </small>
+                            </div>
+                            <div class="col-md-3 mb-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-success btn-lg w-100" id="scanBtn">
+                                    <i class="fas fa-search me-2"></i>
+                                    Scanner
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <!-- Résultat du scan -->
+                    <div id="scanResult" class="mt-4" style="display: none;"></div>
+                    
+                    <!-- Camera Scanner (optionnel) -->
+                    <div class="mt-4">
+                        <button type="button" class="btn btn-outline-info" onclick="toggleCamera()">
+                            <i class="fas fa-camera me-2"></i>
+                            Activer la caméra QR
                         </button>
+                        <div id="cameraContainer" style="display: none;" class="mt-3">
+                            <video id="cameraFeed" width="100%" height="300" style="border-radius: 10px;"></video>
+                            <canvas id="cameraCanvas" style="display: none;"></canvas>
+                        </div>
                     </div>
                 </div>
-            </form>
-
-            <!-- Spinner de chargement -->
-            <div id="loadingSpinner" class="loading-spinner">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Vérification en cours...</span>
-                </div>
-                <p class="mt-2 text-muted">Vérification du billet...</p>
             </div>
         </div>
-
-        <!-- Résultat de la vérification -->
-        <div id="resultCard" class="result-card">
-            <div id="resultContent"></div>
-        </div>
-
-        <!-- Historique des scans récents -->
-        <div class="scanner-card">
-            <h5 class="fw-bold mb-3">
-                <i class="fas fa-history me-2"></i>
-                Scans Récents
-            </h5>
-            <div id="recentScans">
-                <p class="text-muted text-center">Aucun scan récent</p>
+        
+        <!-- Historique des scans -->
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Historique des Scans
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="scanHistory" class="scan-history">
+                        <p class="text-muted text-center">Aucun scan effectué</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistiques rapides -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Statistiques Rapides
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 id="validScans" class="text-success">0</h4>
+                            <small>Valides</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 id="invalidScans" class="text-danger">0</h4>
+                            <small>Refusés</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
 @endsection
+
+@push('styles')
+<style>
+    .scanner-page .card {
+        border: none;
+        border-radius: 15px;
+    }
+    
+    .scan-history {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .scan-item {
+        border-bottom: 1px solid #dee2e6;
+        padding: 10px 0;
+    }
+    
+    .scan-item:last-child {
+        border-bottom: none;
+    }
+    
+    .scan-valid {
+        border-left: 4px solid #28a745;
+        padding-left: 10px;
+        background: #f8fff9;
+    }
+    
+    .scan-invalid {
+        border-left: 4px solid #dc3545;
+        padding-left: 10px;
+        background: #fff8f8;
+    }
+    
+    .scan-used {
+        border-left: 4px solid #ffc107;
+        padding-left: 10px;
+        background: #fffdf5;
+    }
+    
+    #ticketCode {
+        transition: all 0.3s ease;
+    }
+    
+    #ticketCode:focus {
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        border-color: #80bdff;
+    }
+    
+    .scanner-stats .badge {
+        font-size: 0.9rem;
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>
+let scanCount = 0;
+let validScans = 0;
+let invalidScans = 0;
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('scannerForm');
     const ticketCodeInput = document.getElementById('ticketCode');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const resultCard = document.getElementById('resultCard');
-    const resultContent = document.getElementById('resultContent');
-    const recentScans = document.getElementById('recentScans');
+    const scanBtn = document.getElementById('scanBtn');
+    const scanResult = document.getElementById('scanResult');
     
-    // Array pour stocker les scans récents
-    let recentScansData = [];
+    // Auto-focus sur le champ
+    ticketCodeInput.focus();
     
     // Soumission du formulaire
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        const ticketCode = ticketCodeInput.value.trim();
-        if (!ticketCode) {
-            showError('Veuillez saisir un code de billet');
-            return;
-        }
-        
-        verifyTicket(ticketCode);
+        scanTicket();
     });
     
-    // Auto-submit quand on colle ou scanne un code
+    // Auto-submit après saisie complète du code
     ticketCodeInput.addEventListener('input', function(e) {
-        const value = e.target.value.trim();
-        // Si ça ressemble à un code complet (TKT-XXXXXXXX), vérifier automatiquement
-        if (value.match(/^TKT-[A-Z0-9]{8}$/i)) {
-            setTimeout(() => verifyTicket(value), 100);
+        let value = e.target.value.toUpperCase();
+        e.target.value = value;
+        
+        // Auto-scan si format complet (TKT-XXXXXXXX)
+        if (value.match(/^TKT-[A-Z0-9]{8}$/)) {
+            setTimeout(() => scanTicket(), 500);
         }
     });
+});
+
+function scanTicket() {
+    const ticketCode = document.getElementById('ticketCode').value.trim();
+    const scanBtn = document.getElementById('scanBtn');
+    const scanResult = document.getElementById('scanResult');
     
-    function verifyTicket(ticketCode) {
-        // Afficher le spinner
-        loadingSpinner.style.display = 'block';
-        resultCard.style.display = 'none';
-        
-        // Faire la requête AJAX
-        fetch('{{ route("promoteur.scanner.verify") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') || '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                ticket_code: ticketCode
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            loadingSpinner.style.display = 'none';
-            
-            if (data.success) {
-                showSuccess(data.message, data.ticket);
-                addToRecentScans(ticketCode, 'success', data.ticket);
-            } else {
-                showError(data.message, data.ticket);
-                addToRecentScans(ticketCode, 'error', data.ticket);
-            }
-            
-            // Vider le champ pour le prochain scan
-            ticketCodeInput.value = '';
-            ticketCodeInput.focus();
-        })
-        .catch(error => {
-            loadingSpinner.style.display = 'none';
-            console.error('Erreur:', error);
-            showError('Erreur de connexion. Veuillez réessayer.');
-            ticketCodeInput.focus();
-        });
+    if (!ticketCode) {
+        showError('Veuillez saisir un code de billet');
+        return;
     }
     
-    function showSuccess(message, ticket) {
-        resultCard.className = 'result-card result-success';
-        resultCard.style.display = 'block';
-        
-        let ticketInfo = '';
-        if (ticket) {
-            ticketInfo = `
-                <div class="mt-3">
-                    <h6>Informations du billet :</h6>
-                    <ul class="mb-0">
-                        <li><strong>Événement :</strong> ${ticket.event_title || 'N/A'}</li>
-                        <li><strong>Type :</strong> ${ticket.ticket_type || 'N/A'}</li>
-                        <li><strong>Lieu :</strong> ${ticket.venue || 'N/A'}</li>
-                        <li><strong>Date :</strong> ${ticket.event_date || 'N/A'} à ${ticket.event_time || 'N/A'}</li>
-                    </ul>
-                </div>
-            `;
+    // Disable button et show loading
+    scanBtn.disabled = true;
+    scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Scan en cours...';
+    
+    // API Call
+    fetch('/api/scan-ticket', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({ ticket_code: ticketCode })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess(data);
+            validScans++;
+            addToHistory(data.ticket, 'valid');
+        } else {
+            showError(data.error, data.ticket);
+            invalidScans++;
+            addToHistory(data.ticket || { ticket_code: ticketCode }, 'invalid');
         }
         
-        resultContent.innerHTML = `
-            <div class="text-center">
-                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                <h4 class="text-success">Billet Valide !</h4>
-                <p class="mb-0">${message}</p>
-                ${ticketInfo}
+        updateStats();
+        clearInput();
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showError('Erreur de connexion');
+        invalidScans++;
+        updateStats();
+    })
+    .finally(() => {
+        // Re-enable button
+        scanBtn.disabled = false;
+        scanBtn.innerHTML = '<i class="fas fa-search me-2"></i>Scanner';
+    });
+}
+
+function showSuccess(data) {
+    const scanResult = document.getElementById('scanResult');
+    const ticket = data.ticket;
+    
+    scanResult.innerHTML = `
+        <div class="alert alert-success alert-dismissible fade show">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading">✅ Billet Valide Scanné !</h5>
+                    <p class="mb-1"><strong>${ticket.event.title}</strong></p>
+                    <p class="mb-1">Type: ${ticket.ticket_type} • Porteur: ${ticket.holder.name}</p>
+                    <small>Scanné le ${new Date(data.scanned_at).toLocaleString('fr-FR')}</small>
+                </div>
             </div>
-        `;
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    scanResult.style.display = 'block';
+    
+    // Sound effect (optionnel)
+    playSuccessSound();
+}
+
+function showError(message, ticket = null) {
+    const scanResult = document.getElementById('scanResult');
+    
+    let extraInfo = '';
+    if (ticket && ticket.status === 'used') {
+        extraInfo = `<p class="mb-1">⚠️ Billet déjà utilisé</p>`;
+        if (ticket.used_at) {
+            extraInfo += `<small>Utilisé le ${new Date(ticket.used_at).toLocaleString('fr-FR')}</small>`;
+        }
+    } else if (ticket) {
+        extraInfo = `<p class="mb-1">${ticket.event ? ticket.event.title : ''}</p>`;
     }
     
-    function showError(message, ticket) {
-        resultCard.className = 'result-card result-error';
-        resultCard.style.display = 'block';
-        
-        let ticketInfo = '';
-        if (ticket) {
-            ticketInfo = `
-                <div class="mt-3">
-                    <h6>Informations du billet :</h6>
-                    <ul class="mb-0">
-                        <li><strong>Code :</strong> ${ticket.ticket_code || 'N/A'}</li>
-                        <li><strong>Statut :</strong> ${ticket.status || 'N/A'}</li>
-                        <li><strong>Événement :</strong> ${ticket.event_title || 'N/A'}</li>
-                    </ul>
+    scanResult.innerHTML = `
+        <div class="alert alert-danger alert-dismissible fade show">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-times-circle fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading">❌ ${message}</h5>
+                    ${extraInfo}
                 </div>
-            `;
-        }
-        
-        resultContent.innerHTML = `
-            <div class="text-center">
-                <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
-                <h4 class="text-danger">Billet Non Valide</h4>
-                <p class="mb-0">${message}</p>
-                ${ticketInfo}
             </div>
-        `;
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    scanResult.style.display = 'block';
+    
+    // Sound effect (optionnel)  
+    playErrorSound();
+}
+
+function addToHistory(ticket, status) {
+    const scanHistory = document.getElementById('scanHistory');
+    
+    // Supprimer le message vide
+    if (scanHistory.querySelector('.text-muted')) {
+        scanHistory.innerHTML = '';
     }
     
-    function addToRecentScans(code, status, ticket) {
-        const scan = {
-            code: code,
-            status: status,
-            timestamp: new Date().toLocaleString('fr-FR'),
-            ticket: ticket
-        };
-        
-        recentScansData.unshift(scan);
-        
-        // Garder seulement les 10 derniers
-        if (recentScansData.length > 10) {
-            recentScansData = recentScansData.slice(0, 10);
-        }
-        
-        updateRecentScansDisplay();
-    }
+    const statusClass = status === 'valid' ? 'scan-valid' : 
+                       (ticket && ticket.status === 'used') ? 'scan-used' : 'scan-invalid';
     
-    function updateRecentScansDisplay() {
-        if (recentScansData.length === 0) {
-            recentScans.innerHTML = '<p class="text-muted text-center">Aucun scan récent</p>';
-            return;
-        }
-        
-        let html = '<div class="list-group">';
-        recentScansData.forEach(scan => {
-            const statusIcon = scan.status === 'success' ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
-            const statusText = scan.status === 'success' ? 'Valide' : 'Invalide';
-            
-            html += `
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <code class="fw-bold">${scan.code}</code>
-                        <br>
-                        <small class="text-muted">${scan.timestamp}</small>
-                    </div>
-                    <div class="text-end">
-                        <i class="fas ${statusIcon} me-2"></i>
-                        <span class="badge bg-${scan.status === 'success' ? 'success' : 'danger'}">${statusText}</span>
-                    </div>
-                </div>
-            `;
-        });
-        html += '</div>';
-        
-        recentScans.innerHTML = html;
-    }
+    const statusIcon = status === 'valid' ? '✅' : 
+                      (ticket && ticket.status === 'used') ? '⚠️' : '❌';
     
-    // Focus automatique sur le champ
+    const historyItem = document.createElement('div');
+    historyItem.className = `scan-item ${statusClass}`;
+    historyItem.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+                <strong>${statusIcon} ${ticket.ticket_code || 'Code inconnu'}</strong>
+                <br>
+                <small class="text-muted">${ticket.event ? ticket.event.title : 'Événement inconnu'}</small>
+                <br>
+                <small class="text-muted">${new Date().toLocaleTimeString('fr-FR')}</small>
+            </div>
+        </div>
+    `;
+    
+    // Ajouter en haut de l'historique
+    scanHistory.insertBefore(historyItem, scanHistory.firstChild);
+    
+    // Limiter à 10 éléments
+    const items = scanHistory.querySelectorAll('.scan-item');
+    if (items.length > 10) {
+        items[items.length - 1].remove();
+    }
+}
+
+function updateStats() {
+    scanCount++;
+    document.getElementById('scan-count').textContent = `${scanCount} scannés aujourd'hui`;
+    document.getElementById('validScans').textContent = validScans;
+    document.getElementById('invalidScans').textContent = invalidScans;
+}
+
+function clearInput() {
+    const ticketCodeInput = document.getElementById('ticketCode');
+    ticketCodeInput.value = '';
     ticketCodeInput.focus();
+}
+
+function playSuccessSound() {
+    // Optionnel: jouer un son de succès
+    try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmcYAz+G1fTSeygCKnzM6t2QQg...');
+        audio.play();
+    } catch (e) {
+        // Ignorer si audio non supporté
+    }
+}
+
+function playErrorSound() {
+    // Optionnel: jouer un son d'erreur
+    try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmcYAz+G1fTSeygCKnzM6t2QQg...');
+        audio.play();
+    } catch (e) {
+        // Ignorer si audio non supporté
+    }
+}
+
+function toggleCamera() {
+    const container = document.getElementById('cameraContainer');
+    const video = document.getElementById('cameraFeed');
+    
+    if (container.style.display === 'none') {
+        // Activer la caméra
+        container.style.display = 'block';
+        startCamera();
+    } else {
+        // Désactiver la caméra
+        container.style.display = 'none';
+        stopCamera();
+    }
+}
+
+function startCamera() {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+            const video = document.getElementById('cameraFeed');
+            video.srcObject = stream;
+            video.play();
+            
+            // TODO: Intégrer une bibliothèque de scan QR comme jsQR
+            // https://github.com/cozmo/jsQR
+        })
+        .catch(err => {
+            console.error('Erreur caméra:', err);
+            alert('Impossible d\'accéder à la caméra');
+        });
+}
+
+function stopCamera() {
+    const video = document.getElementById('cameraFeed');
+    if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+    }
+}
+
+function showStats() {
+    // Afficher un modal avec des statistiques détaillées
+    alert(`Statistiques de scan:\n\nTotal: ${scanCount}\nValides: ${validScans}\nRefusés: ${invalidScans}\nTaux de succès: ${scanCount > 0 ? Math.round((validScans/scanCount)*100) : 0}%`);
+}
+
+// Raccourcis clavier
+document.addEventListener('keydown', function(e) {
+    // F5 = Focus sur input
+    if (e.key === 'F5') {
+        e.preventDefault();
+        document.getElementById('ticketCode').focus();
+    }
+    
+    // Escape = Clear input
+    if (e.key === 'Escape') {
+        clearInput();
+    }
 });
 </script>
 @endpush

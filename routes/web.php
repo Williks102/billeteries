@@ -133,13 +133,24 @@ Route::prefix('cart')->name('cart.')->group(function () {
 });
 
 // Routes publiques pour vérification des billets
-Route::get('/tickets/{ticket}', [App\Http\Controllers\TicketController::class, 'show'])
-    ->name('tickets.show');
-Route::get('/verify-ticket/{ticketCode}', [App\Http\Controllers\TicketController::class, 'verify'])
+
+// Route publique de vérification (UNIQUE)
+// API de vérification pour scanner
+Route::get('/api/verify-ticket/{ticketCode}', [App\Http\Controllers\TicketVerificationController::class, 'verifyApi'])
+    ->name('api.tickets.verify');
+Route::get('/verify-ticket/{ticketCode}', [App\Http\Controllers\TicketVerificationController::class, 'verify'])
     ->name('tickets.verify');
+// API pour scanner un ticket
+Route::post('/api/scan-ticket', [App\Http\Controllers\TicketVerificationController::class, 'scan'])
+    ->name('api.tickets.scan');
+
 Route::get('/tickets/{ticket}/download', [App\Http\Controllers\TicketController::class, 'download'])
     ->middleware('auth')
     ->name('tickets.download');
+    
+// Route pour afficher un ticket (authentifié)
+Route::middleware('auth')->get('/tickets/{ticket}', [App\Http\Controllers\TicketController::class, 'show'])
+    ->name('tickets.show');
 
 
 // Route de vérification des billets (PUBLIQUE - pour scanner QR codes)
@@ -261,11 +272,11 @@ Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->g
     Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
     Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
     // Dans la section admin de routes/web.php
-Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-Route::patch('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
-Route::post('/settings/test-email', [AdminController::class, 'testEmail'])->name('settings.test-email');
-Route::post('/settings/backup', [AdminController::class, 'backupSystem'])->name('settings.backup');
-Route::post('/settings/clear-cache', [AdminController::class, 'clearCache'])->name('settings.clear-cache');
+    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+    Route::patch('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+    Route::post('/settings/test-email', [AdminController::class, 'testEmail'])->name('settings.test-email');
+    Route::post('/settings/backup', [AdminController::class, 'backupSystem'])->name('settings.backup');
+    Route::post('/settings/clear-cache', [AdminController::class, 'clearCache'])->name('settings.clear-cache');
     
     // CORRECTION : Enlever le préfixe /admin puisqu'il est déjà dans le groupe
     Route::get('/events/{id}', [AdminController::class, 'eventDetail'])->name('events.detail');
@@ -389,10 +400,10 @@ Route::post('/settings/clear-cache', [AdminController::class, 'clearCache'])->na
         })->name('profile');
 
         Route::get('/scanner', [App\Http\Controllers\Promoteur\PromoteurController::class, 'scanner'])->name('scanner');
-    Route::get('/sales', [App\Http\Controllers\Promoteur\PromoteurController::class, 'sales'])->name('sales');
-    Route::get('/commissions', [App\Http\Controllers\Promoteur\PromoteurController::class, 'commissions'])->name('commissions');
-    Route::get('/reports', [App\Http\Controllers\Promoteur\PromoteurController::class, 'reports'])->name('reports');
-    Route::get('/profile', [App\Http\Controllers\Promoteur\PromoteurController::class, 'profile'])->name('profile');
+        Route::get('/sales', [App\Http\Controllers\Promoteur\PromoteurController::class, 'sales'])->name('sales');
+        Route::get('/commissions', [App\Http\Controllers\Promoteur\PromoteurController::class, 'commissions'])->name('commissions');
+        Route::get('/reports', [App\Http\Controllers\Promoteur\PromoteurController::class, 'reports'])->name('reports');
+        Route::get('/profile', [App\Http\Controllers\Promoteur\PromoteurController::class, 'profile'])->name('profile');
     });
 
     

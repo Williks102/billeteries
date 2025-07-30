@@ -1,136 +1,144 @@
+{{-- resources/views/acheteur/tickets-pdf.blade.php --}}
+{{-- Version complète avec polices plus grandes et QR codes plus grands --}}
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Billets - {{ $order->event->title }}</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>Billets - {{ $order->event->title ?? 'Événement' }}</title>
     <style>
         @page {
             margin: 15mm;
-            size: A4 portrait;
+            size: A4;
         }
         
         body {
-            font-family: 'DejaVu Sans', sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #333;
+            font-family: 'DejaVu Sans', Arial, sans-serif;
             margin: 0;
             padding: 0;
+            line-height: 1.4;
+            color: #333;
+            font-size: 16px; /* Augmenté de 14px à 16px */
         }
         
         .ticket {
-            border: 3px solid #FF6B35;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            background: white;
             page-break-inside: avoid;
-            min-height: 250mm;
-        }
-        
-        .ticket:not(:last-child) {
-            page-break-after: always;
+            margin-bottom: 40px; /* Augmenté de 30px à 40px */
+            border: 3px solid #FF6B35; /* Augmenté de 2px à 3px */
+            border-radius: 15px; /* Augmenté de 12px à 15px */
+            background: white;
+            overflow: hidden;
+            position: relative;
         }
         
         .ticket-header {
-            background: linear-gradient(135deg, #FF6B35 0%, #1a1a1a 100%);
+            background: linear-gradient(135deg, #1a237e, #2c3e50);
             color: white;
-            padding: 15px;
-            margin: -20px -20px 20px -20px;
-            border-radius: 7px 7px 0 0;
+            padding: 25px; /* Augmenté de 20px à 25px */
             text-align: center;
+            position: relative;
         }
         
-        .ticket-header h1 {
-            font-size: 18px;
-            margin: 0 0 5px 0;
+        .event-title {
+            font-size: 28px; /* Augmenté de 24px à 28px */
             font-weight: bold;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        .category {
-            font-size: 12px;
-            opacity: 0.9;
+        .event-subtitle {
+            font-size: 18px; /* Augmenté de 16px à 18px */
             margin: 0;
+            opacity: 0.9;
         }
         
-        .ticket-content {
-            padding: 10px 0;
-        }
-        
-        .row {
-            width: 100%;
+        .ticket-body {
             display: table;
-            margin-bottom: 15px;
+            width: 100%;
+            min-height: 200px; /* Augmenté de 180px à 200px */
         }
         
         .col-left {
             display: table-cell;
-            width: 70%;
+            width: 65%;
             vertical-align: top;
-            padding-right: 20px;
+            padding: 25px; /* Augmenté de 20px à 25px */
+            border-right: 3px dashed #ddd; /* Augmenté de 2px à 3px */
         }
         
         .col-right {
             display: table-cell;
-            width: 30%;
+            width: 35%;
             vertical-align: top;
+            padding: 25px; /* Augmenté de 20px à 25px */
             text-align: center;
-            border-left: 2px dashed #ddd;
-            padding-left: 20px;
         }
         
         .info-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px; /* Augmenté de 15px à 20px */
         }
         
         .info-label {
             font-weight: bold;
             color: #FF6B35;
-            font-size: 10px;
+            font-size: 14px; /* Augmenté de 12px à 14px */
             text-transform: uppercase;
-            margin-bottom: 3px;
+            margin-bottom: 5px; /* Augmenté de 3px à 5px */
             display: block;
+            letter-spacing: 0.5px;
         }
         
         .info-value {
-            font-size: 13px;
-            font-weight: 500;
+            font-size: 18px; /* Augmenté de 16px à 18px */
+            font-weight: 600; /* Augmenté de 500 à 600 */
             line-height: 1.3;
+            color: #1a1a1a;
+        }
+        
+        .text-small {
+            font-size: 15px; /* Augmenté de 13px à 15px */
+            color: #666;
+            line-height: 1.2;
+        }
+        
+        .fw-bold {
+            font-weight: bold;
         }
         
         .ticket-code {
             font-family: 'Courier New', monospace;
-            font-size: 16px;
+            font-size: 20px; /* Augmenté de 18px à 20px */
             font-weight: bold;
-            letter-spacing: 2px;
+            letter-spacing: 3px; /* Augmenté de 2px à 3px */
             color: #1a1a1a;
             background: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 15px 0;
+            padding: 15px; /* Augmenté de 12px à 15px */
+            border-radius: 8px; /* Augmenté de 6px à 8px */
+            margin: 20px 0; /* Augmenté de 15px à 20px */
             text-align: center;
-            border: 2px solid #FF6B35;
+            border: 3px solid #FF6B35; /* Augmenté de 2px à 3px */
         }
         
         .qr-code {
-            width: 120px;
-            height: 120px;
-            margin: 15px auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            width: 160px; /* Augmenté de 140px à 160px */
+            height: 160px; /* Augmenté de 140px à 160px */
+            margin: 20px auto; /* Augmenté de 15px à 20px */
+            border: 2px solid #ddd;
+            border-radius: 8px; /* Augmenté de 6px à 8px */
             display: block;
         }
         
         .qr-placeholder {
-            width: 120px;
-            height: 120px;
-            border: 2px dashed #FF6B35;
-            border-radius: 8px;
+            width: 160px; /* Augmenté de 140px à 160px */
+            height: 160px; /* Augmenté de 140px à 160px */
+            border: 3px dashed #FF6B35; /* Augmenté de 2px à 3px */
+            border-radius: 10px; /* Augmenté de 8px à 10px */
             background: #f8f9fa;
-            margin: 15px auto;
+            margin: 20px auto; /* Augmenté de 15px à 20px */
             display: table;
             color: #FF6B35;
-            font-size: 10px;
+            font-size: 14px; /* Augmenté de 12px à 14px */
         }
         
         .qr-content {
@@ -139,250 +147,460 @@
             text-align: center;
             font-weight: bold;
             line-height: 1.2;
+            padding: 10px;
         }
         
         .qr-success {
-            width: 120px;
-            height: 120px;
-            border: 2px solid #28a745;
-            border-radius: 8px;
+            width: 160px; /* Augmenté de 140px à 160px */
+            height: 160px; /* Augmenté de 140px à 160px */
+            border: 3px solid #28a745; /* Augmenté de 2px à 3px */
+            border-radius: 10px; /* Augmenté de 8px à 10px */
             background: #f8fff9;
-            margin: 15px auto;
+            margin: 20px auto; /* Augmenté de 15px à 20px */
             display: table;
             color: #28a745;
-            font-size: 9px;
+            font-size: 14px; /* Augmenté de 12px à 14px */
         }
         
-        .price-badge {
-            background: #1a1a1a;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            display: inline-block;
-            margin: 10px 0;
+        .footer-info {
+            text-align: center;
+            margin-top: 25px; /* Augmenté de 20px à 25px */
+            padding-top: 20px; /* Augmenté de 15px à 20px */
+            border-top: 2px dashed #ddd;
+            font-size: 14px; /* Augmenté de 12px à 14px */
+            color: #666;
         }
         
-        .status-badge {
-            background: #17a2b8;
+        .verification-note {
+            background: #e3f2fd;
+            border: 2px solid #2196f3; /* Augmenté de 1px à 2px */
+            border-radius: 8px; /* Augmenté de 6px à 8px */
+            padding: 15px; /* Augmenté de 12px à 15px */
+            margin-top: 20px; /* Augmenté de 15px à 20px */
+            font-size: 15px; /* Augmenté de 13px à 15px */
+            color: #1976d2;
+            text-align: center;
+        }
+        
+        .company-info {
+            text-align: center;
+            margin-top: 30px; /* Augmenté de 25px à 30px */
+            padding: 20px; /* Augmenté de 15px à 20px */
+            background: #f8f9fa;
+            border-radius: 8px; /* Augmenté de 6px à 8px */
+            font-size: 14px; /* Augmenté de 12px à 14px */
+            color: #666;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107; /* Augmenté de 1px à 2px */
+            border-radius: 8px; /* Augmenté de 6px à 8px */
+            padding: 15px; /* Augmenté de 12px à 15px */
+            margin: 20px 0; /* Augmenté de 15px à 20px */
+            font-size: 15px; /* Augmenté de 13px à 15px */
+            color: #856404;
+        }
+        
+        .summary-page {
+            page-break-before: always;
+            padding: 30px;
+            background: white;
+        }
+        
+        .summary-header {
+            background: linear-gradient(135deg, #1a237e, #2c3e50);
             color: white;
-            padding: 6px 12px;
+            padding: 25px;
+            text-align: center;
             border-radius: 15px;
-            font-size: 11px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-title {
+            font-size: 32px;
             font-weight: bold;
-            display: inline-block;
-            margin: 10px 0;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        .status-valid { background: #28a745; }
-        .status-used { background: #6c757d; }
-        .status-cancelled { background: #dc3545; }
-        
-        .instructions {
-            background: #e7f3ff;
-            border: 1px solid #b3d7ff;
-            border-radius: 5px;
-            padding: 10px;
-            margin: 15px 0;
-            font-size: 10px;
-            color: #0c5aa6;
+        .summary-subtitle {
+            font-size: 20px;
+            margin: 0;
+            opacity: 0.9;
         }
         
-        .instructions ul {
-            margin: 5px 0;
-            padding-left: 15px;
+        .summary-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            background: #f8f9fa;
         }
         
-        .instructions li {
-            margin-bottom: 3px;
+        .summary-section h3 {
+            color: #FF6B35;
+            font-size: 20px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #FF6B35;
+            padding-bottom: 10px;
         }
         
-        .text-center { text-align: center; }
-        .fw-bold { font-weight: bold; }
-        .text-small { font-size: 10px; }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .summary-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            font-size: 16px;
+        }
+        
+        .summary-table .label {
+            font-weight: bold;
+            color: #333;
+            width: 40%;
+        }
+        
+        .summary-table .value {
+            color: #666;
+        }
+        
+        .summary-total {
+            background: #28a745;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .contact-section {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            font-size: 16px;
+            color: #1976d2;
+        }
+        
+        .contact-section h4 {
+            color: #1976d2;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        /* Print styles */
+        @media print {
+            .ticket {
+                page-break-inside: avoid;
+                margin-bottom: 0;
+            }
+            
+            .ticket:not(:last-child) {
+                page-break-after: always;
+            }
+            
+            .summary-page {
+                page-break-before: always;
+            }
+        }
     </style>
 </head>
-
 <body>
+    {{-- Boucle pour chaque billet --}}
     @foreach($order->tickets as $index => $ticket)
         <div class="ticket">
             <!-- En-tête du billet -->
             <div class="ticket-header">
-                <h1>{{ $order->event->title }}</h1>
-                <p class="category">{{ $order->event->category->name ?? 'Événement' }}</p>
+                <div class="event-title">{{ $order->event->title ?? 'Événement' }}</div>
+                <div class="event-subtitle">Billet d'entrée officiel</div>
             </div>
             
-            <!-- Contenu principal -->
-            <div class="ticket-content">
-                <div class="row">
-                    <!-- Informations à gauche -->
-                    <div class="col-left">
-                        <div class="info-group">
-                            <span class="info-label">📅 Date & Heure</span>
-                            <div class="info-value fw-bold">
-                                {{ $order->event->event_date ? $order->event->event_date->format('d/m/Y') : 'Date TBD' }}<br>
-                                {{ $order->event->event_time ? $order->event->event_time->format('H:i') : 'Heure TBD' }}
-                            </div>
-                        </div>
-                        
-                        <div class="info-group">
-                            <span class="info-label">📍 Lieu</span>
-                            <div class="info-value">
-                                {{ $order->event->venue ?? 'Lieu TBD' }}<br>
-                                @if($order->event->address)
-                                    <span class="text-small">{{ $order->event->address }}</span>
-                                @endif
-                            </div>
-                        </div>
-                        
-                        <div class="info-group">
-                            <span class="info-label">🎫 Type de billet</span>
-                            <div class="info-value fw-bold">{{ $ticket->ticketType->name ?? 'Billet Standard' }}</div>
-                            @if($ticket->ticketType && $ticket->ticketType->description)
-                                <div class="text-small">{{ $ticket->ticketType->description }}</div>
+            <!-- Corps du billet -->
+            <div class="ticket-body">
+                <!-- Informations à gauche -->
+                <div class="col-left">
+                    <div class="info-group">
+                        <span class="info-label">📅 Date et heure</span>
+                        <div class="info-value fw-bold">
+                            {{ $order->event->formatted_event_date ?? 'Date TBD' }}
+                            @if($order->event->formatted_event_time)
+                                à {{ $order->event->formatted_event_time }}
                             @endif
-                        </div>
-                        
-                        @if($ticket->seat_number)
-                            <div class="info-group">
-                                <span class="info-label">💺 Siège</span>
-                                <div class="info-value fw-bold">{{ $ticket->seat_number }}</div>
-                            </div>
-                        @endif
-                        
-                        <div class="info-group">
-                            <span class="info-label">🎟️ Numéro de commande</span>
-                            <div class="info-value">{{ $order->order_number }}</div>
-                        </div>
-                        
-                        <div class="info-group">
-                            <span class="info-label">👤 Acheteur</span>
-                            <div class="info-value">
-                                {{ $order->user->name }}<br>
-                                <span class="text-small">{{ $order->user->email }}</span>
-                            </div>
                         </div>
                     </div>
                     
-                    <!-- QR Code et informations à droite -->
-                    <div class="col-right">
-                        @php
-                            // Force l'utilisation du nouveau service QR
-                            $qrCodeGenerated = false;
-                            $qrCodeBase64 = null;
-                            
-                            try {
-                                // Utiliser explicitement le service QR corrigé
-                                $qrService = app(\App\Services\QRCodeService::class);
-                                
-                                // Log pour debugging
-                                \Log::info("Template PDF - Génération QR pour ticket: {$ticket->ticket_code}");
-                                
-                                $qrCodeBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
-                                
-                                if ($qrCodeBase64 && strlen($qrCodeBase64) > 100) {
-                                    $qrCodeGenerated = true;
-                                    \Log::info("Template PDF - QR généré avec succès pour: {$ticket->ticket_code}");
-                                } else {
-                                    \Log::warning("Template PDF - QR non généré pour: {$ticket->ticket_code}");
-                                }
-                                
-                            } catch (\Exception $e) {
-                                \Log::error("Template PDF - Erreur QR pour ticket {$ticket->ticket_code}: " . $e->getMessage());
-                                $qrCodeBase64 = null;
-                            }
-                        @endphp
-                        
-                        @if($qrCodeGenerated && $qrCodeBase64)
-                            <!-- QR Code réussi -->
-                            <img src="{{ $qrCodeBase64 }}" alt="QR Code - {{ $ticket->ticket_code }}" class="qr-code">
-                            <div class="qr-success">
-                                <div class="qr-content">
-                                    ✅ QR CODE<br>
-                                    GÉNÉRÉ<br>
-                                    <small>{{ $ticket->ticket_code }}</small>
-                                </div>
-                            </div>
-                        @else
-                            <!-- Placeholder si génération échoue -->
-                            <div class="qr-placeholder">
-                                <div class="qr-content">
-                                    ⚠️ QR CODE<br>
-                                    {{ $ticket->ticket_code }}<br>
-                                    <small>Code manuel requis</small>
-                                </div>
-                            </div>
-                        @endif
-                        
-                        <!-- Code du billet toujours affiché -->
-                        <div class="ticket-code">{{ $ticket->ticket_code }}</div>
-                        
-                        <div class="text-small">
-                            Présentez ce code à l'entrée
+                    <div class="info-group">
+                        <span class="info-label">📍 Lieu</span>
+                        <div class="info-value fw-bold">
+                            {{ $order->event->venue ?? 'Lieu TBD' }}<br>
+                            @if($order->event->address)
+                                <span class="text-small">{{ $order->event->address }}</span>
+                            @endif
                         </div>
-                        
-                        <!-- URL de vérification -->
-                        <div style="font-size: 8px; margin: 10px 0; color: #666; word-break: break-all;">
-                            <strong>Vérification :</strong><br>
-                            {{ url("/verify-ticket/{$ticket->ticket_code}") }}
+                    </div>
+                    
+                    <div class="info-group">
+                        <span class="info-label">🎫 Type de billet</span>
+                        <div class="info-value fw-bold">{{ $ticket->ticketType->name ?? 'Billet Standard' }}</div>
+                        @if($ticket->ticketType && $ticket->ticketType->description)
+                            <div class="text-small">{{ $ticket->ticketType->description }}</div>
+                        @endif
+                    </div>
+                    
+                    @if($ticket->seat_number)
+                        <div class="info-group">
+                            <span class="info-label">💺 Siège</span>
+                            <div class="info-value fw-bold">{{ $ticket->seat_number }}</div>
                         </div>
-                        
-                        <!-- Statut du billet -->
-                        @if($ticket->status == 'sold')
-                            <div class="status-badge status-valid">✅ Valide</div>
-                        @elseif($ticket->status == 'used')
-                            <div class="status-badge status-used">✓ Utilisé</div>
-                        @elseif($ticket->status == 'cancelled')
-                            <div class="status-badge status-cancelled">✗ Annulé</div>
-                        @else
-                            <div class="status-badge">{{ ucfirst($ticket->status) }}</div>
-                        @endif
-                        
-                        <!-- Prix du billet -->
-                        @if($ticket->ticketType && $ticket->ticketType->price)
-                            <div class="price-badge">
-                                {{ number_format($ticket->ticketType->price, 0, ',', ' ') }} FCFA
-                            </div>
-                        @endif
-                        
-                        <!-- Instructions -->
-                        <div class="instructions">
-                            <strong>Instructions :</strong>
-                            <ul>
-                                <li>Présentez ce billet à l'entrée</li>
-                                @if($qrCodeGenerated)
-                                    <li>QR code scannable disponible</li>
-                                @else
-                                    <li>Code manuel si besoin</li>
-                                @endif
-                                <li>Gardez votre billet jusqu'à la fin</li>
-                                @if($ticket->seat_number)
-                                    <li>Siège : {{ $ticket->seat_number }}</li>
-                                @endif
-                            </ul>
+                    @endif
+                    
+                    <div class="info-group">
+                        <span class="info-label">🎟️ Numéro de commande</span>
+                        <div class="info-value">{{ $order->order_number }}</div>
+                    </div>
+                    
+                    <div class="info-group">
+                        <span class="info-label">👤 Acheteur</span>
+                        <div class="info-value">
+                            {{ $order->user->name }}<br>
+                            <span class="text-small">{{ $order->user->email }}</span>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Footer -->
-                <div style="border-top: 1px dashed #ddd; padding-top: 10px; margin-top: 20px; font-size: 9px; color: #666;">
-                    <div style="float: left; width: 50%;">
-                        <strong>Billetterie CI</strong><br>
-                        Support : support@billetterie-ci.com
+                <!-- QR Code et informations à droite -->
+                <div class="col-right">
+                    @php
+                        // Force l'utilisation du nouveau service QR avec taille augmentée
+                        $qrCodeGenerated = false;
+                        $qrCodeBase64 = null;
+                        
+                        try {
+                            // Utiliser explicitement le service QR corrigé avec taille plus grande
+                            $qrService = app(\App\Services\QRCodeService::class);
+                            
+                            // Log pour debugging
+                            \Log::info("Template PDF - Génération QR pour ticket: {$ticket->ticket_code}");
+                            
+                            // Essayer d'abord la méthode stylée avec taille plus grande
+                            if (method_exists($qrService, 'generateStyledQR')) {
+                                $qrCodeBase64 = $qrService->generateStyledQR($ticket, [
+                                    'size' => 200,
+                                    'margin' => 1,
+                                    'color' => '1a1a1a',
+                                    'bg_color' => 'ffffff'
+                                ]);
+                            }
+                            
+                            // Fallback avec service standard
+                            if (!$qrCodeBase64 || strlen($qrCodeBase64) < 100) {
+                                $qrCodeBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
+                            }
+                            
+                            // Dernier fallback
+                            if (!$qrCodeBase64 || strlen($qrCodeBase64) < 100) {
+                                $qrCodeBase64 = $qrService->generateTicketQRBase64($ticket);
+                            }
+                            
+                            if ($qrCodeBase64 && strlen($qrCodeBase64) > 100) {
+                                $qrCodeGenerated = true;
+                                \Log::info("Template PDF - QR généré avec succès pour: {$ticket->ticket_code}");
+                            } else {
+                                \Log::warning("Template PDF - QR non généré pour: {$ticket->ticket_code}");
+                            }
+                            
+                        } catch (\Exception $e) {
+                            \Log::error("Template PDF - Erreur QR pour ticket {$ticket->ticket_code}: " . $e->getMessage());
+                        }
+                    @endphp
+                    
+                    @if($qrCodeGenerated && $qrCodeBase64)
+                        <!-- QR Code généré avec succès - SEULEMENT LE QR CODE -->
+                        <img src="{{ $qrCodeBase64 }}" alt="QR Code" class="qr-code">
+                    @else
+                        <!-- Fallback si QR non généré -->
+                        <div class="qr-placeholder">
+                            <div class="qr-content">
+                                📱 QR CODE<br>
+                                EN COURS DE<br>
+                                GÉNÉRATION
+                            </div>
+                        </div>
+                    @endif
+                    
+                    <!-- Code du billet (plus grand) -->
+                    <div class="ticket-code">{{ $ticket->ticket_code }}</div>
+                    
+                    <!-- Statut du billet -->
+                    <div class="info-group">
+                        <span class="info-label">📊 Statut</span>
+                        <div class="info-value" style="color: #28a745;">
+                            {{ $ticket->status === 'sold' ? '✅ VALIDE' : '⏳ EN ATTENTE' }}
+                        </div>
                     </div>
-                    <div style="float: right; width: 50%; text-align: right;">
-                        Généré le {{ now()->format('d/m/Y à H:i') }}<br>
-                        @if($qrCodeGenerated)
-                            <span style="color: #28a745;">✅ QR Code intégré</span>
-                        @else
-                            <span style="color: #dc3545;">⚠️ QR Code non généré</span>
-                        @endif
-                    </div>
-                    <div style="clear: both;"></div>
+                    
+                    <!-- Prix (si disponible) -->
+                    @if($ticket->ticketType && $ticket->ticketType->price)
+                        <div class="info-group">
+                            <span class="info-label">💰 Prix</span>
+                            <div class="info-value">{{ number_format($ticket->ticketType->price) }} FCFA</div>
+                        </div>
+                    @endif
                 </div>
             </div>
+            
+            <!-- Note de vérification -->
+            <div class="verification-note">
+                <strong>🔍 Vérification :</strong> Scannez le QR code à l'entrée ou visitez<br>
+                <strong>{{ url('/verify-ticket/' . $ticket->ticket_code) }}</strong>
+            </div>
+            
+            <!-- Informations importantes -->
+            <div class="warning-box">
+                <strong>⚠️ Important :</strong> 
+                • Présentez ce billet à l'entrée
+                • Un seul scan autorisé
+                • Billet nominatif et incessible
+                • Conservez ce document jusqu'à la fin de l'événement
+            </div>
+            
+            <!-- Footer avec infos de l'entreprise -->
+            <div class="footer-info">
+                <strong>ClicBillet CI</strong> - Votre plateforme de billetterie en ligne<br>
+                🌐 www.clicbillet.ci | 📧 contact@clicbillet.ci | 📞 +225 XX XX XX XX<br>
+                <em>Billet généré le {{ now()->format('d/m/Y à H:i') }}</em>
+            </div>
         </div>
+        
+        @if(!$loop->last)
+            <div style="page-break-after: always;"></div>
+        @endif
     @endforeach
+    
+    {{-- Page finale avec récapitulatif de la commande --}}
+    <div class="summary-page">
+        <div class="summary-header">
+            <div class="summary-title">Récapitulatif de commande</div>
+            <div class="summary-subtitle">{{ $order->order_number }}</div>
+        </div>
+        
+        <div class="summary-section">
+            <h3>📋 Informations de la commande</h3>
+            <table class="summary-table">
+                <tr>
+                    <td class="label">Numéro de commande :</td>
+                    <td class="value">{{ $order->order_number }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Date de commande :</td>
+                    <td class="value">{{ $order->created_at->format('d/m/Y à H:i') }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Statut de paiement :</td>
+                    <td class="value">
+                        @if($order->payment_status === 'paid')
+                            <span style="color: #28a745; font-weight: bold;">✅ PAYÉ</span>
+                        @else
+                            <span style="color: #ffc107; font-weight: bold;">⏳ EN ATTENTE</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">Méthode de paiement :</td>
+                    <td class="value">{{ $order->payment_method ?? 'Non définie' }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="summary-section">
+            <h3>🎭 Événement</h3>
+            <table class="summary-table">
+                <tr>
+                    <td class="label">Titre :</td>
+                    <td class="value"><strong>{{ $order->event->title ?? 'N/A' }}</strong></td>
+                </tr>
+                <tr>
+                    <td class="label">Date :</td>
+                    <td class="value">{{ $order->event->formatted_event_date ?? 'Date TBD' }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Heure :</td>
+                    <td class="value">{{ $order->event->formatted_event_time ?? 'Heure TBD' }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Lieu :</td>
+                    <td class="value">{{ $order->event->venue ?? 'Lieu TBD' }}</td>
+                </tr>
+                @if($order->event->address)
+                <tr>
+                    <td class="label">Adresse :</td>
+                    <td class="value">{{ $order->event->address }}</td>
+                </tr>
+                @endif
+            </table>
+        </div>
+        
+        <div class="summary-section">
+            <h3>🎫 Billets commandés</h3>
+            <table class="summary-table">
+                @foreach($order->orderItems as $item)
+                <tr>
+                    <td class="label">{{ $item->ticketType->name ?? 'Billet' }} (x{{ $item->quantity }}) :</td>
+                    <td class="value">{{ number_format($item->total_price) }} FCFA</td>
+                </tr>
+                @endforeach
+                <tr class="summary-total">
+                    <td class="label">TOTAL :</td>
+                    <td class="value">{{ number_format($order->total_amount) }} FCFA</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="summary-section">
+            <h3>👤 Informations client</h3>
+            <table class="summary-table">
+                <tr>
+                    <td class="label">Nom :</td>
+                    <td class="value">{{ $order->user->name }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Email :</td>
+                    <td class="value">{{ $order->user->email }}</td>
+                </tr>
+                @if($order->user->phone)
+                <tr>
+                    <td class="label">Téléphone :</td>
+                    <td class="value">{{ $order->user->phone }}</td>
+                </tr>
+                @endif
+                <tr>
+                    <td class="label">Client depuis :</td>
+                    <td class="value">{{ $order->user->created_at->format('d/m/Y') }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="contact-section">
+            <h4>📞 Besoin d'aide ?</h4>
+            <p><strong>Contactez notre service client :</strong></p>
+            <p>
+                📧 <strong>support@clicbillet.ci</strong><br>
+                📞 <strong>+225 XX XX XX XX</strong><br>
+                💬 <strong>Chat en ligne sur www.clicbillet.ci</strong>
+            </p>
+            <p><em>Notre équipe est disponible du lundi au vendredi de 8h à 18h</em></p>
+        </div>
+        
+        <div class="company-info">
+            <strong>ClicBillet CI</strong><br>
+            Votre partenaire de confiance pour tous vos événements<br>
+            <em>Merci de votre confiance !</em><br><br>
+            <small>Document généré automatiquement le {{ now()->format('d/m/Y à H:i') }}</small>
+        </div>
+    </div>
 </body>
 </html>

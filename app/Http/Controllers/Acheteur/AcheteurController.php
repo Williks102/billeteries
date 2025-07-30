@@ -244,4 +244,74 @@ public function getOrderQRCodes(Order $order)
 
         return redirect()->back()->with('success', 'Profil mis à jour avec succès.');
     }
+
+    /**
+ * Liste des commandes pour l'acheteur - MÉTHODE MANQUANTE
+ */
+public function orders(Request $request)
+{
+    $user = Auth::user();
+    
+    try {
+        // Construction de la requête
+        $query = $user->orders()
+            ->with(['event.category', 'orderItems.ticketType', 'tickets.ticketType']);
+
+        // Filtres
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+        
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhereHas('event', function($eventQuery) use ($search) {
+                      $eventQuery->where('title', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $orders = $query->orderBy('created_at', 'desc')->paginate(10);
+        
+        // Statistiques
+        $stats = [
+            'total_orders' => $user->orders()->count(),
+            'paid_orders' => $user->orders()->where('payment_status', 'paid')->count(),
+            'total_tickets' => $user->orders()
+                ->where('payment_status', 'paid')
+                ->with('orderItems')
+                ->get()
+                ->sum(function($order) {
+                    return $order->orderItems->sum('quantity');
+                }),
+            'total_spent' => $user->orders()
+                ->where('payment_status', 'paid')
+                ->sum('total_amount')
+        ];
+
+        return view('acheteur.orders', compact('orders', 'stats'));
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur acheteur orders: ' . $e->getMessage());
+        
+        return view('acheteur.orders', [
+            'orders' => collect()->paginate(10),
+            'stats' => [
+                'total_orders' => 0,
+                'paid_orders' => 0, 
+                'total_tickets' => 0,
+                'total_spent' => 0
+            ]
+        ])->with('error', 'Erreur lors du chargement des commandes.');
+    }
+}
 }

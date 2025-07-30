@@ -275,4 +275,29 @@ class Ticket extends Model
             'price' => $this->ticketType->price ?? 0
         ];
     }
+
+    /**
+ * Relation orders() manquante
+ */
+public function orders()
+{
+    return $this->belongsToMany(Order::class, 'order_tickets');
+}
+
+/**
+ * Helper pour vérifier l'appartenance
+ */
+public function belongsToUser($userId)
+{
+    if ($this->order_item_id) {
+        $orderItem = \App\Models\OrderItem::find($this->order_item_id);
+        return $orderItem && $orderItem->order && 
+               $orderItem->order->user_id === $userId && 
+               $orderItem->order->payment_status === 'paid';
+    }
+    
+    return $this->orders()->where('user_id', $userId)
+                          ->where('payment_status', 'paid')
+                          ->exists();
+}
 }

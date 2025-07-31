@@ -2145,4 +2145,74 @@ public function settings()
             return ['Erreur lors de la lecture des logs: ' . $e->getMessage()];
         }
     }
+
+    /**
+ * Dashboard des emails et statistiques
+ */
+public function emailDashboard()
+{
+    // Statistiques des emails des 30 derniers jours
+    $stats = [
+        'emails_sent_today' => \DB::table('mail_logs')
+            ->whereDate('created_at', today())
+            ->count(),
+        'emails_sent_week' => \DB::table('mail_logs')
+            ->whereBetween('created_at', [now()->subWeek(), now()])
+            ->count(),
+        'emails_sent_month' => \DB::table('mail_logs')
+            ->whereBetween('created_at', [now()->subMonth(), now()])
+            ->count(),
+        'failed_emails' => \DB::table('failed_jobs')
+            ->where('payload', 'like', '%mail%')
+            ->count(),
+    ];
+
+    // Derniers emails envoyés
+    $recentEmails = \DB::table('mail_logs')
+        ->orderBy('created_at', 'desc')
+        ->limit(20)
+        ->get();
+
+    // Configuration email actuelle
+    $emailConfig = [
+        'mailer' => config('mail.default'),
+        'host' => config('mail.mailers.smtp.host'),
+        'port' => config('mail.mailers.smtp.port'),
+        'from_address' => config('mail.from.address'),
+        'from_name' => config('mail.from.name'),
+    ];
+
+    return view('admin.emails.dashboard', compact('stats', 'recentEmails', 'emailConfig'));
+    }  
+
+    /**
+ * Configuration des templates email
+ */
+public function emailTemplates()
+{
+    $templates = [
+        'order-confirmation' => [
+            'name' => 'Confirmation de commande',
+            'description' => 'Email envoyé après qu\'un client passe une commande',
+            'variables' => ['order', 'customer', 'event', 'total']
+        ],
+        'payment-confirmation' => [
+            'name' => 'Confirmation de paiement',
+            'description' => 'Email avec billets envoyé après paiement confirmé',
+            'variables' => ['order', 'tickets']
+        ],
+        'promoteur-new-sale' => [
+            'name' => 'Nouvelle vente (Promoteur)',
+            'description' => 'Notification de vente pour les promoteurs',
+            'variables' => ['order', 'promoteur', 'commission']
+        ],
+        'admin-new-order' => [
+            'name' => 'Nouvelle commande (Admin)',
+            'description' => 'Notification de commande pour les admins',
+            'variables' => ['order', 'stats']
+        ]
+    ];
+
+    return view('admin.emails.templates', compact('templates'));
+}
 }

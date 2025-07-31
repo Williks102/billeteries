@@ -220,6 +220,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/settings/test-email', [AdminController::class, 'testEmail'])->name('settings.test-email');
         Route::post('/settings/backup', [AdminController::class, 'backupSystem'])->name('settings.backup');
         Route::post('/settings/clear-cache', [AdminController::class, 'clearCache'])->name('settings.clear-cache');
+
+        Route::prefix('emails')->name('emails.')->group(function () {
+        Route::get('/', [AdminController::class, 'emailDashboard'])->name('dashboard');
+        Route::post('/test', [AdminController::class, 'testEmail'])->name('test');
+        Route::get('/templates', [AdminController::class, 'emailTemplates'])->name('templates');
+        Route::post('/orders/{order}/resend', [AdminController::class, 'resendOrderEmail'])->name('resend');
+        });
         
         // Routes temporaires et liens dashboard
         Route::get('/reports', function () { 

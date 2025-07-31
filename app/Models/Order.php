@@ -54,6 +54,8 @@ class Order extends Model
         return $this->hasOne(Commission::class);
     }
 
+    
+
     /**
      * Scopes
      */
@@ -197,6 +199,12 @@ class Order extends Model
         
         // Créer la commission
         $this->createCommission();
+
+        // Déclencher l'email de confirmation paiement
+        $emailService = app(\App\Services\EmailService::class);
+        $emailService->sendPaymentConfirmation($this);
+        
+        return $this;
     }
 
     /**

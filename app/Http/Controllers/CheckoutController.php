@@ -137,6 +137,9 @@ class CheckoutController extends Controller
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]);
+                        // Envoyer les emails
+                        $emailService = app(\App\Services\EmailService::class);
+                        $emailService->sendAllOrderEmails($order);
                     }
 
                     // Mettre à jour le stock

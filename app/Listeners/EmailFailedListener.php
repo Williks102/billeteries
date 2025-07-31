@@ -1,3 +1,5 @@
+<?php
+
 namespace App\Listeners;
 
 use Illuminate\Queue\Events\JobFailed;
@@ -19,19 +21,19 @@ class EmailFailedListener
                 'failed',
                 $event->exception->getMessage()
             );
-            
+
             // Optionnel : Alerter les admins si trop d'échecs
             $this->checkFailureThreshold();
         }
     }
-    
+
     private function checkFailureThreshold()
     {
         $recentFailures = \DB::table('mail_logs')
             ->where('status', 'failed')
             ->where('created_at', '>=', now()->subHour())
             ->count();
-            
+
         if ($recentFailures > 10) {
             // Alerter les admins
             \Log::critical("Trop d'emails échoués : {$recentFailures} en 1h");

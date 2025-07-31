@@ -1,3 +1,5 @@
+<?php
+
 namespace App\Services;
 
 use App\Models\Order;
@@ -19,12 +21,12 @@ class EmailService
         try {
             Mail::to($order->user->email)
                 ->send(new OrderConfirmation($order));
-                
+
             Log::info("Email confirmation commande envoyé", [
                 'order_id' => $order->id,
                 'email' => $order->user->email
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error("Erreur envoi email confirmation commande", [
@@ -43,12 +45,12 @@ class EmailService
         try {
             Mail::to($order->user->email)
                 ->send(new PaymentConfirmation($order));
-                
+
             Log::info("Email confirmation paiement envoyé", [
                 'order_id' => $order->id,
                 'email' => $order->user->email
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error("Erreur envoi email confirmation paiement", [
@@ -66,15 +68,15 @@ class EmailService
     {
         try {
             $promoteur = $order->event->promoteur;
-            
+
             Mail::to($promoteur->email)
                 ->send(new PromoteurNewSale($order));
-                
+
             Log::info("Email promoteur nouvelle vente envoyé", [
                 'order_id' => $order->id,
                 'promoteur_email' => $promoteur->email
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error("Erreur envoi email promoteur", [
@@ -92,17 +94,17 @@ class EmailService
     {
         try {
             $admins = User::where('role', 'admin')->get();
-            
+
             foreach ($admins as $admin) {
                 Mail::to($admin->email)
                     ->send(new AdminNewOrder($order));
             }
-            
+
             Log::info("Email admin nouvelle commande envoyé", [
                 'order_id' => $order->id,
                 'admin_count' => $admins->count()
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error("Erreur envoi email admin", [
@@ -120,15 +122,15 @@ class EmailService
     {
         // 1. Email confirmation au client
         $this->sendOrderConfirmation($order);
-        
+
         // 2. Si payé, email avec billets
         if ($order->payment_status === 'paid') {
             $this->sendPaymentConfirmation($order);
         }
-        
+
         // 3. Notification promoteur
         $this->notifyPromoteurNewSale($order);
-        
+
         // 4. Notification admin
         $this->notifyAdminNewOrder($order);
     }
@@ -140,12 +142,12 @@ class EmailService
     {
         try {
             $email = $emailTo ?? config('mail.from.address');
-            
+
             Mail::raw('Ceci est un email de test depuis ClicBillet CI. Si vous recevez cet email, la configuration fonctionne !', function ($message) use ($email) {
                 $message->to($email)
                         ->subject('Test Email - ClicBillet CI');
             });
-            
+
             Log::info("Email de test envoyé", ['email' => $email]);
             return true;
         } catch (\Exception $e) {

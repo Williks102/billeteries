@@ -1,4 +1,5 @@
 @extends('layouts.promoteur')
+@section('title', 'Page profile - ClicBillet CI')
 
 @push('styles')
 <style>

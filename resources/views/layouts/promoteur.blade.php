@@ -34,8 +34,8 @@
         
         .sidebar {
             min-height: calc(100vh - 56px);
-            background: white;
-            box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, var(--black-primary), var(--black-secondary)) !important;
+            box-shadow: 2px 0 4px hsla(0, 0%, 0%, 0.10);
         }
         
         .nav-link {

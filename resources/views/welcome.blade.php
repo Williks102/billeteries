@@ -484,8 +484,8 @@
 }
 
 .cta-section {
-    background: linear-gradient(135deg, var(--dark-blue), var(--primary-orange));
-    color: white;
+    background: linear-gradient(135deg, #fff3cd, #fff3cd);
+    color: #081d30ff;
 }
 
 .cta-card {

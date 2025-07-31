@@ -96,8 +96,8 @@
         
         /* Footer */
         .footer {
-            background: linear-gradient(135deg, var(--dark-blue), var(--primary-orange));
-            color: white;
+            background: #962e08ff;
+            color: #fcfcfcff;
             padding: 3rem 0 1rem;
             margin-top: auto;
         }

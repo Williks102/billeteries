@@ -1,4 +1,5 @@
 @extends('layouts.promoteur')
+@section('title', 'Scanner de Billets - ClicBillet CI')
 
 @push('styles')
 <style>

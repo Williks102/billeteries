@@ -58,7 +58,9 @@ Route::get('/api/verify-ticket/{ticketCode}', [TicketVerificationController::cla
 // API pour scanner un ticket (marquer comme utilisé)
 Route::post('/api/scan-ticket', [TicketVerificationController::class, 'scan'])
     ->name('api.tickets.scan');
-
+    
+    //Gestion des pages (CMS)
+ Route::get('/page/{slug}', [App\Http\Controllers\PageController::class, 'showCMS'])->name('pages.cms');
 // ==================== ROUTES AUTHENTIFIÉES ====================
 
 // Dashboard principal (redirecteur)
@@ -170,7 +172,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pages/{page}/duplicate', [\App\Http\Controllers\Admin\PageController::class, 'duplicate'])->name('pages.duplicate');
         Route::patch('/pages/{page}/toggle-status', [\App\Http\Controllers\Admin\PageController::class, 'toggleStatus'])->name('pages.toggleStatus');
         Route::post('/pages/reorder', [\App\Http\Controllers\Admin\PageController::class, 'reorder'])->name('pages.reorder');
-        Route::get('/page/{slug}', [App\Http\Controllers\PageController::class, 'showCMS'])->name('pages.cms');
+       
         
         // Gestion utilisateurs
         Route::get('/users', [AdminController::class, 'users'])->name('users');

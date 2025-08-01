@@ -331,3 +331,48 @@ Route::get('/test-qr-diagnostic', function() {
     
     return response()->json($results, 200, [], JSON_PRETTY_PRINT);
 })->name('test.qr.diagnostic');
+
+
+// ==================== PAGES LÉGALES ET INFORMATIONS ====================
+
+Route::get('/about', [App\Http\Controllers\PageController::class, 'about'])->name('pages.about');
+Route::get('/how-it-works', [App\Http\Controllers\PageController::class, 'howItWorks'])->name('pages.how-it-works');
+Route::get('/faq', [App\Http\Controllers\PageController::class, 'faq'])->name('pages.faq');
+Route::get('/contact', [App\Http\Controllers\PageController::class, 'contact'])->name('pages.contact');
+Route::post('/contact', [App\Http\Controllers\PageController::class, 'submitContact'])->name('pages.contact.submit');
+
+// Pages légales
+Route::get('/terms-of-service', [App\Http\Controllers\PageController::class, 'termsOfService'])->name('pages.terms');
+Route::get('/privacy-policy', [App\Http\Controllers\PageController::class, 'privacyPolicy'])->name('pages.privacy');
+Route::get('/legal-mentions', [App\Http\Controllers\PageController::class, 'legalMentions'])->name('pages.legal');
+
+// Guide promoteur
+Route::get('/promoter-guide', [App\Http\Controllers\PageController::class, 'promoterGuide'])->name('pages.promoter-guide');
+Route::get('/pricing', [App\Http\Controllers\PageController::class, 'pricing'])->name('pages.pricing');
+
+// Support
+Route::get('/support', [App\Http\Controllers\PageController::class, 'support'])->name('pages.support');
+Route::post('/support', [App\Http\Controllers\PageController::class, 'submitSupport'])->name('pages.support.submit');
+
+// ==================== ÉVÉNEMENTS PAR CATÉGORIE ====================
+
+// Ces routes utilisent déjà votre HomeController
+Route::get('/events/concerts', function() {
+    return redirect()->route('home', ['category' => 1]); // ID de la catégorie Concert
+})->name('events.concerts');
+
+Route::get('/events/theatre', function() {
+    return redirect()->route('home', ['category' => 2]); // ID de la catégorie Théâtre
+})->name('events.theatre');
+
+Route::get('/events/sports', function() {
+    return redirect()->route('home', ['category' => 3]); // ID de la catégorie Sports
+})->name('events.sports');
+
+Route::get('/events/conferences', function() {
+    return redirect()->route('home', ['category' => 4]); // ID de la catégorie Conférences
+})->name('events.conferences');
+
+Route::get('/events/festivals', function() {
+    return redirect()->route('home', ['category' => 5]); // ID de la catégorie Festivals
+})->name('events.festivals');

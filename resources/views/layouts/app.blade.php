@@ -180,77 +180,80 @@
     
     <!-- Footer -->
     @unless(request()->routeIs('login') || request()->routeIs('register'))
-        <footer class="footer mt-5">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-4 mb-4">
-                        <h5 class="fw-bold mb-3">
-                            <i class="fas fa-ticket-alt me-2"></i>ClicBillet CI
-                        </h5>
-                        <p>La plateforme de billetterie #1 en Côte d'Ivoire. Découvrez et réservez vos événements favoris en quelques clics.</p>
-                        <div class="social-links">
-                            <a href="#" class="me-3"><i class="fab fa-facebook-f"></i></a>
-                            <a href="#" class="me-3"><i class="fab fa-twitter"></i></a>
-                            <a href="#" class="me-3"><i class="fab fa-instagram"></i></a>
-                            <a href="#" class="me-3"><i class="fab fa-linkedin-in"></i></a>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="fw-bold mb-3">Événements</h6>
-                        <ul class="list-unstyled">
-                            <li><a href="#">Concerts</a></li>
-                            <li><a href="#">Théâtre</a></li>
-                            <li><a href="#">Sports</a></li>
-                            <li><a href="#">Conférences</a></li>
-                            <li><a href="#">Festivals</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="fw-bold mb-3">Aide</h6>
-                        <ul class="list-unstyled">
-                            <li><a href="#">Comment ça marche</a></li>
-                            <li><a href="#">Support</a></li>
-                            <li><a href="#">FAQ</a></li>
-                            <li><a href="#">Contact</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="fw-bold mb-3">Organisateurs</h6>
-                        <ul class="list-unstyled">
-                            <li><a href="{{ route('register') }}">Devenir promoteur</a></li>
-                            <li><a href="#">Guide promoteur</a></li>
-                            <li><a href="#">Tarifs</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="fw-bold mb-3">Légal</h6>
-                        <ul class="list-unstyled">
-                            <li><a href="#">Conditions d'utilisation</a></li>
-                            <li><a href="#">Politique de confidentialité</a></li>
-                            <li><a href="#">Mentions légales</a></li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <hr class="my-4" style="border-color: rgba(255,255,255,0.2);">
-                
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <p class="mb-0">&copy; {{ date('Y') }} ClicBillet CI. Tous droits réservés.</p>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <small class="text-muted">
-                            <i class="fas fa-map-marker-alt me-1"></i>
-                            Abidjan, Côte d'Ivoire
-                        </small>
-                    </div>
+        <!-- Footer mis à jour avec les vrais liens -->
+<footer class="footer mt-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <h5 class="fw-bold mb-3">
+                    <i class="fas fa-ticket-alt me-2"></i>ClicBillet CI
+                </h5>
+                <p>La plateforme de billetterie #1 en Côte d'Ivoire.
+                Découvrez et réservez vos événements favoris en quelques clics.</p>
+                <div class="social-links">
+                    <a href="#" class="me-3"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="me-3"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="me-3"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="me-3"><i class="fab fa-linkedin-in"></i></a>
                 </div>
             </div>
-        </footer>
+            
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6 class="fw-bold mb-3">Événements</h6>
+                <ul class="list-unstyled">
+                    <li><a href="{{ route('events.concerts') }}">Concerts</a></li>
+                    <li><a href="{{ route('events.theatre') }}">Théâtre</a></li>
+                    <li><a href="{{ route('events.sports') }}">Sports</a></li>
+                    <li><a href="{{ route('events.conferences') }}">Conférences</a></li>
+                    <li><a href="{{ route('events.festivals') }}">Festivals</a></li>
+                </ul>
+            </div>
+            
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6 class="fw-bold mb-3">Aide</h6>
+                <ul class="list-unstyled">
+                    <li><a href="{{ route('pages.how-it-works') }}">Comment ça marche</a></li>
+                    <li><a href="{{ route('pages.support') }}">Support</a></li>
+                    <li><a href="{{ route('pages.faq') }}">FAQ</a></li>
+                    <li><a href="{{ route('pages.contact') }}">Contact</a></li>
+                </ul>
+            </div>
+            
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6 class="fw-bold mb-3">Organisateurs</h6>
+                <ul class="list-unstyled">
+                    <li><a href="{{ route('register') }}">Devenir promoteur</a></li>
+                    <li><a href="{{ route('pages.promoter-guide') }}">Guide promoteur</a></li>
+                    <li><a href="{{ route('pages.pricing') }}">Tarifs</a></li>
+                    <li><a href="{{ route('pages.about') }}">À propos</a></li>
+                </ul>
+            </div>
+            
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6 class="fw-bold mb-3">Légal</h6>
+                <ul class="list-unstyled">
+                    <li><a href="{{ route('pages.terms') }}">Conditions d'utilisation</a></li>
+                    <li><a href="{{ route('pages.privacy') }}">Politique de confidentialité</a></li>
+                    <li><a href="{{ route('pages.legal') }}">Mentions légales</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <hr class="my-4" style="border-color: rgba(255,255,255,0.2);">
+        
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0">&copy; {{ date('Y') }} ClicBillet CI. Tous droits réservés.</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-0">
+                    <i class="fas fa-heart text-danger"></i> 
+                    Fait avec passion en Côte d'Ivoire
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
     @endunless
     
     <!-- Scripts -->

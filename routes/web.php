@@ -165,6 +165,12 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->group(function () {
         // Dashboard principal
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+        // Gestion des pages (CMS) - À ajouter dans la section admin
+        Route::resource('pages', \App\Http\Controllers\Admin\PageController::class);
+        Route::post('/pages/{page}/duplicate', [\App\Http\Controllers\Admin\PageController::class, 'duplicate'])->name('pages.duplicate');
+        Route::patch('/pages/{page}/toggle-status', [\App\Http\Controllers\Admin\PageController::class, 'toggleStatus'])->name('pages.toggleStatus');
+        Route::post('/pages/reorder', [\App\Http\Controllers\Admin\PageController::class, 'reorder'])->name('pages.reorder');
+        Route::get('/page/{slug}', [App\Http\Controllers\PageController::class, 'showCMS'])->name('pages.cms');
         
         // Gestion utilisateurs
         Route::get('/users', [AdminController::class, 'users'])->name('users');
@@ -213,7 +219,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/promoters/export', [AdminController::class, 'exportPromoters'])->name('export.promoters');
         Route::get('/accounting/export/{period}', [AdminController::class, 'exportAccounting'])->name('export.accounting');
         Route::get('/export/all', [AdminController::class, 'exportAll'])->name('export.all');
-        
+        Route::get('/export/financial', [AdminController::class, 'exportFinancial'])->name('export.financial');
+        Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
+        Route::get('/export/events', [AdminController::class, 'exportEvents'])->name('export.events');
+        Route::get('/export/orders', [AdminController::class, 'exportOrders'])->name('export.orders');
+        Route::get('/export/tickets', [AdminController::class, 'exportTickets'])->name('export.tickets');
         // Paramètres système
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::patch('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');

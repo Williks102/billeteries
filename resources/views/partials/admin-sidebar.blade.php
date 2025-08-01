@@ -40,6 +40,12 @@
            href="{{ route('admin.settings') }}">
             <i class="fas fa-cog me-2"></i>Paramètres
         </a>
+
+        <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('admin.pages*') ? 'active' : '' }}" href="{{ route('admin.pages.index') }}">
+        <i class="fas fa-file-alt"></i> Pages
+        </a>
+        </li>   
         
         <hr class="my-3">
         

@@ -14,69 +14,69 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Admin principal
+        // Admin principal pour la gestion
         User::create([
             'name' => 'Admin Principal',
-            'email' => 'admin@billetterie-ci.com',
-            'password' => Hash::make('admin123'),
+            'email' => 'admin@clicbillet.ci',
+            'password' => Hash::make('admin2024!'),
             'role' => 'admin',
             'phone' => '+225 01 02 03 04 05'
         ]);
 
-        // Promoteurs
+        // Promoteurs réalistes
         User::create([
             'name' => 'Kouadio Productions',
-            'email' => 'kouadio@productions.ci',
-            'password' => Hash::make('password123'),
+            'email' => 'contact@kouadio-prod.ci',
+            'password' => Hash::make('secure123'),
             'role' => 'promoteur',
             'phone' => '+225 07 12 34 56 78'
         ]);
 
         User::create([
             'name' => 'Abidjan Events',
-            'email' => 'contact@abidjan-events.ci',
-            'password' => Hash::make('password123'),
+            'email' => 'info@abidjan-events.ci',
+            'password' => Hash::make('events2024'),
             'role' => 'promoteur',
             'phone' => '+225 05 67 89 01 23'
         ]);
 
         User::create([
             'name' => 'Culture & Spectacles CI',
-            'email' => 'info@culture-spectacles.ci',
-            'password' => Hash::make('password123'),
+            'email' => 'booking@culture-spectacles.ci',
+            'password' => Hash::make('culture2024'),
             'role' => 'promoteur',
             'phone' => '+225 01 45 67 89 01'
         ]);
 
         User::create([
             'name' => 'Sports Events Abidjan',
-            'email' => 'sports@abidjan.ci',
-            'password' => Hash::make('password123'),
+            'email' => 'contact@sports-abidjan.ci',
+            'password' => Hash::make('sports2024'),
             'role' => 'promoteur',
             'phone' => '+225 07 98 76 54 32'
         ]);
 
-        // Acheteurs
+        // Acheteurs réalistes
         User::create([
             'name' => 'Aminata Traoré',
-            'email' => 'aminata@gmail.com',
-            'password' => Hash::make('password123'),
+            'email' => 'aminata.traore@gmail.com',
+            'password' => Hash::make('user2024'),
             'role' => 'acheteur',
             'phone' => '+225 05 11 22 33 44'
         ]);
 
         User::create([
             'name' => 'Kofi Asante',
-            'email' => 'kofi@yahoo.fr',
-            'password' => Hash::make('password123'),
+            'email' => 'kofi.asante@outlook.com',
+            'password' => Hash::make('user2024'),
             'role' => 'acheteur',
             'phone' => '+225 07 55 66 77 88'
         ]);
 
         User::create([
             'name' => 'Marie-Claire Brou',
-            'email' => 'marie.brou@outlook.com',
-            'password' => Hash::make('password123'),
+            'email' => 'marie.brou@yahoo.fr',
+            'password' => Hash::make('user2024'),
             'role' => 'acheteur',
             'phone' => '+225 01 99 88 77 66'
         ]);
@@ -84,34 +84,34 @@ class UserSeeder extends Seeder
         User::create([
             'name' => 'Ibrahim Sanogo',
             'email' => 'ibrahim.sanogo@gmail.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make('user2024'),
             'role' => 'acheteur',
             'phone' => '+225 05 44 33 22 11'
         ]);
 
         User::create([
             'name' => 'Fatoumata Keita',
-            'email' => 'fatoumata@hotmail.fr',
-            'password' => Hash::make('password123'),
+            'email' => 'fatoumata.keita@hotmail.fr',
+            'password' => Hash::make('user2024'),
             'role' => 'acheteur',
             'phone' => '+225 07 77 88 99 00'
         ]);
 
-        // Promoteur et acheteur de test avec des logins simples
+        // Quelques autres acheteurs pour les statistiques
         User::create([
-            'name' => 'Test Promoteur',
-            'email' => 'promoteur@test.com',
-            'password' => Hash::make('password'),
-            'role' => 'promoteur',
-            'phone' => '+225 01 23 45 67 89'
+            'name' => 'Yves Kouassi',
+            'email' => 'yves.kouassi@gmail.com',
+            'password' => Hash::make('user2024'),
+            'role' => 'acheteur',
+            'phone' => '+225 01 11 22 33 44'
         ]);
 
         User::create([
-            'name' => 'Test Acheteur',
-            'email' => 'acheteur@test.com',
-            'password' => Hash::make('password'),
+            'name' => 'Adjoa Mensah',
+            'email' => 'adjoa.mensah@yahoo.com',
+            'password' => Hash::make('user2024'),
             'role' => 'acheteur',
-            'phone' => '+225 07 89 01 23 45'
+            'phone' => '+225 05 55 66 77 88'
         ]);
     }
 }

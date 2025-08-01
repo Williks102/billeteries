@@ -224,6 +224,7 @@
                 <ul class="list-unstyled">
                     <li><a href="{{ route('register') }}">Devenir promoteur</a></li>
                     <li><a href="{{ route('pages.promoter-guide') }}">Guide promoteur</a></li>
+                    <a href="{{ route('pages.cms', 'guide-promoteur') }}">Guide</a>  <!-- CMS -->
                     <li><a href="{{ route('pages.pricing') }}">Tarifs</a></li>
                     <li><a href="{{ route('pages.about') }}">À propos</a></li>
                 </ul>

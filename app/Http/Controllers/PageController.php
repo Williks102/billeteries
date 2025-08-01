@@ -262,4 +262,18 @@ class PageController extends Controller
                            ->withInput();
         }
     }
+    /**
+     * Affichage d'une page CMS par son slug
+     */
+public function showCMS($slug)
+{
+    $page = \App\Models\Page::where('slug', $slug)
+                           ->where('is_active', true)
+                           ->firstOrFail();
+    
+    return view('admin.pages.show', compact('page'));
 }
+    
+
+}
+

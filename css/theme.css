@@ -1,0 +1,322 @@
+/* 🎨 Thème Orange & Noir - Billetterie CI */
+
+:root {
+    /* Couleurs principales */
+    --primary-orange: #FF6B35;
+    --primary-dark: #E55A2B;
+    --secondary-orange: #FF8C42;
+    --accent-orange: #FF9A56;
+    
+    --black-primary: #1a1a1a;
+    --black-secondary: #2d2d2d;
+    --black-light: #404040;
+    
+    /* Couleurs de support */
+    --gray-light: #f8f9fa;
+    --gray-medium: #6c757d;
+    --success: #28a745;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --info: #17a2b8;
+}
+
+/* === BOUTONS === */
+.btn-primary, 
+.btn-primary-custom {
+    background: var(--black-primary) !important;
+    border: 2px solid var(--black-primary) !important;
+    color: white !important;
+    font-weight: 600;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover, 
+.btn-primary-custom:hover {
+    background: var(--primary-orange) !important;
+    border-color: var(--primary-orange) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3);
+}
+
+.btn-outline-primary {
+    border: 2px solid var(--primary-orange) !important;
+    color: var(--primary-orange) !important;
+    background: transparent !important;
+    font-weight: 600;
+    border-radius: 25px;
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-orange) !important;
+    border-color: var(--primary-orange) !important;
+    color: white !important;
+}
+
+.btn-secondary {
+    background: var(--black-light) !important;
+    border: 2px solid var(--black-light) !important;
+    color: white !important;
+    border-radius: 25px;
+}
+
+.btn-secondary:hover {
+    background: var(--black-secondary) !important;
+    border-color: var(--black-secondary) !important;
+}
+
+/* === HEADERS ET GRADIENTS === */
+.dashboard-header,
+.order-header,
+.ticket-header {
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--black-primary) 100%) !important;
+}
+
+/* === NAVIGATION === */
+.navbar-brand {
+    color: var(--black-primary) !important;
+    font-weight: bold;
+}
+
+.navbar-brand:hover {
+    color: var(--primary-orange) !important;
+}
+
+/* === SIDEBAR === */
+.sidebar .nav-link {
+    color: var(--gray-medium);
+    transition: all 0.3s ease;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: var(--primary-orange) !important;
+    color: white !important;
+}
+
+/* === CARTES ET STATISTIQUES === */
+.stat-card {
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    border-color: var(--primary-orange);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.15);
+}
+
+.stat-icon.primary { 
+    background: linear-gradient(45deg, var(--primary-orange), var(--black-primary)) !important; 
+}
+
+.stat-icon.success { 
+    background: linear-gradient(45deg, var(--success), var(--secondary-orange)) !important; 
+}
+
+.stat-icon.warning { 
+    background: linear-gradient(45deg, var(--primary-orange), var(--accent-orange)) !important; 
+}
+
+.stat-icon.info { 
+    background: linear-gradient(45deg, var(--black-primary), var(--black-light)) !important; 
+}
+
+/* === BADGES === */
+.badge.bg-primary {
+    background: var(--primary-orange) !important;
+}
+
+.status-badge {
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+/* === LIENS === */
+a {
+    color: var(--primary-orange);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--primary-dark);
+}
+
+/* === FORMULAIRES === */
+.form-control:focus {
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+}
+
+.form-select:focus {
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+}
+
+/* === CARTES COMMANDES === */
+.recent-order-card {
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.recent-order-card:hover {
+    border-color: var(--primary-orange);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.15);
+}
+
+.ticket-card {
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.ticket-card:hover {
+    border-color: var(--primary-orange);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.15);
+}
+
+/* === PRIX ET VALEURS === */
+.price-badge {
+    background: var(--primary-orange) !important;
+    color: white;
+    font-weight: bold;
+}
+
+.text-primary {
+    color: var(--primary-orange) !important;
+}
+
+/* === ALERTES === */
+.alert-success {
+    background: rgba(255, 107, 53, 0.1);
+    border-color: var(--primary-orange);
+    color: var(--primary-dark);
+}
+
+.alert-info {
+    background: rgba(26, 26, 26, 0.05);
+    border-color: var(--black-light);
+    color: var(--black-primary);
+}
+
+/* === BREADCRUMB === */
+.breadcrumb-item.active {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.breadcrumb-item a:hover {
+    color: white;
+}
+
+/* === QR CODE COULEURS === */
+.qr-code-placeholder {
+    border-color: var(--primary-orange);
+    color: var(--primary-orange);
+}
+
+/* === PAGINATION === */
+.page-link {
+    color: var(--primary-orange);
+}
+
+.page-link:hover {
+    color: var(--primary-dark);
+    background-color: rgba(255, 107, 53, 0.1);
+    border-color: var(--primary-orange);
+}
+
+.page-item.active .page-link {
+    background-color: var(--primary-orange);
+    border-color: var(--primary-orange);
+}
+
+/* === TABLES === */
+.table-hover tbody tr:hover {
+    background-color: rgba(255, 107, 53, 0.05);
+}
+
+/* === MODALS === */
+.modal-header {
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--black-primary) 100%);
+    color: white;
+}
+
+.modal-title {
+    color: white;
+}
+
+.btn-close {
+    filter: invert(1);
+}
+
+/* === DROPDOWNS === */
+.dropdown-item:hover {
+    background-color: rgba(255, 107, 53, 0.1);
+    color: var(--primary-dark);
+}
+
+/* === PROGRESS BARS === */
+.progress-bar {
+    background-color: var(--primary-orange);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .btn {
+        padding: 8px 20px;
+        font-size: 14px;
+    }
+    
+    .stat-card {
+        margin-bottom: 20px;
+    }
+    
+    .dashboard-header,
+    .order-header {
+        padding: 20px 0;
+    }
+}
+
+/* === ANIMATIONS === */
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card {
+    animation: slideInFromTop 0.6s ease-out;
+}
+
+.recent-order-card {
+    animation: slideInFromTop 0.6s ease-out;
+}
+
+/* === CUSTOM UTILITIES === */
+.bg-orange {
+    background-color: var(--primary-orange) !important;
+}
+
+.text-orange {
+    color: var(--primary-orange) !important;
+}
+
+.border-orange {
+    border-color: var(--primary-orange) !important;
+}
+
+.bg-black {
+    background-color: var(--black-primary) !important;
+}
+
+.text-black {
+    color: var(--black-primary) !important;
+}

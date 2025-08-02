@@ -1,7 +1,4 @@
-{{-- =============================================== --}}
-{{-- resources/views/emails/order-confirmation.blade.php --}}
-{{-- Email de confirmation de commande --}}
-{{-- =============================================== --}}
+
 @extends('emails.layout')
 
 @section('title', 'Confirmation de commande')

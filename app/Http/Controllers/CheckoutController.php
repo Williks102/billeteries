@@ -191,13 +191,13 @@ class CheckoutController extends Controller
     /**
      * Créer une commission pour une commande
      */
-    private function createCommissionForOrder($order)
+   private function createCommissionForOrder($order)
 {
     $commissionData = $order->calculateCommission();
     
     Commission::create([
         'order_id' => $order->id,
-        'promoteur_id' => $order->event->promoteur_id,
+        'promoter_id' => $order->event->promoter_id,  // ✅ CHANGÉ: promoteur_id → promoter_id
         'gross_amount' => $commissionData['gross_amount'],
         'commission_rate' => $commissionData['commission_rate'],
         'commission_amount' => $commissionData['commission_amount'],

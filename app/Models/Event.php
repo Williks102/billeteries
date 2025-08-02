@@ -1,4 +1,5 @@
 <?php
+// app/Models/Event.php - VERSION HARMONISÉE
 
 namespace App\Models;
 
@@ -11,7 +12,7 @@ class Event extends Model
     use HasFactory;
 
     protected $fillable = [
-        'promoteur_id',
+        'promoter_id',  // ✅ CHANGÉ: promoteur_id → promoter_id
         'category_id',
         'title',
         'description',
@@ -34,9 +35,14 @@ class Event extends Model
     /**
      * Relations
      */
-    public function promoteur()
+    public function promoter()  // ✅ CHANGÉ: Nouvelle relation principale
     {
-        return $this->belongsTo(User::class, 'promoteur_id');
+        return $this->belongsTo(User::class, 'promoter_id');
+    }
+    
+    public function promoteur()  // ✅ ALIAS: Pour compatibilité
+    {
+        return $this->promoter();
     }
 
     public function category()
@@ -59,9 +65,9 @@ class Event extends Model
         return $this->hasMany(Order::class);
     }
 
-    public function commissions()
+    public function commissions()  // ✅ CHANGÉ: Utilise promoter_id
     {
-        return $this->hasMany(Commission::class, 'promoteur_id', 'promoteur_id');
+        return $this->hasMany(Commission::class, 'promoter_id', 'promoter_id');
     }
 
     /**
@@ -80,6 +86,11 @@ class Event extends Model
     public function scopePast($query)
     {
         return $query->where('event_date', '<', now()->toDateString());
+    }
+
+    public function scopeForPromoter($query, $promoterId)  // ✅ NOUVEAU: Scope pratique
+    {
+        return $query->where('promoter_id', $promoterId);
     }
 
     /**
@@ -106,7 +117,7 @@ class Event extends Model
     }
 
     /**
-     * Méthodes de calcul - CORRIGÉES
+     * Méthodes de calcul
      */
     public function totalRevenue()
     {
@@ -115,7 +126,6 @@ class Event extends Model
 
     public function totalTicketsSold()
     {
-        // CORRECTION : Utiliser la relation orderItems pour éviter l'erreur
         return $this->orders()
             ->where('payment_status', 'paid')
             ->withSum('orderItems', 'quantity')
@@ -130,9 +140,7 @@ class Event extends Model
 
     public function availableTicketsCount()
     {
-        $total = $this->totalTicketsAvailable();
-        $sold = $this->totalTicketsSold();
-        return max(0, $total - $sold);
+        return $this->totalTicketsAvailable() - $this->totalTicketsSold();
     }
 
     public function getProgressPercentage()
@@ -143,55 +151,12 @@ class Event extends Model
         return $total > 0 ? round(($sold / $total) * 100, 2) : 0;
     }
 
-    public function isSoldOut()
-    {
-        return $this->availableTicketsCount() <= 0;
-    }
-
-    public function getLowestPrice()
-    {
-        return $this->ticketTypes()->where('is_active', true)->min('price') ?? 0;
-    }
-
-    public function getHighestPrice()
-    {
-        return $this->ticketTypes()->where('is_active', true)->max('price') ?? 0;
-    }
-
-    /**
-     * Types de billets disponibles à la vente
-     */
-    public function availableTicketTypes()
-    {
-        return $this->ticketTypes()
-            ->where('is_active', true)
-            ->where('sale_start_date', '<=', now())
-            ->where('sale_end_date', '>=', now())
-            ->whereRaw('quantity_available > quantity_sold')
-            ->get();
-    }
-
-    /**
-     * Vérifier si l'événement est encore en vente
-     */
-    public function isOnSale()
-    {
-        return $this->status === 'published' && 
-               $this->isUpcoming && 
-               $this->availableTicketTypes()->count() > 0;
-    }
-
-    /**
-     * Méthode alternative pour calculer les billets vendus (plus simple)
-     */
+    // Méthodes alternatives pour éviter les erreurs de relations
     public function getTicketsSoldCount()
     {
         return $this->ticketTypes()->sum('quantity_sold') ?? 0;
     }
 
-    /**
-     * Méthode alternative pour le nombre de commandes
-     */
     public function getOrdersCount()
     {
         return $this->orders()->where('payment_status', 'paid')->count() ?? 0;

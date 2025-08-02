@@ -1,10 +1,10 @@
 <?php
+// app/Models/CommissionSetting.php - VERSION HARMONISÉE
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Helpers\CurrencyHelper;
 
 class CommissionSetting extends Model
 {
@@ -12,7 +12,7 @@ class CommissionSetting extends Model
 
     protected $fillable = [
         'category_id',
-        'promoteur_id',
+        'promoter_id',  // ✅ CHANGÉ: promoteur_id → promoter_id
         'commission_rate',
         'platform_fee_fixed',
         'min_commission',
@@ -38,9 +38,14 @@ class CommissionSetting extends Model
         return $this->belongsTo(EventCategory::class, 'category_id');
     }
 
-    public function promoteur()
+    public function promoter()  // ✅ CHANGÉ: Nouvelle relation principale
     {
-        return $this->belongsTo(User::class, 'promoteur_id');
+        return $this->belongsTo(User::class, 'promoter_id');
+    }
+    
+    public function promoteur()  // ✅ ALIAS: Pour compatibilité
+    {
+        return $this->promoter();
     }
 
     /**
@@ -64,17 +69,17 @@ class CommissionSetting extends Model
 
     public function scopeDefault($query)
     {
-        return $query->whereNull('category_id')->whereNull('promoteur_id');
+        return $query->whereNull('category_id')->whereNull('promoter_id');
     }
 
     public function scopeForCategory($query, $categoryId)
     {
-        return $query->where('category_id', $categoryId)->whereNull('promoteur_id');
+        return $query->where('category_id', $categoryId)->whereNull('promoter_id');
     }
 
-    public function scopeForPromoteur($query, $promoteurId)
+    public function scopeForPromoter($query, $promoterId)  // ✅ CHANGÉ: promoteur → promoter
     {
-        return $query->where('promoteur_id', $promoteurId);
+        return $query->where('promoter_id', $promoterId);
     }
 
     /**
@@ -87,17 +92,17 @@ class CommissionSetting extends Model
 
     public function getFormattedPlatformFeeAttribute()
     {
-        return CurrencyHelper::formatFCFA($this->platform_fee_fixed);
+        return number_format($this->platform_fee_fixed, 0, ',', ' ') . ' FCFA';
     }
 
     public function getFormattedMinCommissionAttribute()
     {
-        return CurrencyHelper::formatFCFA($this->min_commission);
+        return number_format($this->min_commission, 0, ',', ' ') . ' FCFA';
     }
 
     public function getTypeAttribute()
     {
-        if ($this->promoteur_id) {
+        if ($this->promoter_id) {
             return 'Promoteur spécifique';
         } elseif ($this->category_id) {
             return 'Catégorie';
@@ -108,8 +113,8 @@ class CommissionSetting extends Model
 
     public function getDescriptionAttribute()
     {
-        if ($this->promoteur_id) {
-            return "Commission pour {$this->promoteur->name}";
+        if ($this->promoter_id) {
+            return "Commission pour {$this->promoter->name}";
         } elseif ($this->category_id) {
             return "Commission pour la catégorie {$this->category->name}";
         } else {
@@ -118,46 +123,14 @@ class CommissionSetting extends Model
     }
 
     /**
-     * Vérifications
+     * Méthodes statiques pour récupérer les commissions
      */
-    public function isValid($date = null)
-    {
-        $date = $date ?: now();
-        
-        return $this->is_active &&
-               $this->valid_from <= $date &&
-               ($this->valid_until === null || $this->valid_until >= $date);
-    }
-
-    public function isExpired()
-    {
-        return $this->valid_until && $this->valid_until < now();
-    }
-
-    public function isDefault()
-    {
-        return is_null($this->category_id) && is_null($this->promoteur_id);
-    }
-
-    public function isForCategory()
-    {
-        return !is_null($this->category_id) && is_null($this->promoteur_id);
-    }
-
-    public function isForPromoteur()
-    {
-        return !is_null($this->promoteur_id);
-    }
-
-    /**
-     * Obtenir la commission applicable pour un événement et un promoteur
-     */
-    public static function getCommissionForEvent($event, $promoteurId)
+    public static function getCommissionForEvent($event, $promoterId)  // ✅ CHANGÉ: promoteur → promoter
     {
         // Priorité 1: Commission spécifique promoteur
         $commission = self::active()
             ->valid()
-            ->forPromoteur($promoteurId)
+            ->forPromoter($promoterId)
             ->first();
         
         if ($commission) {
@@ -179,112 +152,5 @@ class CommissionSetting extends Model
             ->valid()
             ->default()
             ->first();
-    }
-
-    /**
-     * Calculer la commission pour un montant donné
-     */
-    public function calculateCommission($amount)
-    {
-        $commission = CurrencyHelper::calculateCommission(
-            $amount,
-            $this->commission_rate,
-            $this->platform_fee_fixed
-        );
-        
-        // Appliquer la commission minimale si définie
-        if ($this->min_commission > 0 && $commission['commission'] < $this->min_commission) {
-            $commission['commission'] = $this->min_commission;
-            $commission['net'] = $amount - $this->min_commission;
-        }
-        
-        return $commission;
-    }
-
-    /**
-     * Créer les paramètres de commission par défaut
-     */
-    public static function createDefaults()
-    {
-        // Commission par défaut
-        self::updateOrCreate(
-            [
-                'category_id' => null,
-                'promoteur_id' => null,
-            ],
-            [
-                'commission_rate' => 10.00,
-                'platform_fee_fixed' => 500,
-                'min_commission' => 1000,
-                'is_active' => true,
-                'valid_from' => now()->subYear(),
-                'valid_until' => null,
-            ]
-        );
-        
-        // Commission réduite pour les concerts (volume plus élevé)
-        $concertCategory = EventCategory::where('slug', 'concert')->first();
-        if ($concertCategory) {
-            self::updateOrCreate(
-                [
-                    'category_id' => $concertCategory->id,
-                    'promoteur_id' => null,
-                ],
-                [
-                    'commission_rate' => 8.00,
-                    'platform_fee_fixed' => 300,
-                    'min_commission' => 800,
-                    'is_active' => true,
-                    'valid_from' => now()->subYear(),
-                    'valid_until' => null,
-                ]
-            );
-        }
-        
-        // Commission majorée pour le théâtre (événements plus petits)
-        $theatreCategory = EventCategory::where('slug', 'theatre')->first();
-        if ($theatreCategory) {
-            self::updateOrCreate(
-                [
-                    'category_id' => $theatreCategory->id,
-                    'promoteur_id' => null,
-                ],
-                [
-                    'commission_rate' => 12.00,
-                    'platform_fee_fixed' => 700,
-                    'min_commission' => 1200,
-                    'is_active' => true,
-                    'valid_from' => now()->subYear(),
-                    'valid_until' => null,
-                ]
-            );
-        }
-    }
-
-    /**
-     * Désactiver une commission
-     */
-    public function deactivate()
-    {
-        $this->is_active = false;
-        $this->save();
-    }
-
-    /**
-     * Activer une commission
-     */
-    public function activate()
-    {
-        $this->is_active = true;
-        $this->save();
-    }
-
-    /**
-     * Expirer une commission
-     */
-    public function expire($date = null)
-    {
-        $this->valid_until = $date ?: now();
-        $this->save();
     }
 }

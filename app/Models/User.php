@@ -1,4 +1,5 @@
 <?php
+// app/Models/User.php - VERSION HARMONISÉE
 
 namespace App\Models;
 
@@ -10,9 +11,6 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'name',
         'email',
@@ -21,17 +19,11 @@ class User extends Authenticatable
         'password',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     */
     protected function casts(): array
     {
         return [
@@ -59,11 +51,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Relations
+     * Relations harmonisées
      */
-    public function events()
+    public function events()  // ✅ CHANGÉ: Utilise promoter_id
     {
-        return $this->hasMany(Event::class, 'promoteur_id');
+        return $this->hasMany(Event::class, 'promoter_id');
     }
 
     public function orders()
@@ -71,17 +63,16 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
-    /**
-     * CORRECTION FINALE: Relation commissions avec promoter_id
-     */
-    public function commissions()
+    public function commissions()  // ✅ CHANGÉ: Utilise promoter_id
     {
         return $this->hasMany(Commission::class, 'promoter_id');
     }
 
-    /**
-     * Relation : Tickets achetés par l'utilisateur
-     */
+    public function commissionSettings()  // ✅ CHANGÉ: Utilise promoter_id
+    {
+        return $this->hasMany(CommissionSetting::class, 'promoter_id');
+    }
+
     public function tickets()
     {
         return $this->hasManyThrough(Ticket::class, Order::class)
@@ -102,84 +93,33 @@ class User extends Authenticatable
         return $this->commissions()->where('status', 'pending')->sum('net_amount') ?? 0;
     }
 
-    public function totalTicketsSold()
-    {
-        return $this->events()->withCount(['orders' => function ($query) {
-            $query->where('payment_status', 'paid');
-        }])->get()->sum('orders_count');
-    }
-
-    /**
-     * NOUVELLES MÉTHODES UTILES
-     */
-    
-    /**
-     * Revenus totaux générés (brut, avant commission)
-     */
     public function totalGrossRevenue()
     {
         return $this->commissions()->sum('gross_amount') ?? 0;
     }
 
-    /**
-     * Total des commissions versées à la plateforme
-     */
     public function totalPlatformCommissions()
     {
         return $this->commissions()->sum('commission_amount') ?? 0;
     }
 
-    /**
-     * Nombre d'événements publiés
-     */
-    public function publishedEventsCount()
+    public function totalTicketsSold()
     {
-        return $this->events()->where('status', 'published')->count();
-    }
-
-    /**
-     * Dernier événement créé
-     */
-    public function latestEvent()
-    {
-        return $this->events()->latest()->first();
-    }
-
-    /**
-     * Vérifier si le promoteur a des commissions impayées
-     */
-    public function hasPendingCommissions()
-    {
-        return $this->commissions()->where('status', 'pending')->exists();
-    }
-
-    /**
-     * Commissions du mois en cours
-     */
-    public function currentMonthCommissions()
-    {
-        return $this->commissions()
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year);
-    }
-
-    /**
-     * Performance du promoteur (taux de conversion approximatif)
-     */
-    public function getPerformanceStats()
-    {
-        $totalEvents = $this->events()->count();
-        $publishedEvents = $this->publishedEventsCount();
-        $eventsWithSales = $this->events()->whereHas('orders', function($query) {
+        return $this->events()->withCount(['orders' => function ($query) {
             $query->where('payment_status', 'paid');
-        })->count();
+        }])->get()->sum('orders_count') ?? 0;
+    }
 
-        return [
-            'total_events' => $totalEvents,
-            'published_events' => $publishedEvents,
-            'events_with_sales' => $eventsWithSales,
-            'publication_rate' => $totalEvents > 0 ? round(($publishedEvents / $totalEvents) * 100, 1) : 0,
-            'conversion_rate' => $publishedEvents > 0 ? round(($eventsWithSales / $publishedEvents) * 100, 1) : 0
-        ];
+    public function activeEventsCount()
+    {
+        return $this->events()->where('status', 'published')->count() ?? 0;
+    }
+
+    public function upcomingEventsCount()
+    {
+        return $this->events()
+            ->where('status', 'published')
+            ->where('event_date', '>=', now()->toDateString())
+            ->count() ?? 0;
     }
 }

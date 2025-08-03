@@ -595,7 +595,7 @@ class AdminController extends Controller
                 fputcsv($file, [
                     $event->id,
                     $event->title,
-                    $event->promoteur->name ?? 'N/A',
+                    $event->promoter->name ?? 'N/A',
                     $event->category->name ?? 'N/A',
                     $event->event_date->format('d/m/Y H:i'),
                     $event->status,
@@ -969,7 +969,7 @@ public function commissions(Request $request)
     }
     
     if ($request->filled('promoter')) {
-        $query->where('promoteur_id', $request->promoter);
+        $query->where('promoter_id', $request->promoter);
     }
     
     if ($request->filled('period')) {

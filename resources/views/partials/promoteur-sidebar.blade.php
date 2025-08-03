@@ -54,7 +54,7 @@
             
             {{-- Événements actifs --}}
             @php
-                $activeEvents = \App\Models\Event::where('promoteur_id', auth()->id())
+                $activeEvents = \App\Models\Event::where('promoter_id', auth()->id())
                                                 ->where('status', 'published')
                                                 ->where('event_date', '>=', now())
                                                 ->count();
@@ -71,7 +71,7 @@
             {{-- Ventes du jour --}}
             @php
                 $todaySales = \App\Models\Order::whereHas('event', function($q) {
-                    $q->where('promoteur_id', auth()->id());
+                    $q->where('promoter_id', auth()->id());
                 })->whereDate('created_at', today())
                   ->where('payment_status', 'paid')
                   ->sum('total_amount');

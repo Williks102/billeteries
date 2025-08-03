@@ -36,7 +36,7 @@ class PromoteurController extends Controller
                 ->get();
 
             $recentOrders = Order::whereHas('event', function($q) use ($promoteur) {
-                    $q->where('promoter_id', $promoteur->id);  // ✅ CHANGÉ: promoteur_id → promoter_id
+                    $q->where('promoter_id', $promoter->id);  // ✅ CHANGÉ: promoter_id → promoter_id
                 })
                 ->with(['user', 'event'])
                 ->where('payment_status', 'paid')

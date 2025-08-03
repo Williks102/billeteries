@@ -16,7 +16,7 @@ class CommissionCalculator
         $totalAmount = $price * $quantity;
         
         // Obtenir les paramètres de commission
-        $commissionSetting = CommissionSetting::getCommissionForEvent($event, $event->promoteur_id);
+        $commissionSetting = CommissionSetting::getCommissionForEvent($event, $event->promoter_id);
         
         if (!$commissionSetting) {
             // Valeurs par défaut si pas de paramètres
@@ -93,7 +93,7 @@ class CommissionCalculator
     public static function estimateMonthlyEarnings($promoterId, $averageEventPrice = 5000, $estimatedTicketsPerEvent = 50, $eventsPerMonth = 2)
     {
         // Obtenir les paramètres de commission pour ce promoteur
-        $dummyEvent = new Event(['promoteur_id' => $promoterId]);
+        $dummyEvent = new Event(['promoter_id' => $promoterId]);
         $calc = self::calculateForEvent($dummyEvent, $averageEventPrice, $estimatedTicketsPerEvent);
         
         $earningsPerEvent = $calc['net_amount'];
@@ -259,7 +259,7 @@ class CheckoutController extends Controller
         // Créer l'enregistrement de commission
         Commission::create([
             'order_id' => $order->id,
-            'promoteur_id' => $event->promoteur_id,
+            'promoter_id' => $event->promoter_id,
             'gross_amount' => $commissionData['gross_amount'],
             'commission_rate' => $commissionData['commission_rate'],
             'commission_amount' => $commissionData['commission_amount'],

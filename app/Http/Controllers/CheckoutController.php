@@ -191,13 +191,27 @@ class CheckoutController extends Controller
     /**
      * Créer une commission pour une commande
      */
-   private function createCommissionForOrder($order)
+ private function createCommissionForOrder($order)
 {
+    $event = $order->event;
+    
+    // 🔍 DEBUG
+    \Log::info('Debug Commission Creation', [
+        'event_id' => $event->id,
+        'promoter_id' => $event->promoter_id,
+        'promoteur_id' => $event->promoteur_id ?? 'N/A (normal)',
+        'event_fillable' => $event->getFillable()
+    ]);
+    
     $commissionData = $order->calculateCommission();
+    
+    if (!$event->promoter_id) {
+        throw new \Exception('ERREUR: promoter_id manquant pour l\'événement #' . $event->id);
+    }
     
     Commission::create([
         'order_id' => $order->id,
-        'promoter_id' => $order->event->promoter_id,  // ✅ CHANGÉ: promoteur_id → promoter_id
+        'promoter_id' => $event->promoter_id,  // ✅ Correct
         'gross_amount' => $commissionData['gross_amount'],
         'commission_rate' => $commissionData['commission_rate'],
         'commission_amount' => $commissionData['commission_amount'],

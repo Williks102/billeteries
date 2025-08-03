@@ -19,7 +19,7 @@ class TicketTypeController extends Controller
     public function create(Event $event)
     {
         // Vérifier que l'événement appartient au promoteur connecté
-        if ($event->promoteur_id !== Auth::id()) {
+        if ($event->promoter_id !== Auth::id()) {
             abort(403, 'Vous n\'êtes pas autorisé à modifier cet événement');
         }
         
@@ -31,7 +31,7 @@ class TicketTypeController extends Controller
      */
     public function store(Request $request, Event $event)
     {
-        if ($event->promoteur_id !== Auth::id()) {
+        if ($event->promoter_id !== Auth::id()) {
             abort(403, 'Vous n\'êtes pas autorisé à modifier cet événement');
         }
         
@@ -77,7 +77,7 @@ class TicketTypeController extends Controller
      */
     public function index(Event $event)
     {
-        if ($event->promoteur_id !== Auth::id()) {
+        if ($event->promoter_id !== Auth::id()) {
             abort(403);
         }
         
@@ -91,7 +91,7 @@ class TicketTypeController extends Controller
      */
     public function edit(Event $event, TicketType $ticketType)
     {
-        if ($event->promoteur_id !== Auth::id() || $ticketType->event_id !== $event->id) {
+        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
             abort(403);
         }
         
@@ -103,7 +103,7 @@ class TicketTypeController extends Controller
      */
     public function update(Request $request, Event $event, TicketType $ticketType)
     {
-        if ($event->promoteur_id !== Auth::id() || $ticketType->event_id !== $event->id) {
+        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
             abort(403);
         }
         
@@ -138,7 +138,7 @@ class TicketTypeController extends Controller
      */
     public function destroy(Event $event, TicketType $ticketType)
     {
-        if ($event->promoteur_id !== Auth::id() || $ticketType->event_id !== $event->id) {
+        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
             abort(403);
         }
         
@@ -159,7 +159,7 @@ class TicketTypeController extends Controller
      */
     public function toggle(Event $event, TicketType $ticketType)
     {
-        if ($event->promoteur_id !== Auth::id() || $ticketType->event_id !== $event->id) {
+        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
             abort(403);
         }
         

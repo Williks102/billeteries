@@ -21,7 +21,7 @@ class CommissionsExport implements FromCollection, WithHeadings, WithMapping, Wi
     
     public function collection()
     {
-        $query = Commission::with(['order.event', 'promoteur']);
+        $query = Commission::with(['order.event', 'promoter']);
         
         if (isset($this->filters['status'])) {
             $query->where('status', $this->filters['status']);

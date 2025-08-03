@@ -114,7 +114,7 @@ class CommissionsExport implements FromCollection, WithHeadings, WithMapping, Wi
     
     public function collection()
     {
-        $query = Commission::with(['order.event', 'promoteur']);
+        $query = Commission::with(['order.event', 'promoter']);
         
         // Appliquer les filtres
         if (isset($this->filters['status'])) {
@@ -129,8 +129,8 @@ class CommissionsExport implements FromCollection, WithHeadings, WithMapping, Wi
             $query->where('created_at', '<=', $this->filters['end_date']);
         }
         
-        if (isset($this->filters['promoteur_id'])) {
-            $query->where('promoteur_id', $this->filters['promoteur_id']);
+        if (isset($this->filters['promoter_id'])) {
+            $query->where('promoter_id', $this->filters['promoter_id']);
         }
         
         return $query->orderBy('created_at', 'desc')->get();
@@ -159,8 +159,8 @@ class CommissionsExport implements FromCollection, WithHeadings, WithMapping, Wi
         return [
             $commission->created_at->format('d/m/Y H:i'),
             $commission->order->order_number,
-            $commission->promoteur->name,
-            $commission->promoteur->email,
+            $commission->promoter->name,
+            $commission->promoter->email,
             $commission->order->event->title,
             $commission->gross_amount,
             $commission->commission_rate,
@@ -193,7 +193,7 @@ class RevenuesExport implements FromCollection, WithHeadings, WithMapping, WithS
     
     public function collection()
     {
-        return Order::with(['event.category', 'event.promoteur', 'user'])
+        return Order::with(['event.category', 'event.promoter', 'user'])
             ->where('payment_status', 'paid')
             ->whereBetween('created_at', [$this->startDate, $this->endDate])
             ->orderBy('created_at', 'desc')
@@ -228,7 +228,7 @@ class RevenuesExport implements FromCollection, WithHeadings, WithMapping, WithS
             $order->billing_email,
             $order->event->title,
             $order->event->category->name,
-            $order->event->promoteur->name,
+            $order->event->promoter->name,
             $order->total_amount,
             $commission ? $commission->commission_amount : 0,
             $commission ? $commission->net_amount : 0,

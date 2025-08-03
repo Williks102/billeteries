@@ -136,7 +136,7 @@ class Order extends Model
     public function calculateCommission()
     {
         $event = $this->event;
-        $commissionSetting = CommissionSetting::getCommissionForEvent($event, $event->promoteur_id);
+        $commissionSetting = CommissionSetting::getCommissionForEvent($event, $event->promoter_id);
         
         if (!$commissionSetting) {
             // Commission par défaut : 10% + 500 FCFA
@@ -172,7 +172,7 @@ class Order extends Model
             
             Commission::create([
                 'order_id' => $this->id,
-                'promoteur_id' => $this->event->promoteur_id,
+                'promoter_id' => $this->event->promoter_id,
                 'gross_amount' => $commissionData['gross_amount'],
                 'commission_rate' => $commissionData['commission_rate'],
                 'commission_amount' => $commissionData['commission_amount'],

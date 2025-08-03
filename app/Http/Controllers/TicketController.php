@@ -22,7 +22,7 @@ class TicketController extends Controller
             }
             
             // Le promoteur peut voir les billets de ses événements
-            if ($user->isPromoteur() && $ticket->ticketType->event->promoteur_id !== $user->id) {
+            if ($user->isPromoteur() && $ticket->ticketType->event->promoter_id !== $user->id) {
                 abort(403, 'Vous n\'êtes pas autorisé à voir ce billet');
             }
         }
@@ -56,7 +56,7 @@ class TicketController extends Controller
             abort(403);
         }
         
-        if ($user->isPromoteur() && $ticket->ticketType->event->promoteur_id !== $user->id) {
+        if ($user->isPromoteur() && $ticket->ticketType->event->promoter_id !== $user->id) {
             abort(403);
         }
         

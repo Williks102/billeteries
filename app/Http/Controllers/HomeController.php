@@ -20,7 +20,7 @@ class HomeController extends Controller
     {
         try {
             // Récupérer les événements publiés et à venir
-            $query = Event::with(['category', 'ticketTypes', 'promoteur'])
+            $query = Event::with(['category', 'ticketTypes', 'promoter'])
                 ->where('status', 'published')
                 ->where('event_date', '>=', now()->toDateString())
                 ->orderBy('event_date', 'asc');
@@ -114,7 +114,7 @@ $events = $query->orderBy('created_at', 'desc')
         }
 
         // Charger les relations nécessaires
-        $event->load(['category', 'promoteur', 'ticketTypes' => function($query) {
+        $event->load(['category', 'promoter', 'ticketTypes' => function($query) {
             $query->where('is_active', true)
                   ->where('sale_start_date', '<=', now())
                   ->where('sale_end_date', '>=', now())
@@ -159,7 +159,7 @@ $events = $query->orderBy('created_at', 'desc')
      */
     public function category(EventCategory $category, Request $request)
     {
-        $query = Event::with(['category', 'ticketTypes', 'promoteur'])
+        $query = Event::with(['category', 'ticketTypes', 'promoter'])
             ->where('category_id', $category->id)
             ->where('status', 'published')
             ->where('event_date', '>=', now()->toDateString())
@@ -307,7 +307,7 @@ $events = $query->orderBy('created_at', 'desc')
  */
 public function allEvents(Request $request)
 {
-    $query = Event::with(['category', 'ticketTypes', 'promoteur'])
+    $query = Event::with(['category', 'ticketTypes', 'promoter'])
         ->where('status', 'published')
         ->where('event_date', '>=', now()->toDateString());
 

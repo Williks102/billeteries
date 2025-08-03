@@ -88,8 +88,11 @@ Route::middleware(['auth'])->group(function () {
     // ==================== CHECKOUT ====================
     
     Route::prefix('checkout')->name('checkout.')->group(function () {
+        Route::post('/checkout/direct', [CheckoutController::class, 'direct'])->name('checkout.direct');
         Route::get('/', [CheckoutController::class, 'show'])->name('show');
         Route::post('/process', [CheckoutController::class, 'process'])->name('process');
+        // nouvelle route
+    
         Route::get('/confirmation/{order}', [CheckoutController::class, 'confirmation'])->name('confirmation');
     });
     

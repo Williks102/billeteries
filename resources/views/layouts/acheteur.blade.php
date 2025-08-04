@@ -62,6 +62,10 @@
         .acheteur-navbar .nav-link:hover {
             color: var(--primary-orange) !important;
         }
+
+        .mobile-header {
+    background: linear-gradient(135deg, #00796b, #26a69a);
+}
         
         /* === SIDEBAR ACHETEUR === */
         .acheteur-sidebar {
@@ -245,7 +249,11 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg acheteur-navbar">
+        <button class="mobile-hamburger-btn" onclick="toggleSidebarAcheteur()">
+    <i class="fas fa-ellipsis-v"></i> <!-- Icône différente -->
+ </button>
+
+    <nav class="navbar navbar-expand-lg acheteur-navbar" id="acheteurSidebar">
         <div class="container-fluid px-4">
             <!-- Brand -->
             <a class="navbar-brand" href="{{ route('home') }}">
@@ -360,6 +368,54 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <script>
+function toggleSidebar() {
+    const sidebar = document.getElementById('acheteurSidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active');
+    
+    if (sidebar.classList.contains('mobile-open')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = 'auto';
+    }
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('acheteurSidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
+
+// Fermer avec la touche Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeSidebar();
+    }
+});
+
+// Fermer automatiquement lors du redimensionnement vers desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+        closeSidebar();
+    }
+});
+
+// Gérer les clics sur les liens de la sidebar mobile
+document.querySelectorAll('.acheteur-sidebar .nav-link').forEach(link => {
+    link.addEventListener('click', function() {
+        if (window.innerWidth <= 768) {
+            setTimeout(closeSidebar, 100);
+        }
+    });
+});
+</script>
+
     <!-- Script pour le compteur panier -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {

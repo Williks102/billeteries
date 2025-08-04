@@ -21,6 +21,8 @@ class Ticket extends Model
         'holder_name',
         'holder_email',
         'qr_code_path',
+        'validation_data',
+        'holder_phone',
         'qr_code',
         'used_at'
     ];
@@ -173,6 +175,89 @@ class Ticket extends Model
             return null;
         }
     }
+
+    /**
+ * Obtenir un QR code fiable pour les PDF
+ */
+public function getReliableQrCode($size = 150)
+{
+    try {
+        $qrService = app(\App\Services\QRCodeService::class);
+        
+        // Essayer d'abord la génération normale
+        $qrBase64 = $qrService->generateTicketQRBase64($this, $size);
+        
+        if ($qrBase64 && strlen($qrBase64) > 100) {
+            \Log::info("QR fiable généré pour PDF - Ticket: {$this->ticket_code}");
+            return $qrBase64;
+        }
+        
+        // Si échec, créer un placeholder informatif
+        \Log::warning("QR failed, creating placeholder for ticket: {$this->ticket_code}");
+        return $this->createQRPlaceholder($size);
+        
+    } catch (\Exception $e) {
+        \Log::error("Erreur QR fiable pour ticket {$this->ticket_code}: " . $e->getMessage());
+        return $this->createQRPlaceholder($size);
+    }
+}
+
+    /**
+ * Créer un placeholder QR si la génération échoue
+ */
+private function createQRPlaceholder($size = 150)
+{
+    // Créer une image simple avec GD si disponible
+    if (function_exists('imagecreate')) {
+        try {
+            $image = imagecreatetruecolor($size, $size);
+            $white = imagecolorallocate($image, 255, 255, 255);
+            $orange = imagecolorallocate($image, 255, 107, 53);
+            $black = imagecolorallocate($image, 0, 0, 0);
+            
+            // Fond blanc
+            imagefilledrectangle($image, 0, 0, $size, $size, $white);
+            
+            // Bordure orange
+            imagerectangle($image, 2, 2, $size-3, $size-3, $orange);
+            
+            // Texte
+            $font = 3;
+            $text = "BILLET VALIDE";
+            $textWidth = imagefontwidth($font) * strlen($text);
+            $x = ($size - $textWidth) / 2;
+            imagestring($image, $font, $x, $size/2 - 30, $text, $orange);
+            
+            // Code ticket
+            $code = $this->ticket_code;
+            $font = 2;
+            $codeWidth = imagefontwidth($font) * strlen($code);
+            $x = ($size - $codeWidth) / 2;
+            imagestring($image, $font, $x, $size/2, $code, $black);
+            
+            // URL
+            $url = "clicbillet.com";
+            $font = 1;
+            $urlWidth = imagefontwidth($font) * strlen($url);
+            $x = ($size - $urlWidth) / 2;
+            imagestring($image, $font, $x, $size/2 + 30, $url, $black);
+            
+            // Capturer l'image
+            ob_start();
+            imagepng($image);
+            $imageData = ob_get_clean();
+            imagedestroy($image);
+            
+            return 'data:image/png;base64,' . base64_encode($imageData);
+            
+        } catch (\Exception $e) {
+            \Log::error("Erreur création placeholder: " . $e->getMessage());
+        }
+    }
+    
+    // Fallback ultime : retourner null pour affichage texte
+    return null;
+}
 
     /**
      * Marquer le billet comme vendu
@@ -366,35 +451,66 @@ public function isValidForUse()
     
     return true;
     }
+
    /**
- * AJOUT 6 : Informations complètes pour vérification (compatible avec votre structure)
+ * Informations complètes pour vérification (VERSION CORRIGÉE)
  */
 public function getVerificationInfo()
 {
     $order = $this->getMainOrder();
+    $event = $this->ticketType->event ?? null;
     
     return [
-        'ticket_code' => $this->ticket_code,
-        'status' => $this->status,
         'is_valid' => $this->isValidForUse(),
-        'used_at' => $this->used_at ?? null,
+        'status' => $this->status,
+        'message' => $this->getStatusMessage(),
+        'ticket_code' => $this->ticket_code,
         'event' => [
-            'title' => $this->event->title ?? 'N/A',
-            'date' => $this->event->formatted_event_date ?? 'N/A',
-            'time' => $this->event->formatted_event_time ?? 'N/A',
-            'venue' => $this->event->venue ?? 'N/A'
+            'title' => $event->title ?? 'Événement non trouvé',
+            'date' => $event->event_date ? $event->event_date->format('d/m/Y') : 'Date à déterminer',
+            'time' => $event->event_time ? $event->event_time->format('H:i') : 'Heure à déterminer',
+            'venue' => $event->venue ?? 'Lieu à déterminer',
+            'address' => $event->address ?? null,
+            'category' => $event->category->name ?? null
         ],
-        'ticket_type' => $this->ticketType->name ?? 'N/A',
+        'ticket_type' => $this->ticketType->name ?? 'Type de billet inconnu',
+        'price' => $this->ticketType->price ?? 0,
         'holder' => [
-            // Utiliser vos champs holder_name et holder_email s'ils existent
-            'name' => $this->holder_name ?? ($order ? $order->user->name : 'N/A'),
-            'email' => $this->holder_email ?? ($order ? $order->user->email : 'N/A')
+            'name' => $order ? ($order->user->name ?? 'Nom non disponible') : 'Commande non trouvée',
+            'email' => $order ? ($order->user->email ?? 'Email non disponible') : 'Commande non trouvée'
         ],
-        'order' => $order ? [
-            'number' => $order->order_number ?? $order->id,
-            'payment_status' => $order->payment_status
-        ] : null
+        'order' => [
+            'number' => $order ? ($order->order_number ?? $order->id ?? 'N/A') : 'N/A',
+            'date' => $order && $order->created_at ? $order->created_at->format('d/m/Y à H:i') : 'Date inconnue'  // ← LIGNE CORRIGÉE
+        ],
+        'seat_number' => $this->seat_number,
+        'used_at' => $this->used_at,
+        'can_be_used' => method_exists($this, 'canBeUsed') ? $this->canBeUsed() : false
     ];
-    } 
+}
+/**
+ * Obtenir le message de statut du ticket (NOUVELLE MÉTHODE)
+ */
+public function getStatusMessage()
+{
+    if ($this->used_at) {
+        return 'Billet déjà utilisé le ' . $this->used_at->format('d/m/Y à H:i');
+    }
 
+    return match($this->status) {
+        'sold' => 'Billet valide et utilisable',
+        'cancelled' => 'Billet annulé',
+        'expired' => 'Billet expiré',
+        'used' => 'Billet déjà utilisé',
+        'available' => 'Billet disponible à la vente',
+        default => 'Statut du billet: ' . $this->status
+    };
+}
+/**
+ * Vérifier si le billet peut être utilisé
+ */
+public function canBeUsed()
+{
+    return $this->status === 'sold' && !$this->used_at && $this->ticketType && $this->ticketType->event;
+}
 }

@@ -397,4 +397,11 @@ public function allEvents(Request $request)
 
     return view('events.all', compact('events', 'categories', 'stats'));
 }
+
+public function testQR() {
+    if (!auth()->check() || !auth()->user()->isAdmin()) abort(403);
+    
+    $service = app(\App\Services\QRCodeService::class);
+    return $service->testAllMethods();
+}
 }

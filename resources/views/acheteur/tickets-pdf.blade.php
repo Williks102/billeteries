@@ -374,63 +374,24 @@
                 
                 <!-- QR Code et informations à droite -->
                 <div class="col-right">
-                    @php
-                        // Force l'utilisation du nouveau service QR avec taille augmentée
-                        $qrCodeGenerated = false;
-                        $qrCodeBase64 = null;
-                        
-                        try {
-                            // Utiliser explicitement le service QR corrigé avec taille plus grande
-                            $qrService = app(\App\Services\QRCodeService::class);
-                            
-                            // Log pour debugging
-                            \Log::info("Template PDF - Génération QR pour ticket: {$ticket->ticket_code}");
-                            
-                            // Essayer d'abord la méthode stylée avec taille plus grande
-                            if (method_exists($qrService, 'generateStyledQR')) {
-                                $qrCodeBase64 = $qrService->generateStyledQR($ticket, [
-                                    'size' => 200,
-                                    'margin' => 1,
-                                    'color' => '1a1a1a',
-                                    'bg_color' => 'ffffff'
-                                ]);
-                            }
-                            
-                            // Fallback avec service standard
-                            if (!$qrCodeBase64 || strlen($qrCodeBase64) < 100) {
-                                $qrCodeBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
-                            }
-                            
-                            // Dernier fallback
-                            if (!$qrCodeBase64 || strlen($qrCodeBase64) < 100) {
-                                $qrCodeBase64 = $qrService->generateTicketQRBase64($ticket);
-                            }
-                            
-                            if ($qrCodeBase64 && strlen($qrCodeBase64) > 100) {
-                                $qrCodeGenerated = true;
-                                \Log::info("Template PDF - QR généré avec succès pour: {$ticket->ticket_code}");
-                            } else {
-                                \Log::warning("Template PDF - QR non généré pour: {$ticket->ticket_code}");
-                            }
-                            
-                        } catch (\Exception $e) {
-                            \Log::error("Template PDF - Erreur QR pour ticket {$ticket->ticket_code}: " . $e->getMessage());
-                        }
-                    @endphp
-                    
-                    @if($qrCodeGenerated && $qrCodeBase64)
-                        <!-- QR Code généré avec succès - SEULEMENT LE QR CODE -->
-                        <img src="{{ $qrCodeBase64 }}" alt="QR Code" class="qr-code">
-                    @else
-                        <!-- Fallback si QR non généré -->
-                        <div class="qr-placeholder">
-                            <div class="qr-content">
-                                📱 QR CODE<br>
-                                EN COURS DE<br>
-                                GÉNÉRATION
-                            </div>
-                        </div>
-                    @endif
+                  @php
+    $qrCodeBase64 = $ticket->getReliableQrCode(150);
+@endphp
+
+<div class="qr-section">
+    @if($qrCodeBase64)
+        <img src="{{ $qrCodeBase64 }}" 
+             alt="QR Code" 
+             style="width: 130px; height: 130px; border: 1px solid #ddd; display: block;">
+    @else
+        <!-- Fallback textuel si même le placeholder échoue -->
+        <div style="width: 130px; height: 130px; border: 2px solid #FF6B35; display: flex; align-items: center; justify-content: center; background: #f8f9fa; flex-direction: column; font-size: 11px; text-align: center; padding: 5px;">
+            <div style="font-weight: bold; margin-bottom: 5px; color: #FF6B35;">BILLET VALIDE</div>
+            <div style="font-size: 9px; word-break: break-all; margin-bottom: 5px;">{{ $ticket->ticket_code }}</div>
+            <div style="font-size: 8px;">Vérifiez sur le site</div>
+        </div>
+    @endif
+</div>
                     
                     <!-- Code du billet (plus grand) -->
                     <div class="ticket-code">{{ $ticket->ticket_code }}</div>

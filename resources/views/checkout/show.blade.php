@@ -1,5 +1,5 @@
 {{-- resources/views/checkout/show.blade.php - VERSION ADAPTÉE --}}
-@extends($checkoutLayout)
+@extends('layouts.app')
 
 @section('title', 'Finaliser ma commande - ClicBillet CI')
 

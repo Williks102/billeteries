@@ -8,81 +8,267 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Service pour la génération de QR codes
- * Version complète et optimisée
+ * Service QR Code - Version corrigée et améliorée
+ * Compatible avec votre système existant
  */
 class QRCodeService
 {
-    private const DEFAULT_SIZE = 200;
-    private const DEFAULT_TIMEOUT = 10;
-    private const QR_CACHE_DIRECTORY = 'public/qrcodes';
-    
     /**
-     * Méthode principale : génère ou récupère le QR avec cache
+     * Générer un QR code via multiples méthodes avec fallbacks
+     * Version améliorée de votre méthode actuelle
      */
-    public function getOrGenerateTicketQR(Ticket $ticket, string $format = 'url'): ?string
+    public function generateTicketQRBase64(Ticket $ticket, $size = 200)
     {
-        return match($format) {
-            'base64' => $this->generateTicketQRBase64($ticket),
-            'url' => $this->getTicketQRFromCacheOrGenerate($ticket),
-            default => throw new \InvalidArgumentException("Format non supporté: {$format}")
-        };
+        Log::info("Génération QR pour ticket: {$ticket->ticket_code}");
+        
+        // Méthode 1: Google Charts AMÉLIORÉ (votre méthode actuelle mais robuste)
+        $qr = $this->generateWithGoogleChartsEnhanced($ticket, $size);
+        if ($qr) {
+            Log::info("QR généré avec Google Charts amélioré");
+            return $qr;
+        }
+        
+        // Méthode 2: SimpleSoftwareIO si disponible
+        if (class_exists('\SimpleSoftwareIO\QrCode\Facades\QrCode')) {
+            $qr = $this->generateWithSimpleSoftwareIO($ticket, $size);
+            if ($qr) {
+                Log::info("QR généré avec SimpleSoftwareIO");
+                return $qr;
+            }
+        }
+        
+        // Méthode 3: API QR Server (alternative)
+        $qr = $this->generateWithQRServer($ticket, $size);
+        if ($qr) {
+            Log::info("QR généré avec QR Server");
+            return $qr;
+        }
+        
+        // Méthode 4: Fallback file_get_contents simple
+        $qr = $this->generateWithFileGetContents($ticket, $size);
+        if ($qr) {
+            Log::info("QR généré avec file_get_contents");
+            return $qr;
+        }
+        
+        Log::error("Toutes les méthodes QR ont échoué pour: {$ticket->ticket_code}");
+        return null;
     }
     
     /**
-     * Générer un QR code via Google Charts API et retourner en base64
+     * Méthode 1: Google Charts AMÉLIORÉE avec plusieurs tentatives
      */
-    public function generateTicketQRBase64(Ticket $ticket, int $size = self::DEFAULT_SIZE): ?string
+    private function generateWithGoogleChartsEnhanced(Ticket $ticket, $size)
     {
         try {
-            $verificationUrl = $this->getVerificationUrl($ticket);
-            $qrUrl = $this->buildGoogleChartsUrl($verificationUrl, $size);
+            $verificationUrl = url("/verify-ticket/{$ticket->ticket_code}");
             
-            $response = Http::timeout(self::DEFAULT_TIMEOUT)->get($qrUrl);
+            // Essayer plusieurs configurations
+            $configs = [
+                // Config standard
+                [
+                    'chs' => "{$size}x{$size}",
+                    'cht' => 'qr',
+                    'chl' => $verificationUrl,
+                    'choe' => 'UTF-8'
+                ],
+                // Config avec correction d'erreur
+                [
+                    'chs' => "{$size}x{$size}",
+                    'cht' => 'qr',
+                    'chl' => $verificationUrl,
+                    'choe' => 'UTF-8',
+                    'chld' => 'H|1'  // Haute correction, marge 1
+                ],
+                // Config simplifiée
+                [
+                    'chs' => "{$size}x{$size}",
+                    'cht' => 'qr',
+                    'chl' => $verificationUrl
+                ]
+            ];
             
-            if ($response->successful()) {
-                $imageData = $response->body();
+            foreach ($configs as $configIndex => $config) {
+                $qrUrl = "https://chart.googleapis.com/chart?" . http_build_query($config);
+                
+                try {
+                    // Méthode 1: Http::get (votre méthode actuelle)
+                    $response = Http::timeout(8)->get($qrUrl);
+                    
+                    if ($response->successful() && strlen($response->body()) > 100) {
+                        Log::info("Google Charts config #{$configIndex} réussie");
+                        return 'data:image/png;base64,' . base64_encode($response->body());
+                    }
+                    
+                } catch (\Exception $e) {
+                    Log::warning("HTTP client config #{$configIndex} failed, trying file_get_contents: " . $e->getMessage());
+                    
+                    // Méthode 2: file_get_contents en fallback
+                    $context = stream_context_create([
+                        'http' => [
+                            'timeout' => 5,
+                            'method' => 'GET',
+                            'header' => 'User-Agent: Laravel/QRService'
+                        ]
+                    ]);
+                    
+                    $imageData = @file_get_contents($qrUrl, false, $context);
+                    
+                    if ($imageData && strlen($imageData) > 100) {
+                        Log::info("Google Charts file_get_contents config #{$configIndex} réussie");
+                        return 'data:image/png;base64,' . base64_encode($imageData);
+                    }
+                }
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning('Google Charts amélioré échoué : ' . $e->getMessage());
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Méthode 2: SimpleSoftwareIO (si installé)
+     */
+    private function generateWithSimpleSoftwareIO(Ticket $ticket, $size)
+    {
+        try {
+            $verificationUrl = url("/verify-ticket/{$ticket->ticket_code}");
+            
+            $qrCode = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
+                ->size($size)
+                ->margin(1)
+                ->errorCorrection('H')
+                ->encoding('UTF-8')
+                ->generate($verificationUrl);
+            
+            if ($qrCode && strlen($qrCode) > 100) {
+                return 'data:image/png;base64,' . base64_encode($qrCode);
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning('SimpleSoftwareIO échoué : ' . $e->getMessage());
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Méthode 3: QR Server API (alternative)
+     */
+    private function generateWithQRServer(Ticket $ticket, $size)
+    {
+        try {
+            $verificationUrl = url("/verify-ticket/{$ticket->ticket_code}");
+            
+            $apiUrl = "https://api.qrserver.com/v1/create-qr-code/?" . http_build_query([
+                'size' => "{$size}x{$size}",
+                'data' => $verificationUrl,
+                'format' => 'png',
+                'ecc' => 'H'
+            ]);
+            
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 5,
+                    'method' => 'GET',
+                    'header' => 'User-Agent: Laravel/QRService'
+                ]
+            ]);
+            
+            $imageData = @file_get_contents($apiUrl, false, $context);
+            
+            if ($imageData && strlen($imageData) > 100) {
                 return 'data:image/png;base64,' . base64_encode($imageData);
             }
             
-            Log::warning('Échec génération QR Google Charts', [
-                'ticket_code' => $ticket->ticket_code,
-                'status' => $response->status(),
-                'url' => $qrUrl
-            ]);
-            
-            return null;
-            
         } catch (\Exception $e) {
-            Log::error('Erreur génération QR code base64', [
-                'ticket_code' => $ticket->ticket_code,
-                'error' => $e->getMessage()
-            ]);
-            return null;
+            Log::warning('QR Server échoué : ' . $e->getMessage());
         }
+        
+        return null;
     }
     
     /**
-     * Vérifier le cache ou générer et sauvegarder un QR code
+     * Méthode 4: Fallback simple avec file_get_contents
      */
-    private function getTicketQRFromCacheOrGenerate(Ticket $ticket): ?string
+    private function generateWithFileGetContents(Ticket $ticket, $size)
     {
-        // D'abord vérifier le cache
-        $cachedQR = $this->getTicketQRFromCache($ticket);
-        if ($cachedQR) {
-            return $cachedQR;
+        try {
+            $verificationUrl = url("/verify-ticket/{$ticket->ticket_code}");
+            $qrUrl = "https://chart.googleapis.com/chart?chs={$size}x{$size}&cht=qr&chl=" . urlencode($verificationUrl);
+            
+            // Context très simple
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 3,
+                    'ignore_errors' => true
+                ]
+            ]);
+            
+            $imageData = @file_get_contents($qrUrl, false, $context);
+            
+            if ($imageData && strlen($imageData) > 50) {
+                return 'data:image/png;base64,' . base64_encode($imageData);
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning('file_get_contents fallback échoué : ' . $e->getMessage());
         }
         
-        // Sinon générer et sauvegarder
-        return $this->generateAndSaveTicketQR($ticket);
+        return null;
+    }
+    
+    /**
+     * Générer et sauvegarder un QR code sur le disque
+     * Version améliorée de votre méthode actuelle
+     */
+    public function generateAndSaveTicketQR(Ticket $ticket, $size = 200)
+    {
+        try {
+            // Générer le QR en base64 avec les nouvelles méthodes
+            $qrBase64 = $this->generateTicketQRBase64($ticket, $size);
+            
+            if (!$qrBase64) {
+                Log::warning("Impossible de générer QR pour ticket {$ticket->ticket_code}");
+                return null;
+            }
+            
+            // Extraire les données de l'image
+            $imageData = base64_decode(str_replace('data:image/png;base64,', '', $qrBase64));
+            
+            // Sauvegarder
+            $directory = 'public/qrcodes';
+            $filename = "qr-{$ticket->ticket_code}.png";
+            $filepath = "{$directory}/{$filename}";
+            
+            Storage::put($filepath, $imageData);
+            
+            // Optionnel: mettre à jour le ticket avec le chemin
+            try {
+                $ticket->update(['qr_code_path' => $filepath]);
+            } catch (\Exception $e) {
+                Log::warning("Impossible de mettre à jour qr_code_path pour ticket {$ticket->ticket_code}: " . $e->getMessage());
+            }
+            
+            $url = Storage::url($filepath);
+            Log::info("QR sauvegardé avec succès pour {$ticket->ticket_code}: {$url}");
+            
+            return $url;
+            
+        } catch (\Exception $e) {
+            Log::error("Erreur sauvegarde QR pour {$ticket->ticket_code}: " . $e->getMessage());
+            return null;
+        }
     }
     
     /**
      * Vérifier si un QR code existe déjà en cache
      */
-    public function getTicketQRFromCache(Ticket $ticket): ?string
+    public function getTicketQRFromCache(Ticket $ticket)
     {
-        $filename = $this->getCacheFilename($ticket);
+        $filename = "public/qrcodes/qr-{$ticket->ticket_code}.png";
         
         if (Storage::exists($filename)) {
             return Storage::url($filename);
@@ -92,83 +278,58 @@ class QRCodeService
     }
     
     /**
-     * Générer et sauvegarder un QR code sur le disque
+     * Méthode principale : génère le QR avec cache
+     * Compatible avec votre code existant
      */
-    public function generateAndSaveTicketQR(Ticket $ticket, int $size = self::DEFAULT_SIZE): ?string
+    public function getOrGenerateTicketQR(Ticket $ticket, $format = 'base64')
     {
-        try {
-            $verificationUrl = $this->getVerificationUrl($ticket);
-            $qrUrl = $this->buildGoogleChartsUrl($verificationUrl, $size);
-            
-            $response = Http::timeout(self::DEFAULT_TIMEOUT)->get($qrUrl);
-            
-            if ($response->successful()) {
-                $imageData = $response->body();
-                $filepath = $this->getCacheFilename($ticket);
-                
-                // Créer le répertoire si nécessaire
-                Storage::makeDirectory(dirname($filepath));
-                
-                // Sauvegarder avec Laravel Storage
-                Storage::put($filepath, $imageData);
-                
-                Log::info('QR code généré et sauvegardé', [
-                    'ticket_code' => $ticket->ticket_code,
-                    'filepath' => $filepath
-                ]);
-                
-                return Storage::url($filepath);
-            }
-            
-            Log::warning('Échec génération QR pour sauvegarde', [
-                'ticket_code' => $ticket->ticket_code,
-                'status' => $response->status()
-            ]);
-            
-            return null;
-            
-        } catch (\Exception $e) {
-            Log::error('Erreur sauvegarde QR code', [
-                'ticket_code' => $ticket->ticket_code,
-                'error' => $e->getMessage()
-            ]);
-            return null;
+        // Pour PDF (base64), générer à la volée
+        if ($format === 'base64') {
+            return $this->generateTicketQRBase64($ticket);
         }
+        
+        // Pour URL, vérifier le cache d'abord
+        $cachedQR = $this->getTicketQRFromCache($ticket);
+        if ($cachedQR) {
+            return $cachedQR;
+        }
+        
+        return $this->generateAndSaveTicketQR($ticket);
     }
     
     /**
-     * Générer QR code avec style personnalisé
+     * Générer QR code personnalisé avec style
+     * Votre méthode existante améliorée
      */
-    public function generateStyledQR(Ticket $ticket, array $options = []): ?string
+    public function generateStyledQR(Ticket $ticket, $options = [])
     {
-        $verificationUrl = $this->getVerificationUrl($ticket);
+        $verificationUrl = url("/verify-ticket/{$ticket->ticket_code}");
         
-        $size = $options['size'] ?? self::DEFAULT_SIZE;
+        // Options par défaut
+        $size = $options['size'] ?? 200;
         $margin = $options['margin'] ?? 1;
-        $color = $options['color'] ?? '1a1a1a';
-        $backgroundColor = $options['bg_color'] ?? 'ffffff';
+        $color = $options['color'] ?? '1a1a1a'; // Noir par défaut
+        $backgroundColor = $options['bg_color'] ?? 'ffffff'; // Blanc par défaut
         
+        // URL Google Charts avec options
         $qrUrl = "https://chart.googleapis.com/chart?" . http_build_query([
             'chs' => "{$size}x{$size}",
             'cht' => 'qr',
             'chl' => $verificationUrl,
             'choe' => 'UTF-8',
-            'chld' => 'M|' . $margin,
-            'chco' => $color . '|' . $backgroundColor
+            'chld' => 'H|' . $margin, // Haute correction + marge
+            'chco' => $color . '|' . $backgroundColor // Couleur|Background
         ]);
         
         try {
-            $response = Http::timeout(self::DEFAULT_TIMEOUT)->get($qrUrl);
+            $response = Http::timeout(8)->get($qrUrl);
             
             if ($response->successful()) {
                 return 'data:image/png;base64,' . base64_encode($response->body());
             }
             
         } catch (\Exception $e) {
-            Log::warning('Erreur QR stylé', [
-                'ticket_code' => $ticket->ticket_code,
-                'error' => $e->getMessage()
-            ]);
+            Log::warning('Erreur QR stylé : ' . $e->getMessage());
         }
         
         // Fallback : QR simple
@@ -176,65 +337,149 @@ class QRCodeService
     }
     
     /**
-     * Générer QR code avec informations enrichies
+     * Générer QR code avec informations dans l'URL
+     * Votre méthode existante maintenue
      */
-    public function generateAdvancedTicketQR(Ticket $ticket, bool $includeEventInfo = false): ?string
+    public function generateAdvancedTicketQR(Ticket $ticket, $includeEventInfo = false)
     {
         if ($includeEventInfo) {
             // Inclure plus d'infos dans le QR code
             $qrData = json_encode([
                 'ticket_code' => $ticket->ticket_code,
                 'event' => $ticket->ticketType->event->title,
-                'date' => $ticket->ticketType->event->event_date->format('Y-m-d H:i'),
+                'date' => $ticket->ticketType->event->formatted_event_date,
                 'venue' => $ticket->ticketType->event->venue,
-                'verify_url' => $this->getVerificationUrl($ticket)
+                'verify_url' => url("/verify-ticket/{$ticket->ticket_code}")
             ]);
         } else {
             // URL simple
-            $qrData = $this->getVerificationUrl($ticket);
+            $qrData = url("/verify-ticket/{$ticket->ticket_code}");
         }
         
-        $qrUrl = $this->buildGoogleChartsUrl($qrData, self::DEFAULT_SIZE);
+        $qrUrl = "https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=" . urlencode($qrData);
         
         try {
-            $response = Http::timeout(self::DEFAULT_TIMEOUT)->get($qrUrl);
+            $response = Http::timeout(8)->get($qrUrl);
             
             if ($response->successful()) {
                 return 'data:image/png;base64,' . base64_encode($response->body());
             }
             
         } catch (\Exception $e) {
-            Log::warning('Erreur QR avancé', [
-                'ticket_code' => $ticket->ticket_code,
-                'error' => $e->getMessage()
-            ]);
+            Log::warning('Erreur QR avancé : ' . $e->getMessage());
         }
         
         return $this->generateTicketQRBase64($ticket);
     }
     
     /**
-     * Nettoyer les anciens QR codes (commande artisan)
+     * Méthode de diagnostic - Tester toutes les méthodes
+     * NOUVELLE - pour identifier les problèmes
      */
-    public function cleanupOldQRCodes(int $daysOld = 30): int
+    public function testAllMethods()
+    {
+        $testUrl = "https://example.com/test";
+        $results = [];
+        
+        Log::info("=== DIAGNOSTIC QR CODES ===");
+        
+        // Test Google Charts avec Http
+        try {
+            $qrUrl = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=" . urlencode($testUrl);
+            $response = Http::timeout(5)->get($qrUrl);
+            $results['google_charts_http'] = $response->successful() && strlen($response->body()) > 100 ? 'SUCCESS' : 'FAILED';
+            if ($response->successful()) {
+                $results['google_charts_http_size'] = strlen($response->body());
+            }
+        } catch (\Exception $e) {
+            $results['google_charts_http'] = 'ERROR: ' . $e->getMessage();
+        }
+        
+        // Test file_get_contents
+        try {
+            $qrUrl = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=" . urlencode($testUrl);
+            $context = stream_context_create(['http' => ['timeout' => 5]]);
+            $data = @file_get_contents($qrUrl, false, $context);
+            $results['file_get_contents'] = $data && strlen($data) > 100 ? 'SUCCESS' : 'FAILED';
+            if ($data) {
+                $results['file_get_contents_size'] = strlen($data);
+            }
+        } catch (\Exception $e) {
+            $results['file_get_contents'] = 'ERROR: ' . $e->getMessage();
+        }
+        
+        // Test SimpleSoftwareIO
+        if (class_exists('\SimpleSoftwareIO\QrCode\Facades\QrCode')) {
+            try {
+                $qr = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(150)->generate($testUrl);
+                $results['simplesoftwareio'] = $qr && strlen($qr) > 100 ? 'SUCCESS' : 'FAILED';
+                if ($qr) {
+                    $results['simplesoftwareio_size'] = strlen($qr);
+                }
+            } catch (\Exception $e) {
+                $results['simplesoftwareio'] = 'ERROR: ' . $e->getMessage();
+            }
+        } else {
+            $results['simplesoftwareio'] = 'NOT_INSTALLED';
+        }
+        
+        // Test QR Server
+        try {
+            $apiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urlencode($testUrl);
+            $context = stream_context_create(['http' => ['timeout' => 5]]);
+            $data = @file_get_contents($apiUrl, false, $context);
+            $results['qr_server'] = $data && strlen($data) > 100 ? 'SUCCESS' : 'FAILED';
+            if ($data) {
+                $results['qr_server_size'] = strlen($data);
+            }
+        } catch (\Exception $e) {
+            $results['qr_server'] = 'ERROR: ' . $e->getMessage();
+        }
+        
+        // Infos système
+        $results['system_info'] = [
+            'php_version' => PHP_VERSION,
+            'curl_enabled' => function_exists('curl_init'),
+            'gd_enabled' => extension_loaded('gd'),
+            'openssl_enabled' => extension_loaded('openssl'),
+            'allow_url_fopen' => ini_get('allow_url_fopen') ? 'YES' : 'NO',
+            'user_agent_blocked' => ini_get('user_agent') ?: 'default'
+        ];
+        
+        // Résumé
+        $workingMethods = array_filter([
+            $results['google_charts_http'] === 'SUCCESS' ? 'Google Charts (Http)' : null,
+            $results['file_get_contents'] === 'SUCCESS' ? 'file_get_contents' : null,
+            ($results['simplesoftwareio'] ?? null) === 'SUCCESS' ? 'SimpleSoftwareIO' : null,
+            $results['qr_server'] === 'SUCCESS' ? 'QR Server' : null,
+        ]);
+        
+        $results['summary'] = [
+            'working_methods_count' => count($workingMethods),
+            'working_methods' => $workingMethods,
+            'recommendation' => count($workingMethods) > 0 ? 'QR generation should work' : 'All methods failed - check network/firewall'
+        ];
+        
+        Log::info('Diagnostic QR codes terminé', $results);
+        return $results;
+    }
+    
+    /**
+     * Nettoyer les anciens QR codes (commande artisan)
+     * Votre méthode existante maintenue
+     */
+    public function cleanupOldQRCodes($daysOld = 30)
     {
         $deletedCount = 0;
-        $files = Storage::files(self::QR_CACHE_DIRECTORY);
+        $files = Storage::files('public/qrcodes');
         $cutoffTime = now()->subDays($daysOld);
         
         foreach ($files as $file) {
-            try {
-                $lastModified = Storage::lastModified($file);
-                
-                if ($lastModified < $cutoffTime->timestamp) {
-                    Storage::delete($file);
-                    $deletedCount++;
-                }
-            } catch (\Exception $e) {
-                Log::warning('Erreur suppression QR cache', [
-                    'file' => $file,
-                    'error' => $e->getMessage()
-                ]);
+            $lastModified = Storage::lastModified($file);
+            
+            if ($lastModified < $cutoffTime->timestamp) {
+                Storage::delete($file);
+                $deletedCount++;
             }
         }
         
@@ -244,278 +489,39 @@ class QRCodeService
     
     /**
      * Générer un QR code de test (pour debug)
+     * Votre méthode existante améliorée
      */
-    public function generateTestQR(string $text = 'Test QR Code'): ?string
+    public function generateTestQR($text = 'Test QR Code')
     {
-        $qrUrl = $this->buildGoogleChartsUrl($text, self::DEFAULT_SIZE);
+        $qrUrl = "https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=" . urlencode($text);
         
         try {
-            $response = Http::timeout(self::DEFAULT_TIMEOUT)->get($qrUrl);
+            $response = Http::timeout(5)->get($qrUrl);
             
             if ($response->successful()) {
                 return 'data:image/png;base64,' . base64_encode($response->body());
             }
             
         } catch (\Exception $e) {
-            Log::error('Erreur génération QR test', [
-                'text' => $text,
-                'error' => $e->getMessage()
-            ]);
+            Log::error('Test QR failed: ' . $e->getMessage());
         }
         
         return null;
     }
     
     /**
-     * Test de toutes les méthodes (pour diagnostic)
+     * Valider qu'un QR code fonctionne
+     * Votre méthode existante maintenue
      */
-    public function testAllMethods(): array
+    public function validateQRGeneration()
     {
-        $results = [
-            'success' => true,
-            'tests' => []
+        $testQR = $this->generateTestQR('https://billetterie-ci.com/test');
+        
+        return [
+            'working' => !is_null($testQR),
+            'api_accessible' => !is_null($testQR),
+            'message' => $testQR ? 'QR generation working' : 'QR generation failed',
+            'test_qr' => $testQR
         ];
-        
-        // Test QR simple
-        try {
-            $testQR = $this->generateTestQR('Test Simple');
-            $results['tests']['simple_qr'] = [
-                'success' => $testQR !== null,
-                'length' => $testQR ? strlen($testQR) : 0
-            ];
-        } catch (\Exception $e) {
-            $results['tests']['simple_qr'] = [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-            $results['success'] = false;
-        }
-        
-        // Test avec ticket si disponible
-        try {
-            $ticket = Ticket::first();
-            if ($ticket) {
-                $ticketQR = $this->generateTicketQRBase64($ticket);
-                $results['tests']['ticket_qr'] = [
-                    'success' => $ticketQR !== null,
-                    'ticket_code' => $ticket->ticket_code,
-                    'length' => $ticketQR ? strlen($ticketQR) : 0
-                ];
-            } else {
-                $results['tests']['ticket_qr'] = [
-                    'success' => false,
-                    'error' => 'Aucun ticket disponible pour le test'
-                ];
-            }
-        } catch (\Exception $e) {
-            $results['tests']['ticket_qr'] = [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-            $results['success'] = false;
-        }
-        
-        // Test stockage
-        try {
-            $testPath = self::QR_CACHE_DIRECTORY . '/test.txt';
-            Storage::put($testPath, 'test');
-            $exists = Storage::exists($testPath);
-            Storage::delete($testPath);
-            
-            $results['tests']['storage'] = [
-                'success' => $exists,
-                'directory' => self::QR_CACHE_DIRECTORY
-            ];
-        } catch (\Exception $e) {
-            $results['tests']['storage'] = [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-            $results['success'] = false;
-        }
-        
-        // Test de connectivité Google Charts
-        try {
-            $testUrl = "https://chart.googleapis.com/chart?chs=100x100&cht=qr&chl=test";
-            $response = Http::timeout(5)->get($testUrl);
-            
-            $results['tests']['google_charts_connectivity'] = [
-                'success' => $response->successful(),
-                'status' => $response->status(),
-                'response_size' => $response->successful() ? strlen($response->body()) : 0
-            ];
-            
-            if (!$response->successful()) {
-                $results['success'] = false;
-            }
-        } catch (\Exception $e) {
-            $results['tests']['google_charts_connectivity'] = [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-            $results['success'] = false;
-        }
-        
-        // Test de génération avec style
-        try {
-            $ticket = Ticket::first();
-            if ($ticket) {
-                $styledQR = $this->generateStyledQR($ticket, [
-                    'size' => 150,
-                    'color' => 'ff0000',
-                    'bg_color' => 'ffffff'
-                ]);
-                
-                $results['tests']['styled_qr'] = [
-                    'success' => $styledQR !== null,
-                    'length' => $styledQR ? strlen($styledQR) : 0
-                ];
-            } else {
-                $results['tests']['styled_qr'] = [
-                    'success' => false,
-                    'error' => 'Aucun ticket pour tester le QR stylé'
-                ];
-            }
-        } catch (\Exception $e) {
-            $results['tests']['styled_qr'] = [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-        
-        return $results;
-    }
-    
-    /**
-     * Régénérer tous les QR codes manquants pour les tickets vendus
-     */
-    public function regenerateMissingQRCodes(): array
-    {
-        $results = [
-            'total_tickets' => 0,
-            'generated' => 0,
-            'failed' => 0,
-            'errors' => []
-        ];
-        
-        $ticketsWithoutQR = Ticket::where('status', 'sold')
-            ->whereNull('qr_code')
-            ->get();
-            
-        $results['total_tickets'] = $ticketsWithoutQR->count();
-        
-        foreach ($ticketsWithoutQR as $ticket) {
-            try {
-                $qr = $this->generateTicketQRBase64($ticket);
-                if ($qr) {
-                    $ticket->update(['qr_code' => $qr]);
-                    $results['generated']++;
-                    
-                    Log::info('QR code régénéré', [
-                        'ticket_code' => $ticket->ticket_code
-                    ]);
-                } else {
-                    $results['failed']++;
-                    $results['errors'][] = "Échec génération pour {$ticket->ticket_code}";
-                }
-            } catch (\Exception $e) {
-                $results['failed']++;
-                $results['errors'][] = "Erreur pour {$ticket->ticket_code}: " . $e->getMessage();
-                
-                Log::error('Erreur régénération QR', [
-                    'ticket_code' => $ticket->ticket_code,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-        
-        return $results;
-    }
-    
-    /**
-     * Obtenir les statistiques des QR codes
-     */
-    public function getQRStats(): array
-    {
-        $stats = [
-            'total_tickets' => Ticket::count(),
-            'sold_tickets' => Ticket::where('status', 'sold')->count(),
-            'tickets_with_qr' => Ticket::whereNotNull('qr_code')->count(),
-            'tickets_without_qr' => Ticket::where('status', 'sold')->whereNull('qr_code')->count(),
-            'cached_files' => 0,
-            'cache_size_mb' => 0
-        ];
-        
-        try {
-            $files = Storage::files(self::QR_CACHE_DIRECTORY);
-            $stats['cached_files'] = count($files);
-            
-            $totalSize = 0;
-            foreach ($files as $file) {
-                try {
-                    $totalSize += Storage::size($file);
-                } catch (\Exception $e) {
-                    // Ignorer les erreurs de fichiers individuels
-                }
-            }
-            $stats['cache_size_mb'] = round($totalSize / 1024 / 1024, 2);
-        } catch (\Exception $e) {
-            Log::warning('Erreur calcul stats QR cache', [
-                'error' => $e->getMessage()
-            ]);
-        }
-        
-        return $stats;
-    }
-    
-    // ==================== MÉTHODES PRIVÉES ====================
-    
-    /**
-     * Construire l'URL de vérification pour un ticket
-     */
-    private function getVerificationUrl(Ticket $ticket): string
-    {
-        return url("/verify-ticket/{$ticket->ticket_code}");
-    }
-    
-    /**
-     * Construire l'URL Google Charts pour le QR code
-     */
-    private function buildGoogleChartsUrl(string $data, int $size): string
-    {
-        return "https://chart.googleapis.com/chart?" . http_build_query([
-            'chs' => "{$size}x{$size}",
-            'cht' => 'qr',
-            'chl' => $data,
-            'choe' => 'UTF-8'
-        ]);
-    }
-    
-    /**
-     * Obtenir le nom de fichier cache pour un ticket
-     */
-    private function getCacheFilename(Ticket $ticket): string
-    {
-        return self::QR_CACHE_DIRECTORY . "/qr-{$ticket->ticket_code}.png";
-    }
-    
-    /**
-     * Valider un ticket pour la génération de QR
-     */
-    private function validateTicketForQR(Ticket $ticket): bool
-    {
-        return !empty($ticket->ticket_code) && 
-               $ticket->ticketType && 
-               $ticket->ticketType->event;
-    }
-    
-    /**
-     * Nettoyer le répertoire de cache (créer s'il n'existe pas)
-     */
-    private function ensureCacheDirectoryExists(): void
-    {
-        if (!Storage::exists(self::QR_CACHE_DIRECTORY)) {
-            Storage::makeDirectory(self::QR_CACHE_DIRECTORY);
-        }
     }
 }

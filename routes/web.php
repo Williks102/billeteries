@@ -88,7 +88,7 @@ Route::middleware(['auth'])->group(function () {
     // ==================== CHECKOUT ====================
     
     Route::prefix('checkout')->name('checkout.')->group(function () {
-        Route::post('/checkout/direct', [CheckoutController::class, 'direct'])->name('checkout.direct');
+        Route::post('/direct', [CheckoutController::class, 'direct'])->name('direct');
         Route::get('/', [CheckoutController::class, 'show'])->name('show');
         Route::post('/process', [CheckoutController::class, 'process'])->name('process');
         // nouvelle route
@@ -292,60 +292,29 @@ Route::middleware(['auth'])->prefix('api')->name('api.')->group(function () {
 
 // ==================== ROUTES DE DEBUG (À RETIRER EN PRODUCTION) ====================
 
-Route::get('/test-qr-diagnostic', function() {
-    if (!auth()->check() || !auth()->user()->isAdmin()) {
-        abort(403);
-    }
+# Route de test (ajoutez temporairement dans routes/web.php)
+Route::get('/test-qr-methods', function() {
+    if (!auth()->check() || !auth()->user()->isAdmin()) abort(403);
     
-    $results = [];
+    $service = app(\App\Services\QRCodeService::class);
+    return $service->testAllMethods();
+});
+
+
+# Ajoutez cette route temporaire pour tester
+Route::get('/test-qr-diagnostic', [App\Http\Controllers\HomeController::class, 'testQR']);
+Route::get('/test-ticket-simple', function() {
+    $ticket = App\Models\Ticket::where('ticket_code', 'TKT-NYUEWEI5')->first();
     
-    // Test des extensions PHP
-    $results['extensions'] = [
-        'gd' => extension_loaded('gd'),
-        'imagick' => extension_loaded('imagick'),
-        'curl' => extension_loaded('curl'),
-        'openssl' => extension_loaded('openssl')
+    return [
+        'ticket_code' => $ticket->ticket_code,
+        'status' => $ticket->status,
+        'has_order_item' => $ticket->order_item_id ? 'Oui' : 'Non',
+        'order_item' => $ticket->orderItem,
+        'main_order' => $ticket->getMainOrder(),
+        'event_title' => $ticket->ticketType->event->title ?? 'Pas d\'événement'
     ];
-    
-    // Test SimpleSoftwareIO/QrCode
-    $results['packages'] = [
-        'simplesoftwareio/simple-qrcode' => class_exists('\SimpleSoftwareIO\QrCode\Facades\QrCode')
-    ];
-    
-    // Test du service QRCodeService
-    try {
-        $qrService = app(\App\Services\QRCodeService::class);
-        $results['service_test'] = method_exists($qrService, 'testAllMethods') 
-            ? $qrService->testAllMethods() 
-            : ['success' => true, 'message' => 'Service disponible'];
-    } catch (\Exception $e) {
-        $results['service_test'] = [
-            'success' => false,
-            'error' => $e->getMessage()
-        ];
-    }
-    
-    // Test avec un vrai ticket
-    try {
-        $ticket = \App\Models\Ticket::first();
-        if ($ticket) {
-            $qrService = app(\App\Services\QRCodeService::class);
-            $qrBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
-            $results['real_ticket_test'] = [
-                'ticket_code' => $ticket->ticket_code,
-                'qr_generated' => $qrBase64 !== null,
-                'qr_length' => $qrBase64 ? strlen($qrBase64) : 0,
-                'qr_preview' => $qrBase64 ? substr($qrBase64, 0, 100) . '...' : null
-            ];
-        }
-    } catch (\Exception $e) {
-        $results['real_ticket_test'] = [
-            'error' => $e->getMessage()
-        ];
-    }
-    
-    return response()->json($results, 200, [], JSON_PRETTY_PRINT);
-})->name('test.qr.diagnostic');
+});
 
 
 // ==================== PAGES LÉGALES ET INFORMATIONS ====================

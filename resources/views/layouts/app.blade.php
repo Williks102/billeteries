@@ -264,12 +264,12 @@
     <script>
         // Auto-hide alerts après 5 secondes
         setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
+            const alerts = document.querySelectorAll('.alert.auto-hide');
+    alerts.forEach(function(alert) {
+        const bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+    });
+}, 5000);
         
         // Fonction globale pour afficher des notifications
         window.showNotification = function(message, type = 'info') {

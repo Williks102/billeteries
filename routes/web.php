@@ -189,7 +189,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Gestion événements
         // Dans la section admin, assurez-vous d'avoir :
-       Route::get('/events', [AdminController::class, 'events'])->name('events');
+        Route::get('/events', [AdminController::class, 'events'])->name('events');
         Route::get('/events/{event}', [AdminController::class, 'showEvent'])->name('events.show');
         Route::get('/events/{event}/edit', [AdminController::class, 'editEvent'])->name('events.edit');
         Route::patch('/events/{event}', [AdminController::class, 'updateEvent'])->name('events.update');
@@ -199,6 +199,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/events/bulk-delete', [AdminController::class, 'bulkDeleteEvents'])->name('events.bulkDelete');
         
         // Gestion tickets
+        
         Route::get('/tickets', [AdminController::class, 'tickets'])->name('tickets');
         Route::get('/tickets/{ticket}', [AdminController::class, 'showTicket'])->name('tickets.show');
         Route::patch('/tickets/{ticket}/mark-used', [AdminController::class, 'markTicketUsed'])->name('tickets.markUsed');

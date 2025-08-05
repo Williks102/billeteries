@@ -245,7 +245,7 @@
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.events.index', $event) }}" 
+                                        <a href="{{ route('admin.events', $event) }}" 
                                            class="btn btn-sm btn-outline-primary" 
                                            title="Voir détails">
                                             <i class="fas fa-eye"></i>

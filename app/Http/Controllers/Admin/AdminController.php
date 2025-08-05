@@ -2350,7 +2350,7 @@ public function showEvent(Event $event)
             'trace' => $e->getTraceAsString()
         ]);
 
-        return redirect()->route('admin.events.index')
+        return redirect()->route('admin.events')
             ->with('error', 'Erreur lors du chargement de l\'événement. Détails: ' . $e->getMessage());
     }
 }
@@ -2378,7 +2378,7 @@ public function editEvent(Event $event)
             'event_id' => $event->id ?? 'inconnu'
         ]);
 
-        return redirect()->route('admin.events.index')
+        return redirect()->route('admin.events')
             ->with('error', 'Impossible de charger l\'édition: ' . $e->getMessage());
     }
 }

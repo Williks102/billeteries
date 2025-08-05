@@ -178,10 +178,13 @@ Route::middleware(['auth'])->group(function () {
        
         
         // Gestion utilisateurs
+        Route::get('/users', [AdminController::class, 'storeUser'])->name('users.store');
+        Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
+        Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
+        Route::patch('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+        Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
         Route::get('/users', [AdminController::class, 'users'])->name('users');
         Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
-        Route::patch('/users/{user}/role', [AdminController::class, 'updateRole'])->name('users.role');
-        Route::patch('/users/{user}/status', [AdminController::class, 'toggleStatus'])->name('users.status');
         
         // Gestion événements
         Route::get('/events', [AdminController::class, 'events'])->name('events');

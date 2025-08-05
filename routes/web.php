@@ -189,9 +189,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Gestion événements
         // Dans la section admin, assurez-vous d'avoir :
-        Route::get('/events', [AdminController::class, 'events'])->name('events.index');
+        Route::get('/events', [AdminController::class, 'events'])->name('index');
         Route::get('/events', [AdminController::class, 'events'])->name('events');
-        
+        Route::get('/events/{event}', [AdminController::class, 'showEvent'])->name('events.show');
         Route::get('/events/{event}/edit', [AdminController::class, 'editEvent'])->name('events.edit');
         Route::patch('/events/{event}', [AdminController::class, 'updateEvent'])->name('events.update');
         Route::delete('/events/{event}', [AdminController::class, 'destroyEvent'])->name('events.destroy');

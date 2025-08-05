@@ -55,44 +55,20 @@
         .main-content {
             padding: 2rem;
         }
-
-        .mobile-header {
-    background: linear-gradient(135deg, #8e24aa, #ab47bc);
-}
-
-.promoteur-sidebar {
-    transition: transform 0.3s ease;
-}
-        @media (max-width: 768px) {
-    .promoteur-navbar { display: none; }
-    .promoteur-sidebar.mobile-open { transform: translateX(0); }
-}
     </style>
     
     @stack('styles')
 </head>
 <body>
     <!-- Navbar -->
-
-    <!-- Header mobile différent -->
-<header class="mobile-header">
-    <button class="mobile-hamburger-btn" onclick="toggleSidebarPromoteur()">
-        <i class="fas fa-grip-lines-vertical"></i> <!-- Icône différente -->
-    </button>
-    <h5>
-        <i class="fas fa-bullhorn text-warning me-2"></i>
-        Promoteur - ClicBillet CI
-    </h5>
-</header>
-
     <nav class="navbar navbar-expand-lg navbar-light bg-white">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ route('home') }}">
                 <i class="fas fa-ticket-alt me-2"></i>
                 {{ config('app.name', 'Billetterie') }}
             </a>
-
-            <div class="navbar-nav ms-auto promoteur-sidebar" id="promoteurSidebar">
+            
+            <div class="navbar-nav ms-auto">
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-user-circle me-1"></i>
@@ -206,54 +182,6 @@
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-function toggleSidebar() {
-    const sidebar = document.getElementById('promoteurSidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    
-    sidebar.classList.toggle('mobile-open');
-    overlay.classList.toggle('active');
-    
-    if (sidebar.classList.contains('mobile-open')) {
-        document.body.style.overflow = 'hidden';
-    } else {
-        document.body.style.overflow = 'auto';
-    }
-}
-
-function closeSidebar() {
-    const sidebar = document.getElementById('promoteurSidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    
-    sidebar.classList.remove('mobile-open');
-    overlay.classList.remove('active');
-    document.body.style.overflow = 'auto';
-}
-
-// Fermer avec la touche Escape
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeSidebar();
-    }
-});
-
-// Fermer automatiquement lors du redimensionnement vers desktop
-window.addEventListener('resize', function() {
-    if (window.innerWidth > 768) {
-        closeSidebar();
-    }
-});
-
-// Gérer les clics sur les liens de la sidebar mobile
-document.querySelectorAll('.promoteur-sidebar .nav-link').forEach(link => {
-    link.addEventListener('click', function() {
-        if (window.innerWidth <= 768) {
-            setTimeout(closeSidebar, 100);
-        }
-    });
-});
-</script>
     
     @stack('scripts')
 </body>

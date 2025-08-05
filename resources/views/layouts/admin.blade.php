@@ -80,49 +80,6 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.15);
             border-radius: 10px;
         }
-
-        /* === RESPONSIVE MOBILE === */
-@media (max-width: 768px) {
-    body {
-        padding-top: 60px; /* Header mobile plus petit */
-    }
-    
-    /* Header mobile visible */
-    .mobile-header {
-        display: flex;
-    }
-    
-    /* Header desktop caché */
-    .admin-navbar {
-        display: none;
-    }
-    
-    /* Sidebar cachée par défaut */
-    .admin-sidebar {
-        position: fixed !important;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        width: 280px;
-        max-height: 100vh;
-        transform: translateX(-100%);
-        z-index: 1056;
-        border-radius: 0;
-        transition: transform 0.3s ease;
-    }
-    
-    /* Sidebar ouverte */
-    .admin-sidebar.mobile-open {
-        transform: translateX(0);
-    }
-    
-    /* Contenu principal ajusté */
-    .admin-content {
-        margin-left: 0;
-        padding: 15px;
-        min-height: calc(100vh - 60px);
-    }
-}
         
         /* === SIDEBAR === */
         .admin-sidebar {
@@ -357,7 +314,6 @@
                 top: auto;
                 max-height: none;
                 margin-bottom: 20px;
-                transition: transform 0.3s ease;
             }
             
             .admin-content {
@@ -387,78 +343,13 @@
         .admin-sidebar::-webkit-scrollbar-thumb:hover {
             background: var(--primary-dark);
         }
-
-        /* === HEADER MOBILE === */
-.mobile-header {
-    display: none; /* Caché sur desktop */
-    display: flex;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background: linear-gradient(135deg, #1a237e, #3949ab);
-    color: white;
-    z-index: 1060;
-    align-items: center;
-    padding: 0 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-}
-
-.mobile-hamburger-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 22px;
-    padding: 10px;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    margin-right: 15px;
-}
-
-.mobile-hamburger-btn:hover {
-    background: rgba(255,255,255,0.1);
-    transform: scale(1.1);
-}
-
-/* === OVERLAY MOBILE === */
-.sidebar-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 1055;
-    backdrop-filter: blur(2px);
-}
-
-.sidebar-overlay.active {
-    display: block;
-}
     </style>
     
     @stack('styles')
 </head>
 <body>
     <!-- Header Admin -->
-    <!-- Header Mobile (visible uniquement sur mobile) -->
-<header class="mobile-header">
-    <button class="mobile-hamburger-btn" onclick="toggleSidebar()">
-        <i class="fas fa-grip-lines"></i>
-    </button>
-    <h5>
-        <i class="fas fa-shield-alt text-warning me-2"></i>
-        Admin - ClicBillet CI
-    </h5>
-</header>
-
-<!-- Overlay Mobile -->
-<div class="sidebar-overlay" onclick="closeSidebar()"></div>
-
-    <nav class="navbar navbar-expand-lg admin-navbar" id="adminNavbar">
+    <nav class="navbar navbar-expand-lg admin-navbar">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ route('admin.dashboard') }}">
                 <i class="fas fa-shield-alt text-orange me-2"></i>
@@ -509,7 +400,7 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar Admin -->
-            <div class="col-md-3 col-lg-2 admin-sidebar id="adminSidebar">
+            <div class="col-md-3 col-lg-2">
                 @include('partials.admin-sidebar')
             </div>
 
@@ -564,54 +455,6 @@
     
     <!-- Scripts personnalisés -->
     <script>
-function toggleSidebar() {
-    const sidebar = document.getElementById('adminSidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    
-    sidebar.classList.toggle('mobile-open');
-    overlay.classList.toggle('active');
-    
-    if (sidebar.classList.contains('mobile-open')) {
-        document.body.style.overflow = 'hidden';
-    } else {
-        document.body.style.overflow = 'auto';
-    }
-}
-
-function closeSidebar() {
-    const sidebar = document.getElementById('adminSidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    
-    sidebar.classList.remove('mobile-open');
-    overlay.classList.remove('active');
-    document.body.style.overflow = 'auto';
-}
-
-// Fermer avec la touche Escape
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeSidebar();
-    }
-});
-
-// Fermer automatiquement lors du redimensionnement vers desktop
-window.addEventListener('resize', function() {
-    if (window.innerWidth > 768) {
-        closeSidebar();
-    }
-});
-
-// Gérer les clics sur les liens de la sidebar mobile
-document.querySelectorAll('.admin-sidebar .nav-link').forEach(link => {
-    link.addEventListener('click', function() {
-        if (window.innerWidth <= 768) {
-            setTimeout(closeSidebar, 100);
-        }
-    });
-});
-</script>
-
-    <script>
         // Auto-hide des alertes après 5 secondes
         document.addEventListener('DOMContentLoaded', function() {
             const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
@@ -645,7 +488,6 @@ document.querySelectorAll('.admin-sidebar .nav-link').forEach(link => {
             return fetch(url, options);
         }
     </script>
-
     
     @stack('scripts')
 </body>

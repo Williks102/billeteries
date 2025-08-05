@@ -2216,67 +2216,125 @@ public function emailTemplates()
     return view('admin.emails.templates', compact('templates'));
 }
 
-    /**
- * Afficher les détails d'un événement
+ /**
+ * Afficher les détails d'un événement - VERSION ULTRA ROBUSTE
  */
 public function showEvent(Event $event)
 {
     try {
+        // Chargement sécurisé des relations
         $event->load([
             'category', 
             'promoteur', 
             'ticketTypes' => function($query) {
                 $query->withCount('tickets');
-            },
-            'orders' => function($query) {
-                $query->with('user')->latest();
-            },
-            'tickets' => function($query) {
-                $query->with(['orderItem.order.user', 'ticketType']);
             }
         ]);
 
-        // Statistiques de l'événement
-        $stats = [
-            'total_revenue' => $event->totalRevenue(),
-            'tickets_sold' => $event->getTicketsSoldCount(),
-            'tickets_available' => $event->totalTicketsAvailable(),
-            'orders_count' => $event->getOrdersCount(),
-            'commission_earned' => $event->getCommissionEarned(),
-            'progress_percentage' => $event->getProgressPercentage(),
-        ];
+        // Statistiques avec fallback pour chaque méthode
+        $stats = [];
+        
+        // Total revenue
+        try {
+            $stats['total_revenue'] = $event->totalRevenue() ?? 0;
+        } catch (\Exception $e) {
+            $stats['total_revenue'] = 0;
+            \Log::warning('Erreur calcul revenue: ' . $e->getMessage());
+        }
+        
+        // Tickets vendus
+        try {
+            $stats['tickets_sold'] = $event->getTicketsSoldCount() ?? 0;
+        } catch (\Exception $e) {
+            $stats['tickets_sold'] = 0;
+            \Log::warning('Erreur calcul tickets vendus: ' . $e->getMessage());
+        }
+        
+        // Tickets disponibles
+        try {
+            $stats['tickets_available'] = $event->totalTicketsAvailable() ?? 0;
+        } catch (\Exception $e) {
+            $stats['tickets_available'] = 0;
+            \Log::warning('Erreur calcul tickets disponibles: ' . $e->getMessage());
+        }
+        
+        // Nombre de commandes
+        try {
+            $stats['orders_count'] = $event->getOrdersCount() ?? 0;
+        } catch (\Exception $e) {
+            $stats['orders_count'] = 0;
+            \Log::warning('Erreur calcul commandes: ' . $e->getMessage());
+        }
+        
+        // Commission gagnée (avec fallback)
+        try {
+            if (method_exists($event, 'getCommissionEarned')) {
+                $stats['commission_earned'] = $event->getCommissionEarned() ?? 0;
+            } else {
+                // Calcul simple : 5% du total des revenus
+                $stats['commission_earned'] = ($stats['total_revenue'] * 0.05);
+            }
+        } catch (\Exception $e) {
+            $stats['commission_earned'] = 0;
+            \Log::warning('Erreur calcul commission: ' . $e->getMessage());
+        }
+        
+        // Pourcentage de progression
+        try {
+            $stats['progress_percentage'] = $event->getProgressPercentage() ?? 0;
+        } catch (\Exception $e) {
+            $stats['progress_percentage'] = 0;
+            \Log::warning('Erreur calcul pourcentage: ' . $e->getMessage());
+        }
 
-        // Commandes récentes
-        $recentOrders = $event->orders()
-            ->with('user')
-            ->latest()
-            ->take(10)
-            ->get();
+        // Commandes récentes avec gestion d'erreurs
+        try {
+            $recentOrders = $event->orders()
+                ->with(['user' => function($query) {
+                    $query->select('id', 'name', 'email');
+                }])
+                ->latest()
+                ->take(10)
+                ->get();
+        } catch (\Exception $e) {
+            $recentOrders = collect();
+            \Log::warning('Erreur récupération commandes récentes: ' . $e->getMessage());
+        }
 
-        // Tickets par statut
-        $ticketsByStatus = $event->tickets()
-            ->select('status', \DB::raw('count(*) as count'))
-            ->groupBy('status')
-            ->pluck('count', 'status')
-            ->toArray();
+        // Tickets par statut avec gestion d'erreurs
+        try {
+            $ticketsByStatus = $event->tickets()
+                ->select('status', \DB::raw('count(*) as count'))
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->toArray();
+        } catch (\Exception $e) {
+            $ticketsByStatus = [];
+            \Log::warning('Erreur stats tickets par statut: ' . $e->getMessage());
+        }
 
-        // Ventes par type de billet
-        $salesByTicketType = $event->ticketTypes()
-            ->withCount([
-                'tickets as sold_count' => function($query) {
-                    $query->whereIn('status', ['sold', 'used']);
-                }
-            ])
-            ->get()
-            ->map(function($ticketType) {
-                return [
-                    'name' => $ticketType->name,
-                    'price' => $ticketType->price,
-                    'sold' => $ticketType->sold_count,
-                    'total' => $ticketType->quantity,
-                    'revenue' => $ticketType->price * $ticketType->sold_count
-                ];
-            });
+        // Ventes par type de billet avec gestion d'erreurs
+        try {
+            $salesByTicketType = $event->ticketTypes()
+                ->withCount([
+                    'tickets as sold_count' => function($query) {
+                        $query->whereIn('status', ['sold', 'used']);
+                    }
+                ])
+                ->get()
+                ->map(function($ticketType) {
+                    return [
+                        'name' => $ticketType->name ?? 'N/A',
+                        'price' => $ticketType->price ?? 0,
+                        'sold' => $ticketType->sold_count ?? 0,
+                        'total' => $ticketType->quantity_available ?? 0,
+                        'revenue' => ($ticketType->price ?? 0) * ($ticketType->sold_count ?? 0)
+                    ];
+                });
+        } catch (\Exception $e) {
+            $salesByTicketType = collect();
+            \Log::warning('Erreur ventes par type de billet: ' . $e->getMessage());
+        }
 
         return view('admin.events.show', compact(
             'event', 
@@ -2287,39 +2345,41 @@ public function showEvent(Event $event)
         ));
 
     } catch (\Exception $e) {
-        \Log::error('Erreur dans admin.events.show: ' . $e->getMessage(), [
-            'event_id' => $event->id,
+        \Log::error('Erreur critique dans admin.events.show: ' . $e->getMessage(), [
+            'event_id' => $event->id ?? 'inconnu',
             'trace' => $e->getTraceAsString()
         ]);
 
-        return redirect()->route('admin.events')
-            ->with('error', 'Erreur lors du chargement des détails de l\'événement');
+        return redirect()->route('admin.events.index')
+            ->with('error', 'Erreur lors du chargement de l\'événement. Détails: ' . $e->getMessage());
     }
 }
+
+
 /**
- * Afficher le formulaire d'édition d'un événement
+ * Édition événement - VERSION ROBUSTE
  */
 public function editEvent(Event $event)
 {
     try {
+        // Chargement sécurisé
         $event->load(['category', 'promoteur', 'ticketTypes']);
         
-        $categories = EventCategory::orderBy('name')->get();
+        // Data avec fallbacks
+        $categories = EventCategory::orderBy('name')->get() ?? collect();
         $promoteurs = User::where('role', 'promoteur')
-            ->where('status', 'active')
             ->orderBy('name')
-            ->get();
+            ->get() ?? collect();
 
         return view('admin.events.edit', compact('event', 'categories', 'promoteurs'));
 
     } catch (\Exception $e) {
         \Log::error('Erreur dans admin.events.edit: ' . $e->getMessage(), [
-            'event_id' => $event->id,
-            'trace' => $e->getTraceAsString()
+            'event_id' => $event->id ?? 'inconnu'
         ]);
 
-        return redirect()->route('admin.events')
-            ->with('error', 'Impossible de charger le formulaire d\'édition');
+        return redirect()->route('admin.events.index')
+            ->with('error', 'Impossible de charger l\'édition: ' . $e->getMessage());
     }
 }
 

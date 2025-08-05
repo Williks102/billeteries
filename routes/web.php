@@ -188,8 +188,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
 
         // Gestion événements
+        // Dans la section admin, assurez-vous d'avoir :
+        Route::get('/events', [AdminController::class, 'events'])->name('events.index');
         Route::get('/events', [AdminController::class, 'events'])->name('events');
-        Route::get('/events/{event}', [AdminController::class, 'showEvent'])->name('events.show');
+        
         Route::get('/events/{event}/edit', [AdminController::class, 'editEvent'])->name('events.edit');
         Route::patch('/events/{event}', [AdminController::class, 'updateEvent'])->name('events.update');
         Route::delete('/events/{event}', [AdminController::class, 'destroyEvent'])->name('events.destroy');
@@ -323,6 +325,58 @@ Route::get('/test-ticket-simple', function() {
 });
 
 
+// À ajouter temporairement dans routes/web.php pour débugger
+
+Route::get('/debug-events', function() {
+    if (!auth()->check() || !auth()->user()->isAdmin()) {
+        abort(403);
+    }
+    
+    try {
+        // Test de base
+        $event = \App\Models\Event::first();
+        
+        if (!$event) {
+            return 'Aucun événement trouvé dans la base de données';
+        }
+        
+        $debug = [
+            'event_id' => $event->id,
+            'event_title' => $event->title,
+            'event_structure' => $event->toArray(),
+            
+            // Test des relations
+            'has_category' => $event->category ? 'OUI' : 'NON',
+            'has_promoteur' => $event->promoteur ? 'OUI' : 'NON',
+            'has_ticket_types' => $event->ticketTypes->count(),
+            'has_tickets' => $event->tickets->count(),
+            'has_orders' => $event->orders->count(),
+            
+            // Test des méthodes
+            'total_revenue' => $event->totalRevenue(),
+            'tickets_sold_count' => method_exists($event, 'getTicketsSoldCount') ? $event->getTicketsSoldCount() : 'MÉTHODE MANQUANTE',
+            'orders_count' => method_exists($event, 'getOrdersCount') ? $event->getOrdersCount() : 'MÉTHODE MANQUANTE',
+            'commission_earned' => method_exists($event, 'getCommissionEarned') ? $event->getCommissionEarned() : 'MÉTHODE MANQUANTE',
+            'progress_percentage' => method_exists($event, 'getProgressPercentage') ? $event->getProgressPercentage() : 'MÉTHODE MANQUANTE',
+            
+            // Structure tables
+            'events_columns' => \Schema::getColumnListing('events'),
+            'ticket_types_columns' => \Schema::getColumnListing('ticket_types'),
+            'tickets_columns' => \Schema::getColumnListing('tickets'),
+            'orders_columns' => \Schema::getColumnListing('orders'),
+        ];
+        
+        return response()->json($debug, 200, [], JSON_PRETTY_PRINT);
+        
+    } catch (\Exception $e) {
+        return [
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+            'trace' => $e->getTraceAsString()
+        ];
+    }
+});
 // ==================== PAGES LÉGALES ET INFORMATIONS ====================
 Route::get('/pages/{page}', [\App\Http\Controllers\Admin\PageController::class, 'show'])->name('pages.show');
 

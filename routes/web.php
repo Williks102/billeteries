@@ -171,6 +171,7 @@ Route::middleware(['auth'])->group(function () {
         // Dashboard principal
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         // Gestion des pages (CMS) - À ajouter dans la section admin
+
         Route::resource('pages', \App\Http\Controllers\Admin\PageController::class);
         Route::post('/pages/{page}/duplicate', [\App\Http\Controllers\Admin\PageController::class, 'duplicate'])->name('pages.duplicate');
         Route::patch('/pages/{page}/toggle-status', [\App\Http\Controllers\Admin\PageController::class, 'toggleStatus'])->name('pages.toggleStatus');
@@ -185,7 +186,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
         Route::get('/users', [AdminController::class, 'users'])->name('users');
         Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
-        
+
         // Gestion événements
         Route::get('/events', [AdminController::class, 'events'])->name('events');
         Route::get('/events/{event}', [AdminController::class, 'showEvent'])->name('events.show');
@@ -220,6 +221,8 @@ Route::middleware(['auth'])->group(function () {
         // Commissions et paiements
         Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
         Route::post('/commissions/{commission}/pay', [AdminController::class, 'payCommission'])->name('commissions.pay');
+        Route::post('/commissions/{commission}/hold', [AdminController::class, 'holdCommission'])->name('commissions.hold');
+        Route::post('/commissions/{commission}/release', [AdminController::class, 'releaseCommission'])->name('commissions.release');
         
         // Exports et rapports
         Route::get('/commissions/export', [AdminController::class, 'exportCommissions'])->name('export.commissions');
@@ -321,6 +324,7 @@ Route::get('/test-ticket-simple', function() {
 
 
 // ==================== PAGES LÉGALES ET INFORMATIONS ====================
+Route::get('/pages/{page}', [\App\Http\Controllers\Admin\PageController::class, 'show'])->name('pages.show');
 
 Route::get('/about', [App\Http\Controllers\PageController::class, 'about'])->name('pages.about');
 Route::get('/how-it-works', [App\Http\Controllers\PageController::class, 'howItWorks'])->name('pages.how-it-works');

@@ -2215,4 +2215,357 @@ public function emailTemplates()
 
     return view('admin.emails.templates', compact('templates'));
 }
+
+    /**
+ * Afficher les détails d'un événement
+ */
+public function showEvent(Event $event)
+{
+    try {
+        $event->load([
+            'category', 
+            'promoteur', 
+            'ticketTypes' => function($query) {
+                $query->withCount('tickets');
+            },
+            'orders' => function($query) {
+                $query->with('user')->latest();
+            },
+            'tickets' => function($query) {
+                $query->with(['orderItem.order.user', 'ticketType']);
+            }
+        ]);
+
+        // Statistiques de l'événement
+        $stats = [
+            'total_revenue' => $event->totalRevenue(),
+            'tickets_sold' => $event->getTicketsSoldCount(),
+            'tickets_available' => $event->totalTicketsAvailable(),
+            'orders_count' => $event->getOrdersCount(),
+            'commission_earned' => $event->getCommissionEarned(),
+            'progress_percentage' => $event->getProgressPercentage(),
+        ];
+
+        // Commandes récentes
+        $recentOrders = $event->orders()
+            ->with('user')
+            ->latest()
+            ->take(10)
+            ->get();
+
+        // Tickets par statut
+        $ticketsByStatus = $event->tickets()
+            ->select('status', \DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        // Ventes par type de billet
+        $salesByTicketType = $event->ticketTypes()
+            ->withCount([
+                'tickets as sold_count' => function($query) {
+                    $query->whereIn('status', ['sold', 'used']);
+                }
+            ])
+            ->get()
+            ->map(function($ticketType) {
+                return [
+                    'name' => $ticketType->name,
+                    'price' => $ticketType->price,
+                    'sold' => $ticketType->sold_count,
+                    'total' => $ticketType->quantity,
+                    'revenue' => $ticketType->price * $ticketType->sold_count
+                ];
+            });
+
+        return view('admin.events.show', compact(
+            'event', 
+            'stats', 
+            'recentOrders', 
+            'ticketsByStatus', 
+            'salesByTicketType'
+        ));
+
+    } catch (\Exception $e) {
+        \Log::error('Erreur dans admin.events.show: ' . $e->getMessage(), [
+            'event_id' => $event->id,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return redirect()->route('admin.events')
+            ->with('error', 'Erreur lors du chargement des détails de l\'événement');
+    }
+}
+/**
+ * Afficher le formulaire d'édition d'un événement
+ */
+public function editEvent(Event $event)
+{
+    try {
+        $event->load(['category', 'promoteur', 'ticketTypes']);
+        
+        $categories = EventCategory::orderBy('name')->get();
+        $promoteurs = User::where('role', 'promoteur')
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.events.edit', compact('event', 'categories', 'promoteurs'));
+
+    } catch (\Exception $e) {
+        \Log::error('Erreur dans admin.events.edit: ' . $e->getMessage(), [
+            'event_id' => $event->id,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return redirect()->route('admin.events')
+            ->with('error', 'Impossible de charger le formulaire d\'édition');
+    }
+}
+
+/**
+ * Afficher le profil administrateur
+ */
+public function profile()
+{
+    try {
+        $user = auth()->user();
+        
+        // Statistiques d'activité de l'admin
+        $activityStats = [
+            'users_managed' => User::count(),
+            'events_approved' => Event::where('status', 'published')->count(),
+            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
+            'commissions_paid' => Commission::where('status', 'paid')->sum('amount'),
+            'recent_logins' => \DB::table('sessions')
+                ->where('user_id', $user->id)
+                ->count(),
+        ];
+
+        // Activités récentes (logs d'administration)
+        $recentActivities = collect([
+            // Événements récemment approuvés
+            Event::where('status', 'published')
+                ->latest('updated_at')
+                ->take(5)
+                ->get()
+                ->map(function($event) {
+                    return [
+                        'type' => 'event_approved',
+                        'message' => "Événement '{$event->title}' approuvé",
+                        'date' => $event->updated_at,
+                        'icon' => 'fas fa-check-circle',
+                        'color' => 'success'
+                    ];
+                }),
+            
+            // Utilisateurs récemment créés
+            User::latest('created_at')
+                ->take(3)
+                ->get()
+                ->map(function($user) {
+                    return [
+                        'type' => 'user_created',
+                        'message' => "Nouvel utilisateur: {$user->name} ({$user->role})",
+                        'date' => $user->created_at,
+                        'icon' => 'fas fa-user-plus',
+                        'color' => 'info'
+                    ];
+                }),
+        ])->flatten()->sortByDesc('date')->take(10);
+
+        // Paramètres système
+        $systemInfo = [
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'database_size' => $this->getDatabaseSize(),
+            'storage_used' => $this->getStorageUsed(),
+            'cache_status' => $this->getCacheStatus(),
+        ];
+
+        return view('admin.profile', compact(
+            'user', 
+            'activityStats', 
+            'recentActivities', 
+            'systemInfo'
+        ));
+
+    } catch (\Exception $e) {
+        \Log::error('Erreur dans admin.profile: ' . $e->getMessage(), [
+            'user_id' => auth()->id(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return redirect()->route('admin.dashboard')
+            ->with('error', 'Erreur lors du chargement du profil');
+    }
+}
+
+/**
+ * Mettre à jour le profil administrateur
+ */
+public function updateProfile(Request $request)
+{
+    $user = auth()->user();
+
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+        'current_password' => 'nullable|string',
+        'password' => 'nullable|string|min:8|confirmed',
+        'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        'phone' => 'nullable|string|max:20',
+        'notifications_enabled' => 'boolean',
+        'email_notifications' => 'boolean',
+    ]);
+
+    try {
+        // Vérifier le mot de passe actuel si un nouveau mot de passe est fourni
+        if ($request->password && !Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'Le mot de passe actuel est incorrect']);
+        }
+
+        $updateData = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+        ];
+
+        // Gérer l'avatar
+        if ($request->hasFile('avatar')) {
+            // Supprimer l'ancien avatar
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+            
+            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+            $updateData['avatar'] = $avatarPath;
+        }
+
+        // Mettre à jour le mot de passe si fourni
+        if ($request->password) {
+            $updateData['password'] = Hash::make($request->password);
+        }
+
+        $user->update($updateData);
+
+        // Mettre à jour les préférences de notification (si vous avez une table séparée)
+        $user->preferences()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'notifications_enabled' => $request->boolean('notifications_enabled', true),
+                'email_notifications' => $request->boolean('email_notifications', true),
+            ]
+        );
+
+        return redirect()->route('admin.profile')
+            ->with('success', 'Profil mis à jour avec succès !');
+
+    } catch (\Exception $e) {
+        \Log::error('Erreur lors de la mise à jour du profil admin: ' . $e->getMessage(), [
+            'user_id' => $user->id,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return back()->with('error', 'Erreur lors de la mise à jour du profil')
+            ->withInput();
+    }
+}
+/**
+ * Méthodes utilitaires pour le profil admin
+ */
+private function getDatabaseSize()
+{
+    try {
+        $size = \DB::select("
+            SELECT 
+                ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb
+            FROM information_schema.tables 
+            WHERE table_schema = DATABASE()
+        ");
+        
+        return $size[0]->size_mb ?? 0;
+    } catch (\Exception $e) {
+        return 'N/A';
+    }
+}
+
+private function getStorageUsed()
+{
+    try {
+        $storagePath = storage_path('app/public');
+        if (!is_dir($storagePath)) {
+            return '0 MB';
+        }
+        
+        $size = 0;
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($storagePath)) as $file) {
+            $size += $file->getSize();
+        }
+        
+        return round($size / 1024 / 1024, 2) . ' MB';
+    } catch (\Exception $e) {
+        return 'N/A';
+    }
+}
+
+private function getCacheStatus()
+{
+    try {
+        return Cache::getStore() instanceof \Illuminate\Cache\FileStore ? 'File' : 'Database';
+    } catch (\Exception $e) {
+        return 'N/A';
+    }
+}
+/**
+ * Télécharger le PDF d'une commande
+ */
+public function downloadOrderPDF(Order $order)
+{
+    try {
+        // Charger les relations nécessaires
+        $order->load(['user', 'event', 'orderItems.ticketType', 'tickets']);
+        
+        // Vérifier que la commande existe
+        if (!$order) {
+            abort(404, 'Commande non trouvée');
+        }
+        
+        // Générer le PDF avec DomPDF
+        $pdf = \PDF::loadView('admin.pdf.order', compact('order'));
+        
+        // Définir les options du PDF
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions([
+            'defaultFont' => 'DejaVu Sans',
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true
+        ]);
+        
+        // Nom du fichier
+        $filename = 'commande-' . ($order->order_number ?? $order->id) . '.pdf';
+        
+        // Log de l'action
+        \Log::info('PDF de commande téléchargé', [
+            'admin_id' => auth()->id(),
+            'admin_name' => auth()->user()->name,
+            'order_id' => $order->id,
+            'order_number' => $order->order_number ?? $order->id,
+            'timestamp' => now()
+        ]);
+        
+        // Retourner le PDF en téléchargement
+        return $pdf->download($filename);
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur lors de la génération du PDF de commande: ' . $e->getMessage(), [
+            'admin_id' => auth()->id(),
+            'order_id' => $order->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return redirect()->back()->with('error', 'Erreur lors de la génération du PDF: ' . $e->getMessage());
+    }
+}
 }

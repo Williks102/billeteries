@@ -1,5 +1,4 @@
-{{-- ======================================================= --}}
-{{-- resources/views/admin/commissions.blade.php --}}
+{{-- resources/views/admin/commissions.blade.php - VERSION CORRIGÉE --}}
 @extends('layouts.admin')
 
 @section('title', 'Gestion des commissions - ClicBillet CI')
@@ -22,85 +21,87 @@
         </div>
     </div>
 
-    <!-- Statistiques des commissions -->
-    {{-- Statistiques des commissions CORRIGÉES --}}
-<div class="row mb-4">
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-center">
-                <div class="stat-icon warning me-3">
-                    <i class="fas fa-clock"></i>
+    <!-- Statistiques des commissions CORRIGÉES -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon warning me-3">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>{{ $stats['pending'] ?? 0 }}</h4>
+                        <p class="text-muted mb-0">En attente</p>
+                        <small class="text-warning">{{ number_format($stats['total_pending_amount'] ?? 0) }} FCFA</small>
+                    </div>
                 </div>
-                <div class="stat-info">
-                    <h4>{{ $stats['pending'] ?? 0 }}</h4>
-                    <p class="text-muted mb-0">En attente</p>
-                    <small class="text-warning">{{ number_format($stats['total_pending_amount'] ?? 0) }} FCFA</small>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon success me-3">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>{{ $stats['paid'] ?? 0 }}</h4>
+                        <p class="text-muted mb-0">Payées</p>
+                        <small class="text-success">{{ number_format($stats['total_paid_amount'] ?? 0) }} FCFA</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon info me-3">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>{{ number_format($stats['total_amount'] ?? 0) }}</h4>
+                        <p class="text-muted mb-0">Total commissions</p>
+                        <small class="text-info">{{ $stats['avg_rate'] ?? 0 }}% taux moyen</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon danger me-3">
+                        <i class="fas fa-pause"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>{{ $stats['held'] ?? 0 }}</h4>
+                        <p class="text-muted mb-0">Suspendues</p>
+                        <small class="text-danger">{{ number_format($stats['total_held_amount'] ?? 0) }} FCFA</small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-center">
-                <div class="stat-icon success me-3">
-                    <i class="fas fa-check"></i>
-                </div>
-                <div class="stat-info">
-                    <h4>{{ $stats['paid'] ?? 0 }}</h4>
-                    <p class="text-muted mb-0">Payées</p>
-                    <small class="text-success">{{ number_format($stats['total_paid_amount'] ?? 0) }} FCFA</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-center">
-                <div class="stat-icon info me-3">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <div class="stat-info">
-                    <h4>{{ number_format($stats['total_amount'] ?? 0) }}</h4>
-                    <p class="text-muted mb-0">Total commission</p>
-                    <small class="text-info">Revenus plateforme</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-center">
-                <div class="stat-icon primary me-3">
-                    <i class="fas fa-percentage"></i>
-                </div>
-                <div class="stat-info">
-                    <h4>{{ $stats['avg_rate'] ?? 0 }}%</h4>
-                    <p class="text-muted mb-0">Taux moyen</p>
-                    <small class="text-primary">{{ $stats['paid_percentage'] ?? 0 }}% payées</small>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
     <!-- Filtres -->
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.commissions') }}">
-                <div class="row align-items-end">
+                <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Promoteur</label>
-                        <input type="text" name="promoter" class="form-control" 
-                               placeholder="Nom du promoteur..." value="{{ request('promoter') }}">
+                        <label class="form-label">Recherche</label>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Promoteur, commande..." 
+                               value="{{ request('search') }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Statut</label>
                         <select name="status" class="form-select">
-                            <option value="">Tous</option>
+                            <option value="">Tous les statuts</option>
                             <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>En attente</option>
                             <option value="paid" {{ request('status') == 'paid' ? 'selected' : '' }}>Payées</option>
+                            <option value="held" {{ request('status') == 'held' ? 'selected' : '' }}>Suspendues</option>
                             <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Annulées</option>
                         </select>
                     </div>
@@ -125,8 +126,11 @@
 
     <!-- Liste des commissions -->
     <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-coins me-2"></i>Liste des commissions</h5>
+            <div class="text-muted">
+                {{ $commissions->total() }} commission{{ $commissions->total() > 1 ? 's' : '' }}
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -145,44 +149,93 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($commissions ?? [] as $commission)
+                        @forelse($commissions as $commission)
                             <tr>
                                 <td>
-                                    <div class="fw-semibold">{{ $commission->promoter->name ?? 'N/A' }}</div>
-                                    <small class="text-muted">{{ $commission->promoter->email ?? 'N/A' }}</small>
+                                    <div class="fw-semibold">{{ $commission->promoteur->name ?? 'N/A' }}</div>
+                                    <small class="text-muted">{{ $commission->promoteur->email ?? 'N/A' }}</small>
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.orders.show', $commission->order) }}" class="text-decoration-none">
                                         #{{ $commission->order->order_number ?? $commission->order->id }}
                                     </a>
+                                    <br>
+                                    <small class="text-muted">{{ $commission->order->event->title ?? 'N/A' }}</small>
                                 </td>
                                 <td>{{ number_format($commission->gross_amount ?? 0) }} FCFA</td>
                                 <td>{{ $commission->commission_rate ?? 0 }}%</td>
-                                <td class="fw-semibold text-primary">{{ number_format($commission->commission_amount ?? 0) }} FCFA</td>
-                                <td class="fw-semibold">{{ number_format($commission->net_amount ?? 0) }} FCFA</td>
+                                <td class="fw-bold text-primary">{{ number_format($commission->commission_amount ?? 0) }} FCFA</td>
+                                <td class="fw-bold">{{ number_format($commission->net_amount ?? 0) }} FCFA</td>
                                 <td>
-                                    <span class="badge {{ $commission->status == 'paid' ? 'bg-success' : ($commission->status == 'pending' ? 'bg-warning' : 'bg-danger') }}">
-                                        {{ ucfirst($commission->status ?? 'Unknown') }}
-                                    </span>
+                                    @switch($commission->status)
+                                        @case('pending')
+                                            <span class="badge bg-warning">En attente</span>
+                                            @break
+                                        @case('paid')
+                                            <span class="badge bg-success">Payée</span>
+                                            @break
+                                        @case('held')
+                                            <span class="badge bg-danger">Suspendue</span>
+                                            @break
+                                        @case('cancelled')
+                                            <span class="badge bg-secondary">Annulée</span>
+                                            @break
+                                        @default
+                                            <span class="badge bg-light text-dark">{{ $commission->status }}</span>
+                                    @endswitch
                                 </td>
-                                <td>{{ $commission->created_at->format('d/m/Y') }}</td>
                                 <td>
-                                    @if($commission->status == 'pending')
-                                        <form method="POST" action="{{ route('admin.commissions.pay', $commission) }}" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success" 
-                                                    onclick="return confirm('Marquer cette commission comme payée ?')">
-                                                <i class="fas fa-check"></i> Payer
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <div>{{ $commission->created_at->format('d/m/Y') }}</div>
+                                    <small class="text-muted">{{ $commission->created_at->format('H:i') }}</small>
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('admin.orders.show', $commission->order) }}">
+                                                    <i class="fas fa-eye me-2"></i>Voir commande
+                                                </a>
+                                            </li>
+                                            @if($commission->status === 'pending')
+                                                <li>
+                                                    <a class="dropdown-item text-success" href="#" 
+                                                       onclick="payCommission({{ $commission->id }})">
+                                                        <i class="fas fa-check me-2"></i>Marquer payée
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item text-warning" href="#" 
+                                                       onclick="holdCommission({{ $commission->id }})">
+                                                        <i class="fas fa-pause me-2"></i>Suspendre
+                                                    </a>
+                                                </li>
+                                            @endif
+                                            @if($commission->status === 'held')
+                                                <li>
+                                                    <a class="dropdown-item text-info" href="#" 
+                                                       onclick="releaseCommission({{ $commission->id }})">
+                                                        <i class="fas fa-play me-2"></i>Remettre en attente
+                                                    </a>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center p-4">
+                                <td colspan="9" class="text-center py-4">
                                     <i class="fas fa-coins fa-2x text-muted mb-2"></i>
-                                    <p class="text-muted">Aucune commission trouvée</p>
+                                    <p class="text-muted mb-0">Aucune commission trouvée</p>
+                                    @if(request()->hasAny(['search', 'status', 'period']))
+                                        <a href="{{ route('admin.commissions') }}" class="btn btn-outline-orange btn-sm mt-2">
+                                            <i class="fas fa-times me-2"></i>Effacer les filtres
+                                        </a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforelse
@@ -191,10 +244,95 @@
             </div>
         </div>
         
-        @if(isset($commissions) && $commissions->hasPages())
+        {{-- PAGINATION CORRIGÉE --}}
+        @if($commissions->hasPages())
             <div class="card-footer">
-                {{ $commissions->appends(request()->query())->links() }}
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted">
+                        Affichage de {{ $commissions->firstItem() }} à {{ $commissions->lastItem() }} 
+                        sur {{ $commissions->total() }} résultats
+                    </div>
+                    <div>
+                        {{ $commissions->appends(request()->query())->links('pagination::bootstrap-4') }}
+                    </div>
+                </div>
             </div>
         @endif
     </div>
+@endsection
+
+@section('scripts')
+<script>
+function payCommission(id) {
+    if (confirm('Confirmer le paiement de cette commission ?')) {
+        fetch(`/admin/commissions/${id}/pay`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue');
+        });
+    }
+}
+
+function holdCommission(id) {
+    if (confirm('Suspendre cette commission ?')) {
+        fetch(`/admin/commissions/${id}/hold`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue');
+        });
+    }
+}
+
+function releaseCommission(id) {
+    if (confirm('Remettre cette commission en attente ?')) {
+        fetch(`/admin/commissions/${id}/release`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue');
+        });
+    }
+}
+</script>
 @endsection

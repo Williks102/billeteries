@@ -17,9 +17,9 @@
         </a>
         
         <a class="nav-link {{ request()->routeIs('admin.events*') ? 'active' : '' }}" 
-           href="{{ route('admin.events') }}">
-            <i class="fas fa-calendar me-2"></i>Événements
-        </a>
+   href="{{ route('admin.events') }}">
+   <i class="fas fa-calendar me-2"></i>Événements
+</a>
         
         <a class="nav-link {{ request()->routeIs('admin.orders*') ? 'active' : '' }}" 
            href="{{ route('admin.orders') }}">

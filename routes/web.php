@@ -155,7 +155,7 @@ Route::middleware(['auth'])->group(function () {
         
         // Ventes et commissions
         Route::get('/sales', [PromoteurController::class, 'sales'])->name('sales');
-        Route::get('/commissions', [PromoteurController::class, 'commissions'])->name('commissions');
+        
         
         // Rapports
         Route::get('/reports', [PromoteurController::class, 'reports'])->name('reports');
@@ -199,7 +199,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/events/bulk-delete', [AdminController::class, 'bulkDeleteEvents'])->name('events.bulkDelete');
         
         // Gestion tickets
-        
+
         Route::get('/tickets', [AdminController::class, 'tickets'])->name('tickets');
         Route::get('/tickets/{ticket}', [AdminController::class, 'showTicket'])->name('tickets.show');
         Route::patch('/tickets/{ticket}/mark-used', [AdminController::class, 'markTicketUsed'])->name('tickets.markUsed');

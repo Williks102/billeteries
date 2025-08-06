@@ -320,39 +320,7 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Commissions -->
-        <div class="card card-orange">
-            <div class="card-header" style="background: linear-gradient(135deg, #ffc107, #fd7e14); color: white;">
-                <h6 class="mb-0">
-                    <i class="fas fa-money-bill-wave me-2"></i>
-                    Mes Commissions
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>En attente</span>
-                        <strong style="color: #ffc107;">{{ number_format($commissions['pending'] ?? 0) }} F</strong>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>Payées ce mois</span>
-                        <strong style="color: #28a745;">{{ number_format($commissions['paid_this_month'] ?? 0) }} F</strong>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>Total à vie</span>
-                        <strong style="color: #FF6B35;">{{ number_format($commissions['total_lifetime'] ?? 0) }} F</strong>
-                    </div>
-                </div>
-                <a href="{{ route('promoteur.commissions') }}" class="btn btn-black btn-sm w-100">
-                    <i class="fas fa-eye me-2"></i>Voir détails
-                </a>
-            </div>
-        </div>
+    
     </div>
 </div>
 @endsection

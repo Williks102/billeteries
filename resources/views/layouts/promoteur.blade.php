@@ -1,59 +1,61 @@
-{{-- resources/views/layouts/promoteur.blade.php - VÉRIFICATION --}}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name') }} - Espace Promoteur</title>
+    <title>@yield('title', 'Espace Promoteur') - {{ config('app.name') }}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Styles personnalisés -->
     <style>
-        :root {
-            --primary-color: #FF6B35;
-            --secondary-color: #E55A2B;
-        }
-        
-        body {
-            background-color: #f8f9fa;
-        }
-        
-        .navbar-brand {
-            color: var(--primary-color) !important;
-            font-weight: bold;
-        }
-        
-        .navbar {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .navbar-orange {
+            background: linear-gradient(135deg, #FF6B35, #E55A2B);
         }
         
         .sidebar {
-            min-height: calc(100vh - 56px);
-            background: linear-gradient(135deg, var(--black-primary), var(--black-secondary)) !important;
-            box-shadow: 2px 0 4px hsla(0, 0%, 0%, 0.10);
+            min-height: calc(100vh - 76px);
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
         }
         
-        .nav-link {
-            color: #6c757d;
-            padding: 0.75rem 1rem;
+        .sidebar .nav-link {
+            color: #495057;
+            padding: 12px 16px;
             border-radius: 8px;
-            margin: 0.25rem 0;
-            transition: all 0.3s ease;
+            margin-bottom: 4px;
+            transition: all 0.2s ease;
         }
         
-        .nav-link:hover,
-        .nav-link.active {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white !important;
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 107, 53, 0.1);
+            color: #FF6B35;
+            transform: translateX(5px);
+        }
+        
+        .sidebar .nav-link.active {
+            background-color: #FF6B35;
+            color: white;
+        }
+        
+        .sidebar .nav-link.active:hover {
+            background-color: #E55A2B;
+            transform: none;
         }
         
         .main-content {
-            padding: 2rem;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                min-height: auto;
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+            }
         }
     </style>
     
@@ -61,116 +63,77 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white">
+    <nav class="navbar navbar-expand-lg navbar-orange navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ route('home') }}">
-                <i class="fas fa-ticket-alt me-2"></i>
-                {{ config('app.name', 'Billetterie') }}
+            <a class="navbar-brand fw-bold" href="{{ route('promoteur.dashboard') }}">
+                <i class="fas fa-ticket-alt me-2"></i>Espace Promoteur
             </a>
             
-            <div class="navbar-nav ms-auto">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle me-1"></i>
-                        {{ Auth::user()->name }}
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ route('promoteur.profile') }}">
-                            <i class="fas fa-user me-2"></i>Profil
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" href="{{ route('logout') }}"
-                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>
+                            {{ Auth::user()->name }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('promoteur.profile') }}">
+                                <i class="fas fa-user me-2"></i>Profil
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ route('logout') }}"
+                                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
     
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
+            <!-- ✅ CHANGÉ: Utilise maintenant le partial sidebar -->
             <div class="col-md-3 col-lg-2 sidebar">
-                <div class="p-3">
-                    <h6 class="text-muted text-uppercase mb-3">Menu Principal</h6>
-                    <nav class="nav flex-column">
-                        <a class="nav-link {{ request()->routeIs('promoteur.dashboard') ? 'active' : '' }}" 
-                           href="{{ route('promoteur.dashboard') }}">
-                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                        </a>
-                        <a class="nav-link {{ request()->routeIs('promoteur.events.*') ? 'active' : '' }}" 
-                           href="{{ route('promoteur.events.index') }}">
-                            <i class="fas fa-calendar me-2"></i>Mes Événements
-                        </a>
-                        <a class="nav-link {{ request()->routeIs('promoteur.sales') ? 'active' : '' }}" 
-                           href="{{ route('promoteur.sales') }}">
-                            <i class="fas fa-chart-line me-2"></i>Ventes
-                        </a>
-                        <a class="nav-link {{ request()->routeIs('promoteur.commissions') ? 'active' : '' }}" 
-                           href="{{ route('promoteur.commissions') }}">
-                            <i class="fas fa-coins me-2"></i>Commissions
-                        </a>
-                        <a class="nav-link {{ request()->routeIs('promoteur.reports') ? 'active' : '' }}" 
-                           href="{{ route('promoteur.reports') }}">
-                            <i class="fas fa-chart-bar me-2"></i>Rapports
-                        </a>
-                        <a class="nav-link {{ request()->routeIs('promoteur.scanner') ? 'active' : '' }}" 
-                           href="{{ route('promoteur.scanner') }}">
-                            <i class="fas fa-qrcode me-2"></i>Scanner
-                        </a>
-                    </nav>
-                    
-                    <hr>
-                    
-                    <h6 class="text-muted text-uppercase mb-3">Actions Rapides</h6>
-                    <nav class="nav flex-column">
-                        <a class="nav-link" href="{{ route('promoteur.events.create') }}">
-                            <i class="fas fa-plus me-2"></i>Nouvel Événement
-                        </a>
-                        <a class="nav-link" href="{{ route('home') }}">
-                            <i class="fas fa-eye me-2"></i>Voir le Site
-                        </a>
-                    </nav>
-                </div>
+                @include('partials.promoteur-sidebar')
             </div>
             
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10">
-                <div class="main-content">
-                    @if(session('success'))
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <i class="fas fa-check-circle me-2"></i>
-                            {{ session('success') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    @endif
-                    
-                    @if(session('error'))
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            {{ session('error') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    @endif
-                    
-                    @if($errors->any())
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <ul class="mb-0">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    @endif
-                    
-                    @yield('content')
-                </div>
+            <div class="col-md-9 col-lg-10 main-content">
+                <!-- Messages Flash -->
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+                
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+                
+                @if(session('warning'))
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {{ session('warning') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+                
+                <!-- Page Content -->
+                @yield('content')
             </div>
         </div>
     </div>
@@ -180,7 +143,7 @@
         @csrf
     </form>
     
-    <!-- Scripts -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     @stack('scripts')

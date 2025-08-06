@@ -1,5 +1,4 @@
 <?php
-// app/Models/User.php - VERSION HARMONISÉE
 
 namespace App\Models;
 
@@ -14,9 +13,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'phone',
-        'role',
         'password',
+        'role',
+        'phone',
     ];
 
     protected $hidden = [
@@ -33,7 +32,41 @@ class User extends Authenticatable
     }
 
     /**
-     * Vérification des rôles
+     * ✅ CORRIGÉ: Relation avec events (promoter_id au lieu de promoteur_id)
+     */
+    public function events()
+    {
+        return $this->hasMany(Event::class, 'promoter_id');
+    }
+
+    /**
+     * Relation : Un utilisateur a plusieurs commandes
+     */
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * ✅ CORRIGÉ: Relation avec commissions (promoter_id au lieu de promoteur_id)
+     */
+    public function commissions()
+    {
+        return $this->hasMany(Commission::class, 'promoter_id');
+    }
+
+    /**
+     * Relation : Tickets achetés par l'utilisateur
+     */
+    public function tickets()
+    {
+        return $this->hasManyThrough(Ticket::class, Order::class)
+            ->join('order_tickets', 'tickets.id', '=', 'order_tickets.ticket_id')
+            ->where('orders.payment_status', 'paid');
+    }
+
+    /**
+     * Vérifications de rôles
      */
     public function isAdmin()
     {
@@ -51,75 +84,69 @@ class User extends Authenticatable
     }
 
     /**
-     * Relations harmonisées
-     */
-    public function events()  // ✅ CHANGÉ: Utilise promoter_id
-    {
-        return $this->hasMany(Event::class, 'promoter_id');
-    }
-
-    public function orders()
-    {
-        return $this->hasMany(Order::class);
-    }
-
-    public function commissions()  // ✅ CHANGÉ: Utilise promoter_id
-    {
-        return $this->hasMany(Commission::class, 'promoter_id');
-    }
-
-    public function commissionSettings()  // ✅ CHANGÉ: Utilise promoter_id
-    {
-        return $this->hasMany(CommissionSetting::class, 'promoter_id');
-    }
-
-    public function tickets()
-    {
-        return $this->hasManyThrough(Ticket::class, Order::class)
-            ->join('order_tickets', 'tickets.id', '=', 'order_tickets.ticket_id')
-            ->where('orders.payment_status', 'paid');
-    }
-
-    /**
-     * Statistiques pour promoteur
+     * ✅ CORRIGÉ: Statistiques pour promoteur basées sur les ventes réelles
      */
     public function totalRevenue()
     {
-        return $this->commissions()->where('status', 'paid')->sum('net_amount') ?? 0;
+        try {
+            return $this->events()
+                ->join('orders', 'events.id', '=', 'orders.event_id')
+                ->where('orders.payment_status', 'paid')
+                ->sum('orders.total_amount') ?? 0;
+        } catch (\Exception $e) {
+            \Log::error('Erreur calcul totalRevenue: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     public function pendingRevenue()
     {
-        return $this->commissions()->where('status', 'pending')->sum('net_amount') ?? 0;
-    }
-
-    public function totalGrossRevenue()
-    {
-        return $this->commissions()->sum('gross_amount') ?? 0;
-    }
-
-    public function totalPlatformCommissions()
-    {
-        return $this->commissions()->sum('commission_amount') ?? 0;
+        try {
+            return $this->commissions()
+                ->where('status', 'pending')
+                ->sum('net_amount') ?? 0;
+        } catch (\Exception $e) {
+            \Log::error('Erreur calcul pendingRevenue: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     public function totalTicketsSold()
     {
-        return $this->events()->withCount(['orders' => function ($query) {
-            $query->where('payment_status', 'paid');
-        }])->get()->sum('orders_count') ?? 0;
+        try {
+            return $this->events()
+                ->join('orders', 'events.id', '=', 'orders.event_id')
+                ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+                ->where('orders.payment_status', 'paid')
+                ->sum('order_items.quantity') ?? 0;
+        } catch (\Exception $e) {
+            \Log::error('Erreur calcul totalTicketsSold: ' . $e->getMessage());
+            return 0;
+        }
     }
 
-    public function activeEventsCount()
+    /**
+     * ✅ NOUVEAU: Statistiques des ventes pour l'onglet "Ventes"
+     */
+    public function getSalesStats($startDate = null, $endDate = null)
     {
-        return $this->events()->where('status', 'published')->count() ?? 0;
-    }
+        $query = $this->events()
+            ->join('orders', 'events.id', '=', 'orders.event_id')
+            ->where('orders.payment_status', 'paid');
 
-    public function upcomingEventsCount()
-    {
-        return $this->events()
-            ->where('status', 'published')
-            ->where('event_date', '>=', now()->toDateString())
-            ->count() ?? 0;
+        if ($startDate) {
+            $query->where('orders.created_at', '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $query->where('orders.created_at', '<=', $endDate);
+        }
+
+        return [
+            'total_revenue' => $query->sum('orders.total_amount') ?? 0,
+            'total_orders' => $query->count() ?? 0,
+            'total_tickets' => $query->join('order_items', 'orders.id', '=', 'order_items.order_id')
+                                    ->sum('order_items.quantity') ?? 0,
+        ];
     }
 }

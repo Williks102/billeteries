@@ -23,12 +23,7 @@
         
         <a class="nav-link {{ request()->routeIs('promoteur.sales*') ? 'active' : '' }}" 
            href="{{ route('promoteur.sales') }}">
-            <i class="fas fa-chart-bar me-2"></i>Ventes
-        </a>
-        
-        <a class="nav-link {{ request()->routeIs('promoteur.commissions*') ? 'active' : '' }}" 
-           href="{{ route('promoteur.commissions') }}">
-            <i class="fas fa-coins me-2"></i>Commissions
+            <i class="fas fa-chart-line me-2"></i>Ventes & Revenus
         </a>
         
         <a class="nav-link {{ request()->routeIs('promoteur.reports*') ? 'active' : '' }}" 
@@ -61,54 +56,24 @@
             @endphp
             @if($activeEvents > 0)
                 <a href="{{ route('promoteur.events.index') }}" 
-                   class="nav-link p-2 mb-2" style="background: rgba(40, 167, 69, 0.1); border-radius: 6px;">
-                    <i class="fas fa-calendar-check me-2"></i>
-                    <span class="badge bg-success">{{ $activeEvents }}</span>
-                    <small class="d-block">Événements actifs</small>
+                   class="btn btn-sm btn-outline-success mb-2 w-100">
+                    {{ $activeEvents }} événement(s) actif(s)
                 </a>
             @endif
             
-            {{-- Ventes du jour --}}
+            {{-- Ventes du mois --}}
             @php
-                $todaySales = \App\Models\Order::whereHas('event', function($q) {
-                    $q->where('promoter_id', auth()->id());
-                })->whereDate('created_at', today())
-                  ->where('payment_status', 'paid')
-                  ->sum('total_amount');
+                $monthlySales = auth()->user()->getSalesStats(
+                    now()->startOfMonth(), 
+                    now()->endOfMonth()
+                );
             @endphp
-            @if($todaySales > 0)
+            @if($monthlySales['total_revenue'] > 0)
                 <a href="{{ route('promoteur.sales') }}" 
-                   class="nav-link p-2 mb-2" style="background: rgba(255, 107, 53, 0.1); border-radius: 6px;">
-                    <i class="fas fa-money-bill-wave me-2"></i>
-                    <div class="fw-bold">{{ number_format($todaySales) }} FCFA</div>
-                    <small class="d-block">Ventes aujourd'hui</small>
+                   class="btn btn-sm btn-outline-primary w-100">
+                    {{ number_format($monthlySales['total_revenue']) }} F ce mois
                 </a>
             @endif
-            
-            {{-- Commissions en attente --}}
-            @php
-                $pendingCommissions = \App\Models\Commission::where('promoter_id', auth()->id())
-                                                          ->where('status', 'pending')
-                                                          ->count();
-            @endphp
-            @if($pendingCommissions > 0)
-                <a href="{{ route('promoteur.commissions') }}" 
-                   class="nav-link p-2 mb-2" style="background: rgba(255, 193, 7, 0.1); border-radius: 6px;">
-                    <i class="fas fa-clock me-2"></i>
-                    <span class="badge bg-warning text-dark">{{ $pendingCommissions }}</span>
-                    <small class="d-block">Commissions en attente</small>
-                </a>
-            @endif
-        </div>
-    </div>
-    
-    {{-- Raccourcis rapides --}}
-    <div class="mt-4">
-        <small class="text-muted d-block mb-2">Actions rapides</small>
-        <div class="d-grid gap-2">
-            <a href="{{ route('promoteur.events.create') }}" class="btn btn-sm btn-promoteur">
-                <i class="fas fa-plus me-2"></i>Nouvel événement
-            </a>
         </div>
     </div>
 </div>

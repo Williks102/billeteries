@@ -308,9 +308,7 @@
                         <i class="fas fa-chart-line me-2"></i>Voir mes ventes
                     </a>
                     
-                    <a href="{{ route('promoteur.commissions') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-coins me-2"></i>Mes commissions
-                    </a>
+        
                     
                     <a href="{{ route('promoteur.scanner') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-qrcode me-2"></i>Scanner QR

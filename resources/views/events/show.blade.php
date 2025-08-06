@@ -531,7 +531,7 @@
                     </div>
 
                     <div class="card-body">
-                        <form id="ticketForm" method="POST">
+                        <form id="ticketForm" method="POST" action="{{ route('checkout.direct') }}>
                             @csrf
                             <input type="hidden" name="event_id" value="{{ $event->id }}">
 
@@ -602,7 +602,7 @@
                                 <button type="button" class="btn btn-outline-orange w-100 mb-2" 
                                         onclick="addToCartWithTimer()" id="addToCartBtn">
                                     <i class="fas fa-clock me-2"></i>
-                                    Mettre de côté (15 min)
+                                    Ajouter au panier
                                     <small class="d-block">Continuer à naviguer</small>
                                 </button>
                                 
@@ -612,7 +612,7 @@
                                     <i class="fas fa-lock me-2"></i>
                                     Réserver maintenant (1h)
                                     <small class="d-block">Réservation immédiate</small>
-                                </button>
+                                </button> 
                             </div>
 
                             <!-- Informations de sécurité -->

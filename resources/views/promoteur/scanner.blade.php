@@ -1,4 +1,3 @@
-
 {{-- =============================================== --}}
 @extends('layouts.promoteur')
 
@@ -92,12 +91,25 @@
                     <!-- Résultat du scan -->
                     <div id="scanResult" class="mt-4" style="display: none;"></div>
                     
-                    <!-- Camera Scanner (optionnel) -->
+                    <!-- Camera Scanner AMÉLIORÉ -->
                     <div class="mt-4">
-                        <button type="button" class="btn btn-outline-info" onclick="toggleCamera()">
-                            <i class="fas fa-camera me-2"></i>
-                            Activer la caméra QR
-                        </button>
+                        <div class="d-flex gap-2 align-items-center mb-3">
+                            <button type="button" class="btn btn-outline-info" onclick="toggleCamera()">
+                                <i class="fas fa-camera me-2"></i>
+                                <span id="cameraButtonText">Activer la caméra QR</span>
+                            </button>
+                            
+                            <button type="button" class="btn btn-info btn-sm" onclick="testCameraPermissions()" 
+                                    title="Tester les permissions caméra">
+                                <i class="fas fa-shield-alt"></i>
+                            </button>
+                            
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showCameraHelp()" 
+                                    title="Aide pour la caméra">
+                                <i class="fas fa-question-circle"></i>
+                            </button>
+                        </div>
+                        
                         <div id="cameraContainer" style="display: none;" class="mt-3">
                             <video id="cameraFeed" width="100%" height="300" style="border-radius: 10px;"></video>
                             <canvas id="cameraCanvas" style="display: none;"></canvas>
@@ -205,6 +217,9 @@
 @endpush
 
 @push('scripts')
+<!-- Bibliothèque jsQR pour la détection des QR codes -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
 <script>
 let scanCount = 0;
 let validScans = 0;
@@ -213,90 +228,74 @@ let invalidScans = 0;
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('scannerForm');
     const ticketCodeInput = document.getElementById('ticketCode');
-    const scanBtn = document.getElementById('scanBtn');
-    const scanResult = document.getElementById('scanResult');
     
-    // Auto-focus sur le champ
+    // Focus automatique sur l'input
     ticketCodeInput.focus();
     
-    // Soumission du formulaire
+    // Traitement du formulaire
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        scanTicket();
+        processTicket();
     });
     
-    // Auto-submit après saisie complète du code
+    // Auto-submit si code complet (TKT-XXXXXXXX)
     ticketCodeInput.addEventListener('input', function(e) {
-        let value = e.target.value.toUpperCase();
-        e.target.value = value;
-        
-        // Auto-scan si format complet (TKT-XXXXXXXX)
-        if (value.match(/^TKT-[A-Z0-9]{8}$/)) {
-            setTimeout(() => scanTicket(), 500);
+        const code = e.target.value.trim();
+        if (code.length >= 12 && code.startsWith('TKT-')) {
+            setTimeout(() => {
+                processTicket();
+            }, 500);
         }
+    });
+    
+    // Nettoyage automatique du champ
+    ticketCodeInput.addEventListener('focus', function() {
+        this.select();
     });
 });
 
-function scanTicket() {
-    const ticketCodeInput = document.getElementById('ticketCode');
-    const ticketCode = ticketCodeInput.value.trim().toUpperCase();
+function processTicket() {
+    const ticketCode = document.getElementById('ticketCode').value.trim();
     const scanBtn = document.getElementById('scanBtn');
-
+    
     if (!ticketCode) {
-        showError('Veuillez saisir un code de billet');
+        alert('Veuillez saisir un code de billet');
         return;
     }
-
-    // Désactiver le bouton pendant le scan
+    
+    // Disable button during request
     scanBtn.disabled = true;
-    scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Scanning...';
-
-    console.log('Scanning ticket:', ticketCode); // Debug
-
-    // CORRECTION : Utiliser la route Laravel correcte
+    scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Vérification...';
+    
+    // AJAX request to verify ticket
     fetch('{{ route("promoteur.scanner.verify") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json' // Ajout pour s'assurer d'obtenir du JSON
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
-        body: JSON.stringify({ ticket_code: ticketCode })
+        body: JSON.stringify({
+            ticket_code: ticketCode
+        })
     })
-    .then(response => {
-        console.log('Response status:', response.status); // Debug
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Response data:', data); // Debug
-        
         if (data.success) {
             showSuccess(data);
             validScans++;
             addToHistory(data.ticket, 'valid');
         } else {
-            showError(data.message || data.error, data.ticket);
-            invalidScans++;
+            showError(data.error, data.ticket);
             addToHistory(data.ticket || { ticket_code: ticketCode }, 'invalid');
         }
-        
         updateStats();
         clearInput();
     })
     .catch(error => {
-        console.error('Erreur détaillée:', error);
+        console.error('Erreur:', error);
         
-        // Messages d'erreur plus spécifiques
-        let errorMessage = 'Erreur de connexion';
-        
-        if (error.message.includes('Failed to fetch')) {
-            errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
-        } else if (error.message.includes('HTTP error! status: 419')) {
+        let errorMessage = 'Erreur de connexion. Vérifiez votre connexion internet.';
+        if (error.message.includes('HTTP error! status: 419')) {
             errorMessage = 'Session expirée. Veuillez recharger la page.';
         } else if (error.message.includes('HTTP error! status: 403')) {
             errorMessage = 'Accès non autorisé. Vérifiez vos permissions.';
@@ -314,6 +313,322 @@ function scanTicket() {
         scanBtn.innerHTML = '<i class="fas fa-search me-2"></i>Scanner';
     });
 }
+
+// ========== NOUVELLES FONCTIONS CAMÉRA AMÉLIORÉES ==========
+
+function startCamera() {
+    // Vérifier si getUserMedia est supporté
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showCameraError('Votre navigateur ne supporte pas l\'accès à la caméra. Utilisez Chrome, Firefox ou Safari récent.');
+        return;
+    }
+
+    // Vérifier si on est en HTTPS (requis pour la caméra)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        showCameraError('L\'accès à la caméra nécessite une connexion HTTPS sécurisée.');
+        return;
+    }
+
+    // Options pour la caméra (privilégier la caméra arrière)
+    const constraints = {
+        video: {
+            facingMode: 'environment', // Caméra arrière préférée
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        }
+    };
+
+    // Afficher un indicateur de chargement
+    const cameraContainer = document.getElementById('cameraContainer');
+    cameraContainer.innerHTML = `
+        <div class="text-center p-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Activation de la caméra...</span>
+            </div>
+            <p class="mt-2">Activation de la caméra en cours...</p>
+            <p class="text-muted small">Autorisez l'accès à votre caméra si demandé</p>
+        </div>
+    `;
+
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+            // Succès - afficher le flux vidéo
+            cameraContainer.innerHTML = `
+                <video id="cameraFeed" width="100%" height="300" style="border-radius: 10px;" autoplay playsinline></video>
+                <canvas id="cameraCanvas" style="display: none;"></canvas>
+                <div class="mt-2 text-center">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="stopCamera()">
+                        <i class="fas fa-stop me-1"></i>Arrêter la caméra
+                    </button>
+                    <div class="alert alert-success mt-2" role="alert">
+                        <i class="fas fa-search me-2"></i>Recherche automatique de codes QR en cours...
+                    </div>
+                </div>
+            `;
+            
+            const video = document.getElementById('cameraFeed');
+            video.srcObject = stream;
+            
+            // Commencer la détection QR une fois la vidéo prête
+            video.onloadedmetadata = () => {
+                startQRDetection();
+            };
+        })
+        .catch(err => {
+            console.error('Erreur caméra détaillée:', err);
+            
+            let errorMessage = 'Impossible d\'accéder à la caméra.';
+            
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                errorMessage = 'Accès à la caméra refusé. Veuillez autoriser l\'accès dans votre navigateur.';
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                errorMessage = 'Aucune caméra trouvée sur cet appareil.';
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                errorMessage = 'La caméra est déjà utilisée par une autre application.';
+            } else if (err.name === 'OverconstrainedError') {
+                errorMessage = 'Les paramètres de caméra demandés ne sont pas supportés.';
+            } else if (err.name === 'NotSupportedError') {
+                errorMessage = 'Fonctionnalité caméra non supportée par votre navigateur.';
+            }
+            
+            showCameraError(errorMessage, err);
+        });
+}
+
+function showCameraError(message, error = null) {
+    const cameraContainer = document.getElementById('cameraContainer');
+    
+    cameraContainer.innerHTML = `
+        <div class="alert alert-danger">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-2">Problème d'accès à la caméra</h6>
+                    <p class="mb-2">${message}</p>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-primary btn-sm me-2" onclick="retryCamera()">
+                            <i class="fas fa-redo me-1"></i>Réessayer
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="showCameraHelp()">
+                            <i class="fas fa-question-circle me-1"></i>Aide
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Masquer le conteneur après l'erreur
+    setTimeout(() => {
+        document.getElementById('cameraContainer').style.display = 'none';
+    }, 100);
+}
+
+function retryCamera() {
+    const container = document.getElementById('cameraContainer');
+    container.style.display = 'block';
+    startCamera();
+}
+
+function showCameraHelp() {
+    const helpModal = `
+        <div class="modal fade" id="cameraHelpModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Aide pour l'accès à la caméra</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6><i class="fab fa-chrome text-warning me-2"></i>Chrome / Edge</h6>
+                        <ul class="small mb-3">
+                            <li>Cliquez sur l'icône de caméra dans la barre d'adresse</li>
+                            <li>Sélectionnez "Toujours autoriser"</li>
+                            <li>Rechargez la page</li>
+                        </ul>
+                        
+                        <h6><i class="fab fa-firefox text-orange me-2"></i>Firefox</h6>
+                        <ul class="small mb-3">
+                            <li>Cliquez sur "Autoriser" quand demandé</li>
+                            <li>Ou allez dans Paramètres > Vie privée > Permissions</li>
+                        </ul>
+                        
+                        <h6><i class="fab fa-safari text-primary me-2"></i>Safari</h6>
+                        <ul class="small mb-3">
+                            <li>Allez dans Safari > Paramètres > Sites web</li>
+                            <li>Autorisez l'accès à la caméra pour ce site</li>
+                        </ul>
+                        
+                        <div class="alert alert-info small">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Important :</strong> Assurez-vous qu'aucune autre application n'utilise votre caméra.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <button type="button" class="btn btn-primary" onclick="retryCamera(); bootstrap.Modal.getInstance(document.getElementById('cameraHelpModal')).hide();">
+                            Réessayer maintenant
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Ajouter le modal au DOM s'il n'existe pas
+    if (!document.getElementById('cameraHelpModal')) {
+        document.body.insertAdjacentHTML('beforeend', helpModal);
+    }
+    
+    // Afficher le modal
+    new bootstrap.Modal(document.getElementById('cameraHelpModal')).show();
+}
+
+function toggleCamera() {
+    const container = document.getElementById('cameraContainer');
+    const button = event.target.closest('button');
+    
+    if (container.style.display === 'none' || container.style.display === '') {
+        // Activer la caméra
+        container.style.display = 'block';
+        button.innerHTML = '<i class="fas fa-camera me-2"></i>Désactiver la caméra';
+        button.classList.remove('btn-outline-info');
+        button.classList.add('btn-outline-danger');
+        startCamera();
+    } else {
+        // Désactiver la caméra
+        container.style.display = 'none';
+        button.innerHTML = '<i class="fas fa-camera me-2"></i>Activer la caméra QR';
+        button.classList.remove('btn-outline-danger');
+        button.classList.add('btn-outline-info');
+        stopCamera();
+    }
+}
+
+function stopCamera() {
+    const video = document.getElementById('cameraFeed');
+    if (video && video.srcObject) {
+        // Arrêter tous les tracks de la caméra
+        video.srcObject.getTracks().forEach(track => {
+            track.stop();
+            console.log('Camera track stopped:', track.kind);
+        });
+        video.srcObject = null;
+    }
+    
+    // Arrêter la détection QR
+    if (window.qrDetectionInterval) {
+        clearInterval(window.qrDetectionInterval);
+        window.qrDetectionInterval = null;
+    }
+    
+    console.log('Caméra arrêtée avec succès');
+}
+
+// Fonction de détection QR (nécessite jsQR)
+function startQRDetection() {
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('cameraCanvas');
+    
+    if (!video || !canvas) return;
+    
+    const context = canvas.getContext('2d');
+    
+    // Ajuster la taille du canvas à la vidéo
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Fonction de scan QR répétée
+    function scanQR() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            // Dessiner l'image vidéo sur le canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Obtenir les données d'image
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Vérifier si jsQR est disponible
+            if (typeof jsQR !== 'undefined') {
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    console.log('QR Code détecté:', code.data);
+                    
+                    // Remplir automatiquement le champ de saisie
+                    document.getElementById('ticketCode').value = code.data;
+                    
+                    // Déclencher automatiquement la vérification
+                    processTicket();
+                    
+                    // Arrêter la caméra après détection
+                    toggleCamera();
+                    
+                    // Effet visuel de succès
+                    playSuccessSound();
+                }
+            } else {
+                console.warn('Bibliothèque jsQR non chargée. Seule la saisie manuelle est disponible.');
+            }
+        }
+    }
+    
+    // Scanner toutes les 100ms
+    window.qrDetectionInterval = setInterval(scanQR, 100);
+}
+
+// Test des permissions caméra
+async function testCameraPermissions() {
+    try {
+        let permission = 'unavailable';
+        
+        if (navigator.permissions) {
+            const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+            permission = permissionStatus.state;
+        }
+        
+        let message = '';
+        let alertClass = '';
+        
+        switch (permission) {
+            case 'granted':
+                message = 'Permissions caméra accordées ✅';
+                alertClass = 'alert-success';
+                break;
+            case 'denied':
+                message = 'Permissions caméra refusées ❌ - Consultez l\'aide';
+                alertClass = 'alert-danger';
+                break;
+            case 'prompt':
+                message = 'Permissions caméra non définies - Elles seront demandées lors de l\'activation';
+                alertClass = 'alert-info';
+                break;
+            default:
+                message = 'Impossible de vérifier les permissions caméra';
+                alertClass = 'alert-warning';
+        }
+        
+        // Afficher le résultat
+        const testResult = document.createElement('div');
+        testResult.className = `alert ${alertClass} alert-dismissible fade show mt-2`;
+        testResult.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.scanner-page').insertBefore(testResult, document.querySelector('.row'));
+        
+        // Auto-supprimer après 5 secondes
+        setTimeout(() => {
+            testResult.remove();
+        }, 5000);
+        
+    } catch (error) {
+        console.error('Erreur test permissions:', error);
+        alert('Erreur lors du test des permissions');
+    }
+}
+
+// ========== RESTE DU CODE ORIGINAL ==========
 
 function showSuccess(data) {
     const scanResult = document.getElementById('scanResult');
@@ -440,44 +755,6 @@ function playErrorSound() {
         audio.play();
     } catch (e) {
         // Ignorer si audio non supporté
-    }
-}
-
-function toggleCamera() {
-    const container = document.getElementById('cameraContainer');
-    const video = document.getElementById('cameraFeed');
-    
-    if (container.style.display === 'none') {
-        // Activer la caméra
-        container.style.display = 'block';
-        startCamera();
-    } else {
-        // Désactiver la caméra
-        container.style.display = 'none';
-        stopCamera();
-    }
-}
-
-function startCamera() {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        .then(stream => {
-            const video = document.getElementById('cameraFeed');
-            video.srcObject = stream;
-            video.play();
-            
-            // TODO: Intégrer une bibliothèque de scan QR comme jsQR
-            // https://github.com/cozmo/jsQR
-        })
-        .catch(err => {
-            console.error('Erreur caméra:', err);
-            alert('Impossible d\'accéder à la caméra');
-        });
-}
-
-function stopCamera() {
-    const video = document.getElementById('cameraFeed');
-    if (video.srcObject) {
-        video.srcObject.getTracks().forEach(track => track.stop());
     }
 }
 

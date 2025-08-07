@@ -5,148 +5,216 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\TicketType;
 use App\Models\Event;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Log;
 
 class CartController extends Controller
 {
     /**
-     * SYSTÈME UNIFIÉ - 15 MINUTES TIMER UNIQUEMENT
-     */
-    
-    /**
-     * Ajouter des billets au panier avec timer de 15 minutes
+     * Ajouter des billets au panier (version améliorée)
      */
     public function add(Request $request)
     {
         $request->validate([
-            'event_id' => 'required|exists:events,id',
-            'tickets' => 'required|array',
-            'tickets.*' => 'integer|min:0|max:20'
+            'ticket_type_id' => 'required|exists:ticket_types,id',
+            'quantity' => 'required|integer|min:1|max:10'
         ]);
 
-        $event = Event::findOrFail($request->event_id);
-        $errors = [];
-        $addedTickets = 0;
+        $ticketType = TicketType::with('event')->findOrFail($request->ticket_type_id);
         
-        // Nettoyer d'abord les sessions expirées
-        $this->cleanExpiredSessions();
+        // Vérifier que l'événement est encore disponible à la vente
+        if (!$this->isEventAvailableForSale($ticketType->event)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cet événement n\'est plus disponible à la vente.'
+            ], 400);
+        }
         
-        $cart = session()->get('cart', []);
-
-        foreach ($request->tickets as $ticketTypeId => $quantity) {
-            if ($quantity <= 0) continue;
-
-            $ticketType = TicketType::findOrFail($ticketTypeId);
-            
-            // Vérifications
-            if ($ticketType->event_id != $request->event_id) {
-                $errors[] = "Type de billet invalide pour {$ticketType->name}";
-                continue;
-            }
-
-            $remainingTickets = $ticketType->quantity_available - $ticketType->quantity_sold;
-            if ($quantity > $remainingTickets) {
-                $errors[] = "Pas assez de billets disponibles pour {$ticketType->name}";
-                continue;
-            }
-
-            $maxPerOrder = $ticketType->max_per_order ?? 10;
-            if ($quantity > $maxPerOrder) {
-                $errors[] = "Maximum {$maxPerOrder} billets par commande pour {$ticketType->name}";
-                continue;
-            }
-
-            // Clé unique pour ce type de billet
-            $cartKey = 'ticket_' . $ticketType->id;
-            
-            // Si le billet existe déjà dans le panier, remplacer la quantité
-            if (isset($cart[$cartKey])) {
-                $cart[$cartKey]['quantity'] = $quantity;
-                $cart[$cartKey]['total_price'] = $cart[$cartKey]['unit_price'] * $quantity;
-            } else {
-                // Ajouter nouveau billet au panier
-                $cart[$cartKey] = [
-                    'ticket_type_id' => $ticketType->id,
-                    'event_id' => $ticketType->event_id,
-                    'event_title' => $event->title,
-                    'event_date' => $event->event_date ? $event->event_date->format('d/m/Y') : 'Date TBD',
-                    'event_venue' => $event->venue,
-                    'event_image' => $event->image,
-                    'ticket_name' => $ticketType->name,
-                    'unit_price' => $ticketType->price,
-                    'quantity' => $quantity,
-                    'total_price' => $ticketType->price * $quantity,
-                    'max_per_order' => $maxPerOrder,
-                    'added_at' => now()
-                ];
-            }
-            
-            $addedTickets += $quantity;
+        // Vérifier que les billets sont disponibles
+        if (!$ticketType->canPurchaseQuantity($request->quantity)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Quantité non disponible pour ce type de billet.'
+            ], 400);
         }
 
-        // Sauvegarder le panier en session avec timer de 15 minutes
-        session()->put('cart', $cart);
-        session()->put('cart_timer', now()->addMinutes(15));
+        // Récupérer le panier actuel depuis la session
+        $cart = session()->get('cart', []);
         
-        Log::info('Billets ajoutés au panier', [
-            'user_id' => auth()->id(),
-            'event_id' => $request->event_id,
-            'tickets_added' => $addedTickets,
-            'timer_expires_at' => session()->get('cart_timer')
-        ]);
-
-        if ($request->expectsJson()) {
-            if (!empty($errors)) {
+        // Clé unique pour ce type de billet
+        $cartKey = 'ticket_' . $ticketType->id;
+        
+        // Si le billet existe déjà dans le panier, augmenter la quantité
+        if (isset($cart[$cartKey])) {
+            $newQuantity = $cart[$cartKey]['quantity'] + $request->quantity;
+            
+            // Vérifier que la nouvelle quantité ne dépasse pas les limites
+            if (!$ticketType->canPurchaseQuantity($newQuantity)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Certains billets n\'ont pas pu être ajoutés',
-                    'errors' => $errors,
-                    'cartCount' => $this->getCartCount()
+                    'message' => 'Impossible d\'ajouter cette quantité. Limite atteinte.',
+                    'current_in_cart' => $cart[$cartKey]['quantity'],
+                    'max_allowed' => $ticketType->max_per_order
                 ], 400);
             }
-
-            return response()->json([
-                'success' => true,
-                'message' => "{$addedTickets} billet(s) ajouté(s) au panier avec succès ! (15 min de réservation)",
-                'cartCount' => $this->getCartCount(),
-                'cartTotal' => $this->getCartTotal(),
-                'timerExpiresAt' => session()->get('cart_timer')->toISOString()
-            ]);
+            
+            $cart[$cartKey]['quantity'] = $newQuantity;
+            $cart[$cartKey]['total_price'] = $cart[$cartKey]['unit_price'] * $newQuantity;
+        } else {
+            // Ajouter nouveau billet au panier
+            $cart[$cartKey] = [
+                'ticket_type_id' => $ticketType->id,
+                'event_id' => $ticketType->event_id,
+                'event_title' => $ticketType->event->title,
+                'event_date' => $ticketType->event->formatted_event_date,
+                'event_venue' => $ticketType->event->venue,
+                'ticket_name' => $ticketType->name,
+                'unit_price' => $ticketType->price,
+                'quantity' => $request->quantity,
+                'total_price' => $ticketType->price * $request->quantity,
+                'max_per_order' => $ticketType->max_per_order,
+                'added_at' => now()->timestamp
+            ];
         }
-
-        if (!empty($errors)) {
-            return redirect()->back()->withErrors($errors)->with('warning', 'Certains billets n\'ont pas pu être ajoutés');
+        
+        // Définir un timer de panier si ce n'est pas déjà fait
+        if (!session()->has('cart_timer')) {
+            session()->put('cart_timer', now()->addMinutes(15));
         }
-
-        return redirect()->route('cart.show')->with('success', "{$addedTickets} billet(s) ajouté(s) au panier !");
+        
+        // Sauvegarder le panier en session
+        session()->put('cart', $cart);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Billets ajoutés au panier avec succès !',
+            'cart_count' => $this->getCartCount(),
+            'cart_total' => $this->getCartTotal(),
+            'timer_remaining' => $this->getTimerRemaining()
+        ]);
     }
 
     /**
-     * Afficher le panier
+     * Ajouter plusieurs types de billets en une fois (nouvelle méthode)
      */
-    public function show()
+    public function addMultiple(Request $request)
     {
-        // Nettoyer les sessions expirées
-        $this->cleanExpiredSessions();
-        
+        $request->validate([
+            'tickets' => 'required|array',
+            'tickets.*.ticket_type_id' => 'required|exists:ticket_types,id',
+            'tickets.*.quantity' => 'required|integer|min:1|max:10'
+        ]);
+
         $cart = session()->get('cart', []);
-        $cartTotal = $this->getCartTotal();
-        $cartCount = $this->getCartCount();
-        
-        // Calculer le temps restant
-        $cartTimer = session()->get('cart_timer');
-        $timeRemaining = null;
-        
-        if ($cartTimer && now()->lt($cartTimer)) {
-            $timeRemaining = now()->diffInMinutes($cartTimer);
-        } elseif (!empty($cart) && $cartTimer) {
-            // Timer expiré avec des items - nettoyer
-            session()->forget(['cart', 'cart_timer']);
-            return redirect()->route('cart.show')->with('warning', 'Votre panier a expiré. Les billets ont été libérés.');
+        $addedTickets = [];
+        $errors = [];
+
+        foreach ($request->tickets as $ticketData) {
+            $ticketType = TicketType::with('event')->find($ticketData['ticket_type_id']);
+            
+            if (!$ticketType) {
+                $errors[] = "Type de billet {$ticketData['ticket_type_id']} non trouvé";
+                continue;
+            }
+
+            if (!$this->isEventAvailableForSale($ticketType->event)) {
+                $errors[] = "L'événement {$ticketType->event->title} n'est plus disponible";
+                continue;
+            }
+
+            if (!$ticketType->canPurchaseQuantity($ticketData['quantity'])) {
+                $errors[] = "Quantité non disponible pour {$ticketType->name}";
+                continue;
+            }
+
+            // Ajouter au panier
+            $cartKey = 'ticket_' . $ticketType->id;
+            
+            if (isset($cart[$cartKey])) {
+                $newQuantity = $cart[$cartKey]['quantity'] + $ticketData['quantity'];
+                
+                if (!$ticketType->canPurchaseQuantity($newQuantity)) {
+                    $errors[] = "Limite atteinte pour {$ticketType->name}";
+                    continue;
+                }
+                
+                $cart[$cartKey]['quantity'] = $newQuantity;
+                $cart[$cartKey]['total_price'] = $cart[$cartKey]['unit_price'] * $newQuantity;
+            } else {
+                $cart[$cartKey] = [
+                    'ticket_type_id' => $ticketType->id,
+                    'event_id' => $ticketType->event_id,
+                    'event_title' => $ticketType->event->title,
+                    'event_date' => $ticketType->event->formatted_event_date,
+                    'event_venue' => $ticketType->event->venue,
+                    'ticket_name' => $ticketType->name,
+                    'unit_price' => $ticketType->price,
+                    'quantity' => $ticketData['quantity'],
+                    'total_price' => $ticketType->price * $ticketData['quantity'],
+                    'max_per_order' => $ticketType->max_per_order,
+                    'added_at' => now()->timestamp
+                ];
+            }
+
+            $addedTickets[] = $ticketType->name;
         }
+
+        // Définir un timer de panier
+        if (!session()->has('cart_timer')) {
+            session()->put('cart_timer', now()->addMinutes(15));
+        }
+
+        session()->put('cart', $cart);
+
+        if (empty($addedTickets)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun billet n\'a pu être ajouté',
+                'errors' => $errors
+            ], 400);
+        }
+
+        $message = count($addedTickets) === 1 
+            ? "Billet ajouté : " . $addedTickets[0]
+            : count($addedTickets) . " types de billets ajoutés au panier";
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'added_tickets' => $addedTickets,
+            'errors' => $errors,
+            'cart_count' => $this->getCartCount(),
+            'cart_total' => $this->getCartTotal(),
+            'timer_remaining' => $this->getTimerRemaining()
+        ]);
+    }
+
+    /**
+     * Vérifier si un événement est disponible à la vente
+     */
+    private function isEventAvailableForSale($event)
+    {
+        if (!$event) return false;
         
-        return view('cart.show', compact('cart', 'cartTotal', 'cartCount', 'timeRemaining'));
+        // Vérifier si l'événement est dans le futur
+        if ($event->event_date < now()) return false;
+        
+        // Vérifier si l'événement a des billets disponibles
+        if ($event->ticketTypes->sum(function($ticketType) {
+            return $ticketType->quantity_available - $ticketType->quantity_sold;
+        }) <= 0) return false;
+        
+        return true;
+    }
+
+    /**
+     * Obtenir le temps restant du timer (en secondes)
+     */
+    private function getTimerRemaining()
+    {
+        $timer = session()->get('cart_timer');
+        if (!$timer) return null;
+        
+        $remaining = now()->diffInSeconds($timer, false);
+        return max(0, $remaining);
     }
 
     /**
@@ -155,65 +223,53 @@ class CartController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'cart_key' => 'required|string',
-            'quantity' => 'required|integer|min:1|max:20'
+            'ticket_type_id' => 'required|exists:ticket_types,id',
+            'quantity' => 'required|integer|min:0|max:10'
         ]);
 
-        // Nettoyer les sessions expirées
-        $this->cleanExpiredSessions();
-
         $cart = session()->get('cart', []);
+        $cartKey = 'ticket_' . $request->ticket_type_id;
         
-        if (empty($cart)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Panier vide ou session expirée.'
-            ], 404);
-        }
-        
-        if (!isset($cart[$request->cart_key])) {
+        if (!isset($cart[$cartKey])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Billet non trouvé dans le panier.'
             ], 404);
         }
 
-        $ticketType = TicketType::find($cart[$request->cart_key]['ticket_type_id']);
-        
-        if (!$ticketType) {
+        if ($request->quantity == 0) {
+            // Supprimer du panier
+            unset($cart[$cartKey]);
+            session()->put('cart', $cart);
+            
             return response()->json([
-                'success' => false,
-                'message' => 'Type de billet non trouvé.'
-            ], 404);
+                'success' => true,
+                'message' => 'Billet supprimé du panier.',
+                'cart_count' => $this->getCartCount(),
+                'cart_total' => $this->getCartTotal()
+            ]);
         }
 
         // Vérifier la disponibilité
-        $remainingTickets = $ticketType->quantity_available - $ticketType->quantity_sold;
-        if ($request->quantity > $remainingTickets) {
+        $ticketType = TicketType::find($request->ticket_type_id);
+        if (!$ticketType || !$ticketType->canPurchaseQuantity($request->quantity)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Quantité non disponible.'
             ], 400);
         }
 
-        // Mettre à jour la quantité
-        $cart[$request->cart_key]['quantity'] = $request->quantity;
-        $cart[$request->cart_key]['total_price'] = $cart[$request->cart_key]['unit_price'] * $request->quantity;
+        // Mettre à jour
+        $cart[$cartKey]['quantity'] = $request->quantity;
+        $cart[$cartKey]['total_price'] = $cart[$cartKey]['unit_price'] * $request->quantity;
         
         session()->put('cart', $cart);
         
-        Log::info('Quantité mise à jour dans le panier', [
-            'user_id' => auth()->id(),
-            'cart_key' => $request->cart_key,
-            'new_quantity' => $request->quantity
-        ]);
-        
         return response()->json([
             'success' => true,
-            'message' => 'Panier mis à jour !',
-            'cartCount' => $this->getCartCount(),
-            'cartTotal' => $this->getCartTotal(),
-            'timeRemaining' => $this->getTimeRemaining()
+            'message' => 'Quantité mise à jour.',
+            'cart_count' => $this->getCartCount(),
+            'cart_total' => $this->getCartTotal()
         ]);
     }
 
@@ -222,45 +278,25 @@ class CartController extends Controller
      */
     public function remove(Request $request)
     {
-        $request->validate([
-            'cart_key' => 'required|string'
-        ]);
-
-        // Nettoyer les sessions expirées
-        $this->cleanExpiredSessions();
-
+        $ticketTypeId = $request->ticket_type_id;
         $cart = session()->get('cart', []);
+        $cartKey = 'ticket_' . $ticketTypeId;
         
-        if (empty($cart)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Panier vide ou session expirée.'
-            ], 404);
-        }
-        
-        if (isset($cart[$request->cart_key])) {
-            $removedItem = $cart[$request->cart_key];
-            unset($cart[$request->cart_key]);
+        if (isset($cart[$cartKey])) {
+            unset($cart[$cartKey]);
             session()->put('cart', $cart);
-            
-            Log::info('Article supprimé du panier', [
-                'user_id' => auth()->id(),
-                'cart_key' => $request->cart_key,
-                'ticket_name' => $removedItem['ticket_name']
-            ]);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Billet supprimé du panier.',
-                'cartCount' => $this->getCartCount(),
-                'cartTotal' => $this->getCartTotal(),
-                'timeRemaining' => $this->getTimeRemaining()
+                'cart_count' => $this->getCartCount(),
+                'cart_total' => $this->getCartTotal()
             ]);
         }
         
         return response()->json([
             'success' => false,
-            'message' => 'Billet non trouvé dans le panier.'
+            'message' => 'Billet non trouvé.'
         ], 404);
     }
 
@@ -271,46 +307,40 @@ class CartController extends Controller
     {
         session()->forget(['cart', 'cart_timer']);
         
-        Log::info('Panier vidé', [
-            'user_id' => auth()->id()
-        ]);
-        
-        if (request()->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Panier vidé.',
-                'cartCount' => 0,
-                'cartTotal' => 0
-            ]);
-        }
-        
-        return redirect()->back()->with('success', 'Panier vidé.');
-    }
-
-    /**
-     * API pour obtenir les données du panier
-     */
-    public function getCartData()
-    {
-        $this->cleanExpiredSessions();
-        
-        $cart = session()->get('cart', []);
-        $cartCount = $this->getCartCount();
-        $cartTotal = $this->getCartTotal();
-        $timeRemaining = $this->getTimeRemaining();
-
         return response()->json([
-            'cart' => $cart,
-            'cartCount' => $cartCount,
-            'cartTotal' => $cartTotal,
-            'timeRemaining' => $timeRemaining,
-            'formattedTotal' => number_format($cartTotal, 0, ',', ' ') . ' FCFA',
-            'hasTimer' => $timeRemaining !== null
+            'success' => true,
+            'message' => 'Panier vidé.',
+            'cart_count' => 0,
+            'cart_total' => 0
         ]);
     }
 
     /**
-     * Calculer le nombre total d'articles dans le panier
+     * Prolonger le timer du panier
+     */
+    public function extendTimer(Request $request)
+    {
+        $cart = session()->get('cart', []);
+        
+        if (empty($cart)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun panier actif.'
+            ], 400);
+        }
+
+        // Prolonger de 15 minutes
+        session()->put('cart_timer', now()->addMinutes(15));
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Temps de réservation prolongé de 15 minutes.',
+            'timer_remaining' => $this->getTimerRemaining()
+        ]);
+    }
+
+    /**
+     * Obtenir le nombre total d'articles dans le panier
      */
     public function getCartCount()
     {
@@ -319,7 +349,7 @@ class CartController extends Controller
     }
 
     /**
-     * Calculer le total du panier
+     * Obtenir le total du panier
      */
     public function getCartTotal()
     {
@@ -328,70 +358,28 @@ class CartController extends Controller
     }
 
     /**
-     * Obtenir le temps restant en minutes
+     * API pour obtenir les données du panier
      */
-    public function getTimeRemaining()
+    public function getCartData()
     {
-        $cartTimer = session()->get('cart_timer');
+        $cart = session()->get('cart', []);
         
-        if (!$cartTimer) {
-            return null;
-        }
+        // Vérifier le timer
+        $timer = session()->get('cart_timer');
+        $timerExpired = $timer && now()->gt($timer);
         
-        $remaining = now()->diffInMinutes($cartTimer, false);
-        return $remaining > 0 ? $remaining : 0;
-    }
-
-    /**
-     * Nettoyer les sessions expirées
-     */
-    private function cleanExpiredSessions()
-    {
-        $cartTimer = session()->get('cart_timer');
-        
-        if ($cartTimer && now()->gt($cartTimer)) {
+        if ($timerExpired && !empty($cart)) {
+            // Timer expiré, vider le panier
             session()->forget(['cart', 'cart_timer']);
-            
-            Log::info('Session panier expirée et nettoyée', [
-                'user_id' => auth()->id(),
-                'expired_at' => $cartTimer
-            ]);
-        }
-    }
-
-    /**
-     * Vérifier si le panier a un timer actif
-     */
-    public function hasActiveTimer()
-    {
-        $cartTimer = session()->get('cart_timer');
-        return $cartTimer && now()->lt($cartTimer);
-    }
-
-    /**
-     * Prolonger le timer du panier (si nécessaire)
-     */
-    public function extendTimer()
-    {
-        if ($this->hasActiveTimer() && !empty(session()->get('cart', []))) {
-            session()->put('cart_timer', now()->addMinutes(15));
-            
-            Log::info('Timer panier prolongé', [
-                'user_id' => auth()->id(),
-                'new_expiry' => session()->get('cart_timer')
-            ]);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Timer prolongé de 15 minutes',
-                'timeRemaining' => 15,
-                'expiresAt' => session()->get('cart_timer')->toISOString()
-            ]);
+            $cart = [];
         }
         
         return response()->json([
-            'success' => false,
-            'message' => 'Aucun timer actif à prolonger'
-        ], 400);
+            'cart' => $cart,
+            'cart_count' => $this->getCartCount(),
+            'cart_total' => $this->getCartTotal(),
+            'timer_remaining' => $this->getTimerRemaining(),
+            'timer_expired' => $timerExpired
+        ]);
     }
 }

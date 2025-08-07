@@ -22,6 +22,7 @@ use App\Http\Controllers\Promoteur\TicketTypeController;
 // Page d'accueil et événements (SANS AUTHENTIFICATION)
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/all-events', [HomeController::class, 'allEvents'])->name('events.all');
+Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
 Route::get('/api/events', [HomeController::class, 'getEvents'])->name('api.events');
 Route::get('/search', [HomeController::class, 'search'])->name('search');
 
@@ -43,6 +44,11 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::delete('/remove', [CartController::class, 'remove'])->name('remove');
     Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
     Route::get('/data', [CartController::class, 'getCartData'])->name('data');
+    // Nouvelles routes pour le système amélioré
+    Route::post('/cart/extend-timer', [CartController::class, 'extendTimer'])->name('cart.extend.timer');
+    Route::get('/cart/data', [CartController::class, 'getCartData'])->name('cart.data');
+    // Route pour vérifier le statut du panier (AJAX)
+    Route::get('/cart/status', [CartController::class, 'getStatus'])->name('cart.status');
 });
 
 // ==================== VÉRIFICATION TICKETS (PUBLIQUES) ====================

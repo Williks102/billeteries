@@ -85,6 +85,34 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     border-radius: 8px;
 }
+
+/* Animation pour les erreurs de limite */
+.qty-limit-reached {
+    animation: shake 0.5s;
+    border-color: #dc3545 !important;
+}
+
+@keyframes shake {
+    0%, 50%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+.selection-summary {
+    background: rgba(255,107,53,0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.summary-total {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #FF6B35;
+}
 </style>
 @endpush
 
@@ -144,6 +172,9 @@
 @endsection
 
 @push('scripts')
+<!-- Charger jQuery AVANT le script de réservation -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <!-- SYSTÈME UNIFIÉ DE RÉSERVATION - SCRIPT CORRIGÉ -->
 <script>
 // ===== CLASSE PRINCIPALE DE GESTION DES RÉSERVATIONS =====
@@ -453,9 +484,9 @@ class BookingSystem {
 // ===== INITIALISATION =====
 let bookingSystem;
 
-// Initialisation quand le DOM est prêt
+// Initialisation quand jQuery et le DOM sont prêts
 $(document).ready(function() {
-    console.log('🚀 Démarrage du système de billetterie');
+    console.log('🚀 jQuery et DOM prêts - Démarrage du système de billetterie');
     bookingSystem = new BookingSystem();
     
     // Exposer les fonctions globalement pour compatibilité

@@ -382,4 +382,34 @@ class CartController extends Controller
             'timer_expired' => $timerExpired
         ]);
     }
+    /**
+ * Afficher la page du panier
+ */
+public function show()
+{
+    $cart = session()->get('cart', []);
+    
+    // Vérifier le timer
+    $cartTimer = session()->get('cart_timer');
+    $timerExpired = $cartTimer && now()->gt($cartTimer);
+    
+    if ($timerExpired && !empty($cart)) {
+        // Timer expiré, vider le panier
+        session()->forget(['cart', 'cart_timer']);
+        $cart = [];
+        
+        return redirect()->route('cart.show')->with('warning', 'Votre panier a expiré. Les billets ont été libérés.');
+    }
+    
+    // Calculer les totaux
+    $cartTotal = array_sum(array_column($cart, 'total_price'));
+    $serviceFee = $cartTotal > 0 ? 500 : 0; // Frais de service
+    $finalTotal = $cartTotal + $serviceFee;
+    
+    // Calculer le temps restant
+    $timeRemaining = $cartTimer ? now()->diffInSeconds($cartTimer, false) : null;
+    $timeRemaining = $timeRemaining > 0 ? $timeRemaining : null;
+    
+    return view('cart.show', compact('cart', 'cartTotal', 'serviceFee', 'finalTotal', 'timeRemaining'));
+}
 }

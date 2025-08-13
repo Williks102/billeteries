@@ -1,6 +1,10 @@
 
 @extends('layouts.promoteur')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @push('styles')
 <style>
     .event-card {

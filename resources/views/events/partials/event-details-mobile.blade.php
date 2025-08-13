@@ -1,5 +1,9 @@
 {{-- =============================================== --}}
 {{-- resources/views/events/partials/event-details-mobile.blade.php --}}
+
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
 <div class="event-details">
     <!-- Description -->
     @if($event->description)
@@ -107,7 +111,7 @@
             <div class="similar-event d-flex align-items-center p-2 border rounded mb-2">
                 <div class="similar-event-image me-3">
                     @if($similar->image)
-                    <img src="{{ asset('storage/' . $similar->image) }}" 
+                    <img src="{{ Storage::url( $similar->image) }}" 
                          alt="{{ $similar->title }}"
                          class="rounded"
                          style="width: 60px; height: 60px; object-fit: cover;">

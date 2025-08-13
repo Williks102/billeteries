@@ -1,5 +1,9 @@
 {{-- =============================================== --}}
 {{-- resources/views/events/partials/event-details-desktop.blade.php --}}
+
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
 <div class="event-details">
     <!-- Description principale -->
     @if($event->description)
@@ -107,7 +111,7 @@
             <div class="col-md-4">
                 <div class="similar-event-card border rounded p-3 h-100">
                     @if($similar->image)
-                    <img src="{{ asset('storage/' . $similar->image) }}" 
+                    <img src="{{ Storage::url( $similar->image) }}" 
                          alt="{{ $similar->title }}"
                          class="w-100 rounded mb-3"
                          style="height: 120px; object-fit: cover;">

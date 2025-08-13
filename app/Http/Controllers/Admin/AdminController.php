@@ -14,7 +14,7 @@ use App\Models\Ticket;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
-
+use Illuminate\Support\Facades\Storage;
 class AdminController extends Controller
 {
     public function __construct()

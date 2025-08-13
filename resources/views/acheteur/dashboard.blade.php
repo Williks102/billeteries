@@ -2,6 +2,10 @@
 {{-- VERSION CORRIGÉE : Votre dashboard existant avec le nouveau layout --}}
 @extends('layouts.acheteur')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('title', 'Mon tableau de bord - ClicBillet CI')
 
 @section('breadcrumb')
@@ -97,7 +101,7 @@
                             <div class="event-card border rounded p-3">
                                 <div class="d-flex">
                                     @if($order->event && $order->event->image)
-                                        <img src="{{ asset('storage/' . $order->event->image) }}" 
+                                        <img src="{{ Storage::url( $order->event->image) }}" 
                                              class="event-image me-3" 
                                              style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
                                     @else

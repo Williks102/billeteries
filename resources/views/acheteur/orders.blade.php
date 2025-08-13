@@ -1,6 +1,10 @@
 {{-- resources/views/acheteur/orders.blade.php --}}
 @extends('layouts.acheteur')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('title', 'Mes Commandes - ClicBillet CI')
 
 @section('breadcrumb')
@@ -136,7 +140,7 @@
                                 <!-- Image de l'événement -->
                                 <div class="col-md-2">
                                     @if($order->event && $order->event->image)
-                                        <img src="{{ asset('storage/' . $order->event->image) }}" 
+                                        <img src="{{ Storage::url( $order->event->image) }}" 
                                              alt="{{ $order->event->title }}" 
                                              class="img-fluid rounded" style="max-height: 100px; object-fit: cover;">
                                     @else

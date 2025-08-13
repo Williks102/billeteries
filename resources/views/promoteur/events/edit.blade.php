@@ -1,6 +1,10 @@
 {{-- resources/views/promoteur/events/edit.blade.php --}}
 @extends('layouts.promoteur')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @push('styles')
 <style>
     .form-card {

@@ -1,6 +1,10 @@
 {{-- resources/views/checkout/show.blade.php - VERSION ADAPTÉE --}}
 @extends('layouts.app')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('title', 'Finaliser ma commande - ClicBillet CI')
 
 @section('content')
@@ -340,8 +344,308 @@
     </div>
 </div>
 @endsection
+@push('styles')
+<style>
+/* ===== STYLES POUR CHECKOUT PAGE ===== */
 
+:root {
+    --primary-orange: #FF6B35;
+    --primary-dark: #E55A2B;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --light-gray: #f8f9fa;
+    --border-color: #e9ecef;
+    --shadow-light: 0 2px 10px rgba(0,0,0,0.1);
+    --shadow-medium: 0 4px 20px rgba(0,0,0,0.15);
+    --shadow-strong: 0 8px 30px rgba(0,0,0,0.2);
+    --transition-smooth: all 0.3s ease;
+}
+
+/* ===== CONTENEUR CHECKOUT ===== */
+.checkout-container {
+    padding: 2rem 0;
+    background: var(--light-gray);
+    min-height: calc(100vh - 80px);
+}
+
+/* ===== CARTES CHECKOUT ===== */
+.checkout-card, .checkout-item {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-light);
+    transition: var(--transition-smooth);
+}
+
+.checkout-card:hover {
+    box-shadow: var(--shadow-medium);
+    border-color: var(--primary-orange);
+}
+
+/* ===== SECTIONS CHECKOUT ===== */
+.checkout-section {
+    margin-bottom: 2rem;
+}
+
+.checkout-section:last-child {
+    margin-bottom: 0;
+}
+
+.checkout-section h5 {
+    color: var(--primary-dark);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+/* ===== ÉTAPES DE CHECKOUT ===== */
+.checkout-steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-light);
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex: 1;
+    max-width: 120px;
+}
+
+.step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    right: -50%;
+    width: 100%;
+    height: 2px;
+    background: #e9ecef;
+    z-index: 1;
+}
+
+.step.active:not(:last-child)::after {
+    background: var(--primary-orange);
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.step.active .step-number {
+    background: var(--primary-orange);
+    color: white;
+}
+
+.step span:last-child {
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-align: center;
+}
+
+.step.active span:last-child {
+    color: var(--primary-orange);
+    font-weight: 600;
+}
+
+/* ===== FORMULAIRE CHECKOUT ===== */
+.form-control:focus {
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-orange);
+    border-color: var(--primary-orange);
+}
+
+/* ===== RÉSUMÉ TOTAL ===== */
+.total-summary {
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    padding: 1.5rem;
+    border-radius: 15px;
+    border: 1px solid #ffcc02;
+}
+
+.total-summary .text-orange {
+    color: var(--primary-orange) !important;
+}
+
+/* ===== BOUTON CHECKOUT ===== */
+.btn-checkout {
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
+    border: none;
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+    padding: 1rem 2rem;
+    border-radius: 15px;
+    width: 100%;
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.btn-checkout:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+    color: white;
+}
+
+.btn-checkout:active {
+    transform: translateY(-1px);
+}
+
+.btn-checkout::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-checkout:hover::before {
+    left: 100%;
+}
+
+/* ===== HEADER CHECKOUT ===== */
+.checkout-header {
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
+    color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-medium);
+}
+
+.checkout-header h1 {
+    margin-bottom: 0.5rem;
+}
+
+.checkout-header p {
+    margin-bottom: 0;
+    opacity: 0.9;
+}
+
+/* ===== LIENS ET TEXTES ===== */
+.text-orange {
+    color: var(--primary-orange) !important;
+}
+
+a.text-orange:hover {
+    color: var(--primary-dark) !important;
+    text-decoration: underline;
+}
+
+/* ===== ALERTES ===== */
+.alert-success {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border-color: var(--success-color);
+    color: #155724;
+    border-radius: 10px;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border-color: var(--warning-color);
+    color: #856404;
+    border-radius: 10px;
+}
+
+/* ===== STICKY SIDEBAR ===== */
+.sticky-top {
+    position: sticky !important;
+    top: 2rem !important;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .checkout-container {
+        padding: 1rem 0;
+    }
+    
+    .checkout-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .checkout-header {
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .checkout-steps {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .step {
+        flex-direction: row;
+        max-width: none;
+        width: 100%;
+    }
+    
+    .step:not(:last-child)::after {
+        display: none;
+    }
+    
+    .sticky-top {
+        position: relative !important;
+        top: auto !important;
+    }
+    
+    .btn-checkout {
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes slideInFromBottom {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.checkout-card {
+    animation: slideInFromBottom 0.6s ease-out;
+}
+
+.checkout-header {
+    animation: slideInFromBottom 0.4s ease-out;
+}
+</style>
+@endpush
 @push('scripts')
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // ===== GESTION DU TIMER UNIFIÉ =====

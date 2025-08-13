@@ -1,6 +1,10 @@
 {{-- resources/views/admin/events/edit.blade.php --}}
 @extends('layouts.admin')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('title', 'Modifier l\'événement - ' . $event->title)
 
 @push('styles')

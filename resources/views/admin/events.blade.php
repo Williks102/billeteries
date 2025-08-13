@@ -1,6 +1,10 @@
 {{-- resources/views/admin/events.blade.php --}}
 @extends('layouts.admin')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('title', 'Gestion des événements - ClicBillet CI')
 
 @section('breadcrumb')
@@ -187,7 +191,7 @@
                                 <td>
                                     <div class="d-flex align-items-center">
                                         @if($event->image)
-                                            <img src="{{ asset('storage/' . $event->image) }}" 
+                                            <img src="{{ Storage::url( $event->image) }}" 
                                                  alt="{{ $event->title }}" 
                                                  class="rounded me-3" 
                                                  style="width: 50px; height: 50px; object-fit: cover;">

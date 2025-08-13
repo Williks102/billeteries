@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\EventCategory;
@@ -266,7 +267,7 @@ $events = $query->orderBy('created_at', 'desc')
                     'category_slug' => $event->category->slug,
                     'min_price' => $event->ticketTypes->min('price'),
                     'max_price' => $event->ticketTypes->max('price'),
-                    'image_url' => $event->image ? asset('storage/' . $event->image) : null,
+                    'image_url' => $event->image ? Storage::url( $event->image) : null,
                     'url' => route('events.show', $event),
                 ];
             })

@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
 @section('title', 'Tous les événements')
 
 @section('content')

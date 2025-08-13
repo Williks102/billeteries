@@ -1,6 +1,10 @@
 {{-- resources/views/promoteur/events/tickets/index.blade.php --}}
 @extends('layouts.promoteur')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('title', 'Gestion des billets - ' . $event->title)
 
 @section('content')
@@ -43,7 +47,7 @@
                     <div class="row align-items-center">
                         <div class="col-md-2">
                             @if($event->image)
-                                <img src="{{ asset('storage/' . $event->image) }}" 
+                                <img src="{{ Storage::url( $event->image) }}" 
                                      class="img-fluid rounded" 
                                      alt="{{ $event->title }}"
                                      style="height: 80px; width: 80px; object-fit: cover;">

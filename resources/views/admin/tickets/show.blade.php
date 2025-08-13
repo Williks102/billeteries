@@ -149,7 +149,7 @@
                         <div class="row align-items-center">
                             @if($ticket->ticketType->event->image)
                                 <div class="col-md-3">
-                                    <img src="{{ asset('storage/' . $ticket->ticketType->event->image) }}" 
+                                    <img src="{{ Storage::url( $ticket->ticketType->event->image) }}" 
                                          alt="{{ $ticket->ticketType->event->title }}"
                                          class="img-fluid rounded">
                                 </div>

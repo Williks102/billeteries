@@ -1,219 +1,102 @@
-{{-- resources/views/layouts/acheteur.blade.php --}}
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="fr">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title') - ClicBillet CI</title>
     
-    <title>@yield('title', 'Mon Espace - ClicBillet CI')</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    
-    <!-- Bootstrap & FontAwesome -->
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <!-- Styles personnalisés -->
     <style>
         :root {
             --primary-orange: #FF6B35;
-            --secondary-orange: #ff8c61;
-            --primary-dark: #e55a2b;
-            --dark-blue: #1a237e;
-            --black-primary: #2c3e50;
-            --light-gray: #f8f9fa;
-            --success: #28a745;
-            --warning: #ffc107;
-            --danger: #dc3545;
-            --info: #17a2b8;
+            --secondary-orange: #FF8C42;
+            --dark-gray: #2C3E50;
+            --light-gray: #F8F9FA;
+            --border-color: #E9ECEF;
         }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--light-gray);
-            padding-top: 70px;
+            padding-top: 80px;
         }
         
-        /* === HEADER ACHETEUR === */
+        /* === NAVBAR === */
         .acheteur-navbar {
-            position: fixed !important;
+            background: white !important;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            height: 80px;
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            z-index: 1050;
-            background: linear-gradient(135deg, var(--dark-blue), var(--black-primary)) !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            height: 70px;
+            z-index: 1030;
         }
         
-        .acheteur-navbar .navbar-brand {
-            color: white !important;
+        .navbar-brand {
+            color: var(--primary-orange) !important;
             font-weight: 700;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
         }
         
-        .acheteur-navbar .nav-link {
-            color: rgba(255,255,255,0.9) !important;
+        .nav-link {
+            color: var(--dark-gray) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
             transition: all 0.3s ease;
         }
         
-        .acheteur-navbar .nav-link:hover {
+        .nav-link:hover {
+            background-color: rgba(255, 107, 53, 0.1);
             color: var(--primary-orange) !important;
         }
         
-        /* === SIDEBAR ACHETEUR === */
-        .acheteur-sidebar {
-            position: sticky !important;
-            top: 90px;
-            max-height: calc(100vh - 110px);
-            overflow-y: auto;
-            background: white !important;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-        
-        .acheteur-sidebar h5 {
-            color: var(--black-primary);
-            font-weight: 600;
-            border-bottom: 1px solid #e9ecef;
-            padding-bottom: 15px;
-        }
-        
-        .acheteur-sidebar .nav-link {
-            color: #6c757d !important;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .acheteur-sidebar .nav-link:hover {
-            background: rgba(26, 35, 126, 0.1) !important;
-            color: var(--dark-blue) !important;
-            transform: translateX(5px);
-        }
-        
-        .acheteur-sidebar .nav-link.active {
-            background: linear-gradient(45deg, var(--dark-blue), var(--black-primary)) !important;
+        .nav-link.active {
+            background-color: var(--primary-orange);
             color: white !important;
-            box-shadow: 0 2px 8px rgba(26, 35, 126, 0.3);
         }
         
-        .acheteur-sidebar .nav-link i {
-            width: 20px;
-            text-align: center;
+        /* === SIDEBAR === */
+        .acheteur-sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+            padding: 0;
+            position: sticky;
+            top: 100px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
         }
         
-        /* === CONTENU === */
+        /* === CONTENT === */
         .acheteur-content {
-            min-height: calc(100vh - 100px);
             padding: 20px;
-        }
-        
-        /* === COMPOSANTS === */
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-        }
-        
-        .btn-acheteur {
-            background: linear-gradient(45deg, var(--dark-blue), var(--black-primary));
-            border: none;
-            color: white;
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-acheteur:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(26, 35, 126, 0.4);
-            color: white;
-        }
-        
-        .btn-outline-acheteur {
-            border: 2px solid var(--dark-blue);
-            color: var(--dark-blue);
-            background: transparent;
-            border-radius: 8px;
-            padding: 8px 18px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-outline-acheteur:hover {
-            background: var(--dark-blue);
-            color: white;
-            transform: translateY(-2px);
-        }
-        
-        /* === STAT CARDS === */
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            border-left: 4px solid var(--primary-orange);
-            transition: all 0.3s ease;
-            border: 1px solid #e9ecef;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-        }
-        
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            color: white;
-        }
-        
-        .stat-icon.primary {
-            background: linear-gradient(135deg, var(--primary-orange), #ff8c42);
-        }
-        
-        .stat-icon.success {
-            background: linear-gradient(135deg, #28a745, #34d058);
-        }
-        
-        .stat-icon.info {
-            background: linear-gradient(135deg, var(--dark-blue), #0066cc);
-        }
-        
-        .content-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            border: 1px solid #e9ecef;
-            overflow: hidden;
         }
         
         /* === BREADCRUMB === */
         .acheteur-breadcrumb {
-            background: rgba(255, 107, 53, 0.1) !important;
+            background: white;
             border-radius: 8px;
-            padding: 12px 20px;
+            padding: 1rem;
             margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
-        .acheteur-breadcrumb .breadcrumb-item a {
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
             color: var(--primary-orange);
-            text-decoration: none;
+            font-weight: bold;
         }
         
-        .acheteur-breadcrumb .breadcrumb-item.active {
+        .breadcrumb .breadcrumb-item.active {
             color: var(--dark-gray);
             font-weight: 500;
         }
@@ -283,25 +166,42 @@
                         </a>
                     </li>
                     
-                    <!-- Profil utilisateur -->
+                    <!-- Profil utilisateur - CORRECTION ICI -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user-circle me-1"></i>
-                            {{ Auth::user()->name }}
+                            @auth
+                                {{ auth()->user()->name ?? 'Utilisateur' }}
+                            @else
+                                Connexion
+                            @endauth
                         </a>
                         <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" href="{{ route('acheteur.profile') }}">
-                                    <i class="fas fa-user me-2"></i>Mon profil
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="{{ route('logout') }}"
-                                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
-                                </a>
-                            </li>
+                            @auth
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('acheteur.profile') }}">
+                                        <i class="fas fa-user me-2"></i>Mon profil
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('logout') }}"
+                                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                    </a>
+                                </li>
+                            @else
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('login') }}">
+                                        <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('register') }}">
+                                        <i class="fas fa-user-plus me-2"></i>S'inscrire
+                                    </a>
+                                </li>
+                            @endauth
                         </ul>
                     </li>
                 </ul>
@@ -353,9 +253,11 @@
     </div>
     
     <!-- Formulaire de déconnexion -->
+    @auth
     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
         @csrf
     </form>
+    @endauth
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

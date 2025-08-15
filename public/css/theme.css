@@ -23,7 +23,7 @@
 /* === BOUTONS === */
 .btn-primary, 
 .btn-primary-custom {
-    background: var(--black-primary) !important;
+    background: var(--primary-orange) !important;
     border: 2px solid var(--black-primary) !important;
     color: white !important;
     font-weight: 600;

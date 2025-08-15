@@ -162,11 +162,11 @@
     </div>
 </nav>
 
-<!-- NAVBAR MOBILE (nouvelle) - Visible uniquement sur mobile -->
+<!-- NAVBAR MOBILE avec ID uniques et état initial correct -->
 <nav class="mobile-only-navbar d-block d-md-none">
     <div class="navbar-container">
-        <!-- Menu burger (mobile uniquement) -->
-        <button class="navbar-toggle" id="navbarToggle">
+        <!-- Menu burger avec ID unique -->
+        <button class="navbar-toggle" id="mobileNavToggle" aria-label="Menu">
             <span class="burger-line"></span>
             <span class="burger-line"></span>
             <span class="burger-line"></span>
@@ -183,18 +183,18 @@
         <!-- Actions à droite -->
         <div class="navbar-actions">
             <!-- Bouton recherche -->
-            <button class="action-btn search-btn" id="searchToggle">
+            <button class="action-btn search-btn" id="mobileSearchToggle" aria-label="Recherche">
                 <i class="fas fa-search"></i>
             </button>
             
             <!-- Bouton profil/compte -->
             <div class="profile-dropdown">
-                <button class="action-btn profile-btn" id="profileToggle">
+                <button class="action-btn profile-btn" id="mobileProfileToggle" aria-label="Profil">
                     <i class="fas fa-user"></i>
                 </button>
                 
-                <!-- Menu dropdown profil -->
-                <div class="dropdown-menu" id="profileMenu">
+                <!-- Menu dropdown profil - ÉTAT INITIAL: FERMÉ -->
+                <div class="dropdown-menu" id="mobileProfileMenu" style="opacity: 0; visibility: hidden;">
                     @auth
                         <div class="dropdown-header">
                             <div class="user-info">
@@ -214,55 +214,17 @@
                                 <i class="fas fa-tachometer-alt"></i>
                                 <span>Dashboard Admin</span>
                             </a>
-                            <a href="{{ route('admin.users') }}" class="dropdown-item">
-                                <i class="fas fa-users"></i>
-                                <span>Utilisateurs</span>
-                            </a>
-                            <a href="{{ route('admin.events') }}" class="dropdown-item">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Événements</span>
-                            </a>
                         @elseif(auth()->user()->isPromoteur())
                             <a href="{{ route('promoteur.dashboard') }}" class="dropdown-item">
                                 <i class="fas fa-tachometer-alt"></i>
                                 <span>Dashboard</span>
-                            </a>
-                            <a href="{{ route('promoteur.events.index') }}" class="dropdown-item">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Mes événements</span>
-                            </a>
-                            <a href="{{ route('promoteur.sales') }}" class="dropdown-item">
-                                <i class="fas fa-chart-line"></i>
-                                <span>Ventes</span>
-                            </a>
-                            <a href="{{ route('promoteur.scanner') }}" class="dropdown-item">
-                                <i class="fas fa-qrcode"></i>
-                                <span>Scanner QR</span>
                             </a>
                         @else
                             <a href="{{ route('acheteur.dashboard') }}" class="dropdown-item">
                                 <i class="fas fa-tachometer-alt"></i>
                                 <span>Mes billets</span>
                             </a>
-                            <a href="{{ route('acheteur.tickets') }}" class="dropdown-item">
-                                <i class="fas fa-ticket-alt"></i>
-                                <span>Historique</span>
-                            </a>
-                            <a href="{{ route('cart.show') }}" class="dropdown-item">
-                                <i class="fas fa-shopping-cart"></i>
-                                <span>Mon panier</span>
-                            </a>
                         @endif
-                        
-                        <div class="dropdown-divider"></div>
-                        
-                        <a href="{{ 
-                            auth()->user()->isAdmin() ? route('admin.profile') : 
-                            (auth()->user()->isPromoteur() ? route('promoteur.profile') : route('acheteur.profile')) 
-                        }}" class="dropdown-item">
-                            <i class="fas fa-user-cog"></i>
-                            <span>Mon profil</span>
-                        </a>
                         
                         <div class="dropdown-divider"></div>
                         
@@ -278,61 +240,34 @@
                             <i class="fas fa-sign-in-alt"></i>
                             <span>Connexion</span>
                         </a>
-                        <a href="{{ route('register') }}" class="dropdown-item">
-                            <i class="fas fa-user-plus"></i>
-                            <span>Inscription</span>
-                        </a>
                     @endauth
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Menu mobile overlay -->
-    <div class="mobile-overlay" id="mobileOverlay">
+    <!-- Menu mobile overlay - ÉTAT INITIAL: FERMÉ -->
+    <div class="mobile-overlay" id="mobileNavOverlay" style="opacity: 0; visibility: hidden;">
         <div class="mobile-menu">
             <div class="mobile-header">
                 <span class="mobile-title">Menu</span>
-                <button class="mobile-close" id="mobileClose">
+                <button class="mobile-close" id="mobileNavClose" aria-label="Fermer">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
             <div class="mobile-content">
-                <a href="{{ route('home') }}" class="mobile-link {{ request()->routeIs('home') ? 'active' : '' }}">
+                <a href="{{ route('home') }}" class="mobile-link">
                     <i class="fas fa-home"></i>
                     <span>Accueil</span>
                 </a>
-                <a href="{{ route('events.all') }}" class="mobile-link {{ request()->routeIs('events.*') ? 'active' : '' }}">
+                <a href="{{ route('events.all') }}" class="mobile-link">
                     <i class="fas fa-calendar"></i>
                     <span>Événements</span>
-                </a>
-                <a href="#" class="mobile-link">
-                    <i class="fas fa-tags"></i>
-                    <span>Catégories</span>
                 </a>
                 
                 @auth
                     <div class="mobile-divider"></div>
-                    
-                    <!-- Liens spécifiques au rôle -->
-                    @if(auth()->user()->isAdmin())
-                        <a href="{{ route('admin.dashboard') }}" class="mobile-link">
-                            <i class="fas fa-shield-alt"></i>
-                            <span>Administration</span>
-                        </a>
-                    @elseif(auth()->user()->isPromoteur())
-                        <a href="{{ route('promoteur.dashboard') }}" class="mobile-link">
-                            <i class="fas fa-chart-line"></i>
-                            <span>Espace promoteur</span>
-                        </a>
-                    @else
-                        <a href="{{ route('cart.show') }}" class="mobile-link">
-                            <i class="fas fa-shopping-cart"></i>
-                            <span>Mon panier</span>
-                        </a>
-                    @endif
-                    
                     <div class="mobile-user">
                         <div class="mobile-user-info">
                             <div class="mobile-avatar">
@@ -350,26 +285,22 @@
                         <i class="fas fa-sign-in-alt"></i>
                         <span>Connexion</span>
                     </a>
-                    <a href="{{ route('register') }}" class="mobile-link">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Inscription</span>
-                    </a>
                 @endauth
             </div>
         </div>
     </div>
     
-    <!-- Barre de recherche mobile -->
-    <div class="search-overlay" id="searchOverlay">
+    <!-- Barre de recherche mobile - ÉTAT INITIAL: FERMÉ -->
+    <div class="search-overlay" id="mobileSearchOverlay" style="opacity: 0; visibility: hidden;">
         <div class="search-container">
             <div class="search-header">
-                <button class="search-back" id="searchBack">
+                <button class="search-back" id="mobileSearchBack" aria-label="Retour">
                     <i class="fas fa-arrow-left"></i>
                 </button>
                 <form action="{{ route('search') }}" method="GET" class="search-form-mobile">
                     <div class="search-input-wrapper">
                         <input type="text" name="q" class="search-input" placeholder="Rechercher un événement..." id="mobileSearchInput">
-                        <button class="search-clear" type="button" id="searchClear">
+                        <button class="search-clear" type="button" id="mobileSearchClear" style="opacity: 0;">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -379,159 +310,220 @@
     </div>
 </nav>
 
+
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Elements de la navbar mobile
-    const navbarToggle = document.getElementById('navbarToggle');
-    const mobileOverlay = document.getElementById('mobileOverlay');
-    const mobileClose = document.getElementById('mobileClose');
-    const profileToggle = document.getElementById('profileToggle');
-    const profileMenu = document.getElementById('profileMenu');
-    const searchToggle = document.getElementById('searchToggle');
-    const searchOverlay = document.getElementById('searchOverlay');
-    const searchBack = document.getElementById('searchBack');
-    const searchInput = document.getElementById('mobileSearchInput');
-    const searchClear = document.getElementById('searchClear');
-    
-    // Debug pour vérifier les éléments
-    console.log('Navbar elements found:', {
-        navbarToggle: !!navbarToggle,
-        mobileOverlay: !!mobileOverlay,
-        profileToggle: !!profileToggle,
-        searchToggle: !!searchToggle
-    });
-    
-    // Mobile menu toggle
-    if (navbarToggle && mobileOverlay) {
-        navbarToggle.addEventListener('click', function() {
-            console.log('Menu burger clicked');
-            this.classList.toggle('active');
-            mobileOverlay.classList.toggle('show');
-            document.body.style.overflow = mobileOverlay.classList.contains('show') ? 'hidden' : '';
+// Attendre que TOUT soit chargé
+window.addEventListener('load', function() {
+    // Délai pour s'assurer que Bootstrap est initialisé
+    setTimeout(function() {
+        console.log('🚀 Initialisation navbar mobile...');
+        
+        // Elements avec les nouveaux ID
+        const navToggle = document.getElementById('mobileNavToggle');
+        const navOverlay = document.getElementById('mobileNavOverlay');
+        const navClose = document.getElementById('mobileNavClose');
+        const profileToggle = document.getElementById('mobileProfileToggle');
+        const profileMenu = document.getElementById('mobileProfileMenu');
+        const searchToggle = document.getElementById('mobileSearchToggle');
+        const searchOverlay = document.getElementById('mobileSearchOverlay');
+        const searchBack = document.getElementById('mobileSearchBack');
+        const searchInput = document.getElementById('mobileSearchInput');
+        const searchClear = document.getElementById('mobileSearchClear');
+        
+        // Debug - vérifier les éléments
+        console.log('📱 Éléments trouvés:', {
+            navToggle: !!navToggle,
+            navOverlay: !!navOverlay,
+            profileToggle: !!profileToggle,
+            searchToggle: !!searchToggle
         });
-    }
-    
-    // Close mobile menu
-    if (mobileClose && mobileOverlay && navbarToggle) {
-        mobileClose.addEventListener('click', function() {
-            console.log('Close button clicked');
-            navbarToggle.classList.remove('active');
-            mobileOverlay.classList.remove('show');
-            document.body.style.overflow = '';
-        });
-    }
-    
-    // Close mobile menu on overlay click
-    if (mobileOverlay && navbarToggle) {
-        mobileOverlay.addEventListener('click', function(e) {
-            if (e.target === this) {
-                console.log('Overlay clicked');
-                navbarToggle.classList.remove('active');
-                this.classList.remove('show');
-                document.body.style.overflow = '';
-            }
-        });
-    }
-    
-    // Profile dropdown toggle
-    if (profileToggle && profileMenu) {
-        profileToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            console.log('Profile button clicked');
-            profileMenu.classList.toggle('show');
-        });
-    }
-    
-    // Close profile dropdown when clicking outside
-    document.addEventListener('click', function() {
+        
+        // FORCER la fermeture initiale
+        if (navOverlay) {
+            navOverlay.classList.remove('show');
+            navOverlay.style.opacity = '0';
+            navOverlay.style.visibility = 'hidden';
+        }
         if (profileMenu) {
             profileMenu.classList.remove('show');
+            profileMenu.style.opacity = '0';
+            profileMenu.style.visibility = 'hidden';
         }
-    });
-    
-    // Prevent dropdown close when clicking inside
-    if (profileMenu) {
-        profileMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-    }
-    
-    // Search overlay toggle
-    if (searchToggle && searchOverlay) {
-        searchToggle.addEventListener('click', function() {
-            console.log('Search button clicked');
-            searchOverlay.classList.add('show');
-            document.body.style.overflow = 'hidden';
-            setTimeout(() => {
-                if (searchInput) searchInput.focus();
-            }, 300);
-        });
-    }
-    
-    // Close search overlay
-    if (searchBack && searchOverlay && searchClear) {
-        searchBack.addEventListener('click', function() {
-            console.log('Search back clicked');
+        if (searchOverlay) {
             searchOverlay.classList.remove('show');
-            document.body.style.overflow = '';
-            if (searchInput) searchInput.value = '';
-            searchClear.classList.remove('show');
-        });
-    }
-    
-    // Search input handling
-    if (searchInput && searchClear) {
-        searchInput.addEventListener('input', function() {
-            if (this.value.length > 0) {
-                searchClear.classList.add('show');
-            } else {
-                searchClear.classList.remove('show');
-            }
-        });
-    }
-    
-    // Clear search
-    if (searchClear && searchInput) {
-        searchClear.addEventListener('click', function() {
-            searchInput.value = '';
-            this.classList.remove('show');
-            searchInput.focus();
-        });
-    }
-    
-    // Close overlays on escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            // Close mobile menu
-            if (mobileOverlay?.classList.contains('show')) {
-                navbarToggle?.classList.remove('active');
-                mobileOverlay.classList.remove('show');
+            searchOverlay.style.opacity = '0';
+            searchOverlay.style.visibility = 'hidden';
+        }
+        if (navToggle) {
+            navToggle.classList.remove('active');
+        }
+        
+        // Mobile menu toggle
+        if (navToggle && navOverlay) {
+            navToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🍔 Menu burger cliqué');
+                
+                this.classList.toggle('active');
+                
+                if (this.classList.contains('active')) {
+                    navOverlay.classList.add('show');
+                    navOverlay.style.opacity = '1';
+                    navOverlay.style.visibility = 'visible';
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    navOverlay.classList.remove('show');
+                    navOverlay.style.opacity = '0';
+                    navOverlay.style.visibility = 'hidden';
+                    document.body.style.overflow = '';
+                }
+            });
+        }
+        
+        // Close mobile menu
+        if (navClose && navOverlay && navToggle) {
+            navClose.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('❌ Fermeture menu');
+                
+                navToggle.classList.remove('active');
+                navOverlay.classList.remove('show');
+                navOverlay.style.opacity = '0';
+                navOverlay.style.visibility = 'hidden';
                 document.body.style.overflow = '';
+            });
+        }
+        
+        // Close menu on overlay click
+        if (navOverlay && navToggle) {
+            navOverlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    console.log('🎯 Overlay cliqué');
+                    navToggle.classList.remove('active');
+                    this.classList.remove('show');
+                    this.style.opacity = '0';
+                    this.style.visibility = 'hidden';
+                    document.body.style.overflow = '';
+                }
+            });
+        }
+        
+        // Profile dropdown
+        if (profileToggle && profileMenu) {
+            profileToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('👤 Profil cliqué');
+                
+                const isShowing = profileMenu.classList.contains('show');
+                
+                if (isShowing) {
+                    profileMenu.classList.remove('show');
+                    profileMenu.style.opacity = '0';
+                    profileMenu.style.visibility = 'hidden';
+                } else {
+                    profileMenu.classList.add('show');
+                    profileMenu.style.opacity = '1';
+                    profileMenu.style.visibility = 'visible';
+                }
+            });
+        }
+        
+        // Close profile on outside click
+        document.addEventListener('click', function() {
+            if (profileMenu) {
+                profileMenu.classList.remove('show');
+                profileMenu.style.opacity = '0';
+                profileMenu.style.visibility = 'hidden';
             }
-            
-            // Close search overlay
-            if (searchOverlay?.classList.contains('show')) {
+        });
+        
+        // Search overlay
+        if (searchToggle && searchOverlay) {
+            searchToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔍 Recherche ouverte');
+                
+                searchOverlay.classList.add('show');
+                searchOverlay.style.opacity = '1';
+                searchOverlay.style.visibility = 'visible';
+                document.body.style.overflow = 'hidden';
+                
+                setTimeout(() => {
+                    if (searchInput) searchInput.focus();
+                }, 300);
+            });
+        }
+        
+        // Close search
+        if (searchBack && searchOverlay) {
+            searchBack.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔙 Recherche fermée');
+                
                 searchOverlay.classList.remove('show');
+                searchOverlay.style.opacity = '0';
+                searchOverlay.style.visibility = 'hidden';
                 document.body.style.overflow = '';
+                
                 if (searchInput) searchInput.value = '';
-                searchClear?.classList.remove('show');
-            }
+                if (searchClear) {
+                    searchClear.style.opacity = '0';
+                }
+            });
+        }
+        
+        // Search input
+        if (searchInput && searchClear) {
+            searchInput.addEventListener('input', function() {
+                if (this.value.length > 0) {
+                    searchClear.style.opacity = '1';
+                } else {
+                    searchClear.style.opacity = '0';
+                }
+            });
             
-            // Close profile dropdown
-            profileMenu?.classList.remove('show');
+            searchClear.addEventListener('click', function() {
+                searchInput.value = '';
+                this.style.opacity = '0';
+                searchInput.focus();
+            });
         }
-    });
-    
-    // Restore scroll on window resize
-    window.addEventListener('resize', function() {
-        if (window.innerWidth > 768) {
-            document.body.style.overflow = '';
-            mobileOverlay?.classList.remove('show');
-            searchOverlay?.classList.remove('show');
-            navbarToggle?.classList.remove('active');
-        }
-    });
+        
+        // Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (navOverlay?.classList.contains('show')) {
+                    navToggle?.classList.remove('active');
+                    navOverlay.classList.remove('show');
+                    navOverlay.style.opacity = '0';
+                    navOverlay.style.visibility = 'hidden';
+                    document.body.style.overflow = '';
+                }
+                
+                if (searchOverlay?.classList.contains('show')) {
+                    searchOverlay.classList.remove('show');
+                    searchOverlay.style.opacity = '0';
+                    searchOverlay.style.visibility = 'hidden';
+                    document.body.style.overflow = '';
+                }
+                
+                if (profileMenu) {
+                    profileMenu.classList.remove('show');
+                    profileMenu.style.opacity = '0';
+                    profileMenu.style.visibility = 'hidden';
+                }
+            }
+        });
+        
+        console.log('✅ Navbar mobile initialisée');
+        
+    }, 500); // Délai de 500ms pour éviter les conflits
 });
 </script>
 @endpush

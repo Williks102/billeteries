@@ -1,4 +1,35 @@
 /* 🎨 Thème Orange & Noir - Billetterie CI */
+/* FORCER L'ÉTAT INITIAL FERMÉ */
+.mobile-overlay,
+.search-overlay {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+}
+
+.mobile-overlay.show,
+.search-overlay.show {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+}
+
+.mobile-only-navbar .dropdown-menu {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+}
+
+.mobile-only-navbar .dropdown-menu.show {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+}
+
+/* Empêcher Bootstrap d'interférer */
+.mobile-overlay.show .mobile-menu {
+    transform: translateX(0) !important;
+}
 
 :root {
     /* Couleurs principales */

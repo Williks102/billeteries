@@ -6,116 +6,125 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketVerificationController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\PageController;
+
+// Controllers spécialisés par rôle
 use App\Http\Controllers\Acheteur\AcheteurController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\EventController as AdminEventController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\TicketController as AdminTicketController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\PageController as AdminPageController;
+use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+
 use App\Http\Controllers\Promoteur\PromoteurController;
+use App\Http\Controllers\Promoteur\EventController as PromoteurEventController;
 use App\Http\Controllers\Promoteur\TicketTypeController;
+use App\Http\Controllers\Promoteur\ScannerController;
+use App\Http\Controllers\Promoteur\SalesController;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes - Version basée sur votre projet réel
+| Routes Web - MIGRATION COMPLÈTE VERS CONTRÔLEURS SPÉCIALISÉS
 |--------------------------------------------------------------------------
 */
 
 // ==================== ROUTES PUBLIQUES ====================
 
-// Page d'accueil et événements (SANS AUTHENTIFICATION)
+// Page d'accueil et événements
 Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/all-events', [HomeController::class, 'allEvents'])->name('events.all');
+Route::get('/events', [HomeController::class, 'allEvents'])->name('events.all');
 Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
-Route::get('/api/events', [HomeController::class, 'getEvents'])->name('api.events');
 Route::get('/search', [HomeController::class, 'search'])->name('search');
+Route::get('/api/events', [HomeController::class, 'getEvents'])->name('api.events');
 
-// Détail d'un événement (SANS AUTHENTIFICATION)
-Route::get('/events/{event}', [HomeController::class, 'show'])->name('events.show');
-
-// Événements par catégorie (SANS AUTHENTIFICATION)
+// Catégories d'événements
 Route::get('/categories/{category}', [HomeController::class, 'category'])->name('categories.show');
 
-// Routes d'authentification (générées par Laravel UI)
+// Pages dynamiques (CMS)
+Route::get('/page/{slug}', [PageController::class, 'showCMS'])->name('pages.cms');
+
+// Pages statiques
+Route::get('/how-it-works', [PageController::class, 'howItWorks'])->name('pages.how-it-works');
+Route::get('/faq', [PageController::class, 'faq'])->name('pages.faq');
+Route::get('/contact', [PageController::class, 'contact'])->name('pages.contact');
+Route::post('/contact', [PageController::class, 'submitContact'])->name('pages.contact.submit');
+Route::get('/terms-of-service', [PageController::class, 'termsOfService'])->name('pages.terms');
+Route::get('/privacy-policy', [PageController::class, 'privacyPolicy'])->name('pages.privacy');
+Route::get('/legal-mentions', [PageController::class, 'legalMentions'])->name('pages.legal');
+Route::get('/promoter-guide', [PageController::class, 'promoterGuide'])->name('pages.promoter-guide');
+Route::get('/pricing', [PageController::class, 'pricing'])->name('pages.pricing');
+Route::get('/support', [PageController::class, 'support'])->name('pages.support');
+Route::post('/support', [PageController::class, 'submitSupport'])->name('pages.support.submit');
+
+// Authentification
 Auth::routes();
 
-// ==================== PANIER (SANS AUTHENTIFICATION) ====================
-
-Route::prefix('cart')->name('cart.')->group(function () {  // ← LIGNE CORRIGÉE
+// ==================== PANIER (PUBLIQUE) ====================
+Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('/', [CartController::class, 'show'])->name('show');
     Route::post('/add', [CartController::class, 'add'])->name('add');
     Route::patch('/update', [CartController::class, 'update'])->name('update');
     Route::delete('/remove', [CartController::class, 'remove'])->name('remove');
     Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
     Route::get('/data', [CartController::class, 'getCartData'])->name('data');
-    
-    // Routes améliorées (NETTOYEZ LES DOUBLONS)
     Route::post('/extend-timer', [CartController::class, 'extendTimer'])->name('extend.timer');
     Route::get('/status', [CartController::class, 'getStatus'])->name('status');
 });
 
-// ==================== VÉRIFICATION TICKETS (PUBLIQUES) ====================
+// ==================== VÉRIFICATION TICKETS (PUBLIQUE) ====================
+Route::get('/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verify'])->name('tickets.verify');
+Route::get('/api/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verifyApi'])->name('api.tickets.verify');
+Route::post('/api/scan-ticket', [TicketVerificationController::class, 'scan'])->name('api.tickets.scan');
 
-// Route publique de vérification via QR code (NETTOYER LES DOUBLONS)
-Route::get('/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verify'])
-    ->name('tickets.verify');
-    
-// API de vérification pour scanner
-Route::get('/api/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verifyApi'])
-    ->name('api.tickets.verify');
-    
-// API pour scanner un ticket (marquer comme utilisé)
-Route::post('/api/scan-ticket', [TicketVerificationController::class, 'scan'])
-    ->name('api.tickets.scan');
-    
-    //Gestion des pages (CMS)
- Route::get('/page/{slug}', [App\Http\Controllers\PageController::class, 'showCMS'])->name('pages.cms');
 // ==================== ROUTES AUTHENTIFIÉES ====================
 
 // Dashboard principal (redirecteur)
 Route::middleware(['auth'])->get('/dashboard', function() {
     $user = auth()->user();
     
-    // Debug pour voir le rôle
-    \Log::info('User role: ' . $user->role);
-    
-    if ($user->isAdmin()) {
-        return redirect()->route('admin.dashboard');
-    } elseif ($user->isPromoteur()) {
-        return redirect()->route('promoteur.dashboard');
-    } elseif ($user->isAcheteur()) {
-        return redirect()->route('acheteur.dashboard');
-    }
-    
-    // Fallback avec plus d'infos
-    \Log::error('Rôle utilisateur non reconnu: ' . $user->role . ' pour l\'utilisateur ID: ' . $user->id);
-    return redirect()->route('home')->with('error', 'Rôle utilisateur non reconnu: ' . $user->role);
+    return match($user->role) {
+        'admin' => redirect()->route('admin.dashboard'),
+        'promoteur' => redirect()->route('promoteur.dashboard'),
+        'acheteur' => redirect()->route('acheteur.dashboard'),
+        default => redirect()->route('home')->with('error', 'Rôle utilisateur non reconnu')
+    };
 })->name('dashboard');
 
 Route::middleware(['auth'])->group(function () {
     
     // ==================== CHECKOUT ====================
-    
     Route::prefix('checkout')->name('checkout.')->group(function () {
-        Route::post('/direct', [CheckoutController::class, 'direct'])->name('direct');
         Route::get('/', [CheckoutController::class, 'show'])->name('show');
         Route::post('/process', [CheckoutController::class, 'process'])->name('process');
-        // nouvelle route
-    
+        Route::post('/direct', [CheckoutController::class, 'direct'])->name('direct');
         Route::get('/confirmation/{order}', [CheckoutController::class, 'confirmation'])->name('confirmation');
     });
     
-    // ==================== TICKETS (GÉNÉRAL) ====================
+    // ==================== TICKETS GÉNÉRAUX ====================
+    Route::prefix('tickets')->name('tickets.')->group(function () {
+        Route::get('/{ticket}', [TicketController::class, 'show'])->name('show');
+        Route::get('/{ticket}/download', [TicketController::class, 'download'])->name('download');
+    });
     
-    Route::get('/tickets/{ticket}/download', [TicketController::class, 'download'])->name('tickets.download');
-    Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
-    
-    // ==================== ACHETEUR ====================
-    
-    Route::middleware(['acheteur', 'layout:acheteur'])->prefix('acheteur')->name('acheteur.')->group(function () {
+    // ==================== ESPACE ACHETEUR ====================
+    Route::middleware(['acheteur'])->prefix('acheteur')->name('acheteur.')->group(function () {
         Route::get('/dashboard', [AcheteurController::class, 'dashboard'])->name('dashboard');
+        
+        // Tickets de l'acheteur
         Route::get('/tickets', [AcheteurController::class, 'myTickets'])->name('tickets');
+        Route::get('/ticket/{ticket}', [AcheteurController::class, 'showTicket'])->name('ticket.show');
+        
+        // Commandes de l'acheteur
         Route::get('/orders', [AcheteurController::class, 'orders'])->name('orders');
         Route::get('/order/{order}', [AcheteurController::class, 'orderDetail'])->name('order.detail');
         Route::get('/order/{order}/download', [AcheteurController::class, 'downloadTickets'])->name('order.download');
         Route::get('/orders/{order}/qr-codes', [AcheteurController::class, 'getOrderQRCodes'])->name('orders.qr-codes');
-        Route::get('/ticket/{ticket}', [AcheteurController::class, 'showTicket'])->name('ticket.show');
+        
+        // Profil et favoris
         Route::get('/profile', [AcheteurController::class, 'profile'])->name('profile');
         Route::patch('/profile', [AcheteurController::class, 'updateProfile'])->name('profile.update');
         Route::get('/favorites', [AcheteurController::class, 'favorites'])->name('favorites');
@@ -123,306 +132,185 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/favorites/{event}', [AcheteurController::class, 'removeFromFavorites'])->name('favorites.remove');
     });
     
-    // ==================== PROMOTEUR ====================
-    
-    Route::middleware(['promoteur', 'layout:promoteur'])->prefix('promoteur')->name('promoteur.')->group(function () {
-        // Dashboard principal
+    // ==================== ESPACE PROMOTEUR ====================
+    Route::middleware(['promoteur'])->prefix('promoteur')->name('promoteur.')->group(function () {
         Route::get('/dashboard', [PromoteurController::class, 'dashboard'])->name('dashboard');
         
-        // Gestion des événements
-        Route::get('/events', [PromoteurController::class, 'events'])->name('events.index');
-        Route::get('/events/create', [PromoteurController::class, 'create'])->name('events.create');
-        Route::post('/events', [PromoteurController::class, 'store'])->name('events.store');
-        Route::get('/events/{event}', [PromoteurController::class, 'show'])->name('events.show');
-        Route::get('/events/{event}/edit', [PromoteurController::class, 'edit'])->name('events.edit');
-        Route::patch('/events/{event}', [PromoteurController::class, 'update'])->name('events.update');
-        Route::delete('/events/{event}', [PromoteurController::class, 'destroy'])->name('events.destroy');
+        // Gestion des événements (RESOURCE)
+        Route::resource('events', PromoteurEventController::class);
+        Route::post('/events/{event}/publish', [PromoteurEventController::class, 'publish'])->name('events.publish');
+        Route::post('/events/{event}/unpublish', [PromoteurEventController::class, 'unpublish'])->name('events.unpublish');
         
-        // Publication d'événements
-        Route::post('/events/{event}/publish', [PromoteurController::class, 'publish'])->name('events.publish');
-        Route::post('/events/{event}/unpublish', [PromoteurController::class, 'unpublish'])->name('events.unpublish');
+        // Gestion des types de tickets (NESTED RESOURCE)
+        Route::prefix('events/{event}')->name('events.')->group(function () {
+            Route::resource('tickets', TicketTypeController::class)->except(['show']);
+            Route::patch('/tickets/{ticket}/toggle', [TicketTypeController::class, 'toggle'])->name('tickets.toggle');
+        });
         
-        // Gestion des types de tickets
-        Route::get('/events/{event}/tickets/create', [TicketTypeController::class, 'create'])->name('events.tickets.create');
-        Route::post('/events/{event}/tickets', [TicketTypeController::class, 'store'])->name('events.tickets.store');
-        Route::get('/events/{event}/tickets', [TicketTypeController::class, 'index'])->name('events.tickets.index');
-        Route::get('/events/{event}/tickets/{ticketType}/edit', [TicketTypeController::class, 'edit'])->name('events.tickets.edit');
-        Route::patch('/events/{event}/tickets/{ticketType}', [TicketTypeController::class, 'update'])->name('events.tickets.update');
-        Route::delete('/events/{event}/tickets/{ticketType}', [TicketTypeController::class, 'destroy'])->name('events.tickets.destroy');
-        Route::patch('/events/{event}/tickets/{ticketType}/toggle', [TicketTypeController::class, 'toggle'])->name('events.tickets.toggle');
-        
-        // Scanner QR (ROUTES NETTOYÉES - SUPPRESSION DES DOUBLONS)
-        Route::get('/scanner', [PromoteurController::class, 'scanner'])->name('scanner');
-        Route::post('/scanner/verify', [PromoteurController::class, 'verifyTicket'])->name('scanner.verify');
-        Route::get('/scanner/stats', [PromoteurController::class, 'getScanStats'])->name('scanner.stats');
-        Route::get('/scanner/recent', [PromoteurController::class, 'getRecentScans'])->name('scanner.recent');
-        Route::get('/scanner/search', [PromoteurController::class, 'searchTicket'])->name('scanner.search');
+        // Scanner QR
+        Route::prefix('scanner')->name('scanner.')->group(function () {
+            Route::get('/', [ScannerController::class, 'index'])->name('index');
+            Route::post('/verify', [ScannerController::class, 'verify'])->name('verify');
+            Route::get('/stats', [ScannerController::class, 'stats'])->name('stats');
+            Route::get('/recent', [ScannerController::class, 'recent'])->name('recent');
+            Route::get('/search', [ScannerController::class, 'search'])->name('search');
+        });
         
         // Ventes et commissions
-        Route::get('/sales', [PromoteurController::class, 'sales'])->name('sales');
-        
-        
-        // Rapports
-        Route::get('/reports', [PromoteurController::class, 'reports'])->name('reports');
-        Route::get('/reports/export', [PromoteurController::class, 'exportData'])->name('reports.export');
+        Route::get('/sales', [SalesController::class, 'index'])->name('sales');
+        Route::get('/reports', [SalesController::class, 'reports'])->name('reports');
+        Route::get('/reports/export', [SalesController::class, 'export'])->name('reports.export');
         
         // Profil promoteur
         Route::get('/profile', [PromoteurController::class, 'profile'])->name('profile');
+        Route::patch('/profile', [PromoteurController::class, 'updateProfile'])->name('profile.update');
     });
     
-    // ==================== ADMIN ====================
-    
-    Route::middleware(['admin', 'layout:admin'])->prefix('admin')->name('admin.')->group(function () {
-        // Dashboard principal
+    // ==================== ESPACE ADMIN - CONTRÔLEURS SPÉCIALISÉS ====================
+    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+        
+        // ===== DASHBOARD ET FONCTIONS GÉNÉRALES (AdminController) =====
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-        // Gestion des pages (CMS) - À ajouter dans la section admin
-
-        Route::resource('pages', \App\Http\Controllers\Admin\PageController::class);
-        Route::post('/pages/{page}/duplicate', [\App\Http\Controllers\Admin\PageController::class, 'duplicate'])->name('pages.duplicate');
-        Route::patch('/pages/{page}/toggle-status', [\App\Http\Controllers\Admin\PageController::class, 'toggleStatus'])->name('pages.toggleStatus');
-        Route::post('/pages/reorder', [\App\Http\Controllers\Admin\PageController::class, 'reorder'])->name('pages.reorder');
-       
-        
-        // Gestion utilisateurs
-        Route::get('/users', [AdminController::class, 'storeUser'])->name('users.store');
-        Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
-        Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
-        Route::patch('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
-        Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
-        Route::get('/users', [AdminController::class, 'users'])->name('users');
-        Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
-
-        // Gestion événements
-        // Dans la section admin, assurez-vous d'avoir :
-        Route::get('/events', [AdminController::class, 'events'])->name('events');
-        Route::get('/events/{event}', [AdminController::class, 'showEvent'])->name('events.show');
-        Route::get('/events/{event}/edit', [AdminController::class, 'editEvent'])->name('events.edit');
-        Route::patch('/events/{event}', [AdminController::class, 'updateEvent'])->name('events.update');
-        Route::delete('/events/{event}', [AdminController::class, 'destroyEvent'])->name('events.destroy');
-        Route::patch('/events/{event}/status', [AdminController::class, 'updateEventStatus'])->name('events.updateStatus');
-        Route::post('/events/bulk-update', [AdminController::class, 'bulkUpdateEvents'])->name('events.bulkUpdate');
-        Route::post('/events/bulk-delete', [AdminController::class, 'bulkDeleteEvents'])->name('events.bulkDelete');
-        
-        // Gestion tickets
-
-        Route::get('/tickets', [AdminController::class, 'tickets'])->name('tickets');
-        Route::get('/tickets/{ticket}', [AdminController::class, 'showTicket'])->name('tickets.show');
-        Route::patch('/tickets/{ticket}/mark-used', [AdminController::class, 'markTicketUsed'])->name('tickets.markUsed');
-        Route::patch('/tickets/{ticket}/cancel', [AdminController::class, 'cancelTicket'])->name('tickets.cancel');
-        Route::patch('/tickets/{ticket}/reactivate', [AdminController::class, 'reactivateTicket'])->name('tickets.reactivate');
-        Route::get('/tickets/{ticket}/download', [AdminController::class, 'downloadTicketPDF'])->name('tickets.download');
-        
-        // Gestion commandes
-        Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
-        Route::get('/orders/{order}', [AdminController::class, 'orderDetail'])->name('orders.show');
-        Route::patch('/orders/{order}/status', [AdminController::class, 'updateOrderStatus'])->name('orders.updateStatus');
-        Route::post('/orders/bulk-update', [AdminController::class, 'bulkUpdateOrders'])->name('orders.bulkUpdate');
-        Route::delete('/orders/{order}', [AdminController::class, 'destroyOrder'])->name('orders.destroy');
-        Route::patch('/orders/{order}/refund', [AdminController::class, 'refundOrder'])->name('orders.refund');
-        Route::post('/orders/bulk-delete', [AdminController::class, 'bulkDeleteOrders'])->name('orders.bulkDelete');
-        Route::post('/orders/bulk-export', [AdminController::class, 'bulkExportOrders'])->name('orders.bulkExport');
-        Route::post('/orders/{order}/resend-email', [AdminController::class, 'resendOrderEmail'])->name('orders.resendEmail');
-        Route::get('/orders/{order}/pdf', [AdminController::class, 'downloadOrderPDF'])->name('orders.pdf');
-        Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('orders.export');
-        
-        // Commissions et paiements
         Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
-        Route::post('/commissions/{commission}/pay', [AdminController::class, 'payCommission'])->name('commissions.pay');
-        Route::post('/commissions/{commission}/hold', [AdminController::class, 'holdCommission'])->name('commissions.hold');
-        Route::post('/commissions/{commission}/release', [AdminController::class, 'releaseCommission'])->name('commissions.release');
+        Route::get('/revenues', [AdminController::class, 'revenues'])->name('revenues');
+        Route::get('/analytics', [AdminController::class, 'analytics'])->name('analytics');
+        Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
+        Route::patch('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
         
-        // Exports et rapports
-        Route::get('/commissions/export', [AdminController::class, 'exportCommissions'])->name('export.commissions');
-        Route::get('/revenues/export/{period}', [AdminController::class, 'exportRevenues'])->name('export.revenues');
-        Route::get('/promoters/export', [AdminController::class, 'exportPromoters'])->name('export.promoters');
-        Route::get('/accounting/export/{period}', [AdminController::class, 'exportAccounting'])->name('export.accounting');
-        Route::get('/export/all', [AdminController::class, 'exportAll'])->name('export.all');
-        Route::get('/export/financial', [AdminController::class, 'exportFinancial'])->name('export.financial');
-        Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
-        Route::get('/export/events', [AdminController::class, 'exportEvents'])->name('export.events');
-        Route::get('/export/orders', [AdminController::class, 'exportOrders'])->name('export.orders');
-        Route::get('/export/tickets', [AdminController::class, 'exportTickets'])->name('export.tickets');
-        // Paramètres système
-        Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-        Route::patch('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
-        Route::post('/settings/test-email', [AdminController::class, 'testEmail'])->name('settings.test-email');
-        Route::post('/settings/backup', [AdminController::class, 'backupSystem'])->name('settings.backup');
-        Route::post('/settings/clear-cache', [AdminController::class, 'clearCache'])->name('settings.clear-cache');
-
-        Route::prefix('emails')->name('emails.')->group(function () {
-        Route::get('/', [AdminController::class, 'emailDashboard'])->name('dashboard');
-        Route::post('/test', [AdminController::class, 'testEmail'])->name('test');
-        Route::get('/templates', [AdminController::class, 'emailTemplates'])->name('templates');
-        Route::post('/orders/{order}/resend', [AdminController::class, 'resendOrderEmail'])->name('resend');
+        // ===== GESTION DES UTILISATEURS (UserController spécialisé) =====
+        Route::resource('users', AdminUserController::class);
+        Route::patch('/users/{user}/toggle-email', [AdminUserController::class, 'toggleEmailVerification'])->name('users.toggle-email');
+        Route::post('/users/bulk-action', [AdminUserController::class, 'bulkAction'])->name('users.bulk-action');
+        Route::get('/users-export', [AdminUserController::class, 'export'])->name('users.export');
+        
+        // ===== GESTION DES ÉVÉNEMENTS (EventController spécialisé) =====
+        Route::resource('events', AdminEventController::class);
+        Route::patch('/events/{event}/status', [AdminEventController::class, 'updateStatus'])->name('events.update-status');
+        Route::post('/events/bulk-action', [AdminEventController::class, 'bulkAction'])->name('events.bulk-action');
+        Route::get('/events-export', [AdminEventController::class, 'export'])->name('events.export');
+        
+        // ===== GESTION DES COMMANDES (OrderController spécialisé) =====
+        Route::resource('orders', AdminOrderController::class)->only(['index', 'show', 'edit', 'update']);
+        Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update-status');
+        Route::post('/orders/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
+        Route::post('/orders/{order}/resend-email', [AdminOrderController::class, 'resendEmail'])->name('orders.resend-email');
+        Route::post('/orders/bulk-action', [AdminOrderController::class, 'bulkAction'])->name('orders.bulk-action');
+        Route::get('/orders-export', [AdminOrderController::class, 'export'])->name('orders.export');
+        
+        // ===== GESTION DES TICKETS (TicketController spécialisé) =====
+        Route::resource('tickets', AdminTicketController::class)->only(['index', 'show', 'edit', 'update']);
+        Route::patch('/tickets/{ticket}/mark-used', [AdminTicketController::class, 'markUsed'])->name('tickets.mark-used');
+        Route::patch('/tickets/{ticket}/cancel', [AdminTicketController::class, 'cancel'])->name('tickets.cancel');
+        Route::patch('/tickets/{ticket}/reactivate', [AdminTicketController::class, 'reactivate'])->name('tickets.reactivate');
+        Route::get('/tickets/{ticket}/download', [AdminTicketController::class, 'download'])->name('tickets.download');
+        Route::post('/tickets/bulk-action', [AdminTicketController::class, 'bulkAction'])->name('tickets.bulk-action');
+        Route::get('/tickets-export', [AdminTicketController::class, 'export'])->name('tickets.export');
+        
+        // ===== GESTION DES CATÉGORIES (CategoryController spécialisé) =====
+        Route::resource('categories', AdminCategoryController::class);
+        Route::patch('/categories/{category}/toggle-status', [AdminCategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
+        Route::post('/categories/reorder', [AdminCategoryController::class, 'reorder'])->name('categories.reorder');
+        
+        // ===== GESTION DES PAGES CMS (PageController spécialisé) =====
+        Route::resource('pages', AdminPageController::class);
+        Route::post('/pages/{page}/duplicate', [AdminPageController::class, 'duplicate'])->name('pages.duplicate');
+        Route::patch('/pages/{page}/toggle-status', [AdminPageController::class, 'toggleStatus'])->name('pages.toggle-status');
+        Route::post('/pages/reorder', [AdminPageController::class, 'reorder'])->name('pages.reorder');
+        
+        // ===== COMMISSIONS ET FINANCES (AdminController) =====
+        Route::prefix('finances')->name('finances.')->group(function () {
+            Route::patch('/commissions/{commission}/status', [AdminController::class, 'updateCommissionStatus'])->name('commissions.update-status');
+            Route::post('/commissions/bulk-pay', [AdminController::class, 'bulkPayCommissions'])->name('commissions.bulk-pay');
         });
         
-        // Routes temporaires et liens dashboard
-        Route::get('/reports', function () { 
-            return view('admin.reports'); 
-        })->name('reports');
+        // ===== RAPPORTS ET EXPORTS GLOBAUX =====
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [AdminController::class, 'reports'])->name('index');
+            Route::get('/sales', [AdminController::class, 'salesReport'])->name('sales');
+            Route::get('/financial', [AdminController::class, 'financialReport'])->name('financial');
+            Route::get('/export/{type}', [AdminController::class, 'export'])->name('export');
+        });
         
+        // ===== PARAMÈTRES SYSTÈME (SettingsController spécialisé) =====
+        Route::resource('settings', AdminSettingsController::class)->only(['index', 'store']);
+        Route::post('/settings/test-email', [AdminSettingsController::class, 'testEmail'])->name('settings.test-email');
+        Route::post('/settings/backup', [AdminSettingsController::class, 'backup'])->name('settings.backup');
+        Route::post('/settings/clear-cache', [AdminSettingsController::class, 'clearCache'])->name('settings.clear-cache');
+        
+        // ===== EMAILS ET NOTIFICATIONS (AdminController) =====
+        Route::prefix('emails')->name('emails.')->group(function () {
+            Route::get('/', [AdminController::class, 'emailDashboard'])->name('dashboard');
+            Route::post('/test', [AdminController::class, 'testEmail'])->name('test');
+            Route::get('/templates', [AdminController::class, 'emailTemplates'])->name('templates');
+            Route::post('/orders/{order}/resend', [AdminController::class, 'resendOrderEmail'])->name('resend');
+        });
+        
+        // ===== ROUTES DE COMPATIBILITÉ (redirections vers nouvelles routes) =====
+        Route::get('/users-legacy', function() {
+            return redirect()->route('admin.users.index');
+        })->name('users'); // Ancienne route 'admin.users'
+        
+        Route::get('/events-legacy', function() {
+            return redirect()->route('admin.events.index');
+        })->name('events'); // Ancienne route 'admin.events'
+        
+        Route::get('/orders-legacy', function() {
+            return redirect()->route('admin.orders.index');
+        })->name('orders'); // Ancienne route 'admin.orders'
+        
+        Route::get('/tickets-legacy', function() {
+            return redirect()->route('admin.tickets.index');
+        })->name('tickets'); // Ancienne route 'admin.tickets'
+        
+        // Autres routes de compatibilité
         Route::get('/commissions/pending', function () { 
             return redirect()->route('admin.commissions', ['status' => 'pending']); 
         })->name('commissions.pending');
         
         Route::get('/events/no-sales', function () { 
-            return view('admin.events-no-sales'); 
+            return redirect()->route('admin.events.index', ['filter' => 'no-sales']); 
         })->name('events.no-sales');
         
         Route::get('/promoters/inactive', function () { 
-            return view('admin.promoters-inactive'); 
+            return redirect()->route('admin.users.index', ['role' => 'promoteur', 'status' => 'inactive']); 
         })->name('promoters.inactive');
         
         Route::get('/promoters/{user}', function ($user) { 
-            return view('admin.promoter-detail', ['promoter' => \App\Models\User::findOrFail($user)]); 
+            return redirect()->route('admin.users.show', $user);
         })->name('promoters.show');
-        
-        // Profil admin
-        Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     });
     
-    // Route profil générique (fallback)
+    // Profil générique (fallback)
     Route::get('/profile', function () {
         $user = auth()->user();
         
-        if ($user->isAcheteur()) {
-            return redirect()->route('acheteur.profile');
-        } elseif ($user->isPromoteur()) {
-            return redirect()->route('promoteur.profile');
-        } elseif ($user->isAdmin()) {
-            return redirect()->route('admin.profile');
-        }
-        
-        return view('profile', compact('user'));
+        return match($user->role) {
+            'acheteur' => redirect()->route('acheteur.profile'),
+            'promoteur' => redirect()->route('promoteur.profile'),
+            'admin' => redirect()->route('admin.profile'),
+            default => view('profile', compact('user'))
+        };
     })->name('profile');
 });
 
-// ==================== ROUTES API (OPTIONNEL) ====================
-
-Route::middleware(['auth'])->prefix('api')->name('api.')->group(function () {
-    // Routes API futures si nécessaires
-});
-
-// ==================== ROUTES DE DEBUG (À RETIRER EN PRODUCTION) ====================
-
-# Route de test (ajoutez temporairement dans routes/web.php)
-Route::get('/test-qr-methods', function() {
-    if (!auth()->check() || !auth()->user()->isAdmin()) abort(403);
-    
-    $service = app(\App\Services\QRCodeService::class);
-    return $service->testAllMethods();
-});
-
-
-# Ajoutez cette route temporaire pour tester
-Route::get('/test-qr-diagnostic', [App\Http\Controllers\HomeController::class, 'testQR']);
-Route::get('/test-ticket-simple', function() {
-    $ticket = App\Models\Ticket::where('ticket_code', 'TKT-NYUEWEI5')->first();
-    
-    return [
-        'ticket_code' => $ticket->ticket_code,
-        'status' => $ticket->status,
-        'has_order_item' => $ticket->order_item_id ? 'Oui' : 'Non',
-        'order_item' => $ticket->orderItem,
-        'main_order' => $ticket->getMainOrder(),
-        'event_title' => $ticket->ticketType->event->title ?? 'Pas d\'événement'
-    ];
-});
-
-
-// À ajouter temporairement dans routes/web.php pour débugger
-
-Route::get('/debug-events', function() {
-    if (!auth()->check() || !auth()->user()->isAdmin()) {
-        abort(403);
-    }
-    
-    try {
-        // Test de base
-        $event = \App\Models\Event::first();
+// ==================== ROUTES DE DEBUG (RETIRER EN PRODUCTION) ====================
+if (app()->environment(['local', 'staging'])) {
+    Route::middleware(['auth', 'admin'])->group(function () {
+        Route::get('/test-qr-methods', function() {
+            $service = app(\App\Services\QRCodeService::class);
+            return $service->testAllMethods();
+        });
         
-        if (!$event) {
-            return 'Aucun événement trouvé dans la base de données';
-        }
+        Route::get('/test-qr-diagnostic', [HomeController::class, 'testQR']);
         
-        $debug = [
-            'event_id' => $event->id,
-            'event_title' => $event->title,
-            'event_structure' => $event->toArray(),
+        Route::get('/test-ticket-simple', function() {
+            $ticket = App\Models\Ticket::where('ticket_code', 'TKT-NYUEWEI5')->first();
             
-            // Test des relations
-            'has_category' => $event->category ? 'OUI' : 'NON',
-            'has_promoteur' => $event->promoteur ? 'OUI' : 'NON',
-            'has_ticket_types' => $event->ticketTypes->count(),
-            'has_tickets' => $event->tickets->count(),
-            'has_orders' => $event->orders->count(),
-            
-            // Test des méthodes
-            'total_revenue' => $event->totalRevenue(),
-            'tickets_sold_count' => method_exists($event, 'getTicketsSoldCount') ? $event->getTicketsSoldCount() : 'MÉTHODE MANQUANTE',
-            'orders_count' => method_exists($event, 'getOrdersCount') ? $event->getOrdersCount() : 'MÉTHODE MANQUANTE',
-            'commission_earned' => method_exists($event, 'getCommissionEarned') ? $event->getCommissionEarned() : 'MÉTHODE MANQUANTE',
-            'progress_percentage' => method_exists($event, 'getProgressPercentage') ? $event->getProgressPercentage() : 'MÉTHODE MANQUANTE',
-            
-            // Structure tables
-            'events_columns' => \Schema::getColumnListing('events'),
-            'ticket_types_columns' => \Schema::getColumnListing('ticket_types'),
-            'tickets_columns' => \Schema::getColumnListing('tickets'),
-            'orders_columns' => \Schema::getColumnListing('orders'),
-        ];
-        
-        return response()->json($debug, 200, [], JSON_PRETTY_PRINT);
-        
-    } catch (\Exception $e) {
-        return [
-            'error' => $e->getMessage(),
-            'line' => $e->getLine(),
-            'file' => $e->getFile(),
-            'trace' => $e->getTraceAsString()
-        ];
-    }
-});
-// ==================== PAGES LÉGALES ET INFORMATIONS ====================
-Route::get('/pages/{page}', [\App\Http\Controllers\Admin\PageController::class, 'show'])->name('pages.show');
-
-Route::get('/about', [App\Http\Controllers\PageController::class, 'about'])->name('pages.about');
-Route::get('/how-it-works', [App\Http\Controllers\PageController::class, 'howItWorks'])->name('pages.how-it-works');
-Route::get('/faq', [App\Http\Controllers\PageController::class, 'faq'])->name('pages.faq');
-Route::get('/contact', [App\Http\Controllers\PageController::class, 'contact'])->name('pages.contact');
-Route::post('/contact', [App\Http\Controllers\PageController::class, 'submitContact'])->name('pages.contact.submit');
-
-// Pages légales
-Route::get('/terms-of-service', [App\Http\Controllers\PageController::class, 'termsOfService'])->name('pages.terms');
-Route::get('/privacy-policy', [App\Http\Controllers\PageController::class, 'privacyPolicy'])->name('pages.privacy');
-Route::get('/legal-mentions', [App\Http\Controllers\PageController::class, 'legalMentions'])->name('pages.legal');
-
-// Guide promoteur
-Route::get('/promoter-guide', [App\Http\Controllers\PageController::class, 'promoterGuide'])->name('pages.promoter-guide');
-Route::get('/pricing', [App\Http\Controllers\PageController::class, 'pricing'])->name('pages.pricing');
-
-// Support
-Route::get('/support', [App\Http\Controllers\PageController::class, 'support'])->name('pages.support');
-Route::post('/support', [App\Http\Controllers\PageController::class, 'submitSupport'])->name('pages.support.submit');
-
-// ==================== ÉVÉNEMENTS PAR CATÉGORIE ====================
-
-// Ces routes utilisent déjà votre HomeController
-Route::get('/events/concerts', function() {
-    return redirect()->route('home', ['category' => 1]); // ID de la catégorie Concert
-})->name('events.concerts');
-
-Route::get('/events/theatre', function() {
-    return redirect()->route('home', ['category' => 2]); // ID de la catégorie Théâtre
-})->name('events.theatre');
-
-Route::get('/events/sports', function() {
-    return redirect()->route('home', ['category' => 3]); // ID de la catégorie Sports
-})->name('events.sports');
-
-Route::get('/events/conferences', function() {
-    return redirect()->route('home', ['category' => 4]); // ID de la catégorie Conférences
-})->name('events.conferences');
-
-Route::get('/events/festivals', function() {
-    return redirect()->route('home', ['category' => 5]); // ID de la catégorie Festivals
-})->name('events.festivals');
+            return [
+                'ticket_code' => $ticket->ticket_code ?? 'Non trouvé',
+                'status' => $ticket->status ?? 'N/A',
+                'has_order_item' => $ticket->order_item_id ? 'Oui' : 'Non',
+            ];
+        });
+    });
+}

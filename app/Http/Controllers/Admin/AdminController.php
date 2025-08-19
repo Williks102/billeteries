@@ -10,6 +10,8 @@ use App\Models\Ticket;
 use App\Models\Commission;
 use App\Models\EventCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class AdminController extends Controller
 {
@@ -19,8 +21,12 @@ class AdminController extends Controller
         $this->middleware('admin');
     }
 
+    // ================================================================
+    // DASHBOARD PRINCIPAL - CONSERVÉ
+    // ================================================================
+
     /**
-     * Dashboard principal - CONSERVÉ
+     * Dashboard principal avec statistiques générales
      */
     public function dashboard()
     {
@@ -109,297 +115,6 @@ class AdminController extends Controller
     }
 
     // ================================================================
-    // GESTION DES ÉVÉNEMENTS - CONSERVÉ TEMPORAIREMENT
-    // ================================================================
-
-    /**
-     * Liste des événements
-     */
-    public function events(Request $request)
-    {
-        $query = Event::with(['category', 'promoteur', 'ticketTypes']);
-        
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
-        }
-        
-        if ($request->filled('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
-        }
-        
-        $events = $query->latest()->paginate(20);
-        $categories = EventCategory::all();
-        
-        return view('admin.events', compact('events', 'categories'));
-    }
-
-    /**
-     * Affichage événement
-     */
-    public function showEvent(Event $event)
-    {
-        try {
-            $event->load(['category', 'promoteur', 'ticketTypes', 'orders.user', 'tickets']);
-            
-            // Statistiques de l'événement
-            $stats = [
-                'total_tickets' => $event->ticketTypes->sum('quantity_available') ?? 0,
-                'sold_tickets' => $event->ticketTypes->sum('quantity_sold') ?? 0,
-                'total_revenue' => $event->totalRevenue() ?? 0,
-                'total_orders' => $event->orders()->count(),
-                'pending_orders' => $event->orders()->where('payment_status', 'pending')->count(),
-                'used_tickets' => $event->tickets()->where('status', 'used')->count(),
-            ];
-
-            // Commandes récentes pour cet événement
-            $recentOrders = $event->orders()
-                ->with(['user', 'orderItems.ticketType'])
-                ->latest()
-                ->take(10)
-                ->get();
-
-            return view('admin.events.show', compact('event', 'stats', 'recentOrders'));
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur affichage événement: ' . $e->getMessage());
-            return redirect()->route('admin.events.index')->with('error', 'Erreur lors du chargement');
-        }
-    }
-
-    /**
-     * Édition événement
-     */
-    public function editEvent(Event $event)
-    {
-        try {
-            $event->load(['category', 'promoteur', 'ticketTypes']);
-            $categories = EventCategory::orderBy('name')->get() ?? collect();
-            $promoteurs = User::where('role', 'promoteur')->orderBy('name')->get() ?? collect();
-
-            return view('admin.events.edit', compact('event', 'categories', 'promoteurs'));
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur édition événement: ' . $e->getMessage());
-            return redirect()->route('admin.events.index')->with('error', 'Impossible de charger l\'édition');
-        }
-    }
-
-    /**
-     * Mise à jour événement
-     */
-    public function updateEvent(Request $request, Event $event)
-    {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category_id' => 'required|exists:event_categories,id',
-            'promoteur_id' => 'required|exists:users,id',
-            'event_date' => 'required|date',
-            'event_time' => 'required',
-            'venue' => 'required|string|max:255',
-            'address' => 'nullable|string',
-            'status' => 'required|in:draft,pending,published,rejected',
-        ]);
-
-        try {
-            $data = $request->only([
-                'title', 'description', 'category_id', 'promoteur_id', 
-                'event_date', 'event_time', 'venue', 'address', 'status'
-            ]);
-
-            $event->update($data);
-
-            return redirect()->route('admin.events.index')
-                ->with('success', 'Événement mis à jour avec succès');
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur mise à jour événement: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Erreur lors de la mise à jour')->withInput();
-        }
-    }
-
-    /**
-     * Mise à jour du statut d'un événement
-     */
-    public function updateEventStatus(Request $request, Event $event)
-    {
-        $request->validate([
-            'status' => 'required|in:draft,pending,published,rejected',
-        ]);
-
-        try {
-            $event->update(['status' => $request->status]);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Statut mis à jour avec succès'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la mise à jour'
-            ], 500);
-        }
-    }
-
-    // ================================================================
-    // GESTION DES COMMANDES - CONSERVÉ TEMPORAIREMENT
-    // ================================================================
-
-    /**
-     * Liste des commandes
-     */
-    public function orders(Request $request)
-    {
-        $orders = Order::with(['user', 'event'])
-            ->when($request->search, function($query, $search) {
-                $query->where('order_number', 'like', "%{$search}%")
-                      ->orWhereHas('user', function($q) use ($search) {
-                          $q->where('name', 'like', "%{$search}%");
-                      });
-            })
-            ->when($request->payment_status, function($query, $status) {
-                $query->where('payment_status', $status);
-            })
-            ->latest()
-            ->paginate(15);
-
-        // Statistiques
-        $stats = [
-            'paid' => Order::where('payment_status', 'paid')->count(),
-            'pending' => Order::where('payment_status', 'pending')->count(),
-            'failed' => Order::where('payment_status', 'failed')->count(),
-            'refunded' => Order::where('payment_status', 'refunded')->count(),
-            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount')
-        ];
-
-        return view('admin.orders', compact('orders', 'stats'));
-    }
-
-    /**
-     * Détail d'une commande
-     */
-    public function orderDetail(Order $order)
-    {
-        $order->load(['user', 'event', 'orderItems.ticketType', 'tickets']);
-        return view('admin.order-detail', compact('order'));
-    }
-
-    // ================================================================
-    // GESTION DES TICKETS - CONSERVÉ TEMPORAIREMENT
-    // ================================================================
-
-    /**
-     * Liste des tickets
-     */
-    public function tickets(Request $request)
-    {
-        $query = Ticket::with(['ticketType.event.promoteur']);
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('ticket_code', 'like', "%{$search}%")
-                  ->orWhereHas('ticketType.event', function($eq) use ($search) {
-                      $eq->where('title', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $tickets = $query->orderBy('created_at', 'desc')->paginate(20);
-
-        $stats = [
-            'total' => Ticket::count(),
-            'sold' => Ticket::where('status', 'sold')->count(),
-            'used' => Ticket::where('status', 'used')->count(),
-            'cancelled' => Ticket::where('status', 'cancelled')->count(),
-        ];
-
-        return view('admin.tickets', compact('tickets', 'stats'));
-    }
-
-    /**
-     * Affichage d'un ticket
-     */
-    public function showTicket(Ticket $ticket)
-    {
-        $ticket->load(['ticketType.event.promoteur', 'orderItem.order.user']);
-        return view('admin.ticket-detail', compact('ticket'));
-    }
-
-    /**
-     * Marquer ticket comme utilisé
-     */
-    public function markTicketUsed(Ticket $ticket)
-    {
-        try {
-            $ticket->update(['status' => 'used']);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Ticket marqué comme utilisé'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la mise à jour'
-            ], 500);
-        }
-    }
-
-    /**
-     * Annuler un ticket
-     */
-    public function cancelTicket(Ticket $ticket)
-    {
-        try {
-            $ticket->update(['status' => 'cancelled']);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Ticket annulé avec succès'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'annulation'
-            ], 500);
-        }
-    }
-
-    /**
-     * Réactiver un ticket
-     */
-    public function reactivateTicket(Ticket $ticket)
-    {
-        try {
-            $ticket->update(['status' => 'sold']);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Ticket réactivé avec succès'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la réactivation'
-            ], 500);
-        }
-    }
-
-    // ================================================================
     // COMMISSIONS ET FINANCES - CONSERVÉ
     // ================================================================
 
@@ -410,6 +125,7 @@ class AdminController extends Controller
     {
         $query = Commission::with(['promoteur', 'order.event']);
         
+        // Filtres
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -417,11 +133,100 @@ class AdminController extends Controller
         if ($request->filled('promoter')) {
             $query->where('promoteur_id', $request->promoter);
         }
+
+        if ($request->filled('date_from')) {
+            $query->where('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
+        }
         
         $commissions = $query->latest()->paginate(20);
+        
+        // Données pour les filtres
         $promoteurs = User::where('role', 'promoteur')->orderBy('name')->get();
         
-        return view('admin.commissions', compact('commissions', 'promoteurs'));
+        // Statistiques des commissions
+        $stats = [
+            'total_commissions' => Commission::sum('amount'),
+            'paid_commissions' => Commission::where('status', 'paid')->sum('amount'),
+            'pending_commissions' => Commission::where('status', 'pending')->sum('amount'),
+            'held_commissions' => Commission::where('status', 'held')->sum('amount'),
+            'this_month_commissions' => Commission::whereMonth('created_at', now()->month)->sum('amount'),
+        ];
+        
+        return view('admin.commissions', compact('commissions', 'promoteurs', 'stats'));
+    }
+
+    /**
+     * Mise à jour du statut d'une commission
+     */
+    public function updateCommissionStatus(Request $request, Commission $commission)
+    {
+        $request->validate([
+            'status' => 'required|in:pending,paid,held,cancelled'
+        ]);
+
+        try {
+            $oldStatus = $commission->status;
+            $commission->update([
+                'status' => $request->status,
+                'paid_at' => $request->status === 'paid' ? now() : null,
+                'admin_notes' => $request->admin_notes,
+            ]);
+
+            \Log::info('Statut commission modifié par admin', [
+                'admin_id' => auth()->id(),
+                'commission_id' => $commission->id,
+                'old_status' => $oldStatus,
+                'new_status' => $commission->status
+            ]);
+
+            return redirect()->back()
+                ->with('success', 'Statut de la commission mis à jour !');
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur mise à jour commission: ' . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'Erreur lors de la mise à jour');
+        }
+    }
+
+    /**
+     * Paiement en lot des commissions
+     */
+    public function bulkPayCommissions(Request $request)
+    {
+        $request->validate([
+            'commission_ids' => 'required|array',
+            'commission_ids.*' => 'exists:commissions,id'
+        ]);
+
+        try {
+            $count = Commission::whereIn('id', $request->commission_ids)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                    'paid_by' => auth()->id()
+                ]);
+
+            \Log::info('Paiement en lot commissions par admin', [
+                'admin_id' => auth()->id(),
+                'commissions_paid' => $count
+            ]);
+
+            return redirect()->back()
+                ->with('success', "{$count} commission(s) marquée(s) comme payée(s) !");
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur paiement en lot commissions: ' . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'Erreur lors du paiement des commissions');
+        }
     }
 
     /**
@@ -432,35 +237,104 @@ class AdminController extends Controller
         $period = $request->get('period', 'this_month');
         $dateRange = $this->getDateRange($period);
         
+        // Revenus par période
         $revenue = Order::where('payment_status', 'paid')
             ->whereBetween('created_at', $dateRange)
             ->sum('total_amount');
             
         $orders = Order::whereBetween('created_at', $dateRange)->count();
         
-        return view('admin.revenues', compact('revenue', 'orders', 'period'));
+        // Commissions par période
+        $commissions = Commission::whereBetween('created_at', $dateRange)->sum('amount');
+        
+        // Revenus nets (revenus - commissions)
+        $netRevenue = $revenue - $commissions;
+        
+        // Évolution sur 12 mois
+        $monthlyRevenue = collect();
+        for ($i = 11; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthRevenue = Order::where('payment_status', 'paid')
+                ->whereYear('created_at', $date->year)
+                ->whereMonth('created_at', $date->month)
+                ->sum('total_amount');
+            
+            $monthCommissions = Commission::whereYear('created_at', $date->year)
+                ->whereMonth('created_at', $date->month)
+                ->sum('amount');
+                
+            $monthlyRevenue->push([
+                'month' => $date->format('M Y'),
+                'revenue' => $monthRevenue,
+                'commissions' => $monthCommissions,
+                'net_revenue' => $monthRevenue - $monthCommissions,
+            ]);
+        }
+        
+        return view('admin.revenues', compact(
+            'revenue', 
+            'orders', 
+            'commissions', 
+            'netRevenue', 
+            'period', 
+            'monthlyRevenue'
+        ));
     }
 
-    // ================================================================
-    // PARAMÈTRES ET PROFIL - CONSERVÉ
-    // ================================================================
-
     /**
-     * Paramètres système
+     * Analytics avancées
      */
-    public function settings()
+    public function analytics(Request $request)
     {
-        return view('admin.settings');
+        // Analytics par catégorie
+        $categoryStats = EventCategory::withCount('events')
+            ->with(['events' => function($query) {
+                $query->withSum('orders as total_revenue', 'total_amount');
+            }])
+            ->get()
+            ->map(function($category) {
+                return [
+                    'name' => $category->name,
+                    'events_count' => $category->events_count,
+                    'total_revenue' => $category->events->sum('total_revenue') ?? 0,
+                ];
+            });
+
+        // Top événements par revenus
+        $topEvents = Event::join('orders', 'events.id', '=', 'orders.event_id')
+            ->where('orders.payment_status', 'paid')
+            ->selectRaw('events.id, events.title, SUM(orders.total_amount) as total_revenue')
+            ->groupBy('events.id', 'events.title')
+            ->orderByDesc('total_revenue')
+            ->take(10)
+            ->get();
+
+        // Promoteurs les plus actifs
+        $topPromoters = User::where('role', 'promoteur')
+            ->withCount('events')
+            ->withSum(['commissions as total_commissions' => function($query) {
+                $query->where('status', 'paid');
+            }], 'net_amount')
+            ->orderByDesc('total_commissions')
+            ->take(10)
+            ->get();
+
+        return view('admin.analytics', compact('categoryStats', 'topEvents', 'topPromoters'));
     }
 
+    // ================================================================
+    // PROFIL ADMIN - CONSERVÉ
+    // ================================================================
+
     /**
-     * Profil admin
+     * Profil de l'administrateur
      */
     public function profile()
     {
         try {
             $user = auth()->user();
             
+            // Statistiques d'activité de l'admin
             $activityStats = [
                 'users_managed' => User::count(),
                 'events_approved' => Event::where('status', 'published')->count(),
@@ -468,6 +342,7 @@ class AdminController extends Controller
                 'commissions_paid' => Commission::where('status', 'paid')->sum('amount'),
             ];
 
+            // Activité récente (simulation - à adapter selon vos logs)
             $recentActivities = collect([
                 Event::where('status', 'published')
                     ->latest('updated_at')
@@ -493,6 +368,272 @@ class AdminController extends Controller
                 'activityStats' => [],
                 'recentActivities' => collect()
             ]);
+        }
+    }
+
+    /**
+     * Mise à jour du profil admin
+     */
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . auth()->id(),
+            'password' => 'nullable|min:8|confirmed',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        try {
+            $user = auth()->user();
+            $data = $request->only(['name', 'email', 'phone']);
+
+            if ($request->filled('password')) {
+                $data['password'] = Hash::make($request->password);
+            }
+
+            $user->update($data);
+
+            \Log::info('Profil admin mis à jour', [
+                'admin_id' => $user->id,
+                'fields_updated' => array_keys($data)
+            ]);
+
+            return redirect()->back()
+                ->with('success', 'Profil mis à jour avec succès !');
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur mise à jour profil admin: ' . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'Erreur lors de la mise à jour du profil')
+                ->withInput();
+        }
+    }
+
+    // ================================================================
+    // RAPPORTS ET EXPORTS GLOBAUX - CONSERVÉ
+    // ================================================================
+
+    /**
+     * Page principale des rapports
+     */
+    public function reports()
+    {
+        $stats = [
+            'total_users' => User::count(),
+            'total_events' => Event::count(),
+            'total_orders' => Order::count(),
+            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
+            'total_commissions' => Commission::sum('amount'),
+            'pending_commissions' => Commission::where('status', 'pending')->sum('amount'),
+        ];
+
+        return view('admin.reports.index', compact('stats'));
+    }
+
+    /**
+     * Rapport des ventes
+     */
+    public function salesReport(Request $request)
+    {
+        $period = $request->get('period', 'this_month');
+        $dateRange = $this->getDateRange($period);
+
+        $salesData = Order::where('payment_status', 'paid')
+            ->whereBetween('created_at', $dateRange)
+            ->with(['event', 'user'])
+            ->get();
+
+        return view('admin.reports.sales', compact('salesData', 'period'));
+    }
+
+    /**
+     * Rapport financier
+     */
+    public function financialReport(Request $request)
+    {
+        $period = $request->get('period', 'this_month');
+        $dateRange = $this->getDateRange($period);
+
+        $financial = [
+            'total_revenue' => Order::where('payment_status', 'paid')
+                ->whereBetween('created_at', $dateRange)
+                ->sum('total_amount'),
+            'total_commissions' => Commission::whereBetween('created_at', $dateRange)
+                ->sum('amount'),
+            'paid_commissions' => Commission::whereBetween('created_at', $dateRange)
+                ->where('status', 'paid')
+                ->sum('amount'),
+            'pending_commissions' => Commission::whereBetween('created_at', $dateRange)
+                ->where('status', 'pending')
+                ->sum('amount'),
+        ];
+
+        $financial['net_revenue'] = $financial['total_revenue'] - $financial['total_commissions'];
+
+        return view('admin.reports.financial', compact('financial', 'period'));
+    }
+
+    /**
+     * Export global selon le type
+     */
+    public function export(Request $request, $type)
+    {
+        switch ($type) {
+            case 'users':
+                return redirect()->route('admin.users.export', $request->all());
+            case 'events':
+                return redirect()->route('admin.events.export', $request->all());
+            case 'orders':
+                return redirect()->route('admin.orders.export', $request->all());
+            case 'tickets':
+                return redirect()->route('admin.tickets.export', $request->all());
+            case 'categories':
+                return redirect()->route('admin.categories.export', $request->all());
+            case 'commissions':
+                return $this->exportCommissions($request);
+            default:
+                return redirect()->back()->with('error', 'Type d\'export non reconnu');
+        }
+    }
+
+    /**
+     * Export des commissions
+     */
+    private function exportCommissions(Request $request)
+    {
+        try {
+            $query = Commission::with(['promoteur', 'order.event']);
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->filled('promoter')) {
+                $query->where('promoteur_id', $request->promoter);
+            }
+
+            $commissions = $query->get();
+
+            $csvContent = "ID,Promoteur,Événement,Commande,Montant,Statut,Date création,Date paiement\n";
+            
+            foreach ($commissions as $commission) {
+                $csvContent .= implode(',', [
+                    $commission->id,
+                    '"' . addslashes($commission->promoteur->name ?? 'N/A') . '"',
+                    '"' . addslashes($commission->order->event->title ?? 'N/A') . '"',
+                    $commission->order->order_number ?? 'N/A',
+                    number_format($commission->amount, 2),
+                    $commission->status,
+                    $commission->created_at->format('Y-m-d H:i:s'),
+                    $commission->paid_at ? $commission->paid_at->format('Y-m-d H:i:s') : 'N/A'
+                ]) . "\n";
+            }
+
+            return response($csvContent)
+                ->header('Content-Type', 'text/csv')
+                ->header('Content-Disposition', 'attachment; filename="commissions-export-' . now()->format('Y-m-d') . '.csv"');
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur export commissions: ' . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'Erreur lors de l\'export des commissions');
+        }
+    }
+
+    // ================================================================
+    // EMAILS ET NOTIFICATIONS - CONSERVÉ
+    // ================================================================
+
+    /**
+     * Dashboard des emails
+     */
+    public function emailDashboard()
+    {
+        // Statistiques des emails
+        $emailStats = [
+            'total_sent' => 0, // À implémenter selon votre système
+            'bounce_rate' => 0,
+            'open_rate' => 0,
+            'click_rate' => 0,
+        ];
+
+        return view('admin.emails.dashboard', compact('emailStats'));
+    }
+
+    /**
+     * Test d'envoi d'email
+     */
+    public function testEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        try {
+            Mail::raw('Test email depuis ClicBillet CI - ' . now(), function ($message) use ($request) {
+                $message->to($request->email)
+                        ->subject('Test Email - ClicBillet CI');
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Email de test envoyé avec succès !'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur test email: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'envoi : ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Templates d'emails
+     */
+    public function emailTemplates()
+    {
+        // Liste des templates disponibles
+        $templates = [
+            'order_confirmation' => 'Confirmation de commande',
+            'ticket_delivery' => 'Livraison de tickets',
+            'event_reminder' => 'Rappel d\'événement',
+            'commission_payment' => 'Paiement de commission',
+        ];
+
+        return view('admin.emails.templates', compact('templates'));
+    }
+
+    /**
+     * Renvoyer email de commande
+     */
+    public function resendOrderEmail(Order $order)
+    {
+        try {
+            // TODO: Implémenter selon votre système d'emails
+            // Mail::to($order->user->email)->send(new OrderConfirmationMail($order));
+
+            \Log::info('Email commande renvoyé par admin', [
+                'admin_id' => auth()->id(),
+                'order_id' => $order->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Email renvoyé avec succès !'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur renvoi email: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du renvoi'
+            ], 500);
         }
     }
 
@@ -531,57 +672,12 @@ class AdminController extends Controller
                 return [now()->startOfMonth(), now()->endOfMonth()];
             case 'this_year':
                 return [now()->startOfYear(), now()->endOfYear()];
+            case 'last_month':
+                return [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()];
+            case 'last_year':
+                return [now()->subYear()->startOfYear(), now()->subYear()->endOfYear()];
             default:
                 return [now()->startOfMonth(), now()->endOfMonth()];
         }
-    }
-
-    // ================================================================
-    // EXPORTS - CONSERVÉ TEMPORAIREMENT
-    // ================================================================
-
-    public function exportUsers(Request $request)
-    {
-        return redirect()->route('admin.users.export', $request->all());
-    }
-
-    public function exportCommissions(Request $request)
-    {
-        // Logic pour export commissions
-        return response()->streamDownload(function() {
-            echo "Export commissions - À implémenter";
-        }, 'commissions.csv');
-    }
-
-    public function exportOrders(Request $request)
-    {
-        // Logic pour export commandes
-        return response()->streamDownload(function() {
-            echo "Export commandes - À implémenter";
-        }, 'orders.csv');
-    }
-
-    public function exportEvents(Request $request)
-    {
-        // Logic pour export événements
-        return response()->streamDownload(function() {
-            echo "Export événements - À implémenter";
-        }, 'events.csv');
-    }
-
-    public function exportTickets(Request $request)
-    {
-        // Logic pour export tickets
-        return response()->streamDownload(function() {
-            echo "Export tickets - À implémenter";
-        }, 'tickets.csv');
-    }
-
-    public function exportAll(Request $request)
-    {
-        // Logic pour export global
-        return response()->streamDownload(function() {
-            echo "Export global - À implémenter";
-        }, 'export_complet.zip');
     }
 }

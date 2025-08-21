@@ -111,8 +111,8 @@ class OrderController extends Controller
                 'total_tickets' => $order->tickets->count(),
                 'used_tickets' => $order->tickets->where('status', 'used')->count(),
                 'remaining_tickets' => $order->tickets->where('status', 'sold')->count(),
-                'commission_amount' => $order->commissions->sum('amount'),
-                'net_revenue' => $order->total_amount - $order->commissions->sum('amount'),
+                'commission_amount' => $order->commissions->sum('commission_amount'),
+                'net_revenue' => $order->total_amount - $order->commissions->sum('commission_amount'),
             ];
 
             // Historique des actions sur cette commande

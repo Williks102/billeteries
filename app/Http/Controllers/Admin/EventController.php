@@ -45,7 +45,7 @@ class EventController extends Controller
         }
 
         if ($request->filled('promoteur')) {
-            $query->where('promoteur_id', $request->promoteur);
+            $query->where('promoter_id', $request->promoteur);
         }
 
         if ($request->filled('date_from')) {
@@ -99,7 +99,7 @@ class EventController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'category_id' => 'required|exists:event_categories,id',
-            'promoteur_id' => 'required|exists:users,id',
+            'promoter_id' => 'required|exists:users,id',
             'event_date' => 'required|date|after:today',
             'event_time' => 'required',
             'venue' => 'required|string|max:255',
@@ -111,7 +111,7 @@ class EventController extends Controller
 
         try {
             $data = $request->only([
-                'title', 'description', 'category_id', 'promoteur_id', 
+                'title', 'description', 'category_id', 'promoter_id', 
                 'event_date', 'event_time', 'venue', 'address', 'status', 'max_capacity'
             ]);
 
@@ -206,7 +206,7 @@ class EventController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'category_id' => 'required|exists:event_categories,id',
-            'promoteur_id' => 'required|exists:users,id',
+            'promoter_id' => 'required|exists:users,id',
             'event_date' => 'required|date',
             'event_time' => 'required',
             'venue' => 'required|string|max:255',
@@ -218,7 +218,7 @@ class EventController extends Controller
 
         try {
             $data = $request->only([
-                'title', 'description', 'category_id', 'promoteur_id', 
+                'title', 'description', 'category_id', 'promoter_id', 
                 'event_date', 'event_time', 'venue', 'address', 'status', 'max_capacity'
             ]);
 
@@ -400,7 +400,7 @@ class EventController extends Controller
             }
 
             if ($request->filled('promoteur')) {
-                $query->where('promoteur_id', $request->promoteur);
+                $query->where('promoter_id', $request->promoteur);
             }
 
             $events = $query->get();

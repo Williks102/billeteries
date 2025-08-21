@@ -194,7 +194,7 @@
         </a>
     </div>
     <div class="col-md-3">
-        <a href="{{ route('promoteur.scanner') }}" class="quick-action">
+        <a href="{{ route('promoteur.scanner.index') }}" class="quick-action">
             <div class="quick-action-icon">
                 <i class="fas fa-qrcode"></i>
             </div>

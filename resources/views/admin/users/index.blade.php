@@ -422,7 +422,7 @@ function updateStats() {
 }
 
 .stat-card {
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
 .stat-card:hover {

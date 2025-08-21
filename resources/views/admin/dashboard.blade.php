@@ -17,7 +17,10 @@
                     <i class="fas fa-chart-line me-1"></i> Rapports
                 </a>
                 <a href="{{ route('admin.analytics') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-analytics me-1"></i> Analytics
+                    <i class="fas fa-chart-bar me-1"></i> Analytics
+                </a>
+                <a href="{{ route('admin.revenues') }}" class="btn btn-outline-info">
+                    <i class="fas fa-coins me-1"></i> Revenus
                 </a>
             </div>
         </div>

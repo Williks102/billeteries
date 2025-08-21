@@ -16,6 +16,11 @@ class EventCategory extends Model
         'icon'
     ];
 
+    public function getRouteKeyName()
+{
+    return 'slug';
+}
+
     /**
      * Relation : Une catégorie a plusieurs événements
      */

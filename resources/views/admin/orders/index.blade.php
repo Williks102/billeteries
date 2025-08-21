@@ -281,7 +281,7 @@
                                 @if($order->payment_status === 'paid')
                                 <div class="text-success small mt-1">
                                     <i class="fas fa-coins me-1"></i>
-                                    Commission: {{ number_format($order->commissions->sum('amount') ?? 0) }} F
+                                    Commission: {{ number_format($order->commissions->sum('commission_amount') ?? 0) }} F
                                 </div>
                                 @endif
                             </td>

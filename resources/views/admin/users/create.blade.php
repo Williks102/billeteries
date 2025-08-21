@@ -1,4 +1,4 @@
-@extends('admin.admin')
+@extends('layouts.admin')
 
 @section('title', 'Créer un utilisateur')
 

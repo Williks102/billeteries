@@ -30,7 +30,7 @@ class EventSeeder extends Seeder
 
         // 1. Concert Magic System
         $magicSystemEvent = Event::create([
-            'promoteur_id' => $promoteur1->id,
+            'promoter_id' => $promoteur1->id,
             'category_id' => $concertCategory->id,
             'title' => 'Magic System Live - Tournée "Akwaba"',
             'description' => 'Le groupe légendaire Magic System revient sur scène avec leur tournée "Akwaba" ! Venez vivre une soirée inoubliable avec Salif Traoré et son équipe. Au programme : tous leurs hits including "Premier Gaou", "Bouger Bouger" et leurs derniers succès.',
@@ -123,7 +123,7 @@ class EventSeeder extends Seeder
 
         // 2. Alpha Blondy Concert
         $alphaBlondyEvent = Event::create([
-            'promoteur_id' => $promoteur2->id,
+            'promoter_id' => $promoteur2->id,
             'category_id' => $concertCategory->id,
             'title' => 'Alpha Blondy & The Solar System',
             'description' => 'Le roi du reggae africain Alpha Blondy en concert exceptionnel ! Accompagné de son groupe The Solar System, il interprétera ses plus grands succès : "Brigadier Sabari", "Jerusalem", "Cocody Rock"...',
@@ -177,7 +177,7 @@ class EventSeeder extends Seeder
 
         // 3. Match ASEC vs Africa Sports
         $matchEvent = Event::create([
-            'promoteur_id' => $promoteur4->id,
+            'promoter_id' => $promoteur4->id,
             'category_id' => $sportCategory->id,
             'title' => 'ASEC Mimosas vs Africa Sports - Derby d\'Abidjan',
             'description' => 'Le derby le plus attendu de l\'année ! ASEC Mimosas reçoit Africa Sports dans un match qui s\'annonce explosif. Venez supporter votre équipe favorite dans une ambiance de folie !',
@@ -231,7 +231,7 @@ class EventSeeder extends Seeder
 
         // 4. Pièce de Théâtre
         $theatreEvent = Event::create([
-            'promoteur_id' => $promoteur3->id,
+            'promoter_id' => $promoteur3->id,
             'category_id' => $theatreCategory->id,
             'title' => 'L\'Avare de Molière - Version Ivoirienne',
             'description' => 'Une adaptation moderne et humoristique de la célèbre pièce de Molière, transposée dans le contexte ivoirien. Mise en scène par Souleymane Koly.',
@@ -285,7 +285,7 @@ class EventSeeder extends Seeder
 
         // 5. Conférence Tech
         $conferenceEvent = Event::create([
-            'promoteur_id' => $promoteur2->id,
+            'promoter_id' => $promoteur2->id,
             'category_id' => $conferenceCategory->id,
             'title' => 'Digital Abidjan 2024 - L\'Avenir du Numérique en Afrique',
             'description' => 'La plus grande conférence tech de l\'Afrique de l\'Ouest ! Intervenants internationaux, startups, innovations. Thème principal : "IA et Blockchain pour le développement africain".',

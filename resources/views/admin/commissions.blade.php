@@ -180,7 +180,7 @@
                                         <div class="text-muted small">{{ $commission->promoteur->email }}</div>
                                         @php
                                             $totalCommissions = $commission->promoteur->commissions()
-                                                ->where('status', 'paid')->sum('amount');
+                                                ->where('status', 'paid')->sum('commission_amount');
                                         @endphp
                                         <div class="text-success small">
                                             Total: {{ number_format($totalCommissions) }} F

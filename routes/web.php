@@ -165,121 +165,126 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/profile', [PromoteurController::class, 'profile'])->name('profile');
         Route::patch('/profile', [PromoteurController::class, 'updateProfile'])->name('profile.update');
     });
-    
     // ==================== ESPACE ADMIN - CONTRÔLEURS SPÉCIALISÉS ====================
-    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
-        
-        // ===== DASHBOARD ET FONCTIONS GÉNÉRALES (AdminController) =====
-        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-        Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
-        Route::get('/revenues', [AdminController::class, 'revenues'])->name('revenues');
-        Route::get('/analytics', [AdminController::class, 'analytics'])->name('analytics');
-        Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
-        Route::patch('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
-        
-        // ===== GESTION DES UTILISATEURS (UserController spécialisé) =====
-        Route::resource('users', AdminUserController::class);
-        Route::patch('/users/{user}/toggle-email', [AdminUserController::class, 'toggleEmailVerification'])->name('users.toggle-email');
-        Route::post('/users/bulk-action', [AdminUserController::class, 'bulkAction'])->name('users.bulk-action');
-        Route::get('/users-export', [AdminUserController::class, 'export'])->name('users.export');
-        
-        // ===== GESTION DES ÉVÉNEMENTS (EventController spécialisé) =====
-        Route::resource('events', AdminEventController::class);
-        Route::patch('/events/{event}/status', [AdminEventController::class, 'updateStatus'])->name('events.update-status');
-        Route::post('/events/bulk-action', [AdminEventController::class, 'bulkAction'])->name('events.bulk-action');
-        Route::get('/events-export', [AdminEventController::class, 'export'])->name('events.export');
-        
-        // ===== GESTION DES COMMANDES (OrderController spécialisé) =====
-        Route::resource('orders', AdminOrderController::class)->only(['index', 'show', 'edit', 'update']);
-        Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update-status');
-        Route::post('/orders/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
-        Route::post('/orders/{order}/resend-email', [AdminOrderController::class, 'resendEmail'])->name('orders.resend-email');
-        Route::post('/orders/bulk-action', [AdminOrderController::class, 'bulkAction'])->name('orders.bulk-action');
-        Route::get('/orders-export', [AdminOrderController::class, 'export'])->name('orders.export');
-        
-        // ===== GESTION DES TICKETS (TicketController spécialisé) =====
-        Route::resource('tickets', AdminTicketController::class)->only(['index', 'show', 'edit', 'update']);
-        Route::patch('/tickets/{ticket}/mark-used', [AdminTicketController::class, 'markUsed'])->name('tickets.mark-used');
-        Route::patch('/tickets/{ticket}/cancel', [AdminTicketController::class, 'cancel'])->name('tickets.cancel');
-        Route::patch('/tickets/{ticket}/reactivate', [AdminTicketController::class, 'reactivate'])->name('tickets.reactivate');
-        Route::get('/tickets/{ticket}/download', [AdminTicketController::class, 'download'])->name('tickets.download');
-        Route::post('/tickets/bulk-action', [AdminTicketController::class, 'bulkAction'])->name('tickets.bulk-action');
-        Route::get('/tickets-export', [AdminTicketController::class, 'export'])->name('tickets.export');
-        
-        // ===== GESTION DES CATÉGORIES (CategoryController spécialisé) =====
-        Route::resource('categories', AdminCategoryController::class);
-        Route::patch('/categories/{category}/toggle-status', [AdminCategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
-        Route::post('/categories/reorder', [AdminCategoryController::class, 'reorder'])->name('categories.reorder');
-        
-        // ===== GESTION DES PAGES CMS (PageController spécialisé) =====
-        Route::resource('pages', AdminPageController::class);
-        Route::post('/pages/{page}/duplicate', [AdminPageController::class, 'duplicate'])->name('pages.duplicate');
-        Route::patch('/pages/{page}/toggle-status', [AdminPageController::class, 'toggleStatus'])->name('pages.toggle-status');
-        Route::post('/pages/reorder', [AdminPageController::class, 'reorder'])->name('pages.reorder');
-        
-        // ===== COMMISSIONS ET FINANCES (AdminController) =====
-        Route::prefix('finances')->name('finances.')->group(function () {
-            Route::patch('/commissions/{commission}/status', [AdminController::class, 'updateCommissionStatus'])->name('commissions.update-status');
-            Route::post('/commissions/bulk-pay', [AdminController::class, 'bulkPayCommissions'])->name('commissions.bulk-pay');
-        });
-        
-        // ===== RAPPORTS ET EXPORTS GLOBAUX =====
-        Route::prefix('reports')->name('reports.')->group(function () {
-            Route::get('/', [AdminController::class, 'reports'])->name('index');
-            Route::get('/sales', [AdminController::class, 'salesReport'])->name('sales');
-            Route::get('/financial', [AdminController::class, 'financialReport'])->name('financial');
-            Route::get('/export/{type}', [AdminController::class, 'export'])->name('export');
-        });
-        
-        // ===== PARAMÈTRES SYSTÈME (SettingsController spécialisé) =====
-        Route::resource('settings', AdminSettingsController::class)->only(['index', 'store']);
-        Route::post('/settings/test-email', [AdminSettingsController::class, 'testEmail'])->name('settings.test-email');
-        Route::post('/settings/backup', [AdminSettingsController::class, 'backup'])->name('settings.backup');
-        Route::post('/settings/clear-cache', [AdminSettingsController::class, 'clearCache'])->name('settings.clear-cache');
-        
-        // ===== EMAILS ET NOTIFICATIONS (AdminController) =====
-        Route::prefix('emails')->name('emails.')->group(function () {
-            Route::get('/', [AdminController::class, 'emailDashboard'])->name('dashboard');
-            Route::post('/test', [AdminController::class, 'testEmail'])->name('test');
-            Route::get('/templates', [AdminController::class, 'emailTemplates'])->name('templates');
-            Route::post('/orders/{order}/resend', [AdminController::class, 'resendOrderEmail'])->name('resend');
-        });
-        
-        // ===== ROUTES DE COMPATIBILITÉ (redirections vers nouvelles routes) =====
-        Route::get('/users-legacy', function() {
-            return redirect()->route('admin.users.index');
-        })->name('users'); // Ancienne route 'admin.users'
-        
-        Route::get('/events-legacy', function() {
-            return redirect()->route('admin.events.index');
-        })->name('events'); // Ancienne route 'admin.events'
-        
-        Route::get('/orders-legacy', function() {
-            return redirect()->route('admin.orders.index');
-        })->name('orders'); // Ancienne route 'admin.orders'
-        
-        Route::get('/tickets-legacy', function() {
-            return redirect()->route('admin.tickets.index');
-        })->name('tickets'); // Ancienne route 'admin.tickets'
-        
-        // Autres routes de compatibilité
-        Route::get('/commissions/pending', function () { 
-            return redirect()->route('admin.commissions', ['status' => 'pending']); 
-        })->name('commissions.pending');
-        
-        Route::get('/events/no-sales', function () { 
-            return redirect()->route('admin.events.index', ['filter' => 'no-sales']); 
-        })->name('events.no-sales');
-        
-        Route::get('/promoters/inactive', function () { 
-            return redirect()->route('admin.users.index', ['role' => 'promoteur', 'status' => 'inactive']); 
-        })->name('promoters.inactive');
-        
-        Route::get('/promoters/{user}', function ($user) { 
-            return redirect()->route('admin.users.show', $user);
-        })->name('promoters.show');
+Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+    
+    // ===== DASHBOARD ET FONCTIONS GÉNÉRALES (AdminController) =====
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
+    Route::get('/revenues', [AdminController::class, 'revenues'])->name('revenues');
+    Route::get('/analytics', [AdminController::class, 'analytics'])->name('analytics');
+    Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
+    Route::patch('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
+    
+    // ===== GESTION DES UTILISATEURS (UserController spécialisé) =====
+    Route::resource('users', AdminUserController::class);
+    Route::patch('/users/{user}/toggle-email', [AdminUserController::class, 'toggleEmailVerification'])->name('users.toggle-email');
+    Route::post('/users/bulk-action', [AdminUserController::class, 'bulkAction'])->name('users.bulk-action');
+    Route::get('/users-export', [AdminUserController::class, 'export'])->name('users.export');
+    
+    // ===== GESTION DES ÉVÉNEMENTS (EventController spécialisé) =====
+    Route::resource('events', AdminEventController::class);
+    Route::patch('/events/{event}/status', [AdminEventController::class, 'updateStatus'])->name('events.update-status');
+    Route::post('/events/bulk-action', [AdminEventController::class, 'bulkAction'])->name('events.bulk-action');
+    Route::get('/events-export', [AdminEventController::class, 'export'])->name('events.export');
+    
+    // ===== GESTION DES COMMANDES (OrderController spécialisé) =====
+    Route::resource('orders', AdminOrderController::class)->only(['index', 'show', 'edit', 'update']);
+    Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::post('/orders/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
+    Route::post('/orders/{order}/resend-email', [AdminOrderController::class, 'resendEmail'])->name('orders.resend-email');
+    Route::post('/orders/bulk-action', [AdminOrderController::class, 'bulkAction'])->name('orders.bulk-action');
+    Route::get('/orders-export', [AdminOrderController::class, 'export'])->name('orders.export');
+    
+    // ===== GESTION DES TICKETS (TicketController spécialisé) =====
+    Route::resource('tickets', AdminTicketController::class)->only(['index', 'show', 'edit', 'update']);
+    Route::patch('/tickets/{ticket}/mark-used', [AdminTicketController::class, 'markUsed'])->name('tickets.mark-used');
+    Route::patch('/tickets/{ticket}/cancel', [AdminTicketController::class, 'cancel'])->name('tickets.cancel');
+    Route::patch('/tickets/{ticket}/reactivate', [AdminTicketController::class, 'reactivate'])->name('tickets.reactivate');
+    Route::get('/tickets/{ticket}/download', [AdminTicketController::class, 'download'])->name('tickets.download');
+    Route::post('/tickets/bulk-action', [AdminTicketController::class, 'bulkAction'])->name('tickets.bulk-action');
+    Route::get('/tickets-export', [AdminTicketController::class, 'export'])->name('tickets.export');
+    
+    // ===== GESTION DES CATÉGORIES (CategoryController spécialisé) =====
+    Route::resource('categories', AdminCategoryController::class);
+    Route::patch('/categories/{category}/toggle-status', [AdminCategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
+    Route::post('/categories/reorder', [AdminCategoryController::class, 'reorder'])->name('categories.reorder');
+    Route::post('/categories/{category}/duplicate', [AdminCategoryController::class, 'duplicate'])->name('categories.duplicate');
+    Route::post('/categories/{category}/merge', [AdminCategoryController::class, 'merge'])->name('categories.merge');
+    Route::get('/categories-export', [AdminCategoryController::class, 'export'])->name('categories.export');
+    
+    // ===== GESTION DES PAGES CMS (PageController spécialisé) =====
+    Route::resource('pages', AdminPageController::class);
+    Route::post('/pages/{page}/duplicate', [AdminPageController::class, 'duplicate'])->name('pages.duplicate');
+    Route::patch('/pages/{page}/toggle-status', [AdminPageController::class, 'toggleStatus'])->name('pages.toggle-status');
+    Route::post('/pages/reorder', [AdminPageController::class, 'reorder'])->name('pages.reorder');
+    
+    // ===== COMMISSIONS ET FINANCES (AdminController) =====
+    Route::prefix('finances')->name('finances.')->group(function () {
+        Route::patch('/commissions/{commission}/status', [AdminController::class, 'updateCommissionStatus'])->name('commissions.update-status');
+        Route::post('/commissions/bulk-pay', [AdminController::class, 'bulkPayCommissions'])->name('commissions.bulk-pay');
     });
     
+    // ===== RAPPORTS ET EXPORTS GLOBAUX (CORRIGÉ) =====
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [AdminController::class, 'reports'])->name('index');
+        Route::get('/sales', [AdminController::class, 'salesReport'])->name('sales');
+        Route::get('/financial', [AdminController::class, 'financialReport'])->name('financial');
+        Route::get('/users', [AdminController::class, 'usersReport'])->name('users');
+        Route::get('/events', [AdminController::class, 'eventsReport'])->name('events');
+        Route::get('/export/{type}', [AdminController::class, 'export'])->name('export');
+    });
+    
+    // ===== PARAMÈTRES SYSTÈME (SettingsController spécialisé) =====
+    Route::resource('settings', AdminSettingsController::class)->only(['index', 'store']);
+    Route::post('/settings/test-email', [AdminSettingsController::class, 'testEmail'])->name('settings.test-email');
+    Route::post('/settings/backup', [AdminSettingsController::class, 'backup'])->name('settings.backup');
+    Route::post('/settings/clear-cache', [AdminSettingsController::class, 'clearCache'])->name('settings.clear-cache');
+    Route::post('/settings/optimize-db', [AdminSettingsController::class, 'optimizeDatabase'])->name('settings.optimize-db');
+    Route::post('/settings/cleanup-files', [AdminSettingsController::class, 'cleanupFiles'])->name('settings.cleanup-files');
+    
+    // ===== EMAILS ET NOTIFICATIONS (AdminController) =====
+    Route::prefix('emails')->name('emails.')->group(function () {
+        Route::get('/', [AdminController::class, 'emailDashboard'])->name('dashboard');
+        Route::post('/test', [AdminController::class, 'testEmail'])->name('test');
+        Route::get('/templates', [AdminController::class, 'emailTemplates'])->name('templates');
+        Route::post('/orders/{order}/resend', [AdminController::class, 'resendOrderEmail'])->name('resend');
+    });
+    
+    // ===== ROUTES DE COMPATIBILITÉ (redirections vers nouvelles routes) =====
+    Route::get('/users-legacy', function() {
+        return redirect()->route('admin.users.index');
+    })->name('users'); // Ancienne route 'admin.users'
+    
+    Route::get('/events-legacy', function() {
+        return redirect()->route('admin.events.index');
+    })->name('events'); // Ancienne route 'admin.events'
+    
+    Route::get('/orders-legacy', function() {
+        return redirect()->route('admin.orders.index');
+    })->name('orders'); // Ancienne route 'admin.orders'
+    
+    Route::get('/tickets-legacy', function() {
+        return redirect()->route('admin.tickets.index');
+    })->name('tickets'); // Ancienne route 'admin.tickets'
+    
+    // Autres routes de compatibilité
+    Route::get('/commissions/pending', function () { 
+        return redirect()->route('admin.commissions', ['status' => 'pending']); 
+    })->name('commissions.pending');
+    
+    Route::get('/events/no-sales', function () { 
+        return redirect()->route('admin.events.index', ['filter' => 'no-sales']); 
+    })->name('events.no-sales');
+    
+    Route::get('/promoters/inactive', function () { 
+        return redirect()->route('admin.users.index', ['role' => 'promoteur', 'status' => 'inactive']); 
+    })->name('promoters.inactive');
+    
+    Route::get('/promoters/{user}', function ($user) { 
+        return redirect()->route('admin.users.show', $user);
+    })->name('promoters.show');
+});
     // Profil générique (fallback)
     Route::get('/profile', function () {
         $user = auth()->user();

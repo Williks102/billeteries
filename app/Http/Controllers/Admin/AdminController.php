@@ -131,7 +131,7 @@ class AdminController extends Controller
         }
         
         if ($request->filled('promoter')) {
-            $query->where('promoteur_id', $request->promoter);
+            $query->where('promoter_id', $request->promoter);
         }
 
         if ($request->filled('date_from')) {
@@ -149,11 +149,11 @@ class AdminController extends Controller
         
         // Statistiques des commissions
         $stats = [
-            'total_commissions' => Commission::sum('amount'),
-            'paid_commissions' => Commission::where('status', 'paid')->sum('amount'),
-            'pending_commissions' => Commission::where('status', 'pending')->sum('amount'),
-            'held_commissions' => Commission::where('status', 'held')->sum('amount'),
-            'this_month_commissions' => Commission::whereMonth('created_at', now()->month)->sum('amount'),
+            'total_commissions' => Commission::sum('commission_amount'),
+            'paid_commissions' => Commission::where('status', 'paid')->sum('commission_amount'),
+            'pending_commissions' => Commission::where('status', 'pending')->sum('commission_amount'),
+            'held_commissions' => Commission::where('status', 'held')->sum('commission_amount'),
+            'this_month_commissions' => Commission::whereMonth('created_at', now()->month)->sum('commission_amount'),
         ];
         
         return view('admin.commissions', compact('commissions', 'promoteurs', 'stats'));
@@ -245,7 +245,7 @@ class AdminController extends Controller
         $orders = Order::whereBetween('created_at', $dateRange)->count();
         
         // Commissions par période
-        $commissions = Commission::whereBetween('created_at', $dateRange)->sum('amount');
+        $commissions = Commission::whereBetween('created_at', $dateRange)->sum('commission_amount');
         
         // Revenus nets (revenus - commissions)
         $netRevenue = $revenue - $commissions;
@@ -261,7 +261,7 @@ class AdminController extends Controller
             
             $monthCommissions = Commission::whereYear('created_at', $date->year)
                 ->whereMonth('created_at', $date->month)
-                ->sum('amount');
+                ->sum('commission_amount');
                 
             $monthlyRevenue->push([
                 'month' => $date->format('M Y'),
@@ -339,7 +339,7 @@ class AdminController extends Controller
                 'users_managed' => User::count(),
                 'events_approved' => Event::where('status', 'published')->count(),
                 'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
-                'commissions_paid' => Commission::where('status', 'paid')->sum('amount'),
+                'commissions_paid' => Commission::where('status', 'paid')->sum('commission_amount'),
             ];
 
             // Activité récente (simulation - à adapter selon vos logs)
@@ -424,8 +424,8 @@ class AdminController extends Controller
             'total_events' => Event::count(),
             'total_orders' => Order::count(),
             'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
-            'total_commissions' => Commission::sum('amount'),
-            'pending_commissions' => Commission::where('status', 'pending')->sum('amount'),
+            'total_commissions' => Commission::sum('commission_amount'),
+            'pending_commissions' => Commission::where('status', 'pending')->sum('commission_amount'),
         ];
 
         return view('admin.reports.index', compact('stats'));
@@ -460,13 +460,13 @@ class AdminController extends Controller
                 ->whereBetween('created_at', $dateRange)
                 ->sum('total_amount'),
             'total_commissions' => Commission::whereBetween('created_at', $dateRange)
-                ->sum('amount'),
+                ->sum('commission_amount'),
             'paid_commissions' => Commission::whereBetween('created_at', $dateRange)
                 ->where('status', 'paid')
-                ->sum('amount'),
+                ->sum('commission_amount'),
             'pending_commissions' => Commission::whereBetween('created_at', $dateRange)
                 ->where('status', 'pending')
-                ->sum('amount'),
+                ->sum('commission_amount'),
         ];
 
         $financial['net_revenue'] = $financial['total_revenue'] - $financial['total_commissions'];
@@ -498,6 +498,85 @@ class AdminController extends Controller
     }
 
     /**
+     * Rapport des utilisateurs (AJOUTÉ)
+     */
+    public function usersReport(Request $request)
+    {
+        $period = $request->get('period', 'this_month');
+        $dateRange = $this->getDateRange($period);
+
+        $usersData = User::whereBetween('created_at', $dateRange)
+            ->with(['orders', 'events'])
+            ->get();
+
+        $stats = [
+            'new_users' => $usersData->count(),
+            'promoteurs' => $usersData->where('role', 'promoteur')->count(),
+            'acheteurs' => $usersData->where('role', 'acheteur')->count(),
+            'verified_users' => $usersData->whereNotNull('email_verified_at')->count(),
+            'active_users' => $usersData->filter(function($user) {
+                return $user->orders->count() > 0 || $user->events->count() > 0;
+            })->count(),
+        ];
+
+        // Évolution des inscriptions
+        $registrationEvolution = collect();
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $registrationEvolution->push([
+                'date' => $date->format('d/m'),
+                'count' => User::whereDate('created_at', $date)->count(),
+            ]);
+        }
+
+        return view('admin.reports.users', compact('usersData', 'stats', 'period', 'registrationEvolution'));
+    }
+
+    /**
+     * Rapport des événements (AJOUTÉ)
+     */
+    public function eventsReport(Request $request)
+    {
+        $period = $request->get('period', 'this_month');
+        $dateRange = $this->getDateRange($period);
+
+        $eventsData = Event::whereBetween('created_at', $dateRange)
+            ->with(['promoteur', 'category', 'orders'])
+            ->get();
+
+        $stats = [
+            'total_events' => $eventsData->count(),
+            'published_events' => $eventsData->where('status', 'published')->count(),
+            'pending_events' => $eventsData->where('status', 'pending')->count(),
+            'draft_events' => $eventsData->where('status', 'draft')->count(),
+            'total_revenue' => $eventsData->sum(function($event) {
+                return $event->orders->where('payment_status', 'paid')->sum('total_amount');
+            }),
+            'avg_revenue_per_event' => $eventsData->count() > 0 
+                ? $eventsData->sum(function($event) {
+                    return $event->orders->where('payment_status', 'paid')->sum('total_amount');
+                }) / $eventsData->count()
+                : 0,
+        ];
+
+        // Top catégories
+        $topCategories = $eventsData->groupBy('category.name')
+            ->map(function($events, $categoryName) {
+                return [
+                    'name' => $categoryName ?: 'Sans catégorie',
+                    'count' => $events->count(),
+                    'revenue' => $events->sum(function($event) {
+                        return $event->orders->where('payment_status', 'paid')->sum('total_amount');
+                    }),
+                ];
+            })
+            ->sortByDesc('count')
+            ->take(5);
+
+        return view('admin.reports.events', compact('eventsData', 'stats', 'period', 'topCategories'));
+    }
+
+    /**
      * Export des commissions
      */
     private function exportCommissions(Request $request)
@@ -510,7 +589,7 @@ class AdminController extends Controller
             }
 
             if ($request->filled('promoter')) {
-                $query->where('promoteur_id', $request->promoter);
+                $query->where('promoter_id', $request->promoter);
             }
 
             $commissions = $query->get();

@@ -17,7 +17,7 @@ class CommissionSettingSeeder extends Seeder
         // Commission par défaut (toutes catégories)
         CommissionSetting::create([
             'category_id' => null,
-            'promoteur_id' => null,
+            'promoter_id' => null,
             'commission_rate' => 10.00, // 10%
             'platform_fee_fixed' => 500, // 500 FCFA fixe
             'min_commission' => 1000, // Minimum 1000 FCFA
@@ -31,7 +31,7 @@ class CommissionSettingSeeder extends Seeder
         if ($concertCategory) {
             CommissionSetting::create([
                 'category_id' => $concertCategory->id,
-                'promoteur_id' => null,
+                'promoter_id' => null,
                 'commission_rate' => 8.00, // 8%
                 'platform_fee_fixed' => 300, // 300 FCFA fixe
                 'min_commission' => 800, // Minimum 800 FCFA
@@ -46,7 +46,7 @@ class CommissionSettingSeeder extends Seeder
         if ($theatreCategory) {
             CommissionSetting::create([
                 'category_id' => $theatreCategory->id,
-                'promoteur_id' => null,
+                'promoter_id' => null,
                 'commission_rate' => 12.00, // 12%
                 'platform_fee_fixed' => 700, // 700 FCFA fixe
                 'min_commission' => 1200, // Minimum 1200 FCFA
@@ -61,7 +61,7 @@ class CommissionSettingSeeder extends Seeder
         if ($sportCategory) {
             CommissionSetting::create([
                 'category_id' => $sportCategory->id,
-                'promoteur_id' => null,
+                'promoter_id' => null,
                 'commission_rate' => 7.00, // 7%
                 'platform_fee_fixed' => 200, // 200 FCFA fixe
                 'min_commission' => 500, // Minimum 500 FCFA
@@ -76,7 +76,7 @@ class CommissionSettingSeeder extends Seeder
         if ($conferenceCategory) {
             CommissionSetting::create([
                 'category_id' => $conferenceCategory->id,
-                'promoteur_id' => null,
+                'promoter_id' => null,
                 'commission_rate' => 15.00, // 15%
                 'platform_fee_fixed' => 1000, // 1000 FCFA fixe
                 'min_commission' => 2000, // Minimum 2000 FCFA
@@ -91,7 +91,7 @@ class CommissionSettingSeeder extends Seeder
         if ($festivalCategory) {
             CommissionSetting::create([
                 'category_id' => $festivalCategory->id,
-                'promoteur_id' => null,
+                'promoter_id' => null,
                 'commission_rate' => 9.00, // 9%
                 'platform_fee_fixed' => 400, // 400 FCFA fixe
                 'min_commission' => 1000, // Minimum 1000 FCFA

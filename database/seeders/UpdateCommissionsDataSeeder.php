@@ -17,9 +17,9 @@ class UpdateCommissionsDataSeeder extends Seeder
             ->get();
             
         foreach ($commissionsWithoutPromoter as $commission) {
-            if ($commission->order && $commission->order->event && $commission->order->event->promoteur_id) {
+            if ($commission->order && $commission->order->event && $commission->order->event->promoter_id) {
                 $commission->update([
-                    'promoter_id' => $commission->order->event->promoteur_id
+                    'promoter_id' => $commission->order->event->promoter_id
                 ]);
             }
         }

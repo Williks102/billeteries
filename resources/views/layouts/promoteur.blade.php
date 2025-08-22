@@ -1,3 +1,4 @@
+{{-- resources/views/layouts/promoteur.blade.php - WordPress-style Sidebar --}}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -15,599 +16,904 @@
         :root {
             --primary-orange: #FF6B35;
             --primary-dark: #E55A2B;
-            --secondary-orange: #FFA726;
-            --accent-orange: #FFB74D;
-            --black-primary: #2c3e50;
-            --black-secondary: #34495e;
-            --gray-light: #f8f9fa;
-            --gray-medium: #6c757d;
-            --success: #28a745;
-            --warning: #ffc107;
-            --danger: #dc3545;
+            --promoteur-primary: #f59e0b;
+            --promoteur-secondary: #d97706;
+            --black-primary: #1f2937;
+            --black-secondary: #374151;
+            --gray-light: #f9fafb;
+            --gray-medium: #6b7280;
+            --sidebar-width: 280px;
+            --sidebar-mini-width: 60px;
+            --topbar-height: 60px;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            background-color: var(--gray-light);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, sans-serif;
+            background: var(--gray-light);
+            color: #374151;
         }
 
-        /* === NAVBAR PROMOTEUR === */
-        .promoteur-navbar {
-            background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
-            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
-            backdrop-filter: blur(10px);
+        /* ========================= LAYOUT STRUCTURE ========================= */
+        .promoteur-wrapper {
+            display: flex;
+            min-height: 100vh;
         }
 
-        .promoteur-navbar .navbar-brand {
-            color: white !important;
-            font-weight: 700;
-            font-size: 1.4rem;
+        /* ========================= SIDEBAR ========================= */
+        .promoteur-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--black-primary);
+            color: #d1d5db;
+            transition: all 0.2s ease-in-out;
+            z-index: 1000;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .promoteur-sidebar.mini {
+            width: var(--sidebar-mini-width);
+        }
+
+        .promoteur-sidebar.mobile-hidden {
+            transform: translateX(-100%);
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 0;
+            height: var(--topbar-height);
+            background: var(--black-secondary);
             display: flex;
             align-items: center;
-            gap: 10px;
+            border-bottom: 1px solid #4b5563;
         }
 
-        .promoteur-navbar .navbar-brand i {
-            color: white;
-            font-size: 1.6rem;
-        }
-
-        .promoteur-navbar .navbar-brand:hover {
-            color: var(--accent-orange) !important;
-            transform: scale(1.02);
-            transition: all 0.3s ease;
-        }
-
-        /* === NAVIGATION MENU === */
-        .navbar-nav .nav-link {
-            color: rgba(255,255,255,0.95) !important;
-            font-weight: 500;
-            padding: 12px 18px !important;
-            border-radius: 8px;
-            margin: 0 3px;
-            transition: all 0.3s ease;
-            position: relative;
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            text-decoration: none;
+            color: #f3f4f6;
+            font-weight: 600;
+            font-size: 1.1rem;
+            white-space: nowrap;
             overflow: hidden;
         }
 
-        .navbar-nav .nav-link::before {
+        .sidebar-brand i {
+            color: var(--promoteur-primary);
+            font-size: 1.4rem;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand-text {
+            transition: opacity 0.2s ease;
+        }
+
+        .promoteur-sidebar.mini .sidebar-brand-text {
+            opacity: 0;
+            width: 0;
+        }
+
+        /* Toggle Button */
+        .sidebar-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--gray-medium);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 3px;
+            transition: color 0.2s;
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--promoteur-primary);
+        }
+
+        .promoteur-sidebar.mini .sidebar-toggle {
+            display: none;
+        }
+
+        /* Sidebar Menu */
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li {
+            border-bottom: 1px solid #374151;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #d1d5db;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .sidebar-menu a:hover {
+            background: var(--black-secondary);
+            color: #fbbf24;
+        }
+
+        .sidebar-menu a.active {
+            background: var(--promoteur-primary);
+            color: white;
+        }
+
+        .sidebar-menu a.active::before {
             content: '';
             position: absolute;
+            left: 0;
             top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
+            bottom: 0;
+            width: 4px;
+            background: var(--promoteur-secondary);
         }
 
-        .navbar-nav .nav-link:hover::before {
-            left: 100%;
-        }
-
-        .navbar-nav .nav-link:hover {
-            color: white !important;
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .navbar-nav .nav-link.active {
-            background: rgba(255, 255, 255, 0.25) !important;
-            color: white !important;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .navbar-nav .nav-link i {
-            margin-right: 8px;
-            width: 18px;
-            text-align: center;
-        }
-
-        /* === DROPDOWN MENU === */
-        .dropdown-menu {
-            background: white;
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-            padding: 10px 0;
-            margin-top: 8px;
-            min-width: 250px;
-        }
-
-        .dropdown-item {
-            color: var(--black-primary);
-            padding: 12px 20px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            border-radius: 8px;
-            margin: 2px 8px;
-        }
-
-        .dropdown-item:hover {
-            background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
-            color: white;
-            transform: translateX(5px);
-        }
-
-        .dropdown-item i {
-            color: var(--primary-orange);
+        .sidebar-menu i {
             width: 20px;
             text-align: center;
-            margin-right: 10px;
+            margin-right: 12px;
+            flex-shrink: 0;
+            font-size: 1.1rem;
         }
 
-        .dropdown-item:hover i {
-            color: white;
+        .sidebar-menu-text {
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity 0.2s ease;
         }
 
-        .dropdown-divider {
-            border-color: rgba(255, 107, 53, 0.2);
-            margin: 8px 0;
+        .promoteur-sidebar.mini .sidebar-menu-text {
+            opacity: 0;
+            width: 0;
         }
 
-        /* === USER DROPDOWN === */
-        .user-dropdown .dropdown-toggle {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 25px;
-            padding: 8px 16px !important;
+        /* Submenu */
+        .sidebar-submenu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background: #111827;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
         }
 
-        .user-dropdown .dropdown-toggle:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: white;
-            transform: none;
+        .sidebar-submenu.open {
+            max-height: 300px;
         }
 
-        /* === CONTENU PRINCIPAL === */
-        .promoteur-content {
-            padding: 30px;
-            margin-top: 20px;
-            min-height: calc(100vh - 120px);
+        .sidebar-submenu a {
+            padding: 10px 20px 10px 52px;
+            font-size: 0.9rem;
+            border-left: 3px solid transparent;
         }
 
-        .modern-breadcrumb {
+        .sidebar-submenu a:hover {
+            background: var(--black-secondary);
+            border-left-color: var(--promoteur-primary);
+        }
+
+        .sidebar-submenu a.active {
+            background: var(--black-secondary);
+            border-left-color: var(--promoteur-primary);
+            color: var(--promoteur-primary);
+        }
+
+        /* Chevron pour submenu */
+        .menu-chevron {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+            color: var(--gray-medium);
+            font-size: 0.8rem;
+        }
+
+        .submenu-parent.open .menu-chevron {
+            transform: rotate(180deg);
+            color: var(--promoteur-primary);
+        }
+
+        .sidebar-menu a:hover .menu-chevron {
+            color: #fbbf24;
+        }
+
+        /* Mini sidebar hover expansion */
+        .promoteur-sidebar.mini:hover {
+            width: var(--sidebar-width);
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .promoteur-sidebar.mini:hover .sidebar-brand-text,
+        .promoteur-sidebar.mini:hover .sidebar-menu-text {
+            opacity: 1;
+            width: auto;
+        }
+
+        /* ========================= TOPBAR ========================= */
+        .promoteur-topbar {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--topbar-height);
             background: white;
-            border-radius: 10px;
-            padding: 15px 20px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 999;
+            transition: left 0.2s ease-in-out;
         }
 
-        .breadcrumb-item + .breadcrumb-item::before {
-            content: "›";
-            color: var(--primary-orange);
-            font-weight: bold;
+        .promoteur-sidebar.mini ~ .promoteur-topbar {
+            left: var(--sidebar-mini-width);
         }
 
-        /* === RESPONSIVE === */
-        @media (max-width: 991.98px) {
-            .navbar-nav {
-                background: rgba(255,255,255,0.95);
-                border-radius: 12px;
-                padding: 15px;
-                margin-top: 15px;
-                backdrop-filter: blur(10px);
-            }
-
-            .navbar-nav .nav-link {
-                color: var(--black-primary) !important;
-                margin: 2px 0;
-            }
-
-            .navbar-nav .nav-link:hover {
-                color: white !important;
-                background: var(--primary-orange);
-            }
-
-            .promoteur-content {
-                padding: 15px;
-            }
+        .promoteur-sidebar.mobile-hidden ~ .promoteur-topbar {
+            left: 0;
         }
 
-        /* === NOTIFICATION BADGE === */
+        /* Mobile toggle button */
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--black-primary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .mobile-toggle:hover {
+            background: var(--gray-light);
+        }
+
+        /* Breadcrumb */
+        .topbar-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--gray-medium);
+            font-size: 0.9rem;
+        }
+
+        .topbar-breadcrumb a {
+            color: var(--promoteur-primary);
+            text-decoration: none;
+        }
+
+        /* Home button */
+        .home-button {
+            background: var(--promoteur-primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .home-button:hover {
+            background: var(--promoteur-secondary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        /* User menu */
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .topbar-notifications {
+            position: relative;
+            cursor: pointer;
+            color: var(--gray-medium);
+            font-size: 1.1rem;
+        }
+
         .notification-badge {
             position: absolute;
-            top: -5px;
-            right: -5px;
-            background: var(--danger);
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
             color: white;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 11px;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
         }
 
-        .success-badge {
-            background: var(--success);
+        .revenue-display {
+            background: linear-gradient(135deg, #fef3c7, #fbbf24);
+            color: #92400e;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid #f59e0b;
         }
 
-        .warning-badge {
-            background: var(--warning);
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--promoteur-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
         }
 
-        /* === CARDS ET COMPONENTS === */
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .user-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--black-primary);
+        }
+
+        .user-role {
+            font-size: 0.8rem;
+            color: var(--gray-medium);
+        }
+
+        /* ========================= MAIN CONTENT ========================= */
+        .promoteur-main {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--topbar-height);
+            padding: 20px;
+            min-height: calc(100vh - var(--topbar-height));
+            transition: margin-left 0.2s ease-in-out;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .promoteur-sidebar.mini ~ .promoteur-main {
+            margin-left: var(--sidebar-mini-width);
+            width: calc(100% - var(--sidebar-mini-width));
+        }
+
+        .promoteur-sidebar.mobile-hidden ~ .promoteur-main {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        /* ========================= RESPONSIVE ========================= */
+        @media (max-width: 1024px) {
+            .promoteur-sidebar {
+                width: var(--sidebar-mini-width);
+            }
+            
+            .promoteur-topbar {
+                left: var(--sidebar-mini-width);
+            }
+            
+            .promoteur-main {
+                margin-left: var(--sidebar-mini-width);
+                width: calc(100% - var(--sidebar-mini-width));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .promoteur-sidebar {
+                transform: translateX(-100%);
+                width: var(--sidebar-width);
+            }
+            
+            .promoteur-sidebar.mobile-open {
+                transform: translateX(0);
+                box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            }
+            
+            .promoteur-sidebar.mobile-open .sidebar-brand-text,
+            .promoteur-sidebar.mobile-open .sidebar-menu-text {
+                opacity: 1 !important;
+                width: auto !important;
+            }
+            
+            .promoteur-sidebar.mobile-open .sidebar-submenu.open {
+                max-height: 400px;
+                display: block;
+            }
+            
+            .promoteur-sidebar .menu-chevron {
+                color: #d1d5db !important;
+                font-size: 1rem !important;
+                margin-left: auto;
+            }
+            
+            .promoteur-sidebar .submenu-parent.open .menu-chevron {
+                color: var(--promoteur-primary) !important;
+            }
+            
+            .promoteur-topbar {
+                left: 0;
+            }
+            
+            .promoteur-main {
+                margin-left: 0;
+                width: 100%;
+                padding: 15px;
+            }
+            
+            .mobile-toggle {
+                display: block;
+            }
+            
+            .user-info, .revenue-display {
+                display: none;
+            }
+            
+            .promoteur-sidebar:hover {
+                width: var(--sidebar-width);
+            }
+            
+            .sidebar-tooltip {
+                display: none;
+            }
+        }
+
+        /* ========================= CARDS AND COMPONENTS ========================= */
         .dashboard-card {
             background: white;
-            border-radius: 16px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.08);
-            padding: 30px;
-            border-left: 4px solid var(--primary-orange);
-            transition: all 0.3s ease;
-        }
-
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
         }
 
         .stat-card {
             background: white;
-            border-radius: 12px;
-            padding: 25px;
+            border-radius: 8px;
+            padding: 20px;
             text-align: center;
-            box-shadow: 0 3px 20px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-            border-top: 4px solid var(--primary-orange);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            border-left: 4px solid var(--promoteur-primary);
         }
 
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.15);
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
         }
 
-        /* === BOUTONS PERSONNALISÉS === */
-        .btn-orange {
-            background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
-            border: none;
+        @media (max-width: 768px) {
+            .mobile-overlay.active {
+                display: block;
+            }
+        }
+
+        .sidebar-tooltip {
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--black-secondary);
             color: white;
-            font-weight: 600;
-            border-radius: 8px;
-            padding: 12px 24px;
-            transition: all 0.3s ease;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            margin-left: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1001;
         }
 
-        .btn-orange:hover {
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary-orange));
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        .sidebar-tooltip::before {
+            content: '';
+            position: absolute;
+            right: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-right-color: var(--black-secondary);
         }
 
-        .btn-outline-orange {
-            border: 2px solid var(--primary-orange);
-            color: var(--primary-orange);
-            background: transparent;
-            font-weight: 600;
-            border-radius: 8px;
-            padding: 10px 22px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-outline-orange:hover {
-            background: var(--primary-orange);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3);
+        .promoteur-sidebar.mini .sidebar-menu a:hover .sidebar-tooltip {
+            opacity: 1;
         }
     </style>
     
     @stack('styles')
 </head>
 <body>
-    <!-- Navbar Promoteur -->
-    <nav class="navbar navbar-expand-lg promoteur-navbar sticky-top">
-        <div class="container-fluid">
-            <!-- Brand -->
-            <a class="navbar-brand" href="{{ route('promoteur.dashboard') }}">
-                <i class="fas fa-ticket-alt"></i>
-                <span>Espace Promoteur</span>
-            </a>
-
-            <!-- Toggle button -->
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#promoteurNavbar">
-                <i class="fas fa-bars text-white"></i>
-            </button>
-
-            <!-- Navigation -->
-            <div class="collapse navbar-collapse" id="promoteurNavbar">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('promoteur.dashboard') ? 'active' : '' }}" href="{{ route('promoteur.dashboard') }}">
-                            <i class="fas fa-tachometer-alt"></i>Dashboard
-                        </a>
-                    </li>
-                    
-                    <!-- Dropdown Événements -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->routeIs('promoteur.events.*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-calendar-alt"></i>Mes Événements
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('promoteur.events.index') }}">
-                                <i class="fas fa-list"></i>Tous mes événements
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.events.create') }}">
-                                <i class="fas fa-plus-circle"></i>Créer un événement
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.events.index', ['status' => 'draft']) }}">
-                                <i class="fas fa-edit"></i>Brouillons
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.events.index', ['status' => 'pending']) }}">
-                                <i class="fas fa-clock"></i>En attente
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.events.index', ['status' => 'published']) }}">
-                                <i class="fas fa-check-circle"></i>Publiés
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Dropdown Billets -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle position-relative" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-ticket-alt"></i>Billets
-                            @if(isset($pendingScans) && $pendingScans > 0)
-                                <span class="notification-badge warning-badge">{{ $pendingScans }}</span>
-                            @endif
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('promoteur.scanner.index') }}">
-                                <i class="fas fa-qrcode"></i>Scanner QR
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.scanner.stats') }}">
-                                <i class="fas fa-chart-bar"></i>Statistiques scanner
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.scanner.recent') }}">
-                                <i class="fas fa-history"></i>Scans récents
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.scanner.search') }}">
-                                <i class="fas fa-search"></i>Rechercher un billet
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Dropdown Ventes -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->routeIs('promoteur.sales') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-chart-line"></i>Ventes
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('promoteur.sales') }}">
-                                <i class="fas fa-shopping-cart"></i>Mes ventes
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.sales', ['period' => 'today']) }}">
-                                <i class="fas fa-calendar-day"></i>Ventes du jour
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.sales', ['period' => 'week']) }}">
-                                <i class="fas fa-calendar-week"></i>Cette semaine
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.sales', ['period' => 'month']) }}">
-                                <i class="fas fa-calendar"></i>Ce mois
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Dropdown Rapports -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->routeIs('promoteur.reports*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-chart-pie"></i>Rapports
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('promoteur.reports') }}">
-                                <i class="fas fa-chart-line"></i>Vue d'ensemble
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.reports', ['type' => 'events']) }}">
-                                <i class="fas fa-calendar"></i>Par événement
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.reports', ['type' => 'financial']) }}">
-                                <i class="fas fa-money-bill-wave"></i>Financier
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.reports.export') }}">
-                                <i class="fas fa-download"></i>Exporter données
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-
-                <!-- User menu -->
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown user-dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-tie"></i>{{ Auth::user()->name }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ route('promoteur.profile') }}">
-                                <i class="fas fa-user"></i>Mon profil
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('promoteur.profile') }}#settings">
-                                <i class="fas fa-cog"></i>Paramètres
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('home') }}" target="_blank">
-                                <i class="fas fa-external-link-alt"></i>Voir le site
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('pages.promoter-guide') }}" target="_blank">
-                                <i class="fas fa-question-circle"></i>Guide promoteur
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="{{ route('logout') }}"
-                                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                    <i class="fas fa-sign-out-alt"></i>Déconnexion
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
+    <div class="promoteur-wrapper">
+        <!-- Sidebar -->
+        <nav class="promoteur-sidebar" id="promoteurSidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <a href="{{ route('promoteur.dashboard') }}" class="sidebar-brand">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span class="sidebar-brand-text">Espace Promoteur</span>
+                </a>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
             </div>
-        </div>
-    </nav>
 
-    <!-- Contenu Principal -->
-    <div class="container-fluid promoteur-content">
-        <!-- Breadcrumb -->
-        @if(!request()->routeIs('promoteur.dashboard'))
-        <nav class="modern-breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item">
-                    <a href="{{ route('promoteur.dashboard') }}" style="color: var(--primary-orange);">
-                        <i class="fas fa-home me-1"></i>Dashboard
+            <!-- Sidebar Menu -->
+            <ul class="sidebar-menu">
+                <!-- Dashboard -->
+                <li>
+                    <a href="{{ route('promoteur.dashboard') }}" class="{{ request()->routeIs('promoteur.dashboard') ? 'active' : '' }}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span class="sidebar-menu-text">Dashboard</span>
+                        <span class="sidebar-tooltip">Dashboard</span>
                     </a>
                 </li>
-                @yield('breadcrumb')
-            </ol>
-        </nav>
-        @endif
 
-        <!-- Messages Flash -->
-        @if(session('success'))
+                <!-- Mes Événements -->
+                <li class="submenu-parent {{ request()->routeIs('promoteur.events*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('events', this)" class="{{ request()->routeIs('promoteur.events*') ? 'active' : '' }}">
+                        <i class="fas fa-calendar-check"></i>
+                        <span class="sidebar-menu-text">Mes Événements</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Mes Événements</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('promoteur.events*') ? 'open' : '' }}" id="submenu-events">
+                        <li><a href="{{ route('promoteur.events.index') }}" class="{{ request()->routeIs('promoteur.events.index') ? 'active' : '' }}">Tous mes événements</a></li>
+                        <li><a href="{{ route('promoteur.events.create') }}" class="{{ request()->routeIs('promoteur.events.create') ? 'active' : '' }}">Créer un événement</a></li>
+                        <li><a href="{{ route('promoteur.events.draft') }}">Brouillons</a></li>
+                        <li><a href="{{ route('promoteur.events.published') }}">Publiés</a></li>
+                        <li><a href="{{ route('promoteur.events.archived') }}">Archivés</a></li>
+                    </ul>
+                </li>
+
+                <!-- Gestion des Tickets -->
+                <li class="submenu-parent {{ request()->routeIs('promoteur.tickets*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('tickets', this)" class="{{ request()->routeIs('promoteur.tickets*') ? 'active' : '' }}">
+                        <i class="fas fa-ticket-alt"></i>
+                        <span class="sidebar-menu-text">Gestion des Tickets</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Gestion des Tickets</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('promoteur.tickets*') ? 'open' : '' }}" id="submenu-tickets">
+                        <li><a href="{{ route('promoteur.tickets.index') }}" class="{{ request()->routeIs('promoteur.tickets.index') ? 'active' : '' }}">Tous les tickets</a></li>
+                        <li><a href="{{ route('promoteur.tickets.sold') }}">Tickets vendus</a></li>
+                        <li><a href="{{ route('promoteur.tickets.scanned') }}">Tickets scannés</a></li>
+                        <li><a href="{{ route('promoteur.tickets.scanner') }}">Scanner les tickets</a></li>
+                    </ul>
+                </li>
+
+                <!-- Ventes & Commandes -->
+                <li class="submenu-parent {{ request()->routeIs('promoteur.sales*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('sales', this)" class="{{ request()->routeIs('promoteur.sales*') ? 'active' : '' }}">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="sidebar-menu-text">Ventes & Commandes</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Ventes & Commandes</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('promoteur.sales*') ? 'open' : '' }}" id="submenu-sales">
+                        <li><a href="{{ route('promoteur.sales.overview') }}" class="{{ request()->routeIs('promoteur.sales.overview') ? 'active' : '' }}">Vue d'ensemble</a></li>
+                        <li><a href="{{ route('promoteur.sales.orders') }}">Commandes</a></li>
+                        <li><a href="{{ route('promoteur.sales.analytics') }}">Analytics détaillées</a></li>
+                        <li><a href="{{ route('promoteur.sales.exports') }}">Exports & Rapports</a></li>
+                    </ul>
+                </li>
+
+                <!-- Revenus & Commissions -->
+                <li class="submenu-parent {{ request()->routeIs('promoteur.revenues*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('revenues', this)" class="{{ request()->routeIs('promoteur.revenues*') ? 'active' : '' }}">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span class="sidebar-menu-text">Revenus & Commissions</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Revenus & Commissions</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('promoteur.revenues*') ? 'open' : '' }}" id="submenu-revenues">
+                        <li><a href="{{ route('promoteur.revenues.dashboard') }}" class="{{ request()->routeIs('promoteur.revenues.dashboard') ? 'active' : '' }}">Dashboard revenus</a></li>
+                        <li><a href="{{ route('promoteur.revenues.commissions') }}">Mes commissions</a></li>
+                        <li><a href="{{ route('promoteur.revenues.payouts') }}">Demandes de paiement</a></li>
+                        <li><a href="{{ route('promoteur.revenues.history') }}">Historique</a></li>
+                    </ul>
+                </li>
+
+                <!-- Marketing & Promotion -->
+                <li class="submenu-parent {{ request()->routeIs('promoteur.marketing*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('marketing', this)" class="{{ request()->routeIs('promoteur.marketing*') ? 'active' : '' }}">
+                        <i class="fas fa-bullhorn"></i>
+                        <span class="sidebar-menu-text">Marketing & Promotion</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Marketing & Promotion</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('promoteur.marketing*') ? 'open' : '' }}" id="submenu-marketing">
+                        <li><a href="{{ route('promoteur.marketing.campaigns') }}" class="{{ request()->routeIs('promoteur.marketing.campaigns') ? 'active' : '' }}">Campagnes</a></li>
+                        <li><a href="{{ route('promoteur.marketing.codes') }}">Codes promo</a></li>
+                        <li><a href="{{ route('promoteur.marketing.emails') }}">Email marketing</a></li>
+                        <li><a href="{{ route('promoteur.marketing.social') }}">Réseaux sociaux</a></li>
+                    </ul>
+                </li>
+
+                <!-- Analytics -->
+                <li>
+                    <a href="{{ route('promoteur.analytics') }}" class="{{ request()->routeIs('promoteur.analytics') ? 'active' : '' }}">
+                        <i class="fas fa-chart-bar"></i>
+                        <span class="sidebar-menu-text">Analytics</span>
+                        <span class="sidebar-tooltip">Analytics</span>
+                    </a>
+                </li>
+
+                <!-- Mon Profil -->
+                <li class="submenu-parent {{ request()->routeIs('promoteur.profile*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('profile', this)" class="{{ request()->routeIs('promoteur.profile*') ? 'active' : '' }}">
+                        <i class="fas fa-user-cog"></i>
+                        <span class="sidebar-menu-text">Mon Profil</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Mon Profil</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('promoteur.profile*') ? 'open' : '' }}" id="submenu-profile">
+                        <li><a href="{{ route('promoteur.profile.edit') }}" class="{{ request()->routeIs('promoteur.profile.edit') ? 'active' : '' }}">Informations personnelles</a></li>
+                        <li><a href="{{ route('promoteur.profile.company') }}">Informations société</a></li>
+                        <li><a href="{{ route('promoteur.profile.banking') }}">Coordonnées bancaires</a></li>
+                        <li><a href="{{ route('promoteur.profile.security') }}">Sécurité</a></li>
+                        <li><a href="{{ route('promoteur.profile.notifications') }}">Notifications</a></li>
+                    </ul>
+                </li>
+
+                <!-- Support -->
+                <li>
+                    <a href="{{ route('promoteur.support') }}" class="{{ request()->routeIs('promoteur.support') ? 'active' : '' }}">
+                        <i class="fas fa-life-ring"></i>
+                        <span class="sidebar-menu-text">Support</span>
+                        <span class="sidebar-tooltip">Support</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Topbar -->
+        <header class="promoteur-topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" onclick="toggleMobileSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <nav class="topbar-breadcrumb">
+                    <a href="{{ route('promoteur.dashboard') }}">
+                        <i class="fas fa-home"></i>
+                    </a>
+                    @if(View::hasSection('breadcrumb'))
+                        @yield('breadcrumb')
+                    @endif
+                </nav>
+                <a href="{{ route('home') }}" class="home-button">
+                    <i class="fas fa-globe"></i>
+                    <span>Voir le site</span>
+                </a>
+            </div>
+
+            <div class="topbar-user">
+                <!-- Revenus -->
+                <div class="revenue-display">
+                    <i class="fas fa-coins me-1"></i>
+                    {{ number_format(auth()->user()->totalRevenue() ?? 0) }} FCFA
+                </div>
+
+                <!-- Notifications -->
+                <div class="topbar-notifications" onclick="toggleNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">5</span>
+                </div>
+
+                <!-- User Info -->
+                <div class="user-info">
+                    <div class="user-name">{{ auth()->user()->name }}</div>
+                    <div class="user-role">Promoteur</div>
+                </div>
+
+                <!-- User Avatar + Dropdown -->
+                <div class="dropdown">
+                    <div class="user-avatar" data-bs-toggle="dropdown" style="cursor: pointer;">
+                        {{ substr(auth()->user()->name, 0, 1) }}
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ route('promoteur.profile.edit') }}">
+                            <i class="fas fa-user me-2"></i>Mon profil
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ route('promoteur.events.create') }}">
+                            <i class="fas fa-plus me-2"></i>Nouvel événement
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ route('promoteur.revenues.dashboard') }}">
+                            <i class="fas fa-money-bill me-2"></i>Mes revenus
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                                @csrf
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- Mobile Overlay -->
+        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
+        <!-- Main Content -->
+        <main class="promoteur-main">
+            <!-- Flash Messages -->
+            @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-        @endif
+            @endif
 
-        @if(session('error'))
+            @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-        @endif
+            @endif
 
-        @if(session('warning'))
+            @if(session('warning'))
             <div class="alert alert-warning alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>{{ session('warning') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-        @endif
+            @endif
 
-        @if(session('info'))
-            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <i class="fas fa-info-circle me-2"></i>{{ session('info') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-
-        <!-- Contenu de la page -->
-        @yield('content')
+            <!-- Page Content -->
+            @yield('content')
+        </main>
     </div>
 
-    <!-- Form de déconnexion -->
-    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-        @csrf
-    </form>
-
-    <!-- Scripts -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Scripts spécifiques au promoteur -->
     <script>
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
+        // Sidebar state management
+        let sidebarState = localStorage.getItem('promoteur-sidebar-state') || 'open';
+        
+        // Initialize sidebar state
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('promoteurSidebar');
+            
+            if (window.innerWidth <= 1024 && window.innerWidth > 768) {
+                sidebar.classList.add('mini');
+                sidebarState = 'mini';
+            } else if (window.innerWidth <= 768) {
+                sidebar.classList.add('mobile-hidden');
+                sidebarState = 'mobile-hidden';
+            } else if (sidebarState === 'mini') {
+                sidebar.classList.add('mini');
+            }
+        });
 
-        // Confirmation pour les actions destructives
-        document.addEventListener('click', function(e) {
-            if (e.target.matches('[data-confirm]')) {
-                if (!confirm(e.target.getAttribute('data-confirm'))) {
-                    e.preventDefault();
+        // Toggle sidebar (desktop)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('promoteurSidebar');
+            
+            if (sidebar.classList.contains('mini')) {
+                sidebar.classList.remove('mini');
+                sidebarState = 'open';
+            } else {
+                sidebar.classList.add('mini');
+                sidebarState = 'mini';
+            }
+            
+            localStorage.setItem('promoteur-sidebar-state', sidebarState);
+        }
+
+        // Toggle mobile sidebar
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('promoteurSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+        }
+
+        // Close mobile sidebar
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('promoteurSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        }
+
+        // Toggle submenu
+        function toggleSubmenu(menuId, element) {
+            const submenu = document.getElementById('submenu-' + menuId);
+            const parent = element.closest('li');
+            const isOpen = submenu.classList.contains('open');
+            
+            const isMobile = window.innerWidth <= 768;
+            
+            if (!isMobile) {
+                document.querySelectorAll('.sidebar-submenu').forEach(menu => {
+                    if (menu !== submenu) {
+                        menu.classList.remove('open');
+                        menu.closest('li').classList.remove('open');
+                    }
+                });
+            }
+            
+            if (isOpen) {
+                submenu.classList.remove('open');
+                parent.classList.remove('open');
+            } else {
+                submenu.classList.add('open');
+                parent.classList.add('open');
+            }
+            
+            return false;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('promoteurSidebar');
+            
+            if (window.innerWidth <= 768) {
+                sidebar.classList.add('mobile-hidden');
+                sidebar.classList.remove('mini', 'mobile-open');
+            } else if (window.innerWidth <= 1024) {
+                sidebar.classList.add('mini');
+                sidebar.classList.remove('mobile-hidden', 'mobile-open');
+            } else {
+                sidebar.classList.remove('mobile-hidden', 'mobile-open');
+                if (sidebarState === 'open') {
+                    sidebar.classList.remove('mini');
                 }
             }
+            
+            document.getElementById('mobileOverlay').classList.remove('active');
         });
 
-        // Mise à jour automatique des badges de notification
-        function updateNotificationBadges() {
-            // Appel AJAX pour récupérer les nouvelles notifications
-            fetch('/promoteur/notifications/count')
-                .then(response => response.json())
-                .then(data => {
-                    // Mettre à jour le badge des scans en attente
-                    const scanBadge = document.querySelector('.notification-badge.warning-badge');
-                    if (scanBadge && data.pending_scans !== undefined) {
-                        if (data.pending_scans > 0) {
-                            scanBadge.textContent = data.pending_scans;
-                            scanBadge.style.display = 'flex';
-                        } else {
-                            scanBadge.style.display = 'none';
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.log('Erreur lors de la mise à jour des notifications:', error);
-                });
+        // Notifications placeholder
+        function toggleNotifications() {
+            console.log('Toggle notifications');
         }
-
-        // Actualiser les notifications toutes les 2 minutes
-        setInterval(updateNotificationBadges, 120000);
-
-        // Helper pour les confirmations
-        function confirmAction(message, callback) {
-            if (confirm(message)) {
-                callback();
-            }
-        }
-
-        // Helper pour afficher des toasts
-        function showToast(type, message) {
-            const toastHtml = `
-                <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle me-2"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-            
-            // Créer le container de toasts s'il n'existe pas
-            let toastContainer = document.querySelector('.toast-container');
-            if (!toastContainer) {
-                toastContainer = document.createElement('div');
-                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-                document.body.appendChild(toastContainer);
-            }
-            
-            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-            
-            // Activer le toast
-            const toastElement = toastContainer.lastElementChild;
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-            
-            // Supprimer automatiquement après fermeture
-            toastElement.addEventListener('hidden.bs.toast', function() {
-                this.remove();
-            });
-        }
-
-        // Gestion des erreurs AJAX globales
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Erreur non gérée:', event.reason);
-            showToast('danger', 'Une erreur inattendue est survenue');
-        });
-
-        // Initialisation des tooltips Bootstrap (si utilisés)
-        document.addEventListener('DOMContentLoaded', function() {
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        });
     </script>
     
     @stack('scripts')

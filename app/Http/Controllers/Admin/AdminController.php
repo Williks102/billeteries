@@ -285,43 +285,365 @@ class AdminController extends Controller
      * Analytics avancées
      */
     public function analytics(Request $request)
-    {
-        // Analytics par catégorie
-        $categoryStats = EventCategory::withCount('events')
-            ->with(['events' => function($query) {
-                $query->withSum('orders as total_revenue', 'total_amount');
+{
+    try {
+        // Période par défaut (30 derniers jours)
+        $period = $request->get('period', '30days');
+        $dateRange = $this->getAnalyticsDateRange($period);
+        
+        // Statistiques principales
+        $stats = [
+            'total_revenue' => Order::where('payment_status', 'paid')
+                ->whereBetween('created_at', $dateRange)
+                ->sum('total_amount'),
+            'total_orders' => Order::whereBetween('created_at', $dateRange)->count(),
+            'avg_order_value' => Order::where('payment_status', 'paid')
+                ->whereBetween('created_at', $dateRange)
+                ->avg('total_amount') ?? 0,
+            'conversion_rate' => $this->calculateConversionRate($dateRange),
+        ];
+
+        // Top 10 événements par revenus
+        $topEvents = Event::withSum(['orders as revenue' => function($query) use ($dateRange) {
+                $query->where('payment_status', 'paid')
+                      ->whereBetween('created_at', $dateRange);
+            }], 'total_amount')
+            ->withCount(['tickets as tickets_sold' => function($query) {
+                $query->where('status', 'sold');
             }])
+            ->orderBy('revenue', 'desc')
+            ->take(10)
+            ->get();
+
+        // Données pour les graphiques - Évolution du chiffre d'affaires
+        $revenueData = $this->getRevenueEvolution($dateRange);
+        
+        // Répartition par catégorie
+        $categoryData = EventCategory::withSum(['events.orders as revenue' => function($query) use ($dateRange) {
+                $query->where('payment_status', 'paid')
+                      ->whereBetween('created_at', $dateRange);
+            }], 'total_amount')
+            ->having('revenue', '>', 0)
+            ->orderBy('revenue', 'desc')
             ->get()
-            ->map(function($category) {
+            ->map(function($category) use ($stats) {
                 return [
                     'name' => $category->name,
-                    'events_count' => $category->events_count,
-                    'total_revenue' => $category->events->sum('total_revenue') ?? 0,
+                    'value' => $stats['total_revenue'] > 0 
+                        ? round(($category->revenue / $stats['total_revenue']) * 100, 1)
+                        : 0
                 ];
             });
 
-        // Top événements par revenus
-        $topEvents = Event::join('orders', 'events.id', '=', 'orders.event_id')
-            ->where('orders.payment_status', 'paid')
-            ->selectRaw('events.id, events.title, SUM(orders.total_amount) as total_revenue')
-            ->groupBy('events.id', 'events.title')
-            ->orderByDesc('total_revenue')
-            ->take(10)
-            ->get();
+        // Performance mensuelle (6 derniers mois)
+        $monthlyData = collect();
+        for ($i = 5; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthlyData->push([
+                'month' => $date->format('M'),
+                'value' => Order::where('payment_status', 'paid')
+                    ->whereYear('created_at', $date->year)
+                    ->whereMonth('created_at', $date->month)
+                    ->sum('total_amount')
+            ]);
+        }
 
-        // Promoteurs les plus actifs
-        $topPromoters = User::where('role', 'promoteur')
-            ->withCount('events')
-            ->withSum(['commissions as total_commissions' => function($query) {
-                $query->where('status', 'paid');
-            }], 'net_amount')
-            ->orderByDesc('total_commissions')
-            ->take(10)
-            ->get();
+        // Analyse des utilisateurs
+        $userStats = [
+            'new_users' => User::whereBetween('created_at', $dateRange)->count(),
+            'active_users' => User::whereHas('orders', function($query) use ($dateRange) {
+                $query->whereBetween('created_at', $dateRange);
+            })->count(),
+            'retention_rate' => $this->calculateRetentionRate($dateRange),
+        ];
 
-        return view('admin.analytics', compact('categoryStats', 'topEvents', 'topPromoters'));
+        // Analyse des paiements
+        $paymentStats = [
+            'success_rate' => $this->calculatePaymentSuccessRate($dateRange),
+            'failed_count' => Order::where('payment_status', 'failed')
+                ->whereBetween('created_at', $dateRange)
+                ->count(),
+            'mobile_money' => 75, // À adapter selon vos données
+            'card' => 20,
+            'other' => 5,
+        ];
+
+        // Prévisions (simulation - à adapter avec vos algorithmes)
+        $forecasts = [
+            'next_month_revenue' => $stats['total_revenue'] * 1.15, // +15% prévu
+            'new_orders' => ceil($stats['total_orders'] * 1.08), // +8% prévu
+            'new_users' => ceil($userStats['new_users'] * 1.12), // +12% prévu
+            'growth_rate' => 12.5,
+        ];
+
+        // Données pour les graphiques (format JSON)
+        $chartData = [
+            'revenue' => $revenueData,
+            'categories' => $categoryData,
+            'monthly' => $monthlyData,
+        ];
+
+        // Récupérer les données pour les filtres
+        $categories = EventCategory::orderBy('name')->get();
+        $promoters = User::where('role', 'promoter')->orderBy('name')->get();
+
+        return view('admin.analytics', compact(
+            'stats', 'topEvents', 'chartData', 'userStats', 
+            'paymentStats', 'forecasts', 'categories', 'promoters'
+        ));
+
+    } catch (\Exception $e) {
+        \Log::error('Erreur page analytics admin: ' . $e->getMessage());
+        
+        // Retourner une vue avec des données par défaut
+        return view('admin.analytics', [
+            'stats' => ['total_revenue' => 0, 'total_orders' => 0, 'avg_order_value' => 0, 'conversion_rate' => 0],
+            'topEvents' => collect(),
+            'chartData' => ['revenue' => [], 'categories' => [], 'monthly' => []],
+            'userStats' => ['new_users' => 0, 'active_users' => 0, 'retention_rate' => 0],
+            'paymentStats' => ['success_rate' => 0, 'failed_count' => 0, 'mobile_money' => 0, 'card' => 0, 'other' => 0],
+            'forecasts' => ['next_month_revenue' => 0, 'new_orders' => 0, 'new_users' => 0, 'growth_rate' => 0],
+            'categories' => collect(),
+            'promoters' => collect()
+        ])->with('error', 'Erreur lors du chargement des analytics');
     }
+}
+/**
+ * API pour mettre à jour les données analytics selon la période
+ */
+public function analyticsData(Request $request)
+{
+    try {
+        $period = $request->get('period', '30days');
+        $dateRange = $this->getAnalyticsDateRange($period);
+        
+        // Données de revenus pour le graphique principal
+        $revenueData = $this->getRevenueEvolution($dateRange);
+        
+        // KPIs mis à jour
+        $kpis = [
+            'total_revenue' => Order::where('payment_status', 'paid')
+                ->whereBetween('created_at', $dateRange)
+                ->sum('total_amount'),
+            'total_orders' => Order::whereBetween('created_at', $dateRange)->count(),
+            'avg_order_value' => Order::where('payment_status', 'paid')
+                ->whereBetween('created_at', $dateRange)
+                ->avg('total_amount') ?? 0,
+            'conversion_rate' => $this->calculateConversionRate($dateRange),
+        ];
 
+        return response()->json([
+            'revenue' => $revenueData,
+            'kpis' => $kpis
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Erreur API analytics data: ' . $e->getMessage());
+        return response()->json(['error' => 'Erreur lors du chargement des données'], 500);
+    }
+}
+/**
+ * API pour filtrer les analytics
+ */
+public function analyticsFilter(Request $request)
+{
+    try {
+        $filters = $request->only(['category', 'promoter', 'start_date', 'end_date']);
+        $dateRange = [$filters['start_date'] ?? now()->subDays(30), $filters['end_date'] ?? now()];
+        
+        // Construire la requête avec filtres
+        $query = Order::where('payment_status', 'paid')
+            ->whereBetween('created_at', $dateRange);
+            
+        if (!empty($filters['category'])) {
+            $query->whereHas('event', function($q) use ($filters) {
+                $q->where('category_id', $filters['category']);
+            });
+        }
+        
+        if (!empty($filters['promoter'])) {
+            $query->whereHas('event', function($q) use ($filters) {
+                $q->where('promoter_id', $filters['promoter']);
+            });
+        }
+
+        // Données filtrées pour les graphiques
+        $filteredRevenue = $this->getFilteredRevenueData($query, $dateRange);
+        $filteredCategories = $this->getFilteredCategoryData($filters, $dateRange);
+        
+        return response()->json([
+            'revenue' => $filteredRevenue,
+            'categories' => $filteredCategories,
+            'kpis' => [
+                'total_revenue' => $query->sum('total_amount'),
+                'total_orders' => $query->count(),
+                'avg_order_value' => $query->avg('total_amount') ?? 0,
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Erreur API analytics filter: ' . $e->getMessage());
+        return response()->json(['error' => 'Erreur lors du filtrage'], 500);
+    }
+}
+/**
+ * Export des données analytics
+ */
+public function analyticsExport(Request $request)
+{
+    try {
+        $filters = $request->only(['category', 'promoter', 'start_date', 'end_date', 'period']);
+        $dateRange = [$filters['start_date'] ?? now()->subDays(30), $filters['end_date'] ?? now()];
+        
+        // Récupérer toutes les données pour l'export
+        $exportData = $this->generateAnalyticsExportData($filters, $dateRange);
+        
+        $filename = 'analytics_export_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $callback = function() use ($exportData) {
+            $file = fopen('php://output', 'w');
+            fwrite($file, "\xEF\xBB\xBF"); // BOM UTF-8
+            
+            // En-têtes
+            fputcsv($file, [
+                'Date', 'Revenus (FCFA)', 'Nombre Commandes', 'Nouveaux Utilisateurs',
+                'Panier Moyen (FCFA)', 'Taux Conversion (%)'
+            ], ';');
+            
+            // Données
+            foreach ($exportData as $row) {
+                fputcsv($file, [
+                    $row['date'],
+                    number_format($row['revenue'] / 100, 0, ',', ' '),
+                    $row['orders'],
+                    $row['new_users'],
+                    number_format($row['avg_order'] / 100, 0, ',', ' '),
+                    number_format($row['conversion_rate'], 2)
+                ], ';');
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Erreur export analytics: ' . $e->getMessage());
+        return redirect()->back()->with('error', 'Erreur lors de l\'export');
+    }
+}
+/**
+ * Obtenir la plage de dates selon la période
+ */
+private function getAnalyticsDateRange($period)
+{
+    switch ($period) {
+        case '7days':
+            return [now()->subDays(7), now()];
+        case '30days':
+            return [now()->subDays(30), now()];
+        case '90days':
+            return [now()->subDays(90), now()];
+        case 'year':
+            return [now()->subYear(), now()];
+        default:
+            return [now()->subDays(30), now()];
+    }
+}
+/**
+ * Calculer le taux de conversion
+ */
+private function calculateConversionRate($dateRange)
+{
+    $totalVisitors = 1000; // À remplacer par vos vraies données de trafic
+    $totalOrders = Order::whereBetween('created_at', $dateRange)->count();
+    
+    return $totalVisitors > 0 ? ($totalOrders / $totalVisitors) * 100 : 0;
+}
+
+/**
+ * Calculer le taux de rétention
+ */
+private function calculateRetentionRate($dateRange)
+{
+    $newUsers = User::whereBetween('created_at', $dateRange)->count();
+    $returningUsers = User::whereBetween('created_at', $dateRange)
+        ->whereHas('orders', function($query) use ($dateRange) {
+            $query->where('created_at', '>', $dateRange[1]);
+        })->count();
+    
+    return $newUsers > 0 ? ($returningUsers / $newUsers) * 100 : 0;
+}
+
+/**
+ * Calculer le taux de succès des paiements
+ */
+private function calculatePaymentSuccessRate($dateRange)
+{
+    $totalOrders = Order::whereBetween('created_at', $dateRange)->count();
+    $successfulOrders = Order::where('payment_status', 'paid')
+        ->whereBetween('created_at', $dateRange)->count();
+    
+    return $totalOrders > 0 ? ($successfulOrders / $totalOrders) * 100 : 0;
+}
+
+/**
+ * Obtenir l'évolution des revenus
+ */
+private function getRevenueEvolution($dateRange)
+{
+    $days = Carbon::parse($dateRange[0])->diffInDays(Carbon::parse($dateRange[1]));
+    $data = collect();
+    
+    for ($i = 0; $i <= $days; $i++) {
+        $date = Carbon::parse($dateRange[0])->addDays($i);
+        $revenue = Order::where('payment_status', 'paid')
+            ->whereDate('created_at', $date)
+            ->sum('total_amount');
+            
+        $data->push([
+            'date' => $date->format('Y-m-d'),
+            'value' => $revenue
+        ]);
+    }
+    
+    return $data;
+}
+
+/**
+ * Générer les données d'export
+ */
+private function generateAnalyticsExportData($filters, $dateRange)
+{
+    $data = collect();
+    $startDate = Carbon::parse($dateRange[0]);
+    $endDate = Carbon::parse($dateRange[1]);
+    
+    while ($startDate <= $endDate) {
+        $dayRevenue = Order::where('payment_status', 'paid')
+            ->whereDate('created_at', $startDate)
+            ->sum('total_amount');
+            
+        $dayOrders = Order::whereDate('created_at', $startDate)->count();
+        $dayUsers = User::whereDate('created_at', $startDate)->count();
+        
+        $data->push([
+            'date' => $startDate->format('d/m/Y'),
+            'revenue' => $dayRevenue,
+            'orders' => $dayOrders,
+            'new_users' => $dayUsers,
+            'avg_order' => $dayOrders > 0 ? $dayRevenue / $dayOrders : 0,
+            'conversion_rate' => $this->calculateConversionRate([$startDate, $startDate])
+        ]);
+        
+        $startDate->addDay();
+    }
+    
+    return $data;
+}
     // ================================================================
     // PROFIL ADMIN - CONSERVÉ
     // ================================================================

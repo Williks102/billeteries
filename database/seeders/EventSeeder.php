@@ -1,340 +1,198 @@
 <?php
+// database/seeders/EventSeeder.php - VERSION CORRIGÉE POUR CORRESPONDRE AU USERSEEDER
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Event;
-use App\Models\EventCategory;
 use App\Models\User;
-use App\Models\TicketType;
+use App\Models\EventCategory;
+use Carbon\Carbon;
 
 class EventSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Récupérer les catégories et promoteurs
-        $concertCategory = EventCategory::where('slug', 'concert')->first();
-        $theatreCategory = EventCategory::where('slug', 'theatre')->first();
-        $sportCategory = EventCategory::where('slug', 'sport')->first();
-        $conferenceCategory = EventCategory::where('slug', 'conference')->first();
-        $festivalCategory = EventCategory::where('slug', 'festival')->first();
+        $this->command->info('🎪 Création des événements...');
 
-        $promoteur1 = User::where('email', 'kouadio@productions.ci')->first();
-        $promoteur2 = User::where('email', 'contact@abidjan-events.ci')->first();
-        $promoteur3 = User::where('email', 'info@culture-spectacles.ci')->first();
-        $promoteur4 = User::where('email', 'sports@abidjan.ci')->first();
+        // Récupérer les promoteurs et catégories
+        $promoters = User::where('role', 'promoter')->get();
+        $categories = EventCategory::all();
 
-        // 1. Concert Magic System
-        $magicSystemEvent = Event::create([
-            'promoter_id' => $promoteur1->id,
-            'category_id' => $concertCategory->id,
-            'title' => 'Magic System Live - Tournée "Akwaba"',
-            'description' => 'Le groupe légendaire Magic System revient sur scène avec leur tournée "Akwaba" ! Venez vivre une soirée inoubliable avec Salif Traoré et son équipe. Au programme : tous leurs hits including "Premier Gaou", "Bouger Bouger" et leurs derniers succès.',
+        if ($promoters->isEmpty() || $categories->isEmpty()) {
+            $this->command->error('❌ Aucun promoteur ou catégorie trouvé. Exécutez UserSeeder et EventCategorySeeder d\'abord.');
+            return;
+        }
+
+        // Récupérer les emails exacts du UserSeeder
+        $promoter1 = User::where('email', 'contact@sergebeynaud.ci')->first(); // Serge Beynaud Productions
+        $promoter2 = User::where('email', 'events@zouglou.ci')->first();       // Zouglou Events
+        $promoter3 = User::where('email', 'info@amf.ci')->first();             // Abidjan Music Festival
+        $promoter4 = User::where('email', 'contact@sportci.com')->first();     // Sports & Entertainment CI
+        $promoter5 = User::where('email', 'culture@abidjan.ci')->first();      // Cultural Events Abidjan
+
+        // Récupérer les catégories par slug
+        $musiqueCategory = EventCategory::where('slug', 'musique-concerts')->first();
+        $sportsCategory = EventCategory::where('slug', 'sports-loisirs')->first();
+        $cultureCategory = EventCategory::where('slug', 'culture-arts')->first();
+        $gastronomieCategory = EventCategory::where('slug', 'gastronomie')->first();
+        $businessCategory = EventCategory::where('slug', 'business-networking')->first();
+
+        $events = [];
+
+        // ===== MUSIQUE ET CONCERTS =====
+        $events[] = [
+            'promoter_id' => $promoter1->id,
+            'category_id' => $musiqueCategory->id,
+            'title' => 'Festival Zouglou 2025',
+            'description' => 'Le plus grand festival de Zouglou de Côte d\'Ivoire avec les stars nationales et internationales.',
             'venue' => 'Palais de la Culture d\'Abidjan',
-            'address' => 'Boulevard de la République, Abidjan, Plateau',
-            'event_date' => now()->addDays(45),
-            'event_time' => now()->addDays(45)->setTime(20, 0),
+            'address' => 'Plateau, Abidjan',
+            'event_date' => now()->addDays(45)->format('Y-m-d'),
+            'event_time' => now()->addDays(45)->setTime(19, 0),
             'end_time' => now()->addDays(45)->setTime(23, 30),
-            'status' => 'published'
-        ]);
+            'status' => 'published',
+        ];
 
-        // Types de billets pour Magic System
-        TicketType::create([
-            'event_id' => $magicSystemEvent->id,
-            'name' => 'VIP Gold',
-            'description' => 'Accès backstage, meet & greet avec les artistes, boissons premium incluses, places réservées au premier rang',
-            'price' => 100000, // 100,000 FCFA
-            'quantity_available' => 50,
-            'quantity_sold' => 12,
-            'sale_start_date' => now()->subDays(30),
-            'sale_end_date' => $magicSystemEvent->event_date->subHours(2),
-            'max_per_order' => 2,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $magicSystemEvent->id,
-            'name' => 'VIP Standard',
-            'description' => 'Zone VIP avec places assises, boissons incluses et buffet',
-            'price' => 75000, // 75,000 FCFA
-            'quantity_available' => 100,
-            'quantity_sold' => 23,
-            'sale_start_date' => now()->subDays(30),
-            'sale_end_date' => $magicSystemEvent->event_date->subHours(2),
-            'max_per_order' => 4,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $magicSystemEvent->id,
-            'name' => 'Carré Or',
-            'description' => 'Zone premium debout, très proche de la scène',
-            'price' => 50000, // 50,000 FCFA
-            'quantity_available' => 200,
-            'quantity_sold' => 67,
-            'sale_start_date' => now()->subDays(30),
-            'sale_end_date' => $magicSystemEvent->event_date->subHours(1),
-            'max_per_order' => 6,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $magicSystemEvent->id,
-            'name' => 'Tribune',
-            'description' => 'Places assises en tribune avec excellente vue',
-            'price' => 35000, // 35,000 FCFA
-            'quantity_available' => 300,
-            'quantity_sold' => 89,
-            'sale_start_date' => now()->subDays(30),
-            'sale_end_date' => $magicSystemEvent->event_date->subHours(1),
-            'max_per_order' => 8,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $magicSystemEvent->id,
-            'name' => 'Pelouse',
-            'description' => 'Accès général debout',
-            'price' => 20000, // 20,000 FCFA
-            'quantity_available' => 500,
-            'quantity_sold' => 156,
-            'sale_start_date' => now()->subDays(30),
-            'sale_end_date' => $magicSystemEvent->event_date,
-            'max_per_order' => 10,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $magicSystemEvent->id,
-            'name' => 'Étudiant',
-            'description' => 'Tarif spécial étudiants (carte étudiant obligatoire)',
-            'price' => 15000, // 15,000 FCFA
-            'quantity_available' => 150,
-            'quantity_sold' => 45,
-            'sale_start_date' => now()->subDays(20),
-            'sale_end_date' => $magicSystemEvent->event_date,
-            'max_per_order' => 2,
-            'is_active' => true
-        ]);
-
-        // 2. Alpha Blondy Concert
-        $alphaBlondyEvent = Event::create([
-            'promoter_id' => $promoteur2->id,
-            'category_id' => $concertCategory->id,
-            'title' => 'Alpha Blondy & The Solar System',
-            'description' => 'Le roi du reggae africain Alpha Blondy en concert exceptionnel ! Accompagné de son groupe The Solar System, il interprétera ses plus grands succès : "Brigadier Sabari", "Jerusalem", "Cocody Rock"...',
+        $events[] = [
+            'promoter_id' => $promoter1->id,
+            'category_id' => $musiqueCategory->id,
+            'title' => 'Concert Serge Beynaud Live',
+            'description' => 'Serge Beynaud en concert exceptionnel pour ses fans.',
             'venue' => 'Stade Félix Houphouët-Boigny',
-            'address' => 'Boulevard Lagunaire, Abidjan, Le Plateau',
-            'event_date' => now()->addDays(60),
-            'event_time' => now()->addDays(60)->setTime(19, 30),
+            'address' => 'Abidjan',
+            'event_date' => now()->addDays(60)->format('Y-m-d'),
+            'event_time' => now()->addDays(60)->setTime(20, 0),
             'end_time' => now()->addDays(60)->setTime(23, 0),
-            'status' => 'published'
-        ]);
+            'status' => 'published',
+        ];
 
-        // Types de billets pour Alpha Blondy
-        TicketType::create([
-            'event_id' => $alphaBlondyEvent->id,
-            'name' => 'VIP Rastafari',
-            'description' => 'Zone VIP exclusive avec rencontre artiste',
-            'price' => 80000, // 80,000 FCFA
-            'quantity_available' => 80,
-            'quantity_sold' => 15,
-            'sale_start_date' => now()->subDays(25),
-            'sale_end_date' => $alphaBlondyEvent->event_date->subHours(3),
-            'max_per_order' => 3,
-            'is_active' => true
-        ]);
+        $events[] = [
+            'promoter_id' => $promoter2->id,
+            'category_id' => $musiqueCategory->id,
+            'title' => 'Soirée Jazz au Sofitel',
+            'description' => 'Une soirée jazz intimiste avec les meilleurs musiciens locaux.',
+            'venue' => 'Sofitel Abidjan Hotel Ivoire',
+            'address' => 'Cocody, Abidjan',
+            'event_date' => now()->addDays(30)->format('Y-m-d'),
+            'event_time' => now()->addDays(30)->setTime(20, 0),
+            'end_time' => now()->addDays(30)->setTime(23, 0),
+            'status' => 'published',
+        ];
 
-        TicketType::create([
-            'event_id' => $alphaBlondyEvent->id,
-            'name' => 'Fosse',
-            'description' => 'Zone debout face à la scène',
-            'price' => 40000, // 40,000 FCFA
-            'quantity_available' => 400,
-            'quantity_sold' => 78,
-            'sale_start_date' => now()->subDays(25),
-            'sale_end_date' => $alphaBlondyEvent->event_date,
-            'max_per_order' => 8,
-            'is_active' => true
-        ]);
+        $events[] = [
+            'promoter_id' => $promoter3->id,
+            'category_id' => $musiqueCategory->id,
+            'title' => 'Abidjan Music Festival 2025',
+            'description' => 'Le rendez-vous annuel des mélomanes avec les plus grands artistes africains.',
+            'venue' => 'Palais des Sports de Treichville',
+            'address' => 'Treichville, Abidjan',
+            'event_date' => now()->addDays(90)->format('Y-m-d'),
+            'event_time' => now()->addDays(90)->setTime(18, 0),
+            'end_time' => now()->addDays(90)->setTime(23, 59),
+            'status' => 'published',
+        ];
 
-        TicketType::create([
-            'event_id' => $alphaBlondyEvent->id,
-            'name' => 'Gradin',
-            'description' => 'Places assises dans les gradins',
-            'price' => 25000, // 25,000 FCFA
-            'quantity_available' => 600,
-            'quantity_sold' => 89,
-            'sale_start_date' => now()->subDays(25),
-            'sale_end_date' => $alphaBlondyEvent->event_date,
-            'max_per_order' => 10,
-            'is_active' => true
-        ]);
+        // ===== SPORTS ET LOISIRS =====
+        $events[] = [
+            'promoter_id' => $promoter4->id,
+            'category_id' => $sportsCategory->id,
+            'title' => 'ASEC Mimosas vs Africa Sports',
+            'description' => 'Le derby d\'Abidjan tant attendu entre les deux clubs emblématiques.',
+            'venue' => 'Stade Félix Houphouët-Boigny',
+            'address' => 'Abidjan',
+            'event_date' => now()->addDays(21)->format('Y-m-d'),
+            'event_time' => now()->addDays(21)->setTime(16, 0),
+            'end_time' => now()->addDays(21)->setTime(18, 0),
+            'status' => 'published',
+        ];
 
-        // 3. Match ASEC vs Africa Sports
-        $matchEvent = Event::create([
-            'promoter_id' => $promoteur4->id,
-            'category_id' => $sportCategory->id,
-            'title' => 'ASEC Mimosas vs Africa Sports - Derby d\'Abidjan',
-            'description' => 'Le derby le plus attendu de l\'année ! ASEC Mimosas reçoit Africa Sports dans un match qui s\'annonce explosif. Venez supporter votre équipe favorite dans une ambiance de folie !',
-            'venue' => 'Stade Robert Champroux',
+        $events[] = [
+            'promoter_id' => $promoter4->id,
+            'category_id' => $sportsCategory->id,
+            'title' => 'Tournoi de Basketball 3x3',
+            'description' => 'Tournoi de basketball urbain ouvert à tous les niveaux.',
+            'venue' => 'Complexe Sportif de Marcory',
             'address' => 'Marcory, Abidjan',
-            'event_date' => now()->addDays(30),
-            'event_time' => now()->addDays(30)->setTime(16, 0),
-            'end_time' => now()->addDays(30)->setTime(18, 0),
-            'status' => 'published'
-        ]);
-
-        // Types de billets pour le match
-        TicketType::create([
-            'event_id' => $matchEvent->id,
-            'name' => 'Tribune Présidentielle',
-            'description' => 'Tribune couverte avec sièges numérotés',
-            'price' => 20000, // 20,000 FCFA
-            'quantity_available' => 100,
-            'quantity_sold' => 34,
-            'sale_start_date' => now()->subDays(15),
-            'sale_end_date' => $matchEvent->event_date->subHours(2),
-            'max_per_order' => 5,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $matchEvent->id,
-            'name' => 'Tribune Latérale',
-            'description' => 'Gradins latéraux avec bonne visibilité',
-            'price' => 12000, // 12,000 FCFA
-            'quantity_available' => 300,
-            'quantity_sold' => 87,
-            'sale_start_date' => now()->subDays(15),
-            'sale_end_date' => $matchEvent->event_date->subHours(1),
-            'max_per_order' => 8,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $matchEvent->id,
-            'name' => 'Virage Populaire',
-            'description' => 'Zone supporters debout',
-            'price' => 5000, // 5,000 FCFA
-            'quantity_available' => 800,
-            'quantity_sold' => 234,
-            'sale_start_date' => now()->subDays(15),
-            'sale_end_date' => $matchEvent->event_date,
-            'max_per_order' => 15,
-            'is_active' => true
-        ]);
-
-        // 4. Pièce de Théâtre
-        $theatreEvent = Event::create([
-            'promoter_id' => $promoteur3->id,
-            'category_id' => $theatreCategory->id,
-            'title' => 'L\'Avare de Molière - Version Ivoirienne',
-            'description' => 'Une adaptation moderne et humoristique de la célèbre pièce de Molière, transposée dans le contexte ivoirien. Mise en scène par Souleymane Koly.',
-            'venue' => 'Théâtre National de Côte d\'Ivoire',
-            'address' => 'Avenue Chardy, Abidjan, Plateau',
-            'event_date' => now()->addDays(20),
-            'event_time' => now()->addDays(20)->setTime(19, 30),
-            'end_time' => now()->addDays(20)->setTime(22, 0),
-            'status' => 'published'
-        ]);
-
-        // Types de billets pour le théâtre
-        TicketType::create([
-            'event_id' => $theatreEvent->id,
-            'name' => 'Orchestre',
-            'description' => 'Meilleures places au niveau orchestre',
-            'price' => 25000, // 25,000 FCFA
-            'quantity_available' => 80,
-            'quantity_sold' => 23,
-            'sale_start_date' => now()->subDays(10),
-            'sale_end_date' => $theatreEvent->event_date,
-            'max_per_order' => 4,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $theatreEvent->id,
-            'name' => 'Balcon',
-            'description' => 'Places en balcon avec excellente visibilité',
-            'price' => 18000, // 18,000 FCFA
-            'quantity_available' => 120,
-            'quantity_sold' => 34,
-            'sale_start_date' => now()->subDays(10),
-            'sale_end_date' => $theatreEvent->event_date,
-            'max_per_order' => 6,
-            'is_active' => true
-        ]);
-
-        TicketType::create([
-            'event_id' => $theatreEvent->id,
-            'name' => 'Paradis',
-            'description' => 'Places en hauteur à prix réduit',
-            'price' => 10000, // 10,000 FCFA
-            'quantity_available' => 100,
-            'quantity_sold' => 45,
-            'sale_start_date' => now()->subDays(10),
-            'sale_end_date' => $theatreEvent->event_date,
-            'max_per_order' => 8,
-            'is_active' => true
-        ]);
-
-        // 5. Conférence Tech
-        $conferenceEvent = Event::create([
-            'promoter_id' => $promoteur2->id,
-            'category_id' => $conferenceCategory->id,
-            'title' => 'Digital Abidjan 2024 - L\'Avenir du Numérique en Afrique',
-            'description' => 'La plus grande conférence tech de l\'Afrique de l\'Ouest ! Intervenants internationaux, startups, innovations. Thème principal : "IA et Blockchain pour le développement africain".',
-            'venue' => 'Sofitel Abidjan Hôtel Ivoire',
-            'address' => 'Boulevard de la Corniche, Abidjan, Cocody',
-            'event_date' => now()->addDays(35),
-            'event_time' => now()->addDays(35)->setTime(8, 30),
+            'event_date' => now()->addDays(35)->format('Y-m-d'),
+            'event_time' => now()->addDays(35)->setTime(9, 0),
             'end_time' => now()->addDays(35)->setTime(18, 0),
-            'status' => 'published'
-        ]);
+            'status' => 'published',
+        ];
 
-        // Types de billets pour la conférence
-        TicketType::create([
-            'event_id' => $conferenceEvent->id,
-            'name' => 'VIP All Access',
-            'description' => 'Accès complet + networking dinner + certificat',
-            'price' => 150000, // 150,000 FCFA
-            'quantity_available' => 50,
-            'quantity_sold' => 12,
-            'sale_start_date' => now()->subDays(20),
-            'sale_end_date' => $conferenceEvent->event_date->subDays(3),
-            'max_per_order' => 3,
-            'is_active' => true
-        ]);
+        // ===== CULTURE ET ARTS =====
+        $events[] = [
+            'promoter_id' => $promoter5->id,
+            'category_id' => $cultureCategory->id,
+            'title' => 'Exposition d\'Art Contemporain Africain',
+            'description' => 'Découvrez les œuvres des plus grands artistes contemporains africains.',
+            'venue' => 'Centre Culturel Français',
+            'address' => 'Plateau, Abidjan',
+            'event_date' => now()->addDays(14)->format('Y-m-d'),
+            'event_time' => now()->addDays(14)->setTime(10, 0),
+            'end_time' => now()->addDays(14)->setTime(19, 0),
+            'status' => 'published',
+        ];
 
-        TicketType::create([
-            'event_id' => $conferenceEvent->id,
-            'name' => 'Standard',
-            'description' => 'Accès aux conférences + pauses café',
-            'price' => 75000, // 75,000 FCFA
-            'quantity_available' => 200,
-            'quantity_sold' => 45,
-            'sale_start_date' => now()->subDays(20),
-            'sale_end_date' => $conferenceEvent->event_date->subDays(1),
-            'max_per_order' => 5,
-            'is_active' => true
-        ]);
+        $events[] = [
+            'promoter_id' => $promoter5->id,
+            'category_id' => $cultureCategory->id,
+            'title' => 'Spectacle de Danse Traditionnelle',
+            'description' => 'Un voyage à travers les danses traditionnelles de Côte d\'Ivoire.',
+            'venue' => 'Théâtre National',
+            'address' => 'Plateau, Abidjan',
+            'event_date' => now()->addDays(42)->format('Y-m-d'),
+            'event_time' => now()->addDays(42)->setTime(19, 30),
+            'end_time' => now()->addDays(42)->setTime(21, 30),
+            'status' => 'published',
+        ];
 
-        TicketType::create([
-            'event_id' => $conferenceEvent->id,
-            'name' => 'Étudiant',
-            'description' => 'Tarif réduit pour étudiants (justificatif requis)',
-            'price' => 25000, // 25,000 FCFA
-            'quantity_available' => 100,
-            'quantity_sold' => 34,
-            'sale_start_date' => now()->subDays(15),
-            'sale_end_date' => $conferenceEvent->event_date->subDays(1),
-            'max_per_order' => 2,
-            'is_active' => true
-        ]);
+        // ===== GASTRONOMIE =====
+        $events[] = [
+            'promoter_id' => $promoter3->id,
+            'category_id' => $gastronomieCategory->id,
+            'title' => 'Festival de la Gastronomie Ivoirienne',
+            'description' => 'Découvrez les saveurs authentiques de la cuisine ivoirienne.',
+            'venue' => 'Parc des Expositions',
+            'address' => 'Zone 4C, Abidjan',
+            'event_date' => now()->addDays(28)->format('Y-m-d'),
+            'event_time' => now()->addDays(28)->setTime(11, 0),
+            'end_time' => now()->addDays(28)->setTime(22, 0),
+            'status' => 'published',
+        ];
+
+        // ===== BUSINESS ET NETWORKING =====
+        $events[] = [
+            'promoter_id' => $promoter4->id,
+            'category_id' => $businessCategory->id,
+            'title' => 'Conférence Tech & Innovation Abidjan',
+            'description' => 'Rencontrez les leaders de la tech en Afrique de l\'Ouest.',
+            'venue' => 'Hôtel Pullman Abidjan',
+            'address' => 'Plateau, Abidjan',
+            'event_date' => now()->addDays(56)->format('Y-m-d'),
+            'event_time' => now()->addDays(56)->setTime(8, 30),
+            'end_time' => now()->addDays(56)->setTime(17, 30),
+            'status' => 'published',
+        ];
+
+        $events[] = [
+            'promoter_id' => $promoter5->id,
+            'category_id' => $businessCategory->id,
+            'title' => 'Salon de l\'Entrepreneuriat Féminin',
+            'description' => 'Réseau et formation pour les femmes entrepreneures.',
+            'venue' => 'Centre de Conférences de l\'Hôtel Ivoire',
+            'address' => 'Cocody, Abidjan',
+            'event_date' => now()->addDays(70)->format('Y-m-d'),
+            'event_time' => now()->addDays(70)->setTime(9, 0),
+            'end_time' => now()->addDays(70)->setTime(16, 0),
+            'status' => 'published',
+        ];
+
+        // Créer tous les événements
+        foreach ($events as $eventData) {
+            Event::create($eventData);
+        }
+
+        $this->command->info('✅ ' . count($events) . ' événements créés');
     }
 }

@@ -1,462 +1,897 @@
+{{-- resources/views/layouts/admin.blade.php - WordPress-style Sidebar --}}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Administration') - ClicBillet CI</title>
+    <title>@yield('title', 'Administration') - {{ config('app.name') }}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    @stack('styles')
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
         :root {
-            --admin-primary: #FF6B35;
+            --primary-orange: #FF6B35;
+            --primary-dark: #E55A2B;
+            --black-primary: #1d2327;
+            --black-secondary: #2c3338;
+            --gray-light: #f0f0f1;
+            --gray-medium: #8c8f94;
+            --sidebar-width: 280px;
+            --sidebar-mini-width: 60px;
+            --topbar-height: 60px;
+        }
 
-            --admin-secondary: #011127ff;
-            --admin-success: #059669;
-            --admin-warning: #d97706;
-            --admin-danger: #dc2626;
-            --admin-info: #0891b2;
+        * {
+            box-sizing: border-box;
         }
-        
-        .navbar-admin {
-            background: linear-gradient(135deg, var(--admin-secondary) 0%, #011127ff 100%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, sans-serif;
+            background: var(--gray-light);
+            color: #3c434a;
         }
-        
-        .navbar-admin .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: white !important;
+
+        /* ========================= LAYOUT STRUCTURE ========================= */
+        .admin-wrapper {
+            display: flex;
+            min-height: 100vh;
         }
-        
-        .navbar-admin .nav-link {
-            color: rgba(255,255,255,0.9) !important;
-            font-weight: 500;
-            padding: 0.75rem 1rem !important;
-            border-radius: 0.375rem;
-            margin: 0 0.25rem;
+
+        /* ========================= SIDEBAR ========================= */
+        .admin-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--black-primary);
+            color: #c3c4c7;
+            transition: all 0.2s ease-in-out;
+            z-index: 1000;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .admin-sidebar.mini {
+            width: var(--sidebar-mini-width);
+        }
+
+        .admin-sidebar.mobile-hidden {
+            transform: translateX(-100%);
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 0;
+            height: var(--topbar-height);
+            background: var(--black-secondary);
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #3c434a;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            text-decoration: none;
+            color: #f0f0f1;
+            font-weight: 600;
+            font-size: 1.1rem;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .sidebar-brand i {
+            color: var(--primary-orange);
+            font-size: 1.4rem;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand-text {
+            transition: opacity 0.2s ease;
+        }
+
+        .admin-sidebar.mini .sidebar-brand-text {
+            opacity: 0;
+            width: 0;
+        }
+
+        /* Toggle Button */
+        .sidebar-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #8c8f94;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 3px;
+            transition: color 0.2s;
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--primary-orange);
+        }
+
+        .admin-sidebar.mini .sidebar-toggle {
+            display: none;
+        }
+
+        /* Sidebar Menu */
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li {
+            border-bottom: 1px solid #2c3338;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #c3c4c7;
+            text-decoration: none;
             transition: all 0.2s ease;
+            position: relative;
         }
-        
-        .navbar-admin .nav-link:hover {
-            background-color: rgba(240, 125, 59, 1);
-            color: white !important;
+
+        .sidebar-menu a:hover {
+            background: #2c3338;
+            color: #72aee6;
+        }
+
+        .sidebar-menu a.active {
+            background: var(--primary-orange);
+            color: white;
+        }
+
+        .sidebar-menu a.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-dark);
+        }
+
+        .sidebar-menu i {
+            width: 20px;
+            text-align: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-menu-text {
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity 0.2s ease;
+        }
+
+        .admin-sidebar.mini .sidebar-menu-text {
+            opacity: 0;
+            width: 0;
+        }
+
+        /* Submenu */
+        .sidebar-submenu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background: #1a1e23;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .sidebar-submenu.open {
+            max-height: 300px;
+        }
+
+        .sidebar-submenu a {
+            padding: 10px 20px 10px 52px;
+            font-size: 0.9rem;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-submenu a:hover {
+            background: #2c3338;
+            border-left-color: var(--primary-orange);
+        }
+
+        .sidebar-submenu a.active {
+            background: #2c3338;
+            border-left-color: var(--primary-orange);
+            color: var(--primary-orange);
+        }
+
+        /* Chevron pour submenu */
+        .menu-chevron {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+            color: #8c8f94;
+            font-size: 0.8rem;
+        }
+
+        .submenu-parent.open .menu-chevron {
+            transform: rotate(180deg);
+            color: var(--primary-orange);
+        }
+
+        /* Meilleure visibilité du chevron */
+        .sidebar-menu a:hover .menu-chevron {
+            color: #72aee6;
+        }
+
+        /* Mini sidebar hover expansion */
+        .admin-sidebar.mini:hover {
+            width: var(--sidebar-width);
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .admin-sidebar.mini:hover .sidebar-brand-text,
+        .admin-sidebar.mini:hover .sidebar-menu-text {
+            opacity: 1;
+            width: auto;
+        }
+
+        /* ========================= TOPBAR ========================= */
+        .admin-topbar {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--topbar-height);
+            background: white;
+            border-bottom: 1px solid #dcdcde;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 999;
+            transition: left 0.2s ease-in-out;
+        }
+
+        .admin-sidebar.mini ~ .admin-topbar {
+            left: var(--sidebar-mini-width);
+        }
+
+        .admin-sidebar.mobile-hidden ~ .admin-topbar {
+            left: 0;
+        }
+
+        /* Mobile toggle button */
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--black-primary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .mobile-toggle:hover {
+            background: var(--gray-light);
+        }
+
+        /* Home button */
+        .home-button {
+            background: var(--primary-orange);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .home-button:hover {
+            background: var(--primary-dark);
+            color: white;
             transform: translateY(-1px);
         }
-        
-        .navbar-admin .nav-link.active {
-            background-color: #FF6B35
-            color: white !important;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        .topbar-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--gray-medium);
+            font-size: 0.9rem;
         }
-        
-        .dropdown-menu {
-            border: none;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-            border-radius: 0.5rem;
-            padding: 0.5rem 0;
+
+        .topbar-breadcrumb a {
+            color: var(--primary-orange);
+            text-decoration: none;
         }
-        
-        .dropdown-item {
-            padding: 0.75rem 1.5rem;
-            transition: all 0.2s ease;
-            border-radius: 0;
+
+        /* User menu */
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
-        
-        .dropdown-item:hover {
-            background-color: var(--admin-primary);
-            color: white;
-            transform: translateX(5px);
+
+        .topbar-notifications {
+            position: relative;
+            cursor: pointer;
+            color: var(--gray-medium);
+            font-size: 1.1rem;
         }
-        
-        .dropdown-item i {
-            width: 20px;
-            margin-right: 10px;
-        }
-        
-        .content-wrapper {
-            min-height: calc(100vh - 76px);
-            background-color: #f8fafc;
-        }
-        
-        .badge-notification {
+
+        .notification-badge {
             position: absolute;
-            top: 0.25rem;
-            right: 0.25rem;
-            background-color: var(--admin-warning);
+            top: -8px;
+            right: -8px;
+            background: #d63638;
             color: white;
             border-radius: 50%;
             width: 18px;
             height: 18px;
-            font-size: 0.65rem;
+            font-size: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: pulse 2s infinite;
+            font-weight: bold;
         }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        
-        .navbar-text {
-            color: rgba(255,255,255,0.8) !important;
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-orange);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
             font-size: 0.9rem;
         }
-        
-        .btn-admin-logout {
-            background-color: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            transition: all 0.2s ease;
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
         }
-        
-        .btn-admin-logout:hover {
-            background-color: rgba(255,255,255,0.2);
+
+        .user-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--black-primary);
+        }
+
+        .user-role {
+            font-size: 0.8rem;
+            color: var(--gray-medium);
+        }
+
+        /* ========================= MAIN CONTENT ========================= */
+        .admin-main {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--topbar-height);
+            padding: 20px;
+            min-height: calc(100vh - var(--topbar-height));
+            transition: margin-left 0.2s ease-in-out;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .admin-sidebar.mini ~ .admin-main {
+            margin-left: var(--sidebar-mini-width);
+            width: calc(100% - var(--sidebar-mini-width));
+        }
+
+        .admin-sidebar.mobile-hidden ~ .admin-main {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        /* ========================= RESPONSIVE ========================= */
+        @media (max-width: 1024px) {
+            .admin-sidebar {
+                width: var(--sidebar-mini-width);
+            }
+            
+            .admin-topbar {
+                left: var(--sidebar-mini-width);
+            }
+            
+            .admin-main {
+                margin-left: var(--sidebar-mini-width);
+                width: calc(100% - var(--sidebar-mini-width));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+                width: var(--sidebar-width); /* Sidebar complète sur mobile quand ouverte */
+            }
+            
+            .admin-sidebar.mobile-open {
+                transform: translateX(0);
+                box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            }
+            
+            /* CORRECTION MOBILE : Forcer l'affichage complet */
+            .admin-sidebar.mobile-open .sidebar-brand-text,
+            .admin-sidebar.mobile-open .sidebar-menu-text {
+                opacity: 1 !important;
+                width: auto !important;
+            }
+            
+            /* CORRECTION MOBILE : Submenus visibles */
+            .admin-sidebar.mobile-open .sidebar-submenu.open {
+                max-height: 400px;
+                display: block;
+            }
+            
+            /* CORRECTION MOBILE : Chevrons plus visibles */
+            .admin-sidebar .menu-chevron {
+                color: #c3c4c7 !important;
+                font-size: 1rem !important;
+                margin-left: auto;
+            }
+            
+            .admin-sidebar .submenu-parent.open .menu-chevron {
+                color: var(--primary-orange) !important;
+            }
+            
+            .admin-topbar {
+                left: 0;
+            }
+            
+            .admin-main {
+                margin-left: 0;
+                width: 100%;
+                padding: 15px;
+            }
+            
+            .mobile-toggle {
+                display: block;
+            }
+            
+            .user-info {
+                display: none;
+            }
+            
+            /* Pas de hover effects sur mobile */
+            .admin-sidebar:hover {
+                width: var(--sidebar-width);
+            }
+            
+            /* Désactiver les tooltips sur mobile */
+            .sidebar-tooltip {
+                display: none;
+            }
+        }
+
+        /* ========================= CARDS AND COMPONENTS ========================= */
+        .dashboard-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #dcdcde;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #dcdcde;
+            border-left: 4px solid var(--primary-orange);
+        }
+
+        /* Mobile overlay */
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-overlay.active {
+                display: block;
+            }
+        }
+
+        /* Tooltip pour mini sidebar */
+        .sidebar-tooltip {
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--black-secondary);
             color: white;
-            transform: translateY(-1px);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            margin-left: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1001;
+        }
+
+        .sidebar-tooltip::before {
+            content: '';
+            position: absolute;
+            right: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-right-color: var(--black-secondary);
+        }
+
+        .admin-sidebar.mini .sidebar-menu a:hover .sidebar-tooltip {
+            opacity: 1;
         }
     </style>
+    
+    @stack('styles')
 </head>
 <body>
-    <!-- Navigation Admin -->
-    <nav class="navbar navbar-expand-lg navbar-admin sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ route('admin.dashboard') }}">
-                <i class="fas fa-tachometer-alt me-2"></i>
-                ClicBillet CI
-            </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarAdmin">
-                <ul class="navbar-nav me-auto">
-                    
-                    <!-- Dashboard -->
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
-                            <i class="fas fa-home"></i> Dashboard
-                        </a>
-                    </li>
-
-                    <!-- Dropdown Utilisateurs -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle position-relative {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-users"></i>Utilisateurs
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">
-                                <i class="fas fa-list"></i>Tous les utilisateurs
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.users.create') }}">
-                                <i class="fas fa-user-plus"></i>Nouvel utilisateur
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.users.index', ['role' => 'promoteur']) }}">
-                                <i class="fas fa-user-tie"></i>Promoteurs
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.users.index', ['role' => 'acheteur']) }}">
-                                <i class="fas fa-user"></i>Acheteurs
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Dropdown Événements -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle position-relative {{ request()->routeIs('admin.events.*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-calendar-alt"></i>Événements
-                            @if(\App\Models\Event::where('status', 'pending')->count() > 0)
-                            <span class="badge-notification">{{ \App\Models\Event::where('status', 'pending')->count() }}</span>
-                            @endif
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.events.index') }}">
-                                <i class="fas fa-list"></i>Tous les événements
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.events.index', ['status' => 'pending']) }}">
-                                <i class="fas fa-clock"></i>En attente d'approbation
-                                @if(\App\Models\Event::where('status', 'pending')->count() > 0)
-                                <span class="badge bg-warning ms-2">{{ \App\Models\Event::where('status', 'pending')->count() }}</span>
-                                @endif
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.events.index', ['status' => 'published']) }}">
-                                <i class="fas fa-check-circle"></i>Événements publiés
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.events.create') }}">
-                                <i class="fas fa-plus"></i>Nouvel événement
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.categories.index') }}">
-                                <i class="fas fa-tags"></i>Catégories
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Dropdown Billets -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle position-relative {{ request()->routeIs('admin.tickets.*', 'admin.orders.*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-ticket-alt"></i>Billets
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.tickets.index') }}">
-                                <i class="fas fa-ticket-alt"></i>Tous les billets
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.orders.index') }}">
-                                <i class="fas fa-shopping-cart"></i>Commandes
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.tickets.index', ['status' => 'used']) }}">
-                                <i class="fas fa-check"></i>Billets utilisés
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.orders.index', ['payment_status' => 'pending']) }}">
-                                <i class="fas fa-clock"></i>Commandes en attente
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Dropdown Finances -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->routeIs('admin.commissions', 'admin.revenues', 'admin.finances.*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-coins"></i>Finances
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.commissions') }}">
-                                <i class="fas fa-percentage"></i>Commissions
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.revenues') }}">
-                                <i class="fas fa-chart-line"></i>Revenus
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.commissions', ['status' => 'pending']) }}">
-                                <i class="fas fa-clock"></i>Commissions en attente
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.commissions', ['status' => 'paid']) }}">
-                                <i class="fas fa-check-circle"></i>Commissions payées
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Dropdown Contenu -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->routeIs('admin.pages.*', 'admin.categories.*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-file-alt"></i>Contenu
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.pages.index') }}">
-                                <i class="fas fa-file-alt"></i>Pages CMS
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.pages.create') }}">
-                                <i class="fas fa-plus"></i>Nouvelle page
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.categories.index') }}">
-                                <i class="fas fa-folder"></i>Catégories
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Dropdown Rapports (CORRIGÉ) -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->routeIs('admin.reports.*', 'admin.analytics') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-chart-pie"></i>Rapports
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.reports.index') }}">
-                                <i class="fas fa-chart-line"></i>Vue d'ensemble
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.reports.sales') }}">
-                                <i class="fas fa-shopping-cart"></i>Ventes
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.reports.financial') }}">
-                                <i class="fas fa-coins"></i>Financier
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.reports.users') }}">
-                                <i class="fas fa-users"></i>Utilisateurs
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.reports.events') }}">
-                                <i class="fas fa-calendar"></i>Événements
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.analytics') }}">
-                                <i class="fas fa-chart-bar"></i>Analytics
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.users.export') }}">
-                                <i class="fas fa-download"></i>Export Utilisateurs
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.events.export') }}">
-                                <i class="fas fa-download"></i>Export Événements
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.orders.export') }}">
-                                <i class="fas fa-download"></i>Export Commandes
-                            </a></li>
-                        </ul>
-                    </li>
-
-                    <!-- Paramètres -->
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}">
-                            <i class="fas fa-cog"></i> Paramètres
-                        </a>
-                    </li>
-                </ul>
-
-                <!-- Menu utilisateur -->
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i>
-                            {{ auth()->user()->name }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ route('admin.profile') }}">
-                                <i class="fas fa-user"></i>Mon profil
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.settings.index') }}">
-                                <i class="fas fa-cog"></i>Paramètres
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="{{ route('logout') }}" 
-                                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                    <i class="fas fa-sign-out-alt"></i>Déconnexion
-                                </a>
-                                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                                    @csrf
-                                </form>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <nav class="admin-sidebar" id="adminSidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <a href="{{ route('admin.dashboard') }}" class="sidebar-brand">
+                    <i class="fas fa-shield-alt"></i>
+                    <span class="sidebar-brand-text">ClicBillet CI</span>
+                </a>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
             </div>
-        </div>
-    </nav>
 
-    <!-- Contenu principal -->
-    <div class="content-wrapper">
-        <!-- Messages flash -->
-        @if(session('success'))
-        <div class="container-fluid pt-3">
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <!-- Sidebar Menu -->
+            <ul class="sidebar-menu">
+                <!-- Dashboard -->
+                <li>
+                    <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span class="sidebar-menu-text">Dashboard</span>
+                        <span class="sidebar-tooltip">Dashboard</span>
+                    </a>
+                </li>
+
+                <!-- Utilisateurs -->
+                <li class="submenu-parent {{ request()->routeIs('admin.users.*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('users', this)" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                        <i class="fas fa-users"></i>
+                        <span class="sidebar-menu-text">Utilisateurs</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Utilisateurs</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('admin.users.*') ? 'open' : '' }}" id="submenu-users">
+                        <li><a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.index') ? 'active' : '' }}">Tous les utilisateurs</a></li>
+                        <li><a href="{{ route('admin.users.create') }}" class="{{ request()->routeIs('admin.users.create') ? 'active' : '' }}">Ajouter un utilisateur</a></li>
+                        <li><a href="{{ route('admin.users.index', ['role' => 'admin']) }}">Administrateurs</a></li>
+                        <li><a href="{{ route('admin.users.index', ['role' => 'promoteur']) }}">Promoteurs</a></li>
+                        <li><a href="{{ route('admin.users.index', ['role' => 'acheteur']) }}">Acheteurs</a></li>
+                    </ul>
+                </li>
+
+                <!-- Événements -->
+                <li class="submenu-parent {{ request()->routeIs('admin.events.*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('events', this)" class="{{ request()->routeIs('admin.events.*') ? 'active' : '' }}">
+                        <i class="fas fa-calendar-check"></i>
+                        <span class="sidebar-menu-text">Événements</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Événements</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('admin.events.*') ? 'open' : '' }}" id="submenu-events">
+                        <li><a href="{{ route('admin.events.index') }}" class="{{ request()->routeIs('admin.events.index') ? 'active' : '' }}">Tous les événements</a></li>
+                        <li><a href="{{ route('admin.events.index', ['status' => 'pending']) }}">En attente</a></li>
+                        <li><a href="{{ route('admin.events.index', ['status' => 'published']) }}">Publiés</a></li>
+                        <li><a href="{{ route('admin.events.index', ['status' => 'cancelled']) }}">Annulés</a></li>
+                        <li><a href="{{ route('admin.categories.index') }}">Catégories</a></li>
+                    </ul>
+                </li>
+
+                <!-- Commandes -->
+                <li class="submenu-parent {{ request()->routeIs('admin.orders.*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('orders', this)" class="{{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="sidebar-menu-text">Commandes</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Commandes</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('admin.orders.*') ? 'open' : '' }}" id="submenu-orders">
+                        <li><a href="{{ route('admin.orders.index') }}" class="{{ request()->routeIs('admin.orders.index') ? 'active' : '' }}">Toutes les commandes</a></li>
+                        <li><a href="{{ route('admin.orders.index', ['status' => 'pending']) }}">En attente</a></li>
+                        <li><a href="{{ route('admin.orders.index', ['status' => 'paid']) }}">Payées</a></li>
+                        <li><a href="{{ route('admin.orders.index', ['status' => 'failed']) }}">Échouées</a></li>
+                        <li><a href="{{ route('admin.orders.index', ['status' => 'refunded']) }}">Remboursées</a></li>
+                    </ul>
+                </li>
+
+                <!-- Tickets -->
+                <li class="submenu-parent {{ request()->routeIs('admin.tickets.*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('tickets', this)" class="{{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}">
+                        <i class="fas fa-ticket-alt"></i>
+                        <span class="sidebar-menu-text">Tickets</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Tickets</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('admin.tickets.*') ? 'open' : '' }}" id="submenu-tickets">
+                        <li><a href="{{ route('admin.tickets.index') }}" class="{{ request()->routeIs('admin.tickets.index') ? 'active' : '' }}">Tous les tickets</a></li>
+                        <li><a href="{{ route('admin.tickets.index', ['status' => 'sold']) }}">Vendus</a></li>
+                        <li><a href="{{ route('admin.tickets.index', ['status' => 'used']) }}">Utilisés</a></li>
+                        <li><a href="{{ route('admin.tickets.index', ['status' => 'cancelled']) }}">Annulés</a></li>
+                    </ul>
+                </li>
+
+                <!-- Finances -->
+                <li>
+                    <a href="{{ route('admin.commissions') }}" class="{{ request()->routeIs('admin.commissions') ? 'active' : '' }}">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="sidebar-menu-text">Finances</span>
+                        <span class="sidebar-tooltip">Finances</span>
+                    </a>
+                </li>
+
+                <!-- Analytics -->
+                <li>
+                    <a href="{{ route('admin.analytics') }}" class="{{ request()->routeIs('admin.analytics') ? 'active' : '' }}">
+                        <i class="fas fa-chart-bar"></i>
+                        <span class="sidebar-menu-text">Analytics</span>
+                        <span class="sidebar-tooltip">Analytics</span>
+                    </a>
+                </li>
+
+                <!-- Paramètres -->
+                <li class="submenu-parent {{ request()->routeIs('admin.settings.*') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('settings', this)" class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+                        <i class="fas fa-cog"></i>
+                        <span class="sidebar-menu-text">Paramètres</span>
+                        <i class="fas fa-chevron-down menu-chevron"></i>
+                        <span class="sidebar-tooltip">Paramètres</span>
+                    </a>
+                    <ul class="sidebar-submenu {{ request()->routeIs('admin.settings.*') ? 'open' : '' }}" id="submenu-settings">
+                        <li><a href="{{ route('admin.profile') }}">Mon profil</a></li>
+                        <li><a href="#">Emails</a></li>
+                        <li><a href="#">Configuration</a></li>
+                        <li><a href="#">Sauvegardes</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Topbar -->
+        <header class="admin-topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" onclick="toggleMobileSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <nav class="topbar-breadcrumb">
+                    <a href="{{ route('admin.dashboard') }}">
+                        <i class="fas fa-home"></i>
+                    </a>
+                    @if(View::hasSection('breadcrumb'))
+                        @yield('breadcrumb')
+                    @endif
+                </nav>
+                <a href="{{ route('home') }}" class="home-button">
+                    <i class="fas fa-globe"></i>
+                    <span>Voir le site</span>
+                </a>
             </div>
-        </div>
-        @endif
 
-        @if(session('error'))
-        <div class="container-fluid pt-3">
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        </div>
-        @endif
+            <div class="topbar-user">
+                <!-- Notifications -->
+                <div class="topbar-notifications" onclick="toggleNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </div>
 
-        @if(session('warning'))
-        <div class="container-fluid pt-3">
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                {{ session('warning') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        </div>
-        @endif
+                <!-- User Info -->
+                <div class="user-info">
+                    <div class="user-name">{{ auth()->user()->name }}</div>
+                    <div class="user-role">Administrateur</div>
+                </div>
 
-        @if(session('info'))
-        <div class="container-fluid pt-3">
-            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <i class="fas fa-info-circle me-2"></i>
-                {{ session('info') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        </div>
-        @endif
-
-        <!-- Breadcrumb (optionnel) -->
-        @if(isset($breadcrumbs) && count($breadcrumbs) > 0)
-        <div class="container-fluid py-2 border-bottom bg-white">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('admin.dashboard') }}">
-                            <i class="fas fa-home"></i> Dashboard
-                        </a>
-                    </li>
-                    @foreach($breadcrumbs as $breadcrumb)
-                        @if($loop->last)
-                        <li class="breadcrumb-item active">{{ $breadcrumb['title'] }}</li>
-                        @else
-                        <li class="breadcrumb-item">
-                            <a href="{{ $breadcrumb['url'] }}">{{ $breadcrumb['title'] }}</a>
+                <!-- User Avatar + Dropdown -->
+                <div class="dropdown">
+                    <div class="user-avatar" data-bs-toggle="dropdown" style="cursor: pointer;">
+                        {{ substr(auth()->user()->name, 0, 1) }}
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ route('admin.profile') }}">
+                            <i class="fas fa-user me-2"></i>Mon profil
+                        </a></li>
+                        <li><a class="dropdown-item" href="#">
+                            <i class="fas fa-cog me-2"></i>Paramètres
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                                @csrf
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                </button>
+                            </form>
                         </li>
-                        @endif
-                    @endforeach
-                </ol>
-            </nav>
-        </div>
-        @endif
+                    </ul>
+                </div>
+            </div>
+        </header>
 
-        <!-- Contenu de la page -->
-        @yield('content')
+        <!-- Mobile Overlay -->
+        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Flash Messages -->
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
+
+            @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
+
+            @if(session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>{{ session('warning') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
+
+            <!-- Page Content -->
+            @yield('content')
+        </main>
     </div>
 
-    <!-- Scripts -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Scripts personnalisés -->
     <script>
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            var alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                var bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
-
-        // Confirmation pour les actions de suppression
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('a[href*="delete"]') || e.target.closest('button[type="submit"]')?.closest('form[method="POST"]')?.querySelector('input[name="_method"][value="DELETE"]')) {
-                if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
-                    e.preventDefault();
-                    return false;
-                }
+        // Sidebar state management
+        let sidebarState = localStorage.getItem('sidebar-state') || 'open';
+        
+        // Initialize sidebar state
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('adminSidebar');
+            
+            if (window.innerWidth <= 1024 && window.innerWidth > 768) {
+                sidebar.classList.add('mini');
+                sidebarState = 'mini';
+            } else if (window.innerWidth <= 768) {
+                sidebar.classList.add('mobile-hidden');
+                sidebarState = 'mobile-hidden';
+            } else if (sidebarState === 'mini') {
+                sidebar.classList.add('mini');
             }
         });
 
-        // Animation smooth pour les liens anchor
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+        // Toggle sidebar (desktop)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            
+            if (sidebar.classList.contains('mini')) {
+                sidebar.classList.remove('mini');
+                sidebarState = 'open';
+            } else {
+                sidebar.classList.add('mini');
+                sidebarState = 'mini';
+            }
+            
+            localStorage.setItem('sidebar-state', sidebarState);
+        }
+
+        // Toggle mobile sidebar
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+        }
+
+        // Close mobile sidebar
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        }
+
+        // Toggle submenu
+        function toggleSubmenu(menuId, element) {
+            const submenu = document.getElementById('submenu-' + menuId);
+            const parent = element.closest('li');
+            const isOpen = submenu.classList.contains('open');
+            
+            // Sur mobile, ne pas fermer les autres submenus pour une meilleure UX
+            const isMobile = window.innerWidth <= 768;
+            
+            if (!isMobile) {
+                // Desktop : fermer les autres submenus
+                document.querySelectorAll('.sidebar-submenu').forEach(menu => {
+                    if (menu !== submenu) {
+                        menu.classList.remove('open');
+                        menu.closest('li').classList.remove('open');
+                    }
+                });
+            }
+            
+            // Toggle current submenu
+            if (isOpen) {
+                submenu.classList.remove('open');
+                parent.classList.remove('open');
+            } else {
+                submenu.classList.add('open');
+                parent.classList.add('open');
+            }
+            
+            // Empêcher la navigation
+            return false;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('adminSidebar');
+            
+            if (window.innerWidth <= 768) {
+                sidebar.classList.add('mobile-hidden');
+                sidebar.classList.remove('mini', 'mobile-open');
+            } else if (window.innerWidth <= 1024) {
+                sidebar.classList.add('mini');
+                sidebar.classList.remove('mobile-hidden', 'mobile-open');
+            } else {
+                sidebar.classList.remove('mobile-hidden', 'mobile-open');
+                if (sidebarState === 'open') {
+                    sidebar.classList.remove('mini');
                 }
-            });
+            }
+            
+            // Close mobile overlay
+            document.getElementById('mobileOverlay').classList.remove('active');
         });
 
-        // Mise à jour automatique des badges de notification
-        setInterval(function() {
-            // Ici vous pouvez ajouter du code pour mettre à jour les notifications
-            // en temps réel via AJAX si nécessaire
-        }, 60000); // Toutes les minutes
+        // Notifications placeholder
+        function toggleNotifications() {
+            // Implement notifications dropdown
+            console.log('Toggle notifications');
+        }
     </script>
-
+    
     @stack('scripts')
 </body>
 </html>

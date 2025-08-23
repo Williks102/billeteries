@@ -463,6 +463,37 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::patch('/events/{event}/status', [AdminEventController::class, 'updateStatus'])->name('events.update-status');
     Route::post('/events/bulk-action', [AdminEventController::class, 'bulkAction'])->name('events.bulk-action');
     Route::get('/events-export', [AdminEventController::class, 'export'])->name('events.export');
+
+    // Formulaires de création hybride
+    Route::get('events/create-hybrid', [AdminEventController::class, 'createHybrid'])->name('events.create-hybrid');
+    Route::post('events/store-with-mode', [AdminEventController::class, 'storeWithMode'])->name('events.store-with-mode');
+
+    // Interface de gestion hybride
+    Route::get('events/{event}/manage-hybrid', [AdminEventController::class, 'manageHybrid'])->name('events.manage-hybrid');
+
+    // Changement de mode de gestion
+    Route::post('events/{event}/change-management-mode', [AdminEventController::class, 'changeManagementMode'])->name('events.change-management-mode');
+
+    // Gestion des billets par admin
+    Route::get('events/{event}/manage-tickets', [AdminEventController::class, 'manageTickets'])->name('events.manage-tickets');
+    Route::post('events/{event}/store-tickets', [AdminEventController::class, 'storeTickets'])->name('events.store-tickets');
+
+// Tableau de bord des interventions
+    Route::get('intervention-dashboard', [AdminEventController::class, 'interventionDashboard'])->name('intervention-dashboard');
+
+// Actions rapides
+    Route::post('events/{event}/quick-publish', [AdminEventController::class, 'quickPublish'])->name('events.quick-publish');
+    Route::post('events/{event}/quick-unpublish', [AdminEventController::class, 'quickUnpublish'])->name('events.quick-unpublish');
+
+// Historique et audit
+    Route::get('events/{event}/audit-history', [AdminEventController::class, 'auditHistory'])->name('events.audit-history');
+
+// Statistiques hybrides
+    Route::get('hybrid-management-stats', [AdminEventController::class, 'hybridStats'])->name('hybrid-management-stats');
+
+// APIs pour AJAX
+    Route::get('api/intervention-events', [AdminEventController::class, 'getInterventionEvents'])->name('api.intervention-events');
+    Route::post('events/{event}/restore-promoter-control', [AdminEventController::class, 'restorePromoterControl'])->name('events.restore-promoter-control');
     
     // ===== GESTION DES COMMANDES (OrderController spécialisé) =====
     Route::resource('orders', AdminOrderController::class)->only(['index', 'show', 'edit', 'update']);

@@ -291,7 +291,7 @@
 
         /* Home button */
         .home-button {
-            background: var(--primary-orange);
+            background: var(--gray-dark);
             color: white;
             border: none;
             padding: 8px 16px;
@@ -553,6 +553,7 @@
         .admin-sidebar.mini .sidebar-menu a:hover .sidebar-tooltip {
             opacity: 1;
         }
+        
     </style>
     
     @stack('styles')
@@ -601,19 +602,43 @@
                 </li>
 
                 <!-- Événements -->
-                <li class="submenu-parent {{ request()->routeIs('admin.events.*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('events', this)" class="{{ request()->routeIs('admin.events.*') ? 'active' : '' }}">
+                <!-- Événements -->
+                <li class="submenu-parent {{ request()->routeIs('admin.events.*') || request()->routeIs('admin.intervention-dashboard') ? 'open' : '' }}">
+                    <a href="#" onclick="toggleSubmenu('events', this)" class="{{ request()->routeIs('admin.events.*') || request()->routeIs('admin.intervention-dashboard') ? 'active' : '' }}">
                         <i class="fas fa-calendar-check"></i>
                         <span class="sidebar-menu-text">Événements</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
                         <span class="sidebar-tooltip">Événements</span>
                     </a>
-                    <ul class="sidebar-submenu {{ request()->routeIs('admin.events.*') ? 'open' : '' }}" id="submenu-events">
+                    <ul class="sidebar-submenu {{ request()->routeIs('admin.events.*') || request()->routeIs('admin.intervention-dashboard') ? 'open' : '' }}" id="submenu-events">
                         <li><a href="{{ route('admin.events.index') }}" class="{{ request()->routeIs('admin.events.index') ? 'active' : '' }}">Tous les événements</a></li>
+                        <li><a href="{{ route('admin.events.create') }}" class="{{ request()->routeIs('admin.events.create') ? 'active' : '' }}">Créer événement</a></li>
                         <li><a href="{{ route('admin.events.index', ['status' => 'pending']) }}">En attente</a></li>
                         <li><a href="{{ route('admin.events.index', ['status' => 'published']) }}">Publiés</a></li>
                         <li><a href="{{ route('admin.events.index', ['status' => 'cancelled']) }}">Annulés</a></li>
-                        <li><a href="{{ route('admin.categories.index') }}">Catégories</a></li>
+                        
+                        <!-- ✨ NOUVELLES SECTIONS HYBRIDES ✨ -->
+                        <li style="margin-top: 8px; border-top: 1px solid #3c434a; padding-top: 8px;">
+                            <a href="{{ route('admin.events.create-hybrid') }}" 
+                               class="{{ request()->routeIs('admin.events.create-hybrid') ? 'active' : '' }}"
+                               style="color: #f9cb28;">
+                                <i class="fas fa-magic" style="color: #f9cb28;"></i> Créer Hybride
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.intervention-dashboard') }}" 
+                               class="{{ request()->routeIs('admin.intervention-dashboard') ? 'active' : '' }}"
+                               style="color: #ff6b6b;">
+                                <i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> 
+                                Interventions
+                                <span id="intervention-badge" class="intervention-badge" style="display: none;">0</span>
+                            </a>
+                        </li>
+                        
+                        <!-- Séparateur -->
+                        <li style="margin-top: 8px; border-top: 1px solid #3c434a; padding-top: 8px;">
+                            <a href="{{ route('admin.categories.index') }}">Catégories</a>
+                        </li>
                     </ul>
                 </li>
 
@@ -683,6 +708,12 @@
                         <li><a href="#">Sauvegardes</a></li>
                     </ul>
                 </li>
+                <li>
+                    <a href="{{ route('home') }}" class="home-button gap-2">
+                    <i class="fas fa-globe"></i>
+                    <span>Voir le site</span>
+                </a>
+                </li>
             </ul>
         </nav>
 
@@ -700,10 +731,7 @@
                         @yield('breadcrumb')
                     @endif
                 </nav>
-                <a href="{{ route('home') }}" class="home-button">
-                    <i class="fas fa-globe"></i>
-                    <span>Voir le site</span>
-                </a>
+                
             </div>
 
             <div class="topbar-user">

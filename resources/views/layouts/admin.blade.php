@@ -553,7 +553,7 @@
         .admin-sidebar.mini .sidebar-menu a:hover .sidebar-tooltip {
             opacity: 1;
         }
-        
+        gi
     </style>
     
     @stack('styles')

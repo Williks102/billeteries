@@ -817,6 +817,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailInput = document.getElementById('email');
     let emailTimeout;
     
+    /*
     emailInput.addEventListener('input', function() {
         clearTimeout(emailTimeout);
         const email = this.value;
@@ -827,55 +828,78 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1000); // Attendre 1s après que l'utilisateur ait arrêté de taper
         }
     });
+    */
     
     async function checkEmailAvailability(email) {
-        try {
-            const response = await fetch('/api/check-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ email: email })
-            });
-            
-            const data = await response.json();
-            
-            if (!data.available && createAccountCheckbox.checked) {
-                emailInput.classList.add('is-invalid');
-                emailInput.classList.remove('is-valid');
-                
-                // Afficher message d'erreur
-                let feedback = emailInput.parentNode.querySelector('.invalid-feedback');
-                if (!feedback) {
-                    feedback = document.createElement('div');
-                    feedback.className = 'invalid-feedback';
-                    emailInput.parentNode.appendChild(feedback);
-                }
-                feedback.textContent = 'Un compte existe déjà avec cet email. Décochez "Créer un compte" ou connectez-vous.';
-                
-                // Suggérer de décocher la création de compte
-                setTimeout(() => {
-                    if (confirm('Un compte existe déjà avec cet email. Voulez-vous continuer sans créer de nouveau compte ?')) {
-                        createAccountCheckbox.checked = false;
-                        createAccountCheckbox.dispatchEvent(new Event('change'));
-                        emailInput.classList.remove('is-invalid');
-                        feedback.remove();
-                    }
-                }, 1000);
-                
-            } else {
-                emailInput.classList.remove('is-invalid');
-                emailInput.classList.add('is-valid');
-                
-                // Supprimer message d'erreur s'il existe
-                const feedback = emailInput.parentNode.querySelector('.invalid-feedback');
-                if (feedback) feedback.remove();
-            }
-        } catch (error) {
-            console.error('Erreur vérification email:', error);
+    try {
+        const response = await fetch('/api/check-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ email: email })
+        });
+        
+        // Vérifier si la réponse est OK
+        if (!response.ok) {
+            console.error('Erreur API check-email:', response.status, response.statusText);
+            return; // Sortir silencieusement en cas d'erreur serveur
         }
+        
+        const data = await response.json();
+        const emailInput = document.getElementById('email');
+        
+        // Vérifier si la réponse contient les données attendues
+        if (!data.hasOwnProperty('available') || !data.hasOwnProperty('exists')) {
+            console.error('Réponse API invalide:', data);
+            return;
+        }
+        
+        if (!data.available && createAccountCheckbox.checked) {
+            emailInput.classList.add('is-invalid');
+            emailInput.classList.remove('is-valid');
+            
+            // Afficher message d'erreur
+            let feedback = emailInput.parentNode.querySelector('.invalid-feedback');
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                emailInput.parentNode.appendChild(feedback);
+            }
+            feedback.textContent = 'Un compte existe déjà avec cet email. Décochez "Créer un compte" ou connectez-vous.';
+            
+            // Proposer de décocher la création de compte (optionnel)
+            setTimeout(() => {
+                if (confirm('Un compte existe déjà avec cet email. Voulez-vous continuer sans créer de nouveau compte ?')) {
+                    createAccountCheckbox.checked = false;
+                    createAccountCheckbox.dispatchEvent(new Event('change'));
+                    emailInput.classList.remove('is-invalid');
+                    emailInput.classList.add('is-valid');
+                    if (feedback) feedback.remove();
+                }
+            }, 1000);
+            
+        } else {
+            emailInput.classList.remove('is-invalid');
+            emailInput.classList.add('is-valid');
+            
+            // Supprimer message d'erreur s'il existe
+            const feedback = emailInput.parentNode.querySelector('.invalid-feedback');
+            if (feedback) feedback.remove();
+        }
+        
+    } catch (error) {
+        console.error('Erreur vérification email:', error);
+        // En cas d'erreur, ne pas bloquer l'utilisateur, juste logger
+        const emailInput = document.getElementById('email');
+        emailInput.classList.remove('is-invalid');
+        
+        // Supprimer les messages d'erreur existants
+        const feedback = emailInput.parentNode.querySelector('.invalid-feedback');
+        if (feedback) feedback.remove();
     }
+}
     
     // Gestion de la soumission du formulaire
     document.getElementById('checkoutForm').addEventListener('submit', function(e) {

@@ -120,16 +120,38 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     })->name('choose');
 });
 
+// Dans routes/web.php, remplacez la route existante par :
+
 Route::post('/api/check-email', function(Request $request) {
-    $request->validate(['email' => 'required|email']);
-    
-    $exists = \App\Models\User::where('email', $request->email)->exists();
-    
-    return response()->json([
-        'available' => !$exists,
-        'exists' => $exists
-    ]);
-})->name('api.check-email');
+    try {
+        $request->validate(['email' => 'required|email']);
+        
+        $exists = \App\Models\User::where('email', $request->email)
+                                  ->where('is_guest', false) // Exclure les invités
+                                  ->exists();
+        
+        return response()->json([
+            'success' => true,
+            'available' => !$exists,
+            'exists' => $exists
+        ]);
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Email invalide',
+            'errors' => $e->errors()
+        ], 422);
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur API check-email: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur de vérification'
+        ], 500);
+    }
+})->middleware('throttle:60,1'); // Limite à 60 requêtes par minute
 
 Route::middleware(['auth'])->group(function () {
     

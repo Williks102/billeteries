@@ -1,56 +1,50 @@
-{{-- resources/views/cart/show.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Mon Panier - ClicBillet CI')
+@section('title', 'Mon Panier')
 
 @push('styles')
 <style>
+/* ===== VARIABLES CSS ===== */
 :root {
     --primary-orange: #FF6B35;
-    --secondary-orange: #ff8c61;
     --primary-dark: #E55A2B;
-    --dark-blue: #1a237e;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
     --black-primary: #2c3e50;
     --border-color: #e9ecef;
     --light-gray: #f8f9fa;
-    --success-color: #28a745;
-    --warning-color: #ffc107;
-    --danger-color: #dc3545;
-    --shadow-light: 0 2px 10px rgba(0,0,0,0.08);
-    --shadow-medium: 0 4px 20px rgba(0,0,0,0.12);
-    --transition-smooth: all 0.3s ease;
+    --shadow-light: 0 2px 10px rgba(0,0,0,0.1);
+    --shadow-medium: 0 4px 20px rgba(0,0,0,0.15);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-body {
-    background-color: var(--light-gray);
-}
-
-/* ===== CONTENEUR PRINCIPAL ===== */
+/* ===== LAYOUT DE BASE ===== */
 .cart-container {
-    margin-top: 100px; /* Compense le header */
-    margin-bottom: 3rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    min-height: calc(100vh - 100px);
+    padding: 2rem 0;
 }
 
-/* ===== HEADER PANIER ===== */
+/* ===== HEADER DU PANIER ===== */
 .cart-header {
     background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
     color: white;
     padding: 2rem;
     border-radius: 15px;
     margin-bottom: 2rem;
+    text-align: center;
     box-shadow: var(--shadow-medium);
 }
 
 .cart-header h1 {
     margin-bottom: 0.5rem;
-    font-size: 2rem;
     font-weight: 700;
 }
 
 .cart-header p {
     margin-bottom: 0;
     opacity: 0.9;
-    font-size: 1.1rem;
 }
 
 /* ===== ÉTAPES DU PROCESSUS ===== */
@@ -58,69 +52,47 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 2rem;
     background: white;
-    padding: 1rem;
+    padding: 1.5rem;
     border-radius: 15px;
+    margin-bottom: 2rem;
     box-shadow: var(--shadow-light);
+    gap: 2rem;
 }
 
 .step {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    position: relative;
-    flex: 1;
-    max-width: 120px;
+    color: #6c757d;
+    transition: var(--transition-smooth);
 }
 
-.step:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    top: 15px;
-    right: -50%;
-    width: 100%;
-    height: 2px;
-    background: #e9ecef;
-    z-index: 1;
-}
-
-.step.active:not(:last-child)::after {
-    background: var(--primary-orange);
+.step.active {
+    color: var(--primary-orange);
+    font-weight: 600;
 }
 
 .step-number {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
     background: #e9ecef;
     color: #6c757d;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    margin-bottom: 0.5rem;
-    position: relative;
-    z-index: 2;
+    margin-right: 0.75rem;
+    transition: var(--transition-smooth);
 }
 
 .step.active .step-number {
     background: var(--primary-orange);
     color: white;
+    transform: scale(1.1);
 }
 
-.step span:last-child {
-    font-size: 0.8rem;
-    color: #6c757d;
-    text-align: center;
-}
-
-.step.active span:last-child {
-    color: var(--primary-orange);
-    font-weight: 600;
-}
-
-/* ===== CARTES PRINCIPALES ===== */
+/* ===== CARTES DE CONTENU ===== */
 .cart-card {
     background: white;
     border-radius: 15px;
@@ -284,6 +256,23 @@ body {
     transform: translateY(-2px);
 }
 
+.btn-outline-success {
+    border: 2px solid var(--success-color) !important;
+    color: var(--success-color) !important;
+    background: transparent !important;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 12px 24px;
+    transition: var(--transition-smooth);
+}
+
+.btn-outline-success:hover {
+    background: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+    color: white !important;
+    transform: translateY(-2px);
+}
+
 .btn-danger {
     background: var(--danger-color) !important;
     border: none !important;
@@ -296,6 +285,56 @@ body {
     background: #c82333 !important;
     transform: scale(1.05);
     color: white !important;
+}
+
+/* ===== CHOIX DE CHECKOUT ===== */
+.checkout-options {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    border: 1px solid #2196f3;
+}
+
+.checkout-options h6 {
+    color: #1976d2;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.checkout-option {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1rem;
+    transition: var(--transition-smooth);
+    text-decoration: none;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.checkout-option:hover {
+    border-color: var(--primary-orange);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+    text-decoration: none;
+}
+
+.option-icon {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.option-title {
+    font-weight: 600;
+    color: var(--black-primary);
+    margin-bottom: 0.25rem;
+}
+
+.option-description {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin: 0;
 }
 
 /* ===== PANIER VIDE ===== */
@@ -389,6 +428,19 @@ body {
     background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
     color: white;
     border-radius: 20px 20px 0 0;
+    position: relative;
+}
+
+.cart-modal-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 1px;
 }
 
 .cart-modal-handle {
@@ -396,7 +448,8 @@ body {
     height: 4px;
     background: rgba(255,255,255,0.5);
     border-radius: 2px;
-    margin: 0 auto 1rem;
+    margin: 0.75rem auto 0;
+    cursor: grab;
 }
 
 .cart-modal-body {
@@ -419,6 +472,11 @@ body {
     padding: 1rem;
     margin-bottom: 1rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: opacity 0.3s ease;
+}
+
+.mobile-cart-item.updating {
+    opacity: 0.6;
 }
 
 .mobile-cart-item:last-child {
@@ -434,9 +492,25 @@ body {
 .mobile-event-image {
     width: 50px;
     height: 50px;
-    object-fit: cover;
     border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
     margin-right: 0.75rem;
+}
+
+.mobile-event-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mobile-event-image i {
+    font-size: 1.2rem;
+    color: var(--primary-orange);
 }
 
 .mobile-event-info {
@@ -453,6 +527,12 @@ body {
 .mobile-ticket-info {
     font-size: 0.8rem;
     color: #6c757d;
+}
+
+.mobile-venue-info {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
 }
 
 .mobile-item-controls {
@@ -481,6 +561,17 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 0.8rem;
+    transition: var(--transition-smooth);
+}
+
+.mobile-qty-btn:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: scale(1.05);
+}
+
+.mobile-qty-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .mobile-qty-display {
@@ -488,6 +579,13 @@ body {
     text-align: center;
     font-weight: bold;
     font-size: 0.9rem;
+}
+
+.mobile-item-actions {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
 .mobile-price {
@@ -521,7 +619,7 @@ body {
 /* Mobile Actions */
 .mobile-cart-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .mobile-cart-actions .btn {
@@ -554,6 +652,8 @@ body {
     
     .cart-steps {
         padding: 0.75rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
     
     .step span:last-child {
@@ -579,17 +679,49 @@ body {
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
     }
     
     .mobile-cart-button:hover {
         color: white;
         transform: translateY(-2px);
     }
+    
+    .checkout-options .row {
+        flex-direction: column;
+    }
 }
 
 @media (min-width: 769px) {
     .cart-bottom-modal, .mobile-cart-button {
         display: none !important;
+    }
+}
+
+@media (max-width: 350px) {
+    .mobile-cart-actions {
+        flex-direction: column;
+    }
+    
+    .mobile-event-title {
+        font-size: 0.8rem;
+    }
+    
+    .mobile-ticket-info {
+        font-size: 0.7rem;
+    }
+}
+
+/* Animation de suppression */
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
     }
 }
 </style>
@@ -611,33 +743,15 @@ body {
         </div>
         <div class="step">
             <div class="step-number">2</div>
-            <span>Checkout</span>
+            <span>Informations</span>
         </div>
         <div class="step">
             <div class="step-number">3</div>
-            <span>Paiement</span>
-        </div>
-        <div class="step">
-            <div class="step-number">4</div>
             <span>Confirmation</span>
         </div>
     </div>
 
-    {{-- Messages flash --}}
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
+    {{-- Contenu principal --}}
     @if(empty($cart))
         {{-- Panier vide --}}
         <div class="cart-card">
@@ -646,142 +760,138 @@ body {
                     <i class="fas fa-shopping-cart"></i>
                 </div>
                 <h3>Votre panier est vide</h3>
-                <p>Découvrez nos événements et commencez à ajouter des billets à votre panier.</p>
-                <a href="{{ route('events.all') }}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-calendar-alt me-2"></i>
-                    Découvrir les événements
+                <p>Découvrez nos événements exceptionnels et ajoutez vos billets préférés !</p>
+                <a href="{{ route('events.all') }}" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Découvrir les événements
                 </a>
             </div>
         </div>
     @else
         <div class="row">
-            {{-- Articles du panier --}}
-            <div class="col-lg-8">
+            {{-- Contenu du panier (Desktop uniquement) --}}
+            <div class="col-lg-8 d-none d-lg-block">
                 <div class="cart-card">
-                    <h5 class="mb-4">
-                        <i class="fas fa-list me-2 text-orange"></i>
-                        Articles dans votre panier ({{ count($cart) }})
-                    </h5>
+                    <h4 class="mb-4">
+                        <i class="fas fa-list-ul me-2"></i>
+                        Articles sélectionnés ({{ $cartCount }})
+                    </h4>
 
                     @foreach($cart as $key => $item)
-                    <div class="cart-item">
-                        <div class="row align-items-center">
-                            {{-- Image de l'événement --}}
-                            <div class="col-auto">
-                                @php
-                                    // Récupérer l'image de l'événement depuis la base de données
-                                    $event = \App\Models\Event::find($item['event_id'] ?? null);
-                                    $eventImage = $event && $event->image ? \Storage::url($event->image) : null;
-                                @endphp
-                                @if($eventImage)
-                                    <img src="{{ $eventImage }}" alt="{{ $item['event_title'] }}" class="event-image">
-                                @else
-                                    <div class="event-image bg-light d-flex align-items-center justify-content-center">
-                                        <i class="fas fa-calendar-alt text-muted"></i>
+                        <div class="cart-item" id="cart-item-{{ $key }}">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        @php
+                                            $event = \App\Models\Event::find($item['event_id'] ?? null);
+                                            $eventImage = $event && $event->image ? Storage::url($event->image) : null;
+                                        @endphp
+                                        
+                                        <div class="me-3">
+                                            @if($eventImage)
+                                                <img src="{{ $eventImage }}" alt="{{ $item['event_title'] }}" class="event-image">
+                                            @else
+                                                <div class="event-image d-flex align-items-center justify-content-center bg-light">
+                                                    <i class="fas fa-calendar-alt text-primary fa-2x"></i>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div>
+                                            <h6 class="event-title mb-1">{{ $item['event_title'] }}</h6>
+                                            <div class="ticket-info">
+                                                <div><strong>{{ $item['ticket_name'] }}</strong></div>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>{{ $item['event_date'] ?? 'Date à confirmer' }}
+                                                </small><br>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-map-marker-alt me-1"></i>{{ $item['event_venue'] ?? 'Lieu à confirmer' }}
+                                                </small>
+                                            </div>
+                                        </div>
                                     </div>
-                                @endif
-                            </div>
-
-                            {{-- Informations de l'événement --}}
-                            <div class="col">
-                                <div class="event-title">{{ $item['event_title'] }}</div>
-                                <div class="ticket-info">
-                                    <i class="fas fa-ticket-alt me-1"></i>
-                                    {{ $item['ticket_name'] }}
-                                    @if(isset($item['event_date']))
-                                        <br><i class="fas fa-calendar me-1"></i>
-                                        {{-- 🚨 LIGNE PROBLÉMATIQUE - CORRIGÉE 🚨 --}}
-                                        {{ $item['event_date'] }}
-                                    @endif
-                                    @if(isset($item['event_time']))
-                                        <i class="fas fa-clock ms-2 me-1"></i>
-                                        {{ $item['event_time'] }}
-                                    @endif
                                 </div>
-                            </div>
 
-                            {{-- Contrôles de quantité --}}
-                            <div class="col-auto">
-                                <div class="quantity-controls">
-                                    <button type="button" class="qty-btn" onclick="updateQuantity('{{ $key }}', -1)">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <span class="qty-display" id="qty-{{ $key }}">{{ $item['quantity'] }}</span>
-                                    <button type="button" class="qty-btn" onclick="updateQuantity('{{ $key }}', 1)">
-                                        <i class="fas fa-plus"></i>
+                                <div class="col-md-2 text-center">
+                                    <div class="price-info">{{ number_format($item['unit_price']) }} FCFA</div>
+                                </div>
+
+                                <div class="col-md-2 text-center">
+                                    <div class="quantity-controls">
+                                        <button class="qty-btn" onclick="updateQuantity('{{ $key }}', {{ $item['quantity'] - 1 }})" {{ $item['quantity'] <= 1 ? 'disabled' : '' }}>
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <span class="qty-display" id="qty-{{ $key }}">{{ $item['quantity'] }}</span>
+                                        <button class="qty-btn" onclick="updateQuantity('{{ $key }}', {{ $item['quantity'] + 1 }})">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2 text-center">
+                                    <div class="price-info mb-2">{{ number_format($item['total_price']) }} FCFA</div>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="removeFromCart('{{ $key }}')">
+                                        <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
-                            </div>
-
-                            {{-- Prix --}}
-                            <div class="col-auto text-end">
-                                <div class="price-info">
-                                    {{ number_format($item['total_price']) }} FCFA
-                                </div>
-                                <small class="text-muted">
-                                    {{ number_format($item['unit_price']) }} FCFA x {{ $item['quantity'] }}
-                                </small>
-                            </div>
-
-                            {{-- Bouton supprimer --}}
-                            <div class="col-auto">
-                                <button type="button" class="btn btn-sm btn-danger" onclick="removeFromCart('{{ $key }}')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
                             </div>
                         </div>
-                    </div>
                     @endforeach
 
                     {{-- Actions du panier --}}
-                    <div class="mt-4 d-flex flex-wrap gap-2 justify-content-between">
-                        <a href="{{ route('events.all') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-arrow-left me-2"></i>
-                            Continuer mes achats
-                        </a>
-                        <button type="button" class="btn btn-danger" onclick="clearCart()">
-                            <i class="fas fa-trash-alt me-2"></i>
-                            Vider le panier
+                    <div class="d-flex justify-content-between align-items-center mt-4 pt-4 border-top">
+                        <button class="btn btn-outline-danger" onclick="clearCart()">
+                            <i class="fas fa-trash me-2"></i>Vider le panier
                         </button>
+                        <a href="{{ route('events.all') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-plus me-2"></i>Ajouter d'autres billets
+                        </a>
                     </div>
                 </div>
             </div>
 
-            {{-- Résumé du panier --}}
-            <div class="col-lg-4">
+            {{-- Résumé et checkout (Desktop uniquement) --}}
+            <div class="col-lg-4 d-none d-lg-block">
                 <div class="total-summary">
-                    <h5 class="mb-3 text-orange">
-                        <i class="fas fa-calculator me-2"></i>
-                        Résumé de la commande
+                    <h5 class="mb-4">
+                        <i class="fas fa-calculator me-2"></i>Résumé de la commande
                     </h5>
 
-                    @php
-                        $subtotal = array_sum(array_column($cart, 'total_price'));
-                        $serviceFee = 500; // Frais de service
-                        $total = $subtotal + $serviceFee;
-                    @endphp
-
                     <div class="summary-row">
-                        <span>Sous-total ({{ array_sum(array_column($cart, 'quantity')) }} billets)</span>
-                        <span>{{ number_format($subtotal) }} FCFA</span>
+                        <span>Sous-total</span>
+                        <span>{{ number_format($cartTotal) }} FCFA</span>
                     </div>
-
                     <div class="summary-row">
                         <span>Frais de service</span>
-                        <span>{{ number_format($serviceFee) }} FCFA</span>
+                        <span>500 FCFA</span>
                     </div>
-
                     <div class="summary-row">
                         <span><strong>Total</strong></span>
-                        <span><strong>{{ number_format($total) }} FCFA</strong></span>
+                        <span><strong>{{ number_format($cartTotal + 500) }} FCFA</strong></span>
                     </div>
 
-                    {{-- Bouton de checkout --}}
-                    <div class="mt-4">
-                        <a href="{{ route('checkout.show') }}" class="btn btn-primary btn-lg w-100">
-                            <i class="fas fa-credit-card me-2"></i>
-                            Passer commande
-                        </a>
+                    {{-- Boutons de checkout selon le statut --}}
+                    <div class="d-grid mt-4">
+                        @guest
+                            {{-- Pour les visiteurs non connectés --}}
+                            <a href="{{ route('checkout.guest.show') }}" class="btn btn-primary btn-lg mb-3">
+                                <i class="fas fa-bolt me-2"></i>
+                                Commande Express
+                            </a>
+                            
+                            <div class="text-center mb-3">
+                                <small class="text-muted">
+                                    Vous avez déjà un compte ? 
+                                    <a href="{{ route('login') }}?redirect={{ urlencode(route('checkout.show')) }}" class="text-primary">
+                                        Connectez-vous
+                                    </a>
+                                </small>
+                            </div>
+                        @else
+                            {{-- Pour les utilisateurs connectés --}}
+                            <a href="{{ route('checkout.show') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-credit-card me-2"></i>
+                                Passer commande
+                            </a>
+                        @endguest
                     </div>
 
                     {{-- Informations de sécurité --}}
@@ -792,271 +902,439 @@ body {
                         </small>
                     </div>
                 </div>
+
+                {{-- Options de checkout détaillées pour les invités --}}
+                @guest
+                <div class="checkout-options">
+                    <h6 class="text-center mb-3">Comment souhaitez-vous procéder ?</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            <a href="{{ route('checkout.guest.show') }}" class="checkout-option">
+                                <div class="option-icon text-warning">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div class="option-title">Commande express</div>
+                                <div class="option-description">Rapide et simple, sans créer de compte</div>
+                            </a>
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <a href="{{ route('login') }}?redirect={{ urlencode(route('checkout.show')) }}" class="checkout-option">
+                                <div class="option-icon text-success">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="option-title">Avec mon compte</div>
+                                <div class="option-description">Connexion ou création de compte</div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                @endguest
             </div>
         </div>
     @endif
 </div>
 
-{{-- BOTTOM MODAL MOBILE --}}
+{{-- Bouton flottant mobile pour ouvrir le panier --}}
+@if(!empty($cart))
+<button class="mobile-cart-button d-lg-none" onclick="openMobileCartModal()">
+    <i class="fas fa-shopping-cart me-2"></i>
+    Mon Panier ({{ $cartCount }})
+    <span class="ms-2">{{ number_format($cartTotal) }} FCFA</span>
+</button>
+@endif
+
+{{-- Modal Backdrop --}}
 <div class="cart-modal-backdrop" id="mobileCartBackdrop" onclick="closeMobileCartModal()"></div>
 
+{{-- Bottom Modal Amélioré --}}
 <div class="cart-bottom-modal" id="mobileCartModal">
+    {{-- Handle de glissement --}}
+    <div class="cart-modal-handle"></div>
+    
+    {{-- Header avec informations du panier --}}
     <div class="cart-modal-header">
-        <div class="cart-modal-handle"></div>
-        <h5 class="mb-0">
+        <div class="d-flex align-items-center">
             <i class="fas fa-shopping-cart me-2"></i>
-            Mon Panier
-        </h5>
+            <div>
+                <h5 class="mb-0">Mon Panier</h5>
+                <small class="opacity-75">{{ $cartCount ?? 0 }} article{{ ($cartCount ?? 0) > 1 ? 's' : '' }}</small>
+            </div>
+        </div>
         <button type="button" class="btn btn-link text-white p-0" onclick="closeMobileCartModal()">
             <i class="fas fa-times fa-lg"></i>
         </button>
     </div>
     
+    {{-- Corps du modal --}}
     <div class="cart-modal-body">
         @if(empty($cart))
             <div class="text-center py-4">
                 <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
                 <h6 class="text-muted">Panier vide</h6>
-                <p class="text-muted small">Ajoutez des billets pour commencer</p>
+                <p class="text-muted small">Découvrez nos événements</p>
+                <a href="{{ route('events.all') }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-calendar me-2"></i>Voir les événements
+                </a>
             </div>
         @else
-            {{-- Articles du panier en mobile --}}
+            {{-- Articles du panier optimisés --}}
             <div id="mobileCartItems">
                 @foreach($cart as $key => $item)
                 <div class="mobile-cart-item" id="mobile-item-{{ $key }}">
                     <div class="mobile-item-header">
-                        @php
-                            // Récupérer l'image de l'événement depuis la base de données
-                            $event = \App\Models\Event::find($item['event_id'] ?? null);
-                            $eventImage = $event && $event->image ? \Storage::url($event->image) : null;
-                        @endphp
-                        @if($eventImage)
-                            <img src="{{ $eventImage }}" alt="{{ $item['event_title'] }}" class="mobile-event-image">
-                        @else
-                            <div class="mobile-event-image bg-light d-flex align-items-center justify-content-center">
-                                <i class="fas fa-calendar-alt text-muted"></i>
-                            </div>
-                        @endif
-                        
+                        <div class="mobile-event-image">
+                            @php
+                                $event = \App\Models\Event::find($item['event_id'] ?? null);
+                                $eventImage = $event && $event->image ? Storage::url($event->image) : null;
+                            @endphp
+                            
+                            @if($eventImage)
+                                <img src="{{ $eventImage }}" alt="{{ $item['event_title'] }}">
+                            @else
+                                <i class="fas fa-calendar-alt"></i>
+                            @endif
+                        </div>
                         <div class="mobile-event-info">
                             <div class="mobile-event-title">{{ $item['event_title'] }}</div>
                             <div class="mobile-ticket-info">
-                                {{ $item['ticket_name'] }}
-                                @if(isset($item['event_date']))
-                                    {{-- 🚨 LIGNE PROBLÉMATIQUE - CORRIGÉE 🚨 --}}
-                                    • {{ $item['event_date'] }}
-                                @endif
+                                {{ $item['ticket_name'] }} • {{ $item['event_date'] ?? 'Date à confirmer' }}
+                            </div>
+                            <div class="mobile-venue-info">
+                                <i class="fas fa-map-marker-alt me-1"></i>{{ $item['event_venue'] ?? 'Lieu à confirmer' }}
                             </div>
                         </div>
-                        
-                        <button type="button" class="btn btn-sm btn-danger" onclick="removeFromCart('{{ $key }}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
                     </div>
                     
                     <div class="mobile-item-controls">
+                        {{-- Contrôles de quantité améliorés --}}
                         <div class="mobile-quantity-controls">
-                            <button type="button" class="mobile-qty-btn" onclick="updateQuantity('{{ $key }}', -1)">
+                            <button class="mobile-qty-btn" 
+                                    onclick="updateCartQuantity('{{ $key }}', {{ $item['quantity'] - 1 }})"
+                                    {{ $item['quantity'] <= 1 ? 'disabled' : '' }}>
                                 <i class="fas fa-minus"></i>
                             </button>
                             <span class="mobile-qty-display" id="mobile-qty-{{ $key }}">{{ $item['quantity'] }}</span>
-                            <button type="button" class="mobile-qty-btn" onclick="updateQuantity('{{ $key }}', 1)">
+                            <button class="mobile-qty-btn" 
+                                    onclick="updateCartQuantity('{{ $key }}', {{ $item['quantity'] + 1 }})">
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
                         
-                        <div class="mobile-price">
-                            {{ number_format($item['total_price']) }} FCFA
+                        <div class="mobile-item-actions">
+                            <div class="mobile-price">{{ number_format($item['total_price']) }} FCFA</div>
+                            <button class="btn btn-link text-danger p-0 ms-2" 
+                                    onclick="removeFromCart('{{ $key }}')"
+                                    title="Supprimer">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
                 @endforeach
             </div>
             
-            {{-- Résumé mobile --}}
-            <div class="mobile-summary">
-                @php
-                    $subtotal = array_sum(array_column($cart, 'total_price'));
-                    $serviceFee = 500;
-                    $total = $subtotal + $serviceFee;
-                @endphp
-                
-                <div class="mobile-summary-row">
-                    <span>Sous-total</span>
-                    <span>{{ number_format($subtotal) }} FCFA</span>
-                </div>
-                <div class="mobile-summary-row">
-                    <span>Frais de service</span>
-                    <span>{{ number_format($serviceFee) }} FCFA</span>
-                </div>
-                <div class="mobile-summary-row">
-                    <span>Total</span>
-                    <span>{{ number_format($total) }} FCFA</span>
-                </div>
+            {{-- Actions rapides --}}
+            <div class="mobile-cart-actions mt-3">
+                <button class="btn btn-outline-danger btn-sm" onclick="clearCart()">
+                    <i class="fas fa-trash me-2"></i>Vider le panier
+                </button>
+                <a href="{{ route('events.all') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-2"></i>Ajouter des billets
+                </a>
             </div>
         @endif
     </div>
-    
-    <div class="cart-modal-footer">
-        @if(!empty($cart))
-            <div class="mobile-cart-actions">
-                <a href="{{ route('events.all') }}" class="btn btn-outline-primary">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    Continuer
-                </a>
-                <a href="{{ route('checkout.show') }}" class="btn btn-primary">
-                    <i class="fas fa-credit-card me-1"></i>
-                    Commander
-                </a>
-            </div>
-        @else
-            <a href="{{ route('events.all') }}" class="btn btn-primary w-100">
-                <i class="fas fa-calendar-alt me-2"></i>
-                Découvrir les événements
-            </a>
-        @endif
-    </div>
-</div>
 
-{{-- BOUTON FLOTTANT MOBILE --}}
-@if(!empty($cart))
-    <button class="mobile-cart-button d-md-none" onclick="openMobileCartModal()">
-        <i class="fas fa-shopping-cart"></i>
-        <span>Voir mon panier ({{ count($cart) }})</span>
-        <span class="ms-auto">{{ number_format(array_sum(array_column($cart, 'total_price')) + 500) }} FCFA</span>
-    </button>
-@endif
+    {{-- Footer avec résumé et action principale --}}
+    @if(!empty($cart))
+    <div class="cart-modal-footer">
+        <div class="mobile-summary">
+            <div class="mobile-summary-row">
+                <span>Sous-total</span>
+                <span id="mobileSubtotal">{{ number_format($cartTotal) }} FCFA</span>
+            </div>
+            <div class="mobile-summary-row">
+                <span>Frais de service</span>
+                <span>500 FCFA</span>
+            </div>
+            <div class="mobile-summary-row">
+                <span><strong>Total</strong></span>
+                <span><strong id="mobileTotal">{{ number_format($cartTotal + 500) }} FCFA</strong></span>
+            </div>
+        </div>
+        
+        {{-- Boutons d'action selon le statut de connexion --}}
+        <div class="mobile-cart-actions mt-3">
+            @guest
+                {{-- Pour les visiteurs --}}
+                <a href="{{ route('checkout.guest.show') }}" class="btn btn-primary flex-fill me-2">
+                    <i class="fas fa-bolt me-2"></i>Commande Express
+                </a>
+                <a href="{{ route('login') }}?redirect={{ urlencode(route('checkout.show')) }}" class="btn btn-outline-success flex-fill">
+                    <i class="fas fa-user me-2"></i>Me connecter
+                </a>
+            @else
+                {{-- Pour les utilisateurs connectés --}}
+                <a href="{{ route('checkout.show') }}" class="btn btn-primary w-100">
+                    <i class="fas fa-credit-card me-2"></i>Passer commande
+                </a>
+            @endguest
+        </div>
+        
+        {{-- Informations de sécurité --}}
+        <div class="text-center mt-2">
+            <small class="text-muted">
+                <i class="fas fa-shield-alt me-1 text-success"></i>
+                Paiement sécurisé • Billets instantanés
+            </small>
+        </div>
+    </div>
+    @endif
+</div>
 @endsection
 
 @push('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-// Configuration CSRF pour toutes les requêtes AJAX
-$.ajaxSetup({
-    headers: {
-        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-    }
-});
+/**
+ * Système de gestion du panier complet avec support mobile
+ */
+
+// État de chargement global
+let isUpdating = false;
 
 /**
- * Mettre à jour la quantité d'un article
+ * Mettre à jour la quantité (Desktop)
  */
-function updateQuantity(cartKey, change) {
+async function updateQuantity(cartKey, newQuantity) {
+    if (isUpdating || newQuantity < 1) return;
+    
+    isUpdating = true;
+    const itemElement = document.getElementById(`cart-item-${cartKey}`);
     const qtyDisplay = document.getElementById(`qty-${cartKey}`);
-    const currentQty = parseInt(qtyDisplay.textContent);
-    const newQty = Math.max(1, currentQty + change);
     
-    // Mettre à jour visuellement immédiatement
-    qtyDisplay.textContent = newQty;
+    // Feedback visuel
+    if (itemElement) itemElement.style.opacity = '0.6';
     
-    // Envoyer la requête AJAX
-    $.ajax({
-        url: '{{ route("cart.update") }}',
-        method: 'PATCH',
-        data: {
-            cart_key: cartKey,
-            quantity: newQty
-        },
-        success: function(response) {
-            if (response.success) {
-                // Mettre à jour tous les affichages
-                updateMobileQuantityDisplay(cartKey, newQty);
-                updateCartDisplay(response);
-                showNotification(response.message, 'success');
-            } else {
-                // Revenir à l'ancienne valeur en cas d'erreur
-                updateMobileQuantityDisplay(cartKey, currentQty);
-                showNotification(response.message, 'error');
-            }
-        },
-        error: function(xhr) {
-            // Revenir à l'ancienne valeur en cas d'erreur
-            updateMobileQuantityDisplay(cartKey, currentQty);
+    try {
+        const response = await fetch('{{ route("cart.update") }}', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                cart_key: cartKey,
+                quantity: newQuantity
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Mettre à jour l'affichage desktop
+            if (qtyDisplay) qtyDisplay.textContent = newQuantity;
             
-            let message = 'Erreur lors de la mise à jour';
-            try {
-                const response = JSON.parse(xhr.responseText);
-                message = response.message || message;
-            } catch(e) {
-                console.error('Erreur de parsing:', e);
-            }
-            showNotification(message, 'error');
+            // Mettre à jour les totaux
+            updateDesktopTotals(data);
+            
+            // Notification de succès
+            showToast('Quantité mise à jour', 'success', 2000);
+        } else {
+            throw new Error(data.message || 'Erreur de mise à jour');
         }
-    });
-}
 
-/**
- * Supprimer un article du panier
- */
-function removeFromCart(cartKey) {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet article du panier ?')) {
-        $.ajax({
-            url: '{{ route("cart.remove") }}',
-            method: 'DELETE',
-            data: {
-                cart_key: cartKey
-            },
-            success: function(response) {
-                if (response.success) {
-                    showNotification(response.message, 'success');
-                    // Recharger la page après 1 seconde
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    showNotification(response.message, 'error');
-                }
-            },
-            error: function(xhr) {
-                console.error('Erreur AJAX:', xhr);
-                showNotification('Erreur lors de la suppression', 'error');
-            }
-        });
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('Erreur lors de la mise à jour', 'error');
+    } finally {
+        if (itemElement) itemElement.style.opacity = '1';
+        isUpdating = false;
     }
 }
 
 /**
- * Vider complètement le panier
+ * Mettre à jour la quantité (Mobile)
  */
-function clearCart() {
-    if (confirm('Êtes-vous sûr de vouloir vider complètement votre panier ?')) {
-        $.ajax({
-            url: '{{ route("cart.clear") }}',
-            method: 'DELETE',
-            success: function(response) {
-                if (response.success) {
-                    showNotification(response.message, 'success');
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                }
-            },
-            error: function(xhr) {
-                console.error('Erreur AJAX:', xhr);
-                showNotification('Erreur lors du vidage du panier', 'error');
-            }
-        });
-    }
-}
-
-/**
- * Mettre à jour l'affichage du panier après modification
- */
-function updateCartDisplay(response) {
-    if (response.cart_total !== undefined) {
-        // Mettre à jour le sous-total et total
-        const subtotal = response.cart_total;
-        const serviceFee = 500;
-        const total = subtotal + serviceFee;
-        
-        // Supposant que vous avez des éléments avec ces classes
-        $('.cart-subtotal').text(subtotal.toLocaleString() + ' FCFA');
-        $('.cart-total').text(total.toLocaleString() + ' FCFA');
-    }
+async function updateCartQuantity(cartKey, newQuantity) {
+    if (isUpdating || newQuantity < 1) return;
     
-    // Mettre à jour le compteur dans le header (si la fonction existe)
-    if (typeof updateCartCount === 'function') {
-        updateCartCount();
+    isUpdating = true;
+    const itemElement = document.getElementById(`mobile-item-${cartKey}`);
+    const qtyDisplay = document.getElementById(`mobile-qty-${cartKey}`);
+    
+    // Feedback visuel
+    itemElement.classList.add('updating');
+    
+    try {
+        const response = await fetch('{{ route("cart.update") }}', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                cart_key: cartKey,
+                quantity: newQuantity
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Mettre à jour l'affichage mobile
+            qtyDisplay.textContent = newQuantity;
+            updateMobileTotals(data);
+            
+            // Notification de succès discrète
+            showToast('Quantité mise à jour', 'success', 2000);
+        } else {
+            throw new Error(data.message || 'Erreur de mise à jour');
+        }
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('Erreur lors de la mise à jour', 'error');
+    } finally {
+        itemElement.classList.remove('updating');
+        isUpdating = false;
+    }
+}
+
+/**
+ * Supprimer un item du panier
+ */
+async function removeFromCart(cartKey) {
+    if (!confirm('Supprimer cet article du panier ?')) return;
+    
+    isUpdating = true;
+    const desktopItem = document.getElementById(`cart-item-${cartKey}`);
+    const mobileItem = document.getElementById(`mobile-item-${cartKey}`);
+    
+    try {
+        const response = await fetch('{{ route("cart.remove") }}', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ cart_key: cartKey })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Animation de suppression desktop
+            if (desktopItem) {
+                desktopItem.style.animation = 'slideOut 0.3s ease-out forwards';
+                setTimeout(() => desktopItem.remove(), 300);
+            }
+            
+            // Animation de suppression mobile
+            if (mobileItem) {
+                mobileItem.style.animation = 'slideOut 0.3s ease-out forwards';
+                setTimeout(() => mobileItem.remove(), 300);
+            }
+            
+            // Mettre à jour les totaux
+            updateDesktopTotals(data);
+            updateMobileTotals(data);
+            
+            showToast('Article supprimé', 'success');
+            
+            // Recharger si panier vide
+            if (data.cart_count === 0) {
+                setTimeout(() => location.reload(), 1000);
+            }
+
+        } else {
+            throw new Error(data.message || 'Erreur de suppression');
+        }
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('Erreur lors de la suppression', 'error');
+    } finally {
+        isUpdating = false;
+    }
+}
+
+/**
+ * Vider tout le panier
+ */
+async function clearCart() {
+    if (!confirm('Vider complètement votre panier ?')) return;
+    
+    try {
+        const response = await fetch('{{ route("cart.clear") }}', {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('Panier vidé', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            throw new Error(data.message || 'Erreur');
+        }
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('Erreur lors du vidage', 'error');
+    }
+}
+
+/**
+ * Mettre à jour les totaux desktop
+ */
+function updateDesktopTotals(data) {
+    if (data.cart_total !== undefined) {
+        const subtotal = data.cart_total;
+        const total = subtotal + 500;
+        
+        // Mettre à jour les éléments de résumé si ils existent
+        document.querySelectorAll('.total-summary .summary-row').forEach((row, index) => {
+            const span = row.querySelector('span:last-child');
+            if (index === 0 && span) { // Sous-total
+                span.textContent = subtotal.toLocaleString() + ' FCFA';
+            } else if (index === 2 && span) { // Total
+                span.textContent = total.toLocaleString() + ' FCFA';
+            }
+        });
+    }
+}
+
+/**
+ * Mettre à jour les totaux mobiles
+ */
+function updateMobileTotals(data) {
+    const subtotalElement = document.getElementById('mobileSubtotal');
+    const totalElement = document.getElementById('mobileTotal');
+    const cartButton = document.querySelector('.mobile-cart-button');
+    
+    if (subtotalElement && data.cart_total !== undefined) {
+        const subtotal = data.cart_total;
+        const total = subtotal + 500;
+        
+        subtotalElement.textContent = subtotal.toLocaleString() + ' FCFA';
+        totalElement.textContent = total.toLocaleString() + ' FCFA';
+        
+        // Mettre à jour le bouton flottant
+        if (cartButton && data.cart_count !== undefined) {
+            cartButton.innerHTML = `
+                <i class="fas fa-shopping-cart me-2"></i>
+                Mon Panier (${data.cart_count})
+                <span class="ms-2">${subtotal.toLocaleString()} FCFA</span>
+            `;
+        }
     }
 }
 
@@ -1089,46 +1367,28 @@ function closeMobileCartModal() {
 }
 
 /**
- * Mettre à jour les affichages mobile et desktop
+ * Toast notification système
  */
-function updateMobileQuantityDisplay(cartKey, quantity) {
-    // Mettre à jour l'affichage mobile
-    const mobileQty = document.getElementById(`mobile-qty-${cartKey}`);
-    if (mobileQty) {
-        mobileQty.textContent = quantity;
-    }
-    
-    // Mettre à jour l'affichage desktop
-    const desktopQty = document.getElementById(`qty-${cartKey}`);
-    if (desktopQty) {
-        desktopQty.textContent = quantity;
+function showToast(message, type = 'info', duration = 3000) {
+    if (window.notifications) {
+        window.notifications[type](message, { duration });
+    } else {
+        // Fallback simple
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const toast = document.createElement('div');
+        toast.className = `alert ${alertClass} position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 250px; border-radius: 10px;';
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+            ${message}
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.remove(), duration);
     }
 }
 
-/**
- * Afficher une notification stylée
- */
-function showNotification(message, type = 'info') {
-    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
-    const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle';
-    
-    const notification = `
-        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
-             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
-            <i class="fas fa-${icon} me-2"></i>${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    $('body').append(notification);
-    
-    // Auto-supprimer après 4 secondes
-    setTimeout(() => {
-        $('.alert').last().fadeOut();
-    }, 4000);
-}
-
-// Gestionnaire de swipe pour fermer le modal
+// Gestion du swipe pour fermer le modal mobile
 let startY = 0;
 let currentY = 0;
 let isDragging = false;
@@ -1137,12 +1397,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('mobileCartModal');
     
     if (modal) {
+        // Touch events pour le swipe
         modal.addEventListener('touchstart', function(e) {
-            if (e.target.closest('.cart-modal-header')) {
+            if (e.target.closest('.cart-modal-header') || e.target.closest('.cart-modal-handle')) {
                 startY = e.touches[0].clientY;
                 isDragging = true;
             }
-        });
+        }, { passive: true });
         
         modal.addEventListener('touchmove', function(e) {
             if (!isDragging) return;
@@ -1153,7 +1414,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (deltaY > 0) {
                 modal.style.transform = `translateY(${deltaY}px)`;
             }
-        });
+        }, { passive: true });
         
         modal.addEventListener('touchend', function(e) {
             if (!isDragging) return;
@@ -1163,19 +1424,27 @@ document.addEventListener('DOMContentLoaded', function() {
             if (deltaY > 100) {
                 closeMobileCartModal();
             } else {
-                modal.style.transform = 'translateY(0)';
+                modal.style.transform = '';
             }
             
             isDragging = false;
-            modal.style.transform = '';
-        });
+        }, { passive: true });
     }
+    
+    // Gestion du clavier pour accessibilité
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMobileCartModal();
+        }
+    });
 });
 
 // Debug : Afficher les routes disponibles
-console.log('Routes panier configurées:');
-console.log('Update:', '{{ route("cart.update") }}');
-console.log('Remove:', '{{ route("cart.remove") }}');
-console.log('Clear:', '{{ route("cart.clear") }}');
+console.log('🛒 Système de panier initialisé');
+console.log('Routes:', {
+    update: '{{ route("cart.update") }}',
+    remove: '{{ route("cart.remove") }}',
+    clear: '{{ route("cart.clear") }}'
+});
 </script>
 @endpush

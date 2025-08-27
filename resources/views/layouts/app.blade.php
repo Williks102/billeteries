@@ -204,10 +204,154 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                 padding: 1rem 0;
             }
         }
+
+        /* Styles pour les notifications toast */
+.toast-custom {
+    min-width: 300px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    border: none;
+    overflow: hidden;
+}
+
+.toast-custom.success {
+    border-left: 4px solid #28a745;
+}
+
+.toast-custom.error {
+    border-left: 4px solid #dc3545;
+}
+
+.toast-custom.info {
+    border-left: 4px solid #17a2b8;
+}
+
+.toast-custom.warning {
+    border-left: 4px solid #ffc107;
+}
+
+.toast-header-custom {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.toast-body-custom {
+    padding: 1rem;
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.toast-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: white;
+    font-size: 0.8rem;
+}
+
+.toast-icon.success {
+    background: #28a745;
+}
+
+.toast-icon.error {
+    background: #dc3545;
+}
+
+.toast-icon.info {
+    background: #17a2b8;
+}
+
+.toast-icon.warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.toast-title {
+    font-weight: 600;
+    color: #212529;
+    margin: 0;
+    flex: 1;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.toast-close:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+/* Animations */
+.toast-custom {
+    animation: slideInRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.toast-custom.hiding {
+    animation: slideOutRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .toast-container {
+        left: 1rem !important;
+        right: 1rem !important;
+    }
+    
+    .toast-custom {
+        min-width: auto;
+        width: 100%;
+    }
+}
     </style>
     
     @stack('styles')
 </head>
+{{-- Container des notifications --}}
+        <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
+        
 <body class="@yield('body-class')">
     <!-- Header unifié -->
     @include('partials.header')
@@ -252,6 +396,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
     <!-- Contenu principal -->
     <main class="main-content fade-in">
         @yield('content')
+    
     </main>
     
     {{-- Footer complet pour ClicBillet CI --}}
@@ -271,7 +416,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                         La plateforme de référence pour découvrir et réserver vos événements favoris en Côte d'Ivoire. 
                         Concerts, théâtre, sports, conférences... Tout en quelques clics !
                     </p>
-                    
+                   
                     {{-- Réseaux sociaux --}}
                     <div class="social-links">
                         <h6 class="fw-semibold mb-3">Suivez-nous</h6>
@@ -560,6 +705,185 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                 }
             }, 5000);
         };
+
+        /**
+ * Système de notifications Toast amélioré
+ */
+class NotificationSystem {
+    constructor() {
+        this.container = document.getElementById('toastContainer');
+        if (!this.container) {
+            this.createContainer();
+        }
+    }
+
+    createContainer() {
+        this.container = document.createElement('div');
+        this.container.id = 'toastContainer';
+        this.container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        this.container.style.zIndex = '9999';
+        document.body.appendChild(this.container);
+    }
+
+    show(message, type = 'info', options = {}) {
+        const config = {
+            duration: 5000,
+            showClose: true,
+            title: this.getDefaultTitle(type),
+            ...options
+        };
+
+        const toast = this.createToast(message, type, config);
+        this.container.appendChild(toast);
+
+        // Animation d'entrée
+        requestAnimationFrame(() => {
+            toast.style.display = 'block';
+        });
+
+        // Auto-remove
+        if (config.duration > 0) {
+            setTimeout(() => {
+                this.hide(toast);
+            }, config.duration);
+        }
+
+        return toast;
+    }
+
+    createToast(message, type, config) {
+        const toast = document.createElement('div');
+        toast.className = `toast-custom ${type}`;
+        toast.style.display = 'none';
+
+        const icon = this.getIcon(type);
+        
+        toast.innerHTML = `
+            <div class="toast-header-custom">
+                <div class="toast-icon ${type}">
+                    <i class="${icon}"></i>
+                </div>
+                <h6 class="toast-title">${config.title}</h6>
+                ${config.showClose ? `
+                    <button type="button" class="toast-close" aria-label="Fermer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                ` : ''}
+            </div>
+            <div class="toast-body-custom">
+                ${message}
+            </div>
+        `;
+
+        // Event listener pour fermer
+        if (config.showClose) {
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', () => {
+                this.hide(toast);
+            });
+        }
+
+        return toast;
+    }
+
+    hide(toast) {
+        toast.classList.add('hiding');
+        
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }
+
+    getIcon(type) {
+        const icons = {
+            success: 'fas fa-check',
+            error: 'fas fa-times',
+            warning: 'fas fa-exclamation-triangle',
+            info: 'fas fa-info'
+        };
+        return icons[type] || icons.info;
+    }
+
+    getDefaultTitle(type) {
+        const titles = {
+            success: 'Succès',
+            error: 'Erreur',
+            warning: 'Attention',
+            info: 'Information'
+        };
+        return titles[type] || titles.info;
+    }
+
+    // Méthodes de raccourci
+    success(message, options = {}) {
+        return this.show(message, 'success', options);
+    }
+
+    error(message, options = {}) {
+        return this.show(message, 'error', options);
+    }
+
+    warning(message, options = {}) {
+        return this.show(message, 'warning', options);
+    }
+
+    info(message, options = {}) {
+        return this.show(message, 'info', options);
+    }
+
+    // Notification spéciale pour le panier
+    cartSuccess(message, ticketCount = 0) {
+        return this.show(message, 'success', {
+            title: '🛒 Panier mis à jour',
+            duration: 3000
+        });
+    }
+}
+
+// Initialiser le système global
+window.notifications = new NotificationSystem();
+
+// Fonctions globales pour compatibilité
+function showNotification(message, type = 'info', options = {}) {
+    return window.notifications.show(message, type, options);
+}
+
+function showSuccessNotification(message, options = {}) {
+    return window.notifications.success(message, options);
+}
+
+function showErrorNotification(message, options = {}) {
+    return window.notifications.error(message, options);
+}
+
+// Écouter les événements du panier pour les notifications automatiques
+document.addEventListener('cartUpdated', function(e) {
+    if (e.detail && e.detail.message) {
+        window.notifications.cartSuccess(e.detail.message, e.detail.count);
+    }
+});
+
+// Support des notifications Laravel Flash
+document.addEventListener('DOMContentLoaded', function() {
+    // Convertir les flash messages Laravel en notifications toast
+    @if(session('success'))
+        window.notifications.success('{{ session('success') }}');
+    @endif
+    
+    @if(session('error'))
+        window.notifications.error('{{ session('error') }}');
+    @endif
+    
+    @if(session('warning'))
+        window.notifications.warning('{{ session('warning') }}');
+    @endif
+    
+    @if(session('info'))
+        window.notifications.info('{{ session('info') }}');
+    @endif
+});
     </script>
 
     

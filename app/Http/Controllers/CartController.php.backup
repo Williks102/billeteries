@@ -9,110 +9,9 @@ use App\Models\Event;
 class CartController extends Controller
 {
     /**
-     * Ajouter des billets au panier - NOUVELLE VERSION POUR MODAL
+     * Ajouter des billets au panier
      */
     public function add(Request $request)
-    {
-        // Supporter les deux formats : ancien (single) et nouveau (multiple)
-        if ($request->has('tickets')) {
-            // Nouveau format du modal (multiple tickets)
-            return $this->addMultipleTickets($request);
-        } else {
-            // Ancien format (single ticket) pour compatibilité
-            return $this->addSingleTicket($request);
-        }
-    }
-
-    /**
-     * Ajouter plusieurs types de billets (format modal)
-     */
-    private function addMultipleTickets(Request $request)
-    {
-        $request->validate([
-            'event_id' => 'required|exists:events,id',
-            'tickets' => 'required|array|min:1',
-            'tickets.*.ticket_type_id' => 'required|exists:ticket_types,id',
-            'tickets.*.quantity' => 'required|integer|min:1|max:10'
-        ]);
-
-        $event = Event::findOrFail($request->event_id);
-        $cart = session()->get('cart', []);
-        $addedTickets = [];
-        $totalAdded = 0;
-
-        foreach ($request->tickets as $ticketData) {
-            $ticketType = TicketType::with('event')->findOrFail($ticketData['ticket_type_id']);
-            
-            // Vérifier que le ticket appartient bien à cet événement
-            if ($ticketType->event_id != $request->event_id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Type de billet non valide pour cet événement.'
-                ], 400);
-            }
-
-            // Vérifier la disponibilité
-            $requestedQuantity = $ticketData['quantity'];
-            $cartKey = 'ticket_' . $ticketType->id;
-            $currentCartQuantity = isset($cart[$cartKey]) ? $cart[$cartKey]['quantity'] : 0;
-            $totalQuantity = $currentCartQuantity + $requestedQuantity;
-
-            if (!$ticketType->canPurchaseQuantity($totalQuantity)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Quantité non disponible pour '{$ticketType->name}'. Maximum: " . ($ticketType->max_per_order ?? 10)
-                ], 400);
-            }
-
-            // Ajouter ou mettre à jour dans le panier
-            if (isset($cart[$cartKey])) {
-                $cart[$cartKey]['quantity'] = $totalQuantity;
-                $cart[$cartKey]['total_price'] = $cart[$cartKey]['unit_price'] * $totalQuantity;
-            } else {
-                $cart[$cartKey] = [
-                    'ticket_type_id' => $ticketType->id,
-                    'event_id' => $ticketType->event_id,
-                    'event_title' => $ticketType->event->title,
-                    'event_date' => $ticketType->event->formatted_event_date,
-                    'event_venue' => $ticketType->event->venue,
-                    'event_image' => $ticketType->event->image,
-                    'ticket_name' => $ticketType->name,
-                    'unit_price' => $ticketType->price,
-                    'quantity' => $requestedQuantity,
-                    'total_price' => $ticketType->price * $requestedQuantity,
-                    'max_per_order' => $ticketType->max_per_order
-                ];
-            }
-
-            $addedTickets[] = [
-                'name' => $ticketType->name,
-                'quantity' => $requestedQuantity
-            ];
-            $totalAdded += $requestedQuantity;
-        }
-
-        // Sauvegarder le panier
-        session()->put('cart', $cart);
-
-        // Message de succès personnalisé
-        $message = $totalAdded === 1 
-            ? "1 billet ajouté au panier !"
-            : "{$totalAdded} billets ajoutés au panier !";
-
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'added_tickets' => $addedTickets,
-            'cart_count' => $this->getCartCount(),
-            'cart_total' => $this->getCartTotal(),
-            'redirect' => route('cart.show') // Optionnel pour redirection
-        ]);
-    }
-
-    /**
-     * Ajouter un seul type de billet (ancien format)
-     */
-    private function addSingleTicket(Request $request)
     {
         $request->validate([
             'ticket_type_id' => 'required|exists:ticket_types,id',
@@ -121,7 +20,7 @@ class CartController extends Controller
 
         $ticketType = TicketType::with('event')->findOrFail($request->ticket_type_id);
         
-        // Vérifier la disponibilité
+        // Vérifier que les billets sont disponibles
         if (!$ticketType->canPurchaseQuantity($request->quantity)) {
             return response()->json([
                 'success' => false,
@@ -129,13 +28,17 @@ class CartController extends Controller
             ], 400);
         }
 
+        // Récupérer le panier actuel depuis la session
         $cart = session()->get('cart', []);
+        
+        // Clé unique pour ce type de billet
         $cartKey = 'ticket_' . $ticketType->id;
         
-        // Si le billet existe déjà dans le panier
+        // Si le billet existe déjà dans le panier, augmenter la quantité
         if (isset($cart[$cartKey])) {
             $newQuantity = $cart[$cartKey]['quantity'] + $request->quantity;
             
+            // Vérifier que la nouvelle quantité ne dépasse pas les limites
             if (!$ticketType->canPurchaseQuantity($newQuantity)) {
                 return response()->json([
                     'success' => false,
@@ -146,14 +49,13 @@ class CartController extends Controller
             $cart[$cartKey]['quantity'] = $newQuantity;
             $cart[$cartKey]['total_price'] = $cart[$cartKey]['unit_price'] * $newQuantity;
         } else {
-            // Nouveau billet dans le panier
+            // Ajouter nouveau billet au panier
             $cart[$cartKey] = [
                 'ticket_type_id' => $ticketType->id,
                 'event_id' => $ticketType->event_id,
                 'event_title' => $ticketType->event->title,
                 'event_date' => $ticketType->event->formatted_event_date,
                 'event_venue' => $ticketType->event->venue,
-                'event_image' => $ticketType->event->image,
                 'ticket_name' => $ticketType->name,
                 'unit_price' => $ticketType->price,
                 'quantity' => $request->quantity,
@@ -162,6 +64,7 @@ class CartController extends Controller
             ];
         }
         
+        // Sauvegarder le panier en session
         session()->put('cart', $cart);
         
         return response()->json([
@@ -172,25 +75,6 @@ class CartController extends Controller
         ]);
     }
 
-    /**
-     * API pour obtenir les données du panier
-     */
-    public function getCartData()
-    {
-        $cart = session()->get('cart', []);
-        
-        return response()->json([
-            'cart' => $cart,
-            'totalItems' => $this->getCartCount(), // Support pour le badge du header
-            'count' => $this->getCartCount(),
-            'cart_count' => $this->getCartCount(),
-            'cart_total' => $this->getCartTotal(),
-            'formatted_total' => number_format($this->getCartTotal()) . ' FCFA'
-        ]);
-    }
-
-    // ... Autres méthodes existantes (show, update, remove, clear, etc.)
-    
     /**
      * Afficher le panier
      */
@@ -231,7 +115,7 @@ class CartController extends Controller
             ], 400);
         }
 
-        // Mettre à jour
+        // Mettre à jour la quantité
         $cart[$request->cart_key]['quantity'] = $request->quantity;
         $cart[$request->cart_key]['total_price'] = $cart[$request->cart_key]['unit_price'] * $request->quantity;
         
@@ -290,7 +174,7 @@ class CartController extends Controller
     }
 
     /**
-     * Obtenir le nombre total d'articles
+     * Obtenir le nombre total d'articles dans le panier
      */
     public function getCartCount()
     {
@@ -305,5 +189,18 @@ class CartController extends Controller
     {
         $cart = session()->get('cart', []);
         return array_sum(array_column($cart, 'total_price'));
+    }
+
+    /**
+     * API pour obtenir les données du panier - CORRECTION
+     */
+    public function getCartData()
+    {
+        return response()->json([
+            'cart' => session()->get('cart', []),
+            'count' => $this->getCartCount(), // CORRIGÉ : count au lieu de cart_count
+            'cart_count' => $this->getCartCount(), // Gardé pour compatibilité
+            'cart_total' => $this->getCartTotal()
+        ]);
     }
 }

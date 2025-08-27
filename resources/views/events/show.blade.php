@@ -178,12 +178,13 @@
 <!-- SYSTÈME UNIFIÉ DE RÉSERVATION - SCRIPT CORRIGÉ -->
 <script>
 // ===== CLASSE PRINCIPALE DE GESTION DES RÉSERVATIONS =====
+// ===== CLASSE PRINCIPALE DE GESTION DES RÉSERVATIONS =====
 class BookingSystem {
     constructor() {
         this.selectedTickets = {};
         this.isTimerActive = false;
         this.timerInterval = null;
-        this.timeRemaining = 15 * 60;
+        this.timeRemaining = 15 * 60; // 15 minutes en secondes
         
         this.init();
     }
@@ -192,9 +193,12 @@ class BookingSystem {
         console.log('🚀 Initialisation du système de réservation');
         this.setupEventListeners();
         this.updateButtons();
+        this.updateSummary();
     }
     
     setupEventListeners() {
+        console.log('📡 Configuration des event listeners');
+        
         // Gestionnaires pour les boutons + et -
         $(document).on('click', '.qty-btn', (e) => {
             e.preventDefault();
@@ -212,30 +216,50 @@ class BookingSystem {
         });
         
         // Gestionnaire pour le bouton de réservation
-        $(document).on('click', '#reserveBtn, #reserveBtnDesktop', () => {
+        $(document).on('click', '#reserveBtn, #reserveBtnDesktop', (e) => {
+            e.preventDefault();
+            console.log('🎫 Bouton réservation cliqué');
             this.reserveTickets();
+        });
+        
+        // Debug des boutons existants
+        console.log('Boutons trouvés:', {
+            mobile: $('#reserveBtn').length,
+            desktop: $('#reserveBtnDesktop').length,
+            qtyButtons: $('.qty-btn').length
         });
     }
     
     increaseQuantity(ticketTypeId) {
+        console.log(`➕ Augmenter quantité pour ticket ${ticketTypeId}`);
+        
         // Sélectionner TOUS les affichages (mobile et desktop)
         const displays = $(`#qty_${ticketTypeId}, #qty_${ticketTypeId}_desktop`);
-        if (displays.length === 0) return;
+        if (displays.length === 0) {
+            console.error(`❌ Aucun affichage trouvé pour ticket ${ticketTypeId}`);
+            return;
+        }
         
         const display = displays.first();
         const currentQty = parseInt(display.text()) || 0;
         const maxPerOrder = parseInt(display.data('max')) || 10;
         const available = parseInt(display.data('available')) || 0;
+        const maxAllowed = Math.min(maxPerOrder, available);
         
-        if (currentQty < Math.min(maxPerOrder, available)) {
+        console.log(`Quantité actuelle: ${currentQty}, Max: ${maxAllowed}`);
+        
+        if (currentQty < maxAllowed) {
             const newQty = currentQty + 1;
             this.setQuantity(ticketTypeId, newQty);
         } else {
             this.showLimitFeedback(display);
+            console.log(`⚠️ Limite atteinte pour ticket ${ticketTypeId}`);
         }
     }
     
     decreaseQuantity(ticketTypeId) {
+        console.log(`➖ Diminuer quantité pour ticket ${ticketTypeId}`);
+        
         const displays = $(`#qty_${ticketTypeId}, #qty_${ticketTypeId}_desktop`);
         if (displays.length === 0) return;
         
@@ -250,13 +274,15 @@ class BookingSystem {
     setQuantity(ticketTypeId, quantity) {
         quantity = Math.max(0, parseInt(quantity) || 0);
         
+        console.log(`🔢 Mise à jour quantité: ticket ${ticketTypeId} = ${quantity}`);
+        
         // Mettre à jour TOUS les affichages (mobile et desktop)
         const displays = $(`#qty_${ticketTypeId}, #qty_${ticketTypeId}_desktop`);
         displays.each(function() {
             $(this).text(quantity);
         });
         
-        // Mettre à jour la sélection
+        // Mettre à jour la sélection interne
         if (quantity > 0) {
             this.selectedTickets[ticketTypeId] = quantity;
             displays.closest('.ticket-type').addClass('has-selection');
@@ -267,11 +293,15 @@ class BookingSystem {
         
         this.updateSummary();
         this.updateButtons();
+        
+        console.log('📊 État actuel:', this.selectedTickets);
     }
     
     updateSummary() {
         const totalTickets = this.getTotalTickets();
         const totalPrice = this.getTotalPrice();
+        
+        console.log(`📋 Résumé: ${totalTickets} billets, ${totalPrice} FCFA`);
         
         if (totalTickets === 0) {
             $('#summaryContent, #summaryContentDesktop').html('');
@@ -294,6 +324,8 @@ class BookingSystem {
         const totalTickets = this.getTotalTickets();
         const buttons = $('#reserveBtn, #reserveBtnDesktop');
         
+        console.log(`🔘 Mise à jour boutons: ${totalTickets} billets sélectionnés`);
+        
         if (totalTickets === 0) {
             buttons.prop('disabled', true)
                    .html('<i class="fas fa-ticket-alt me-2"></i>Sélectionnez vos billets');
@@ -303,104 +335,124 @@ class BookingSystem {
         }
     }
     
+    // ===== FONCTION DE RÉSERVATION PRINCIPALE =====
     async reserveTickets() {
+        console.log('🚀 Début de la réservation');
+        
         const totalTickets = this.getTotalTickets();
         
         if (totalTickets === 0) {
             this.showAlert('Veuillez sélectionner au moins un billet', 'error');
+            console.log('❌ Aucun billet sélectionné');
             return;
         }
         
-        const buttons = $('#reserveBtn, #reserveBtnDesktop');
-        const originalHtml = buttons.html();
+        // Préparer les données pour l'API
+        const ticketsData = [];
+        Object.keys(this.selectedTickets).forEach(ticketTypeId => {
+            ticketsData.push({
+                ticket_type_id: ticketTypeId,
+                quantity: this.selectedTickets[ticketTypeId]
+            });
+        });
         
-        buttons.prop('disabled', true)
-               .html('<i class="fas fa-spinner fa-spin me-2"></i>Réservation...');
+        const requestData = {
+            event_id: this.getEventId(),
+            tickets: ticketsData
+        };
+        
+        console.log('📤 Données envoyées:', requestData);
+        
+        // Désactiver les boutons pendant la requête
+        const reserveButtons = $('#reserveBtn, #reserveBtnDesktop');
+        const originalHtml = reserveButtons.html();
+        
+        reserveButtons.prop('disabled', true)
+                     .html('<i class="fas fa-spinner fa-spin me-2"></i>Réservation en cours...');
         
         try {
-            // Préparer les données pour l'ajout au panier
-            const requests = [];
-            
-            Object.keys(this.selectedTickets).forEach(ticketTypeId => {
-                const quantity = this.selectedTickets[ticketTypeId];
-                
-                const formData = new FormData();
-                formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
-                formData.append('ticket_type_id', ticketTypeId);
-                formData.append('quantity', quantity);
-                
-                requests.push(
-                    fetch('/cart/add', {
-                        method: 'POST',
-                        body: formData
-                    })
-                );
+            const response = await fetch('{{ route("cart.add") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestData)
             });
             
-            // Envoyer toutes les requêtes
-            const responses = await Promise.all(requests);
-            const results = await Promise.all(responses.map(r => r.json()));
+            console.log('📡 Réponse statut:', response.status);
             
-            // Vérifier si toutes les requêtes ont réussi
-            const allSuccessful = results.every(result => result.success);
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
             
-            if (allSuccessful) {
-                this.showAlert('Billets ajoutés au panier avec succès !', 'success');
+            const data = await response.json();
+            console.log('📥 Réponse reçue:', data);
+            
+            if (data.success) {
+                // Animation de succès
+                reserveButtons.html('<i class="fas fa-check me-2"></i>Ajouté au panier !');
+                reserveButtons.removeClass('btn-reserve').addClass('btn-success');
                 
-                // Démarrer le timer
-                this.startTimer();
+                this.showAlert(data.message, 'success');
                 
-                // Rediriger vers le panier
+                // Mettre à jour le compteur du header si présent
+                this.updateCartBadge(data.cart_count);
+                
+                // Redirection après délai
                 setTimeout(() => {
-                    window.location.href = '/cart';
-                }, 1500);
-            } else {
-                const errors = results.filter(r => !r.success).map(r => r.message);
-                this.showAlert(`Erreurs: ${errors.join(', ')}`, 'error');
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        window.location.href = '{{ route("cart.show") }}';
+                    }
+                }, 2000);
                 
-                buttons.prop('disabled', false).html(originalHtml);
+            } else {
+                throw new Error(data.message || 'Erreur lors de la réservation');
             }
             
         } catch (error) {
-            console.error('Erreur réservation:', error);
-            this.showAlert('Erreur lors de la réservation. Veuillez réessayer.', 'error');
+            console.error('❌ Erreur réservation:', error);
             
-            buttons.prop('disabled', false).html(originalHtml);
+            // Remettre le bouton en état
+            reserveButtons.prop('disabled', false)
+                         .html(originalHtml)
+                         .removeClass('btn-success')
+                         .addClass('btn-reserve');
+            
+            this.showAlert(error.message || 'Erreur lors de la réservation. Veuillez réessayer.', 'error');
         }
     }
     
+    // ===== GESTION DU TIMER =====
     startTimer() {
         if (this.isTimerActive) return;
         
         this.isTimerActive = true;
-        this.timeRemaining = 15 * 60;
-        
-        // Afficher les conteneurs de timer
         $('#timerContainer, #timerContainerDesktop').show();
         
         this.timerInterval = setInterval(() => {
             this.timeRemaining--;
-            this.updateTimerDisplay();
             
-            if (this.timeRemaining <= 0) {
+            const minutes = Math.floor(this.timeRemaining / 60);
+            const seconds = this.timeRemaining % 60;
+            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            $('#timerDisplay, #timerDisplayDesktop').text(timeString);
+            
+            // Alertes de fin de temps
+            if (this.timeRemaining === 300) { // 5 minutes
+                this.showAlert('⏰ Plus que 5 minutes ! Finalisez votre réservation.', 'warning');
+            } else if (this.timeRemaining === 60) { // 1 minute
+                this.showAlert('🚨 Plus qu\'1 minute ! Votre panier va expirer !', 'danger');
+            } else if (this.timeRemaining <= 0) {
                 this.expireTimer();
             }
         }, 1000);
-    }
-    
-    updateTimerDisplay() {
-        const minutes = Math.floor(this.timeRemaining / 60);
-        const seconds = this.timeRemaining % 60;
-        const display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         
-        $('#timerDisplay, #timerDisplayDesktop').text(display);
-        
-        // Alertes de temps
-        if (this.timeRemaining === 300) { // 5 minutes
-            this.showAlert('⏰ Plus que 5 minutes pour finaliser votre réservation!', 'warning');
-        } else if (this.timeRemaining === 60) { // 1 minute
-            this.showAlert('🚨 Plus qu\'1 minute ! Votre panier va expirer !', 'danger');
-        }
+        console.log('⏰ Timer démarré: 15 minutes');
     }
     
     expireTimer() {
@@ -414,7 +466,7 @@ class BookingSystem {
         }, 3000);
     }
     
-    // Utilitaires
+    // ===== UTILITAIRES =====
     getTotalTickets() {
         return Object.values(this.selectedTickets).reduce((sum, qty) => sum + qty, 0);
     }
@@ -434,6 +486,22 @@ class BookingSystem {
         return new Intl.NumberFormat('fr-FR').format(price);
     }
     
+    getEventId() {
+        // Plusieurs façons de récupérer l'ID de l'événement
+        return $('input[name="event_id"]').val() || 
+               $('[data-event-id]').data('event-id') || 
+               window.eventId || 
+               {{ $event->id ?? 'null' }};
+    }
+    
+    updateCartBadge(count) {
+        const badge = $('#cartBadge');
+        if (badge.length && count > 0) {
+            badge.text(count).show().addClass('animate');
+            setTimeout(() => badge.removeClass('animate'), 600);
+        }
+    }
+    
     showAlert(message, type = 'info') {
         const alertClass = {
             'success': 'alert-success',
@@ -451,6 +519,7 @@ class BookingSystem {
             'danger': 'fas fa-exclamation-triangle'
         }[type] || 'fas fa-info-circle';
         
+        // Supprimer les anciennes alertes
         $('.cart-alert').remove();
         
         const alertHtml = `
@@ -464,6 +533,7 @@ class BookingSystem {
         
         $('body').append(alertHtml);
         
+        // Auto-remove après 5 secondes
         setTimeout(() => {
             $('.cart-alert').fadeOut(500, function() {
                 $(this).remove();
@@ -487,6 +557,18 @@ let bookingSystem;
 // Initialisation quand jQuery et le DOM sont prêts
 $(document).ready(function() {
     console.log('🚀 jQuery et DOM prêts - Démarrage du système de billetterie');
+    
+    // Vérifier les prérequis
+    if (typeof $ === 'undefined') {
+        console.error('❌ jQuery non trouvé');
+        return;
+    }
+    
+    if (!$('meta[name="csrf-token"]').length) {
+        console.error('❌ Token CSRF manquant');
+        return;
+    }
+    
     bookingSystem = new BookingSystem();
     
     // Exposer les fonctions globalement pour compatibilité
@@ -494,6 +576,8 @@ $(document).ready(function() {
     window.increaseQuantity = (ticketTypeId) => bookingSystem.increaseQuantity(ticketTypeId);
     window.decreaseQuantity = (ticketTypeId) => bookingSystem.decreaseQuantity(ticketTypeId);
     window.reserveTickets = () => bookingSystem.reserveTickets();
+    
+    console.log('✅ Système de réservation initialisé');
 });
 </script>
 @endpush

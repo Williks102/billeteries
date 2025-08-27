@@ -8,6 +8,7 @@ use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketVerificationController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\GuestCheckoutController;
 
 // Controllers spécialisés par rôle
 use App\Http\Controllers\Acheteur\AcheteurController;
@@ -93,6 +94,42 @@ Route::middleware(['auth'])->get('/dashboard', function() {
         default => redirect()->route('home')->with('error', 'Rôle utilisateur non reconnu')
     };
 })->name('dashboard');
+
+Route::prefix('checkout')->name('checkout.')->group(function () {
+    
+    // Checkout classique (nécessite auth)
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/', [CheckoutController::class, 'show'])->name('show');
+        Route::post('/process', [CheckoutController::class, 'process'])->name('process');
+    });
+    
+    // Checkout invité (sans auth)
+    Route::prefix('guest')->name('guest.')->group(function () {
+        Route::get('/', [GuestCheckoutController::class, 'show'])->name('show');
+        Route::post('/process', [GuestCheckoutController::class, 'process'])->name('process');
+        Route::get('/confirmation/{token}', [GuestCheckoutController::class, 'confirmation'])->name('confirmation');
+        Route::post('/create-account/{token}', [GuestCheckoutController::class, 'createAccountAfterPurchase'])->name('create-account');
+    });
+    
+    // Redirection intelligente depuis le panier
+    Route::get('/choose', function() {
+        if (auth()->check()) {
+            return redirect()->route('checkout.show');
+        }
+        return redirect()->route('checkout.guest.show');
+    })->name('choose');
+});
+
+Route::post('/api/check-email', function(Request $request) {
+    $request->validate(['email' => 'required|email']);
+    
+    $exists = \App\Models\User::where('email', $request->email)->exists();
+    
+    return response()->json([
+        'available' => !$exists,
+        'exists' => $exists
+    ]);
+})->name('api.check-email');
 
 Route::middleware(['auth'])->group(function () {
     

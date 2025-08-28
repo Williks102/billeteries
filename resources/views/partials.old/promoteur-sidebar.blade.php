@@ -17,7 +17,7 @@
         </a>
         
         <a class="nav-link {{ request()->routeIs('promoteur.scanner*') ? 'active' : '' }}" 
-           href="{{ route('promoteur.scanner') }}">
+           href="{{ route('promoteur.scanner.index') }}">
             <i class="fas fa-qrcode me-2"></i>Scanner Billets
         </a>
         

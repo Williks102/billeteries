@@ -310,7 +310,7 @@
                     
         
                     
-                    <a href="{{ route('promoteur.scanner') }}" class="btn btn-outline-secondary">
+                    <a href="{{ route('promoteur.scanner.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-qrcode me-2"></i>Scanner QR
                     </a>
                 </div>

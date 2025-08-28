@@ -14,7 +14,7 @@
     @if($order->payment_status === 'paid')
         <div class="highlight">
             <p><strong>🎉 Votre paiement a été confirmé !</strong><br>
-            Vos billets sont en pièce jointe de cet email.</p>
+            Vos billets sont disponibles sur votre espace.</p>
         </div>
     @else
         <div class="highlight">

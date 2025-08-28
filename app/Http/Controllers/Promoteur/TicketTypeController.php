@@ -3,171 +3,330 @@
 namespace App\Http\Controllers\Promoteur;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
+
+use App\Models\TicketType;
+use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Event;
-use App\Models\TicketType;
-use App\Models\EventCategory;
-use App\Models\Commission;
-use Carbon\Carbon;
 
 class TicketTypeController extends Controller
 {
     /**
-     * Formulaire de création de types de billets
-     */
-    public function create(Event $event)
-    {
-        // Vérifier que l'événement appartient au promoteur connecté
-        if ($event->promoter_id !== Auth::id()) {
-            abort(403, 'Vous n\'êtes pas autorisé à modifier cet événement');
-        }
-        
-        return view('promoteur.events.tickets.create', compact('event'));
-    }
-    
-    /**
-     * Sauvegarder les types de billets
-     */
-    public function store(Request $request, Event $event)
-    {
-        if ($event->promoter_id !== Auth::id()) {
-            abort(403, 'Vous n\'êtes pas autorisé à modifier cet événement');
-        }
-        
-        $request->validate([
-            'ticket_types' => 'required|array|min:1',
-            'ticket_types.*.name' => 'required|string|max:255',
-            'ticket_types.*.description' => 'nullable|string|max:500',
-            'ticket_types.*.price' => 'required|numeric|min:0',
-            'ticket_types.*.quantity_available' => 'required|integer|min:1',
-            'ticket_types.*.sale_start_date' => 'required|date|after_or_equal:today',
-            'ticket_types.*.sale_end_date' => 'required|date|after:sale_start_date',
-            'ticket_types.*.max_per_order' => 'required|integer|min:1|max:20',
-        ], [
-            'ticket_types.required' => 'Vous devez créer au moins un type de billet',
-            'ticket_types.*.name.required' => 'Le nom du billet est obligatoire',
-            'ticket_types.*.price.required' => 'Le prix est obligatoire',
-            'ticket_types.*.price.min' => 'Le prix ne peut pas être négatif',
-            'ticket_types.*.quantity_available.required' => 'La quantité est obligatoire',
-            'ticket_types.*.sale_end_date.after' => 'La fin de vente doit être après le début',
-        ]);
-        
-        foreach ($request->ticket_types as $typeData) {
-            TicketType::create([
-                'event_id' => $event->id,
-                'name' => $typeData['name'],
-                'description' => $typeData['description'] ?? '',
-                'price' => $typeData['price'], // Prix en FCFA
-                'quantity_available' => $typeData['quantity_available'],
-                'quantity_sold' => 0,
-                'sale_start_date' => Carbon::parse($typeData['sale_start_date']),
-                'sale_end_date' => Carbon::parse($typeData['sale_end_date'] . ' 23:59:59'),
-                'max_per_order' => $typeData['max_per_order'],
-                'is_active' => true,
-            ]);
-        }
-        
-        return redirect()->route('promoteur.events.show', $event)
-            ->with('success', 'Types de billets créés avec succès ! Votre événement est maintenant prêt à être publié.');
-    }
-    
-    /**
-     * Liste des types de billets pour un événement
+     * Liste des types de billets d'un événement
      */
     public function index(Event $event)
     {
-        if ($event->promoter_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('view', $event);
         
-        $ticketTypes = $event->ticketTypes()->orderBy('price', 'asc')->get();
-        
-        return view('promoteur.events.tickets.index', compact('event', 'ticketTypes'));
+        $ticketTypes = $event->ticketTypes()
+            ->withCount(['orderItems', 'tickets'])
+            ->withSum(['orderItems as revenue' => function($query) {
+                $query->whereHas('order', function($q) {
+                    $q->where('status', 'paid');
+                });
+            }], 'total_price')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Enrichir avec des statistiques de scan - CORRIGÉ
+        $ticketTypes->map(function($ticketType) {
+            $allTickets = $ticketType->tickets;
+            $ticketType->used_tickets = $allTickets->where('status', 'used')->count();
+            $ticketType->sold_tickets = $allTickets->where('status', 'sold')->count();
+            $ticketType->unused_sold = $ticketType->sold_tickets; // Vendus mais pas utilisés
+            return $ticketType;
+        });
+
+        return view('promoteur.ticket-types.index', compact('event', 'ticketTypes'));
     }
-    
+
     /**
-     * Formulaire d'édition d'un type de billet
+     * Formulaire de création d'un type de billet
      */
-    public function edit(Event $event, TicketType $ticketType)
+    public function create(Event $event)
     {
-        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
-            abort(403);
-        }
+        $this->authorize('update', $event);
         
-        return view('promoteur.events.tickets.edit', compact('event', 'ticketType'));
+        return view('promoteur.ticket-types.create', compact('event'));
     }
-    
+
     /**
-     * Mettre à jour un type de billet
+     * Enregistrer un nouveau type de billet
      */
-    public function update(Request $request, Event $event, TicketType $ticketType)
+    public function store(Request $request, Event $event)
     {
-        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
-            abort(403);
-        }
+        $this->authorize('update', $event);
         
         $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:500',
+            'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'quantity_available' => 'required|integer|min:' . $ticketType->quantity_sold,
-            'sale_start_date' => 'required|date',
-            'sale_end_date' => 'required|date|after:sale_start_date',
-            'max_per_order' => 'required|integer|min:1|max:20',
-        ], [
-            'quantity_available.min' => 'La quantité ne peut pas être inférieure au nombre de billets déjà vendus (' . $ticketType->quantity_sold . ')',
+            'quantity' => 'required|integer|min:1|max:10000',
+            'sale_start_date' => 'nullable|date',
+            'sale_end_date' => 'nullable|date|after:sale_start_date',
+            'is_active' => 'boolean'
         ]);
-        
-        $ticketType->update([
-            'name' => $request->name,
-            'description' => $request->description ?? '',
-            'price' => $request->price,
-            'quantity_available' => $request->quantity_available,
-            'sale_start_date' => Carbon::parse($request->sale_start_date),
-            'sale_end_date' => Carbon::parse($request->sale_end_date . ' 23:59:59'),
-            'max_per_order' => $request->max_per_order,
-        ]);
-        
+
+        // Vérifications métier
+        if ($request->sale_end_date && Carbon::parse($request->sale_end_date)->gt($event->event_date)) {
+            return back()->withErrors([
+                'sale_end_date' => 'La date de fin de vente ne peut pas être après la date de l\'événement'
+            ]);
+        }
+
+        $ticketTypeData = $request->all();
+        $ticketTypeData['event_id'] = $event->id;
+        $ticketTypeData['is_active'] = $request->has('is_active');
+
+        $ticketType = TicketType::create($ticketTypeData);
+
         return redirect()->route('promoteur.events.tickets.index', $event)
-            ->with('success', 'Type de billet modifié avec succès !');
+            ->with('success', 'Type de billet créé avec succès');
     }
-    
+
+    /**
+     * Formulaire d'édition d'un type de billet
+     */
+    public function edit(Event $event, TicketType $ticket)
+    {
+        $this->authorize('update', $event);
+        
+        if ($ticket->event_id !== $event->id) {
+            abort(404);
+        }
+
+        return view('promoteur.ticket-types.edit', compact('event', 'ticket'));
+    }
+
+    /**
+     * Mettre à jour un type de billet
+     */
+    public function update(Request $request, Event $event, TicketType $ticket)
+    {
+        $this->authorize('update', $event);
+        
+        if ($ticket->event_id !== $event->id) {
+            abort(404);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'quantity' => 'required|integer|min:1|max:10000',
+            'sale_start_date' => 'nullable|date',
+            'sale_end_date' => 'nullable|date|after:sale_start_date',
+            'is_active' => 'boolean'
+        ]);
+
+        // Vérifier qu'on ne réduit pas la quantité en dessous des billets vendus
+        $soldTickets = $ticket->orderItems()->whereHas('order', function($query) {
+            $query->where('status', 'paid');
+        })->sum('quantity');
+
+        if ($request->quantity < $soldTickets) {
+            return back()->withErrors([
+                'quantity' => "Impossible de réduire la quantité en dessous de {$soldTickets} (billets déjà vendus)"
+            ]);
+        }
+
+        // Vérifications de dates
+        if ($request->sale_end_date && Carbon::parse($request->sale_end_date)->gt($event->event_date)) {
+            return back()->withErrors([
+                'sale_end_date' => 'La date de fin de vente ne peut pas être après la date de l\'événement'
+            ]);
+        }
+
+        $ticketTypeData = $request->all();
+        $ticketTypeData['is_active'] = $request->has('is_active');
+
+        $ticket->update($ticketTypeData);
+
+        return redirect()->route('promoteur.events.tickets.index', $event)
+            ->with('success', 'Type de billet mis à jour avec succès');
+    }
+
     /**
      * Supprimer un type de billet
      */
-    public function destroy(Event $event, TicketType $ticketType)
+    public function destroy(Event $event, TicketType $ticket)
     {
-        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
-            abort(403);
+        $this->authorize('update', $event);
+        
+        if ($ticket->event_id !== $event->id) {
+            abort(404);
         }
-        
-        // Vérifier qu'aucun billet n'a été vendu
-        if ($ticketType->quantity_sold > 0) {
-            return redirect()->back()
-                ->with('error', 'Impossible de supprimer un type de billet qui a été vendu.');
+
+        // Vérifier qu'il n'y a pas de billets vendus
+        if ($ticket->orderItems()->whereHas('order', function($query) {
+            $query->where('status', 'paid');
+        })->exists()) {
+            return back()->with('error', 'Impossible de supprimer un type de billet avec des ventes');
         }
-        
-        $ticketType->delete();
-        
-        return redirect()->back()
-            ->with('success', 'Type de billet supprimé avec succès.');
+
+        $ticket->delete();
+
+        return redirect()->route('promoteur.events.tickets.index', $event)
+            ->with('success', 'Type de billet supprimé avec succès');
     }
-    
+
     /**
      * Activer/Désactiver un type de billet
      */
-    public function toggle(Event $event, TicketType $ticketType)
+    public function toggle(Event $event, TicketType $ticket)
     {
-        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
-            abort(403);
+        $this->authorize('update', $event);
+        
+        if ($ticket->event_id !== $event->id) {
+            return response()->json(['success' => false, 'message' => 'Type de billet non trouvé'], 404);
+        }
+
+        $ticket->update(['is_active' => !$ticket->is_active]);
+
+        $status = $ticket->is_active ? 'activé' : 'désactivé';
+        
+        return response()->json([
+            'success' => true,
+            'message' => "Type de billet {$status}",
+            'is_active' => $ticket->is_active
+        ]);
+    }
+
+    /**
+     * Dupliquer un type de billet
+     */
+    public function duplicate(Event $event, TicketType $ticket)
+    {
+        $this->authorize('update', $event);
+        
+        if ($ticket->event_id !== $event->id) {
+            abort(404);
+        }
+
+        $newTicketType = $ticket->replicate();
+        $newTicketType->name = $ticket->name . ' (Copie)';
+        $newTicketType->is_active = false;
+        $newTicketType->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Type de billet dupliqué',
+            'redirect' => route('promoteur.events.tickets.edit', [$event, $newTicketType])
+        ]);
+    }
+
+    /**
+     * Statistiques d'un type de billet - CORRIGÉ
+     */
+    public function stats(Event $event, TicketType $ticket)
+    {
+        $this->authorize('view', $event);
+        
+        if ($ticket->event_id !== $event->id) {
+            abort(404);
+        }
+
+        // Statistiques de base
+        $soldQuantity = $ticket->orderItems()->whereHas('order', function($query) {
+            $query->where('status', 'paid');
+        })->sum('quantity');
+
+        $revenue = $ticket->orderItems()->whereHas('order', function($query) {
+            $query->where('status', 'paid');
+        })->sum('total_price');
+
+        $ordersCount = $ticket->orderItems()->whereHas('order', function($query) {
+            $query->where('status', 'paid');
+        })->count();
+
+        // Statistiques d'utilisation - CORRIGÉ
+        $allTickets = $ticket->tickets;
+        $ticketsUsed = $allTickets->where('status', 'used')->count();
+        $ticketsUnused = $allTickets->where('status', 'sold')->count();
+
+        $stats = [
+            'total_quantity' => $ticket->quantity,
+            'sold_quantity' => $soldQuantity,
+            'revenue' => $revenue,
+            'orders_count' => $ordersCount,
+            'tickets_used' => $ticketsUsed,
+            'tickets_unused' => $ticketsUnused,
+            'remaining_quantity' => $ticket->quantity - $soldQuantity,
+            'usage_rate' => $soldQuantity > 0 
+                ? round(($ticketsUsed / $soldQuantity) * 100, 1) 
+                : 0
+        ];
+
+        // Évolution des ventes par jour - CORRIGÉ
+        $salesEvolution = $ticket->orderItems()
+            ->whereHas('order', function($query) {
+                $query->where('status', 'paid');
+            })
+            ->selectRaw('DATE(created_at) as date, SUM(quantity) as tickets_sold, SUM(total_price) as daily_revenue')
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->take(30)
+            ->get();
+
+        // Évolution des utilisations par jour
+        $usageEvolution = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $usedCount = Ticket::where('ticket_type_id', $ticket->id)
+                ->where('status', 'used')
+                ->whereDate('updated_at', $date)
+                ->count();
+                
+            $usageEvolution[] = [
+                'date' => $date->format('d/m'),
+                'count' => $usedCount
+            ];
+        }
+
+        return response()->json([
+            'stats' => $stats,
+            'sales_evolution' => $salesEvolution,
+            'usage_evolution' => $usageEvolution
+        ]);
+    }
+
+    /**
+     * Vérifier la disponibilité d'un type de billet
+     */
+    public function checkAvailability(Event $event, TicketType $ticket)
+    {
+        $this->authorize('view', $event);
+        
+        if ($ticket->event_id !== $event->id) {
+            abort(404);
+        }
+
+        $soldQuantity = $ticket->orderItems()->whereHas('order', function($query) {
+            $query->where('status', 'paid');
+        })->sum('quantity');
+
+        $available = $ticket->quantity - $soldQuantity;
+        $isAvailable = $available > 0 && $ticket->is_active;
+        
+        // Vérifier les dates de vente
+        $now = now();
+        $saleActive = true;
+        
+        if ($ticket->sale_start_date && $now->lt($ticket->sale_start_date)) {
+            $saleActive = false;
         }
         
-        $ticketType->update(['is_active' => !$ticketType->is_active]);
-        
-        $status = $ticketType->is_active ? 'activé' : 'désactivé';
-        
-        return redirect()->back()
-            ->with('success', "Type de billet {$status} avec succès.");
+        if ($ticket->sale_end_date && $now->gt($ticket->sale_end_date)) {
+            $saleActive = false;
+        }
+
+        return response()->json([
+            'available' => $available,
+            'is_available' => $isAvailable && $saleActive,
+            'sale_active' => $saleActive,
+            'sold_quantity' => $soldQuantity,
+            'total_quantity' => $ticket->quantity
+        ]);
     }
 }

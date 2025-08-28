@@ -8,8 +8,11 @@ use App\Models\OrderItem;
 use App\Models\User;
 use App\Models\TicketType;
 use App\Models\Ticket;
+use App\Models\Commission;
+use App\Services\EmailService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class GuestCheckoutController extends Controller
@@ -70,15 +73,22 @@ class GuestCheckoutController extends Controller
             // 2. Créer les commandes
             $orders = $this->createOrdersFromCart($cart, $user, $request);
 
-            // 3. Envoyer les confirmations
+            // 3. 🔥 CORRECTION : Envoyer TOUS les emails (y compris promoteur)
             foreach ($orders as $order) {
-                $this->sendConfirmationEmail($order);
+                $this->sendAllOrderEmails($order);
             }
 
             // 4. Nettoyer la session
             session()->forget(['cart', 'cart_timer']);
             
             DB::commit();
+
+            Log::info('Checkout invité réussi', [
+                'user_id' => $user->id,
+                'orders_count' => count($orders),
+                'is_guest' => $user->is_guest,
+                'create_account' => $request->create_account ?? false
+            ]);
 
             // Redirection selon le type d'utilisateur
             if (auth()->check()) {
@@ -93,7 +103,11 @@ class GuestCheckoutController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Erreur checkout invité: ' . $e->getMessage());
+            Log::error('Erreur checkout invité', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->only(['email', 'first_name', 'last_name'])
+            ]);
             
             return back()->withErrors(['error' => 'Erreur lors du traitement de la commande.'])
                         ->withInput();
@@ -156,28 +170,19 @@ class GuestCheckoutController extends Controller
     }
 
     /**
-     * Gérer la création/récupération de l'utilisateur
+     * Gérer la création ou récupération de l'utilisateur
      */
-    private function handleUser(Request $request)
+    private function handleUser($request)
     {
-        $email = $request->email;
-        $existingUser = User::where('email', $email)->first();
+        // Chercher un utilisateur existant avec cet email
+        $existingUser = User::where('email', $request->email)->first();
 
-        // Si utilisateur existe et veut créer un compte -> erreur
-        if ($existingUser && $request->create_account && !$existingUser->is_guest) {
-            throw new \Exception('Un compte existe déjà avec cet email. Veuillez vous connecter.');
-        }
-
-        // Si utilisateur normal existe, l'utiliser
-        if ($existingUser && !$existingUser->is_guest) {
-            return $existingUser;
-        }
-
-        // Si demande de création de compte
-        if ($request->create_account) {
-            // Si c'est un ancien invité, le convertir
-            if ($existingUser && $existingUser->is_guest) {
+        if ($existingUser) {
+            // Si l'utilisateur existe et veut créer un compte
+            if ($request->create_account && $existingUser->is_guest) {
+                // Convertir l'invité en utilisateur normal
                 $existingUser->update([
+                    'name' => $request->first_name . ' ' . $request->last_name,
                     'first_name' => $request->first_name,
                     'last_name' => $request->last_name,
                     'phone' => $request->phone,
@@ -185,46 +190,47 @@ class GuestCheckoutController extends Controller
                     'is_guest' => false,
                     'guest_converted_at' => now()
                 ]);
+                
+                // Connecter l'utilisateur
                 auth()->login($existingUser);
+                
+                Log::info('Invité converti en utilisateur', [
+                    'user_id' => $existingUser->id,
+                    'email' => $existingUser->email
+                ]);
+                
                 return $existingUser;
             }
-
-            // Créer nouveau compte normal
-            $user = User::create([
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email' => $email,
-                'phone' => $request->phone,
-                'password' => Hash::make($request->password),
-                'role' => 'acheteur',
-                'email_verified_at' => now()
-            ]);
-
-            auth()->login($user);
-            return $user;
-        }
-
-        // Créer/mettre à jour utilisateur invité
-        if ($existingUser && $existingUser->is_guest) {
-            $existingUser->update([
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'phone' => $request->phone,
-            ]);
+            
+            // Sinon, utiliser l'utilisateur existant
             return $existingUser;
         }
 
-        // Créer nouvel invité
-        return User::create([
+        // Créer un nouvel utilisateur
+        $newUser = User::create([
+            'name' => $request->first_name . ' ' . $request->last_name,
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
-            'email' => $email,
+            'email' => $request->email,
             'phone' => $request->phone,
-            'password' => Hash::make(Str::random(16)),
-            'role' => 'acheteur',
-            'is_guest' => true,
+            'password' => $request->create_account ? Hash::make($request->password) : null,
+            'is_guest' => !$request->create_account,
             'email_verified_at' => now()
         ]);
+
+        Log::info('Nouvel utilisateur créé', [
+            'user_id' => $newUser->id,
+            'email' => $newUser->email,
+            'is_guest' => $newUser->is_guest,
+            'create_account' => $request->create_account ?? false
+        ]);
+
+        // Si création de compte, connecter l'utilisateur
+        if ($request->create_account) {
+            auth()->login($newUser);
+        }
+
+        return $newUser;
     }
 
     /**
@@ -247,7 +253,7 @@ class GuestCheckoutController extends Controller
                 'user_id' => $user->id,
                 'event_id' => $eventId,
                 'total_amount' => $eventTotal + 500, // + frais de service
-                'payment_status' => 'paid',
+                'payment_status' => 'paid', // Directement payé pour les invités
                 'payment_method' => 'manual',
                 'order_number' => Order::generateOrderNumber(),
                 'billing_email' => $request->email,
@@ -255,10 +261,21 @@ class GuestCheckoutController extends Controller
                 'guest_token' => $user->is_guest ? Str::random(32) : null
             ]);
 
+            Log::info('Commande invité créée', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'user_id' => $user->id,
+                'event_id' => $eventId,
+                'total_amount' => $order->total_amount
+            ]);
+
             // Créer les items et billets
             foreach ($items as $item) {
                 $this->createOrderItemWithTickets($order, $item);
             }
+
+            // 🔥 NOUVEAU : Créer la commission
+            $this->createCommissionForOrder($order);
 
             $orders[] = $order;
         }
@@ -271,7 +288,7 @@ class GuestCheckoutController extends Controller
      */
     private function createOrderItemWithTickets($order, $item)
     {
-        $ticketType = TicketType::find($item['ticket_type_id']);
+        $ticketType = TicketType::findOrFail($item['ticket_type_id']);
         
         // Réserver le stock
         if (!$ticketType->reserveTickets($item['quantity'])) {
@@ -288,6 +305,7 @@ class GuestCheckoutController extends Controller
         ]);
 
         // Générer les billets
+        $tickets = [];
         for ($i = 0; $i < $item['quantity']; $i++) {
             $ticket = Ticket::create([
                 'ticket_type_id' => $ticketType->id,
@@ -296,6 +314,7 @@ class GuestCheckoutController extends Controller
             ]);
 
             $ticket->generateQRCode();
+            $tickets[] = $ticket;
 
             // Associer à la commande
             DB::table('order_tickets')->insert([
@@ -309,19 +328,14 @@ class GuestCheckoutController extends Controller
 
         // Mettre à jour le stock vendu
         $ticketType->increment('quantity_sold', $item['quantity']);
-    }
 
-    /**
-     * Envoyer email de confirmation
-     */
-    private function sendConfirmationEmail($order)
-    {
-        try {
-            if (class_exists('\App\Services\EmailService')) {
-                app(\App\Services\EmailService::class)->sendPaymentConfirmation($order);
-            }
-        } catch (\Exception $e) {
-            \Log::error('Erreur envoi email: ' . $e->getMessage());
-        }
+        Log::info('Billets invité générés', [
+            'order_item_id' => $orderItem->id,
+            'ticket_type' => $ticketType->name,
+            'quantity' => $item['quantity'],
+            'tickets_generated' => count($tickets)
+        ]);
+
+        return $orderItem;
     }
 }

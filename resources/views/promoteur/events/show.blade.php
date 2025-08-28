@@ -361,7 +361,7 @@ use Illuminate\Support\Facades\Storage;
                 </h6>
                 
                 <div class="d-grid gap-2">
-                    <a href="{{ route('promoteur.scanner') }}" class="btn btn-black">
+                    <a href="{{ route('promoteur.scanner.index') }}" class="btn btn-black">
                         <i class="fas fa-qrcode me-2"></i>Scanner QR
                     </a>
                     

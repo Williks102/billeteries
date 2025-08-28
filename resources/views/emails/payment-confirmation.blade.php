@@ -1,7 +1,3 @@
-{{-- =============================================== --}}
-{{-- resources/views/emails/payment-confirmation.blade.php --}}
-{{-- Email de confirmation de paiement avec billets --}}
-{{-- =============================================== --}}
 @extends('emails.layout')
 
 @section('title', 'Vos billets sont prêts !')
@@ -16,7 +12,7 @@
     
     <div class="highlight">
         <p><strong>✅ Paiement confirmé : {{ number_format($order->total_amount) }} FCFA</strong><br>
-        📎 Vos billets sont en pièce jointe de cet email</p>
+        📎 Vos billets sont disponibles sur votre espace</p>
     </div>
 
     <div class="order-summary">

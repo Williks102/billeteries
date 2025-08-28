@@ -1,4 +1,3 @@
-{-- =============================================== --}}
 {{-- resources/views/emails/layout.blade.php --}}
 {{-- Template de base pour tous les emails --}}
 {{-- =============================================== --}}
@@ -105,8 +104,8 @@
         
         <div class="email-footer">
             <p><strong>ClicBillet CI</strong><br>
-            📧 contact@clicbillet.ci | 📞 +225 XX XX XX XX<br>
-            🌐 www.clicbillet.ci</p>
+            📧 contact@clicbillet.com | 📞 +225 07 02 49 02 77<br>
+            🌐 www.clicbillet.com</p>
             
             <p><small>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</small></p>
         </div>

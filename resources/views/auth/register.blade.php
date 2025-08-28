@@ -163,20 +163,10 @@
             position: relative;
         }
         
-        .phone-prefix {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6b7280;
-            font-weight: 500;
-            z-index: 2;
-            background: white;
-            padding: 0 4px;
-        }
+        
         
         .phone-input {
-            padding-left: 70px !important;
+            padding-left: 75px !important;
         }
         
         .btn-primary {
@@ -348,9 +338,8 @@
             </div>
 
             <div class="form-floating phone-input-group">
-                <span class="phone-prefix">+225</span>
                 <input type="tel" 
-                       class="form-control phone-input @error('phone') is-invalid @enderror" 
+                       class="form-control @error('phone') is-invalid @enderror" 
                        id="phone" 
                        name="phone" 
                        placeholder="01 23 45 67 89"

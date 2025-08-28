@@ -159,7 +159,7 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ route('promoteur.scanner') }}">
+                                    <a class="dropdown-item" href="{{ route('promoteur.scanner.index') }}">
                                         <i class="fas fa-qrcode me-2"></i>Scanner QR
                                     </a>
                                 </li>

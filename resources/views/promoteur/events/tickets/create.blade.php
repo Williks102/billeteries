@@ -9,13 +9,13 @@
         margin-bottom: 2rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-
+    
     .step {
         display: flex;
         align-items: center;
         position: relative;
     }
-
+    
     .step-number {
         width: 40px;
         height: 40px;
@@ -27,102 +27,85 @@
         color: white;
         z-index: 2;
     }
-
+    
     .step-number.completed {
-        background: 
-#28a745;
+        background: #28a745;
     }
-
+    
     .step-number.active {
-        background: 
-#FF6B35;
+        background: #FF6B35;
     }
-
+    
     .step-number.pending {
-        background: 
-#6c757d;
+        background: #6c757d;
     }
-
+    
     .step-line {
         height: 2px;
         flex: 1;
         margin: 0 1rem;
     }
-
+    
     .step-line.completed {
-        background: 
-#28a745;
+        background: #28a745;
     }
-
+    
     .step-line.pending {
-        background: 
-#dee2e6;
+        background: #dee2e6;
     }
-
+    
     .card-custom {
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid 
-#FF6B35;
+        border-left: 4px solid #FF6B35;
         margin-bottom: 2rem;
     }
-
+    
     .preset-card {
-        border: 2px solid 
-#e9ecef;
+        border: 2px solid #e9ecef;
         border-radius: 10px;
         padding: 1.5rem;
         cursor: pointer;
         transition: all 0.3s ease;
         text-align: center;
     }
-
+    
     .preset-card:hover {
-        border-color: 
-#FF6B35;
+        border-color: #FF6B35;
         box-shadow: 0 4px 8px rgba(255, 107, 53, 0.2);
         transform: translateY(-2px);
     }
-
+    
     .preset-card.selected {
-        border-color: 
-#28a745;
-        background-color: 
-#f8f9fa;
+        border-color: #28a745;
+        background-color: #f8f9fa;
     }
-
+    
     .ticket-form {
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid 
-#FF6B35;
+        border-left: 4px solid #FF6B35;
         padding: 2rem;
         margin-bottom: 1.5rem;
         position: relative;
     }
-
+    
     .btn-orange {
-        background: 
-#FF6B35;
-        border-color: 
-#FF6B35;
+        background: #FF6B35;
+        border-color: #FF6B35;
         color: white;
     }
-
+    
     .btn-orange:hover {
-        background: 
-#E55A2B;
-        border-color: 
-#E55A2B;
+        background: #E55A2B;
+        border-color: #E55A2B;
         color: white;
     }
-
+    
     .revenue-card {
-        background: linear-gradient(135deg, 
-#f8f9fa, 
-#e9ecef);
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
         border-radius: 8px;
         padding: 1rem;
         margin-top: 1rem;
@@ -151,12 +134,11 @@
             </div>
             <span class="ms-2 fw-medium text-success">Informations de base</span>
             <div class="step-line completed"></div>
-
+            
             <div class="step-number active">2</div>
-            <span class="ms-2 fw-medium" style="color: 
-#FF6B35;">Types de billets</span>
+            <span class="ms-2 fw-medium" style="color: #FF6B35;">Types de billets</span>
             <div class="step-line pending"></div>
-
+            
             <div class="step-number pending">3</div>
             <span class="ms-2 text-muted">Publication</span>
         </div>
@@ -166,8 +148,7 @@
     <div class="card-custom">
         <div class="card-body">
             <h5 class="card-title mb-3">
-                <i class="fas fa-info-circle me-2" style="color: 
-#FF6B35;"></i>
+                <i class="fas fa-info-circle me-2" style="color: #FF6B35;"></i>
                 Récapitulatif de l'événement
             </h5>
             <div class="row">
@@ -188,12 +169,11 @@
     <div class="card-custom">
         <div class="card-body">
             <h5 class="card-title mb-3">
-                <i class="fas fa-magic me-2" style="color: 
-#FF6B35;"></i>
+                <i class="fas fa-magic me-2" style="color: #FF6B35;"></i>
                 Modèles prédéfinis
             </h5>
             <p class="text-muted mb-4">Cliquez sur un modèle pour l'ajouter rapidement</p>
-
+            
             <div class="row">
                 <!-- Standard -->
                 <div class="col-lg-3 col-md-6 mb-3">
@@ -283,12 +263,12 @@
                         <i class="fas fa-info-circle me-2"></i>
                         Vous devez créer au moins un type de billet
                     </div>
-
+                    
                     <div>
                         <a href="{{ route('promoteur.events.show', $event) }}" class="btn btn-secondary me-2">
                             Terminer plus tard
                         </a>
-
+                        
                         <button type="submit" class="btn btn-orange btn-lg">
                             Finaliser l'événement
                             <i class="fas fa-check ms-2"></i>
@@ -310,13 +290,12 @@
         const index = ticketTypeIndex++;
         const today = new Date().toISOString().split('T')[0];
         const eventDate = '{{ $event->event_date ? $event->event_date->format("Y-m-d") : "" }}';
-
+        
         return `
             <div class="ticket-form" data-index="${index}">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0">
-                        <i class="fas fa-ticket-alt me-2" style="color: 
-#FF6B35;"></i>
+                        <i class="fas fa-ticket-alt me-2" style="color: #FF6B35;"></i>
                         Type de billet #${index + 1}
                     </h5>
                     <button type="button" class="btn btn-sm btn-outline-danger remove-ticket-type">
@@ -394,10 +373,10 @@
         const container = document.getElementById('ticket-types-container');
         const formHtml = createTicketTypeForm();
         container.insertAdjacentHTML('beforeend', formHtml);
-
+        
         // Attacher les event listeners pour ce nouveau formulaire
         attachEventListeners(container.lastElementChild);
-
+        
         // Animation d'apparition
         const newForm = container.lastElementChild;
         newForm.style.opacity = '0';
@@ -416,12 +395,12 @@
             const container = document.getElementById('ticket-types-container');
             const formHtml = createTicketTypeForm(data);
             container.insertAdjacentHTML('beforeend', formHtml);
-
+            
             // Attacher les event listeners et calculer le résumé
             const newForm = container.lastElementChild;
             attachEventListeners(newForm);
             calculateRevenue(newForm);
-
+            
             // Animation et effet visuel
             newForm.style.opacity = '0';
             newForm.style.transform = 'translateY(20px)';
@@ -430,7 +409,7 @@
                 newForm.style.opacity = '1';
                 newForm.style.transform = 'translateY(0)';
             }, 10);
-
+            
             // Effet sur la carte
             this.classList.add('selected');
             setTimeout(() => {
@@ -455,7 +434,7 @@
         // Calcul des revenus en temps réel
         const priceInput = form.querySelector('.price-input');
         const quantityInput = form.querySelector('.quantity-input');
-
+        
         [priceInput, quantityInput].forEach(input => {
             input.addEventListener('input', () => calculateRevenue(form));
         });
@@ -463,7 +442,7 @@
         // Validation des dates
         const startDateInput = form.querySelector('.start-date-input');
         const endDateInput = form.querySelector('.end-date-input');
-
+        
         startDateInput.addEventListener('change', function() {
             endDateInput.setAttribute('min', this.value);
             if (endDateInput.value && endDateInput.value < this.value) {
@@ -477,10 +456,10 @@
         const price = parseFloat(form.querySelector('.price-input').value) || 0;
         const quantity = parseInt(form.querySelector('.quantity-input').value) || 0;
         const revenue = price * quantity;
-
+        
         const revenueElement = form.querySelector('.revenue-estimate');
         revenueElement.textContent = new Intl.NumberFormat('fr-FR').format(revenue) + ' FCFA';
-
+        
         // Changer la couleur selon le montant
         if (revenue > 500000) {
             revenueElement.className = 'fw-bold text-success';
@@ -499,7 +478,7 @@
     // Validation du formulaire
     document.querySelector('form').addEventListener('submit', function(e) {
         const ticketTypes = document.querySelectorAll('.ticket-form');
-
+        
         if (ticketTypes.length === 0) {
             e.preventDefault();
             alert('Vous devez créer au moins un type de billet');
@@ -511,7 +490,7 @@
         ticketTypes.forEach(form => {
             const startDate = form.querySelector('.start-date-input').value;
             const endDate = form.querySelector('.end-date-input').value;
-
+            
             if (new Date(endDate) <= new Date(startDate)) {
                 hasError = true;
                 alert('La date de fin de vente doit être après la date de début');
@@ -555,9 +534,9 @@
                         </div>
                         <span class="ml-2 text-green-600 font-medium">Informations de base</span>
                     </div>
-
+                    
                     <div class="w-16 h-1 bg-green-500"></div>
-
+                    
                     <!-- Étape 2 : Actuelle -->
                     <div class="flex items-center">
                         <div class="w-10 h-10 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold">
@@ -565,9 +544,9 @@
                         </div>
                         <span class="ml-2 text-orange-600 font-medium">Types de billets</span>
                     </div>
-
+                    
                     <div class="w-16 h-1 bg-gray-300"></div>
-
+                    
                     <!-- Étape 3 : Publication -->
                     <div class="flex items-center">
                         <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center font-bold">
@@ -605,7 +584,7 @@
                 Modèles prédéfinis
             </h2>
             <p class="text-gray-600 mb-6">Cliquez sur un modèle pour l'ajouter rapidement</p>
-
+            
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Standard -->
                 <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-orange-500 transition preset-card" 
@@ -697,13 +676,13 @@
                     <i class="fas fa-info-circle mr-2"></i>
                     Vous devez créer au moins un type de billet
                 </div>
-
+                
                 <div class="flex items-center space-x-4">
                     <a href="{{ route('promoteur.events.show', $event) }}"
                        class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
                         Terminer plus tard
                     </a>
-
+                    
                     <button type="submit" 
                             class="bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition flex items-center font-medium">
                         Finaliser l'événement
@@ -723,7 +702,7 @@
         const index = ticketTypeIndex++;
         const today = new Date().toISOString().split('T')[0];
         const eventDate = '{{ $event->event_date }}';
-
+        
         return `
             <div class="bg-white rounded-xl shadow-lg p-6 ticket-type-form" data-index="${index}">
                 <div class="flex items-center justify-between mb-6">
@@ -831,7 +810,7 @@
         const container = document.getElementById('ticket-types-container');
         const formHtml = createTicketTypeForm();
         container.insertAdjacentHTML('beforeend', formHtml);
-
+        
         // Attacher les event listeners pour ce nouveau formulaire
         attachEventListeners(container.lastElementChild);
     });
@@ -843,12 +822,12 @@
             const container = document.getElementById('ticket-types-container');
             const formHtml = createTicketTypeForm(data);
             container.insertAdjacentHTML('beforeend', formHtml);
-
+            
             // Attacher les event listeners et calculer le résumé
             const newForm = container.lastElementChild;
             attachEventListeners(newForm);
             calculateRevenue(newForm);
-
+            
             // Effet visuel
             this.classList.add('border-green-500', 'bg-green-50');
             setTimeout(() => {
@@ -868,17 +847,17 @@
         });
 
         // Calcul des revenus en temps réel
-        const priceInput = form.querySelector('input[name="[price]"]');
-        const quantityInput = form.querySelector('input[name="[quantity_available]"]');
-
+        const priceInput = form.querySelector('input[name*="[price]"]');
+        const quantityInput = form.querySelector('input[name*="[quantity_available]"]');
+        
         [priceInput, quantityInput].forEach(input => {
             input.addEventListener('input', () => calculateRevenue(form));
         });
 
         // Validation des dates
-        const startDateInput = form.querySelector('input[name="[sale_start_date]"]');
-        const endDateInput = form.querySelector('input[name="[sale_end_date]"]');
-
+        const startDateInput = form.querySelector('input[name*="[sale_start_date]"]');
+        const endDateInput = form.querySelector('input[name*="[sale_end_date]"]');
+        
         startDateInput.addEventListener('change', function() {
             endDateInput.setAttribute('min', this.value);
             if (endDateInput.value && endDateInput.value < this.value) {
@@ -889,10 +868,10 @@
 
     // Calculer les revenus potentiels
     function calculateRevenue(form) {
-        const price = parseFloat(form.querySelector('input[name="[price]"]').value) || 0;
-        const quantity = parseInt(form.querySelector('input[name="[quantity_available]"]').value) || 0;
+        const price = parseFloat(form.querySelector('input[name*="[price]"]').value) || 0;
+        const quantity = parseInt(form.querySelector('input[name*="[quantity_available]"]').value) || 0;
         const revenue = price * quantity;
-
+        
         const revenueElement = form.querySelector('.revenue-estimate');
         revenueElement.textContent = new Intl.NumberFormat('fr-FR').format(revenue) + ' FCFA';
     }
@@ -905,7 +884,7 @@
     // Validation du formulaire
     document.querySelector('form').addEventListener('submit', function(e) {
         const ticketTypes = document.querySelectorAll('.ticket-type-form');
-
+        
         if (ticketTypes.length === 0) {
             e.preventDefault();
             alert('Vous devez créer au moins un type de billet');
@@ -915,9 +894,9 @@
         // Vérifier que les dates de fin sont après les dates de début
         let hasError = false;
         ticketTypes.forEach(form => {
-            const startDate = form.querySelector('input[name="[sale_start_date]"]').value;
-            const endDate = form.querySelector('input[name="[sale_end_date]"]').value;
-
+            const startDate = form.querySelector('input[name*="[sale_start_date]"]').value;
+            const endDate = form.querySelector('input[name*="[sale_end_date]"]').value;
+            
             if (new Date(endDate) <= new Date(startDate)) {
                 hasError = true;
                 alert('La date de fin de vente doit être après la date de début');

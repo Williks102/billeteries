@@ -35,25 +35,41 @@ class TicketTypeController extends Controller
             abort(403, 'Vous n\'êtes pas autorisé à modifier cet événement');
         }
 
-        $request->validate([
-            'ticket_types' => 'required|array|min:1',
-            'ticket_types..name' => 'required|string|max:255',
-            'ticket_types..description' => 'nullable|string|max:500',
-            'ticket_types..price' => 'required|numeric|min:0',
-            'ticket_types..quantity_available' => 'required|integer|min:1',
-            'ticket_types..sale_start_date' => 'required|date|after_or_equal:today',
-            'ticket_types..sale_end_date' => 'required|date|after:sale_start_date',
-            'ticket_types..max_per_order' => 'required|integer|min:1|max:20',
-        ], [
-            'ticket_types.required' => 'Vous devez créer au moins un type de billet',
-            'ticket_types..name.required' => 'Le nom du billet est obligatoire',
-            'ticket_types..price.required' => 'Le prix est obligatoire',
-            'ticket_types..price.min' => 'Le prix ne peut pas être négatif',
-            'ticket_types..quantity_available.required' => 'La quantité est obligatoire',
-            'ticket_types..sale_end_date.after' => 'La fin de vente doit être après le début',
-        ]);
+     \Log::info('=== DEBUG TICKET CREATION ===');
+    \Log::info('Données reçues:', $request->all());
+    \Log::info('Event ID: ' . $event->id);  // CORRIGÉ : Concaténation au lieu de tableau
+    \Log::info('Date actuelle: ' . now());   // CORRIGÉ : Concaténation au lieu de tableau
 
+        try {
+           $request->validate([
+    'ticket_types' => 'required|array|min:1',
+    'ticket_types.*.name' => 'required|string|max:255',           // ✅ CORRIGÉ
+    'ticket_types.*.description' => 'nullable|string|max:500',     // ✅ CORRIGÉ
+    'ticket_types.*.price' => 'required|numeric|min:0',           // ✅ CORRIGÉ
+    'ticket_types.*.quantity_available' => 'required|integer|min:1', // ✅ CORRIGÉ
+    'ticket_types.*.sale_start_date' => 'required|date',          // ✅ CORRIGÉ
+    'ticket_types.*.sale_end_date' => 'required|date|after:sale_start_date', // ✅ CORRIGÉ
+    'ticket_types.*.max_per_order' => 'required|integer|min:1|max:20', // ✅ CORRIGÉ
+], [
+    'ticket_types.required' => 'Vous devez créer au moins un type de billet',
+    'ticket_types.*.name.required' => 'Le nom du billet est obligatoire',
+    'ticket_types.*.price.required' => 'Le prix est obligatoire',
+    'ticket_types.*.price.min' => 'Le prix ne peut pas être négatif',
+    'ticket_types.*.quantity_available.required' => 'La quantité est obligatoire',
+    'ticket_types.*.sale_end_date.after' => 'La fin de vente doit être après le début',
+]);
+        return redirect()->route('promoteur.events.show', $event)
+            ->with('success', 'Types de billets créés avec succès ! Votre événement est maintenant prêt à être publié.');
+           \Log::info('Validation réussie !');
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('ERREURS DE VALIDATION:', $e->errors());
+        throw $e;
+    }
+    \Log::info('Validation réussie, début création des billets');
         foreach ($request->ticket_types as $typeData) {
+            \Log::info("Création du billet {$index}:", $typeData);
+         try {   
             TicketType::create([
                 'event_id' => $event->id,
                 'name' => $typeData['name'],
@@ -66,8 +82,14 @@ class TicketTypeController extends Controller
                 'max_per_order' => $typeData['max_per_order'],
                 'is_active' => true,
             ]);
+              \Log::info("Billet créé avec ID: {$ticketType->id}");
+        
+    } catch (\Exception $e) {
+        \Log::error("Erreur création billet {$index}: " . $e->getMessage());
+        throw $e;
+    }
         }
-
+       
         return redirect()->route('promoteur.events.show', $event)
             ->with('success', 'Types de billets créés avec succès ! Votre événement est maintenant prêt à être publié.');
     }

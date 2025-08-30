@@ -83,13 +83,13 @@
                     
                     <div class="mb-3">
                         <h6><i class="fas fa-envelope text-orange me-2"></i>Email</h6>
-                        <p class="mb-0">contact@clicbillet.ci</p>
-                        <small class="text-muted">Réponse sous 24h</small>
+                        <p class="mb-0">contact@clicbillet.com</p>
+                        <small class="text-muted">Réponse dans l'heure</small>
                     </div>
                     
                     <div class="mb-3">
                         <h6><i class="fas fa-phone text-orange me-2"></i>Téléphone</h6>
-                        <p class="mb-0">+225 XX XX XX XX</p>
+                        <p class="mb-0">+225 07 02 49 02 77</p>
                         <small class="text-muted">Lun-Ven 8h-18h</small>
                     </div>
                     

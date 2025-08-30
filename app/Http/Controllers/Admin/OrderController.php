@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -22,74 +23,99 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'event', 'orderItems.ticketType']);
+        try {
+            $query = Order::with(['user', 'event', 'orderItems.ticketType']);
 
-        // Filtres
-        if ($request->filled('payment_status')) {
-            $query->where('payment_status', $request->payment_status);
+            // Filtres
+            if ($request->filled('payment_status')) {
+                $query->where('payment_status', $request->payment_status);
+            }
+
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('order_number', 'like', "%{$search}%")
+                      ->orWhereHas('user', function($uq) use ($search) {
+                          $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('event', function($eq) use ($search) {
+                          $eq->where('title', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            if ($request->filled('event')) {
+                $query->where('event_id', $request->event);
+            }
+
+            if ($request->filled('user')) {
+                $query->where('user_id', $request->user);
+            }
+
+            if ($request->filled('date_from')) {
+                $query->where('created_at', '>=', $request->date_from);
+            }
+
+            if ($request->filled('date_to')) {
+                $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
+            }
+
+            if ($request->filled('amount_min')) {
+                $query->where('total_amount', '>=', $request->amount_min);
+            }
+
+            if ($request->filled('amount_max')) {
+                $query->where('total_amount', '<=', $request->amount_max);
+            }
+
+            // Tri par défaut : plus récentes
+            $orders = $query->latest()->paginate(20);
+
+            // Statistiques pour le dashboard - CORRIGÉ
+            $stats = [
+                'total' => Order::count(),
+                'paid' => Order::where('payment_status', 'paid')->count(),
+                'pending' => Order::where('payment_status', 'pending')->count(),
+                'failed' => Order::where('payment_status', 'failed')->count(),
+                'refunded' => Order::where('payment_status', 'refunded')->count(),
+                'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount') ?? 0,
+                'pending_revenue' => Order::where('payment_status', 'pending')->sum('total_amount') ?? 0,
+                'this_month_orders' => Order::whereMonth('created_at', now()->month)->count(),
+                'this_month_revenue' => Order::where('payment_status', 'paid')
+                    ->whereMonth('created_at', now()->month)
+                    ->sum('total_amount') ?? 0, // ✅ CORRIGÉ : Ajout ?? 0 et fermeture correcte
+            ];
+
+            // Données pour les filtres - Avec protection contre null
+            $events = Event::orderBy('title')->get();
+            $users = User::where('role', 'acheteur')->orderBy('name')->get();
+
+            return view('admin.orders.index', compact('orders', 'stats', 'events', 'users'));
+
+        } catch (\Exception $e) {
+            Log::error('Erreur admin orders index: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            // Valeurs par défaut en cas d'erreur
+            $orders = Order::paginate(20);
+            $stats = [
+                'total' => 0,
+                'paid' => 0,
+                'pending' => 0,
+                'failed' => 0,
+                'refunded' => 0,
+                'total_revenue' => 0,
+                'pending_revenue' => 0,
+                'this_month_orders' => 0,
+                'this_month_revenue' => 0,
+            ];
+            $events = collect();
+            $users = collect();
+
+            return view('admin.orders.index', compact('orders', 'stats', 'events', 'users'))
+                ->with('error', 'Erreur lors du chargement des commandes. Veuillez réessayer.');
         }
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhereHas('user', function($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('event', function($eq) use ($search) {
-                      $eq->where('title', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        if ($request->filled('event')) {
-            $query->where('event_id', $request->event);
-        }
-
-        if ($request->filled('user')) {
-            $query->where('user_id', $request->user);
-        }
-
-        if ($request->filled('date_from')) {
-            $query->where('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
-        }
-
-        if ($request->filled('amount_min')) {
-            $query->where('total_amount', '>=', $request->amount_min);
-        }
-
-        if ($request->filled('amount_max')) {
-            $query->where('total_amount', '<=', $request->amount_max);
-        }
-
-        // Tri par défaut : plus récentes
-        $orders = $query->latest()->paginate(20);
-
-        // Statistiques pour le dashboard
-        $stats = [
-            'total' => Order::count(),
-            'paid' => Order::where('payment_status', 'paid')->count(),
-            'pending' => Order::where('payment_status', 'pending')->count(),
-            'failed' => Order::where('payment_status', 'failed')->count(),
-            'refunded' => Order::where('payment_status', 'refunded')->count(),
-            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
-            'pending_revenue' => Order::where('payment_status', 'pending')->sum('total_amount'),
-            'this_month_orders' => Order::whereMonth('created_at', now()->month)->count(),
-            'this_month_revenue' => Order::where('payment_status', 'paid')
-                ->whereMonth('created_at', now()->month)
-                ->sum('total_amount'),
-        ];
-
-        // Données pour les filtres
-        $events = Event::orderBy('title')->get();
-        $users = User::where('role', 'acheteur')->orderBy('name')->get();
-
-        return view('admin.orders.index', compact('orders', 'stats', 'events', 'users'));
     }
 
     /**
@@ -106,13 +132,13 @@ class OrderController extends Controller
                 'commissions.promoteur'
             ]);
 
-            // Statistiques de la commande
+            // Statistiques de la commande - Avec protection contre null
             $stats = [
-                'total_tickets' => $order->tickets->count(),
-                'used_tickets' => $order->tickets->where('status', 'used')->count(),
-                'remaining_tickets' => $order->tickets->where('status', 'sold')->count(),
-                'commission_amount' => $order->commissions->sum('commission_amount'),
-                'net_revenue' => $order->total_amount - $order->commissions->sum('commission_amount'),
+                'total_tickets' => $order->tickets ? $order->tickets->count() : 0,
+                'used_tickets' => $order->tickets ? $order->tickets->where('status', 'used')->count() : 0,
+                'remaining_tickets' => $order->tickets ? $order->tickets->where('status', 'sold')->count() : 0,
+                'commission_amount' => $order->commissions ? $order->commissions->sum('commission_amount') : 0,
+                'net_revenue' => $order->total_amount - ($order->commissions ? $order->commissions->sum('commission_amount') : 0),
             ];
 
             // Historique des actions sur cette commande
@@ -121,7 +147,7 @@ class OrderController extends Controller
                     'action' => 'order_created',
                     'message' => 'Commande créée',
                     'date' => $order->created_at,
-                    'user' => $order->user->name,
+                    'user' => $order->user ? $order->user->name : 'Utilisateur inconnu',
                     'icon' => 'fas fa-shopping-cart',
                     'color' => 'primary'
                 ]
@@ -141,7 +167,7 @@ class OrderController extends Controller
             return view('admin.orders.show', compact('order', 'stats', 'history'));
 
         } catch (\Exception $e) {
-            \Log::error('Erreur affichage commande: ' . $e->getMessage());
+            Log::error('Erreur affichage commande: ' . $e->getMessage());
             return redirect()->route('admin.orders.index')->with('error', 'Erreur lors du chargement');
         }
     }
@@ -188,7 +214,7 @@ class OrderController extends Controller
                 $order->tickets()->update(['status' => 'cancelled']);
             }
 
-            \Log::info('Commande modifiée par admin', [
+            Log::info('Commande modifiée par admin', [
                 'admin_id' => auth()->id(),
                 'order_id' => $order->id,
                 'old_status' => $oldStatus,
@@ -199,103 +225,88 @@ class OrderController extends Controller
                 ->with('success', 'Commande mise à jour avec succès !');
 
         } catch (\Exception $e) {
-            \Log::error('Erreur mise à jour commande: ' . $e->getMessage());
+            Log::error('Erreur mise à jour commande: ' . $e->getMessage());
             
             return redirect()->back()
-                ->with('error', 'Erreur lors de la mise à jour')
+                ->with('error', 'Erreur lors de la mise à jour de la commande')
                 ->withInput();
         }
     }
 
     /**
-     * Mise à jour rapide du statut de paiement
+     * Mettre à jour le statut de paiement uniquement
      */
     public function updateStatus(Request $request, Order $order)
     {
         $request->validate([
-            'payment_status' => 'required|in:pending,paid,failed,refunded'
+            'payment_status' => 'required|in:pending,paid,failed,refunded',
         ]);
 
         try {
             $oldStatus = $order->payment_status;
             $order->update(['payment_status' => $request->payment_status]);
 
-            // Gestion des tickets selon le nouveau statut
+            // Actions selon le nouveau statut
             switch ($request->payment_status) {
                 case 'paid':
-                    $order->tickets()->update(['status' => 'sold']);
+                    if ($oldStatus !== 'paid') {
+                        $order->tickets()->update(['status' => 'sold']);
+                    }
                     break;
-                case 'refunded':
+                    
                 case 'failed':
+                case 'refunded':
                     $order->tickets()->update(['status' => 'cancelled']);
                     break;
             }
 
-            \Log::info('Statut commande modifié par admin', [
-                'admin_id' => auth()->id(),
-                'order_id' => $order->id,
-                'old_status' => $oldStatus,
-                'new_status' => $order->payment_status
+            return response()->json([
+                'success' => true,
+                'message' => 'Statut mis à jour avec succès'
             ]);
 
-            return redirect()->back()
-                ->with('success', 'Statut de la commande mis à jour !');
-
         } catch (\Exception $e) {
-            \Log::error('Erreur changement statut commande: ' . $e->getMessage());
+            Log::error('Erreur update status: ' . $e->getMessage());
             
-            return redirect()->back()
-                ->with('error', 'Erreur lors du changement de statut');
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour'
+            ], 500);
         }
     }
 
     /**
-     * Remboursement d'une commande
+     * Rembourser une commande
      */
     public function refund(Request $request, Order $order)
     {
-        $request->validate([
-            'refund_reason' => 'required|string|max:500',
-            'partial_amount' => 'nullable|numeric|min:0|max:' . $order->total_amount,
-        ]);
+        if ($order->payment_status !== 'paid') {
+            return redirect()->back()->with('error', 'Seules les commandes payées peuvent être remboursées');
+        }
 
         try {
-            if ($order->payment_status !== 'paid') {
-                return redirect()->back()
-                    ->with('error', 'Seules les commandes payées peuvent être remboursées.');
-            }
-
-            $refundAmount = $request->partial_amount ?? $order->total_amount;
-            $isPartialRefund = $refundAmount < $order->total_amount;
-
-            // Mise à jour du statut
+            // Marquer comme remboursée
             $order->update([
                 'payment_status' => 'refunded',
-                'refund_amount' => $refundAmount,
-                'refund_reason' => $request->refund_reason,
-                'refunded_at' => now(),
-                'refunded_by' => auth()->id(),
+                'admin_notes' => $request->reason ?? 'Remboursement manuel par administrateur'
             ]);
 
-            // Annuler les tickets (total ou partiel selon la logique métier)
-            if (!$isPartialRefund) {
-                $order->tickets()->update(['status' => 'cancelled']);
-            }
+            // Annuler tous les tickets
+            $order->tickets()->update(['status' => 'cancelled']);
 
-            \Log::info('Commande remboursée par admin', [
+            // TODO: Intégrer avec le système de paiement pour remboursement réel
+            
+            Log::info('Commande remboursée par admin', [
                 'admin_id' => auth()->id(),
                 'order_id' => $order->id,
-                'refund_amount' => $refundAmount,
-                'reason' => $request->refund_reason
+                'amount' => $order->total_amount
             ]);
 
-            // TODO: Intégrer avec votre système de paiement pour effectuer le remboursement réel
-            
-            return redirect()->back()
-                ->with('success', "Remboursement de {$refundAmount} FCFA effectué avec succès !");
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', 'Commande remboursée avec succès !');
 
         } catch (\Exception $e) {
-            \Log::error('Erreur remboursement commande: ' . $e->getMessage());
+            Log::error('Erreur remboursement commande: ' . $e->getMessage());
             
             return redirect()->back()
                 ->with('error', 'Erreur lors du remboursement');
@@ -307,26 +318,33 @@ class OrderController extends Controller
      */
     public function resendEmail(Order $order)
     {
+        if ($order->payment_status !== 'paid') {
+            return redirect()->back()->with('error', 'Seules les commandes payées peuvent recevoir un email de confirmation');
+        }
+
         try {
-            if ($order->payment_status !== 'paid') {
+            // ✅ Utiliser votre EmailService existant
+            $emailService = app(\App\Services\EmailService::class);
+            
+            // Envoyer l'email de confirmation avec les billets
+            $success = $emailService->sendPaymentConfirmation($order);
+            
+            if ($success) {
+                Log::info('Email renvoyé par admin', [
+                    'admin_id' => auth()->id(),
+                    'order_id' => $order->id,
+                    'user_email' => $order->user->email
+                ]);
+
                 return redirect()->back()
-                    ->with('error', 'Seules les commandes payées peuvent avoir leur email renvoyé.');
+                    ->with('success', 'Email de confirmation renvoyé avec succès !');
+            } else {
+                return redirect()->back()
+                    ->with('error', 'Erreur lors de l\'envoi de l\'email. Vérifiez les logs.');
             }
 
-            // TODO: Implémenter l'envoi d'email selon votre système
-            // Mail::to($order->user->email)->send(new OrderConfirmationMail($order));
-
-            \Log::info('Email commande renvoyé par admin', [
-                'admin_id' => auth()->id(),
-                'order_id' => $order->id,
-                'user_email' => $order->user->email
-            ]);
-
-            return redirect()->back()
-                ->with('success', 'Email de confirmation renvoyé avec succès !');
-
         } catch (\Exception $e) {
-            \Log::error('Erreur renvoi email commande: ' . $e->getMessage());
+            Log::error('Erreur renvoi email commande: ' . $e->getMessage());
             
             return redirect()->back()
                 ->with('error', 'Erreur lors du renvoi de l\'email');
@@ -347,6 +365,7 @@ class OrderController extends Controller
         try {
             $orders = Order::whereIn('id', $request->orders)->get();
             $count = 0;
+            $emailService = app(\App\Services\EmailService::class);
 
             foreach ($orders as $order) {
                 switch ($request->action) {
@@ -354,6 +373,10 @@ class OrderController extends Controller
                         if ($order->payment_status === 'pending') {
                             $order->update(['payment_status' => 'paid']);
                             $order->tickets()->update(['status' => 'sold']);
+                            
+                            // ✅ Envoyer l'email de confirmation de paiement
+                            $emailService->sendPaymentConfirmation($order);
+                            
                             $count++;
                         }
                         break;
@@ -368,14 +391,15 @@ class OrderController extends Controller
                         
                     case 'resend_emails':
                         if ($order->payment_status === 'paid') {
-                            // TODO: Implémenter l'envoi d'email
+                            // ✅ Utiliser le service email existant
+                            $emailService->sendPaymentConfirmation($order);
                             $count++;
                         }
                         break;
                 }
             }
 
-            \Log::info('Action en lot sur commandes par admin', [
+            Log::info('Action en lot sur commandes par admin', [
                 'admin_id' => auth()->id(),
                 'action' => $request->action,
                 'orders_affected' => $count
@@ -385,7 +409,7 @@ class OrderController extends Controller
                 ->with('success', "{$count} commande(s) traitée(s) avec succès !");
 
         } catch (\Exception $e) {
-            \Log::error('Erreur action en lot commandes: ' . $e->getMessage());
+            Log::error('Erreur action en lot commandes: ' . $e->getMessage());
             
             return redirect()->back()
                 ->with('error', 'Erreur lors du traitement des commandes');
@@ -393,12 +417,12 @@ class OrderController extends Controller
     }
 
     /**
-     * Export CSV personnalisé des commandes
+     * Export des commandes - ✅ Améliorer l'export existant
      */
     public function export(Request $request)
     {
         try {
-            $query = Order::with(['user', 'event']);
+            $query = Order::with(['user', 'event', 'orderItems.ticketType']);
 
             // Appliquer les mêmes filtres que l'index
             if ($request->filled('payment_status')) {
@@ -417,32 +441,93 @@ class OrderController extends Controller
                 $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
             }
 
-            $orders = $query->get();
-
-            $csvContent = "Numéro,Client,Email,Événement,Statut,Montant,Date,Tickets\n";
-            
-            foreach ($orders as $order) {
-                $csvContent .= implode(',', [
-                    $order->order_number,
-                    '"' . addslashes($order->user->name) . '"',
-                    $order->user->email,
-                    '"' . addslashes($order->event->title) . '"',
-                    $order->payment_status,
-                    number_format($order->total_amount, 2),
-                    $order->created_at->format('Y-m-d H:i:s'),
-                    $order->tickets->count()
-                ]) . "\n";
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('order_number', 'like', "%{$search}%")
+                      ->orWhereHas('user', function($uq) use ($search) {
+                          $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('event', function($eq) use ($search) {
+                          $eq->where('title', 'like', "%{$search}%");
+                      });
+                });
             }
 
-            return response($csvContent)
-                ->header('Content-Type', 'text/csv')
-                ->header('Content-Disposition', 'attachment; filename="orders-export-' . now()->format('Y-m-d') . '.csv"');
+            $orders = $query->orderBy('created_at', 'desc')->get();
+
+            // ✅ Export CSV détaillé avec en-têtes français
+            $filename = 'commandes_export_' . date('Y_m_d_H_i_s') . '.csv';
+            
+            $headers = [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ];
+
+            $callback = function() use ($orders) {
+                $file = fopen('php://output', 'w');
+                
+                // BOM UTF-8 pour Excel français
+                fwrite($file, "\xEF\xBB\xBF");
+                
+                // En-têtes détaillés
+                fputcsv($file, [
+                    'Numéro Commande',
+                    'Date Commande', 
+                    'Client',
+                    'Email Client',
+                    'Téléphone',
+                    'Événement',
+                    'Date Événement',
+                    'Lieu',
+                    'Statut Paiement',
+                    'Montant Total (FCFA)',
+                    'Nombre de Billets',
+                    'Types de Billets',
+                    'Codes Billets'
+                ], ';');
+                
+                foreach ($orders as $order) {
+                    $ticketTypes = $order->orderItems->map(function($item) {
+                        return $item->ticketType->name . ' (x' . $item->quantity . ')';
+                    })->implode(', ');
+                    
+                    $ticketCodes = $order->tickets->pluck('ticket_code')->implode(', ');
+                    
+                    fputcsv($file, [
+                        $order->order_number,
+                        $order->created_at->format('d/m/Y H:i'),
+                        $order->user->name,
+                        $order->user->email,
+                        $order->user->phone ?? 'N/A',
+                        $order->event->title ?? 'N/A',
+                        $order->event && $order->event->event_date ? $order->event->event_date->format('d/m/Y') : 'N/A',
+                        $order->event->venue ?? 'N/A',
+                        ucfirst($order->payment_status),
+                        number_format($order->total_amount, 0, ',', ' '),
+                        $order->tickets->count(),
+                        $ticketTypes,
+                        $ticketCodes
+                    ], ';');
+                }
+                
+                fclose($file);
+            };
+
+            Log::info('Export commandes par admin', [
+                'admin_id' => auth()->id(),
+                'total_orders' => $orders->count(),
+                'filters' => $request->all()
+            ]);
+
+            return response()->stream($callback, 200, $headers);
 
         } catch (\Exception $e) {
-            \Log::error('Erreur export commandes: ' . $e->getMessage());
+            Log::error('Erreur export commandes: ' . $e->getMessage());
             
             return redirect()->back()
-                ->with('error', 'Erreur lors de l\'export');
+                ->with('error', 'Erreur lors de l\'export des commandes');
         }
     }
 }

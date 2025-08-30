@@ -160,14 +160,14 @@
                     <i class="fas fa-cog me-2"></i>Actions
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ route('admin.tickets.bulk-verify') }}">
+                    <li><a class="dropdown-item" href="#">
                         <i class="fas fa-check-circle me-2"></i>Vérification en lot
                     </a></li>
-                    <li><a class="dropdown-item" href="{{ route('admin.tickets.stats') }}">
+                    <li><a class="dropdown-item" href="#">
                         <i class="fas fa-chart-bar me-2"></i>Statistiques détaillées
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="{{ route('admin.settings.tickets') }}">
+                    <li><a class="dropdown-item" href="#">
                         <i class="fas fa-cog me-2"></i>Paramètres tickets
                     </a></li>
                 </ul>
@@ -514,7 +514,7 @@
                                                 </li>
                                                 @if($ticket->qr_code)
                                                     <li>
-                                                        <a class="dropdown-item" href="{{ route('verify-ticket', $ticket->ticket_code) }}" target="_blank">
+                                                        <a class="dropdown-item" href="{{ route('verify.ticket', $ticket->ticket_code) }}" target="_blank">
                                                             <i class="fas fa-qrcode me-2"></i>Vérifier
                                                         </a>
                                                     </li>

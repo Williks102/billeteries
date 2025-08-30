@@ -616,24 +616,7 @@
                         <li><a href="{{ route('admin.events.index', ['status' => 'pending']) }}">En attente</a></li>
                         <li><a href="{{ route('admin.events.index', ['status' => 'published']) }}">Publiés</a></li>
                         <li><a href="{{ route('admin.events.index', ['status' => 'cancelled']) }}">Annulés</a></li>
-                        
-                        <!-- ✨ NOUVELLES SECTIONS HYBRIDES ✨ -->
-                        <li style="margin-top: 8px; border-top: 1px solid #3c434a; padding-top: 8px;">
-                            <a href="{{ route('admin.events.create-hybrid') }}" 
-                               class="{{ request()->routeIs('admin.events.create-hybrid') ? 'active' : '' }}"
-                               style="color: #f9cb28;">
-                                <i class="fas fa-magic" style="color: #f9cb28;"></i> Créer Hybride
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.intervention-dashboard') }}" 
-                               class="{{ request()->routeIs('admin.intervention-dashboard') ? 'active' : '' }}"
-                               style="color: #ff6b6b;">
-                                <i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> 
-                                Interventions
-                                <span id="intervention-badge" class="intervention-badge" style="display: none;">0</span>
-                            </a>
-                        </li>
+
                         
                         <!-- Séparateur -->
                         <li style="margin-top: 8px; border-top: 1px solid #3c434a; padding-top: 8px;">

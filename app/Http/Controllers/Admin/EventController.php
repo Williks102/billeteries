@@ -81,10 +81,7 @@ class EventController extends Controller
                 ->where('orders.payment_status', 'paid')
                 ->sum('orders.total_amount'),
             // Nouvelles statistiques hybrides
-            'admin_managed' => Event::where('management_mode', 'admin')->count(),
-            'collaborative' => Event::where('management_mode', 'collaborative')->count(),
-            'promoter_only' => Event::where('management_mode', 'promoter')->count(),
-            'need_intervention' => Event::whereIn('id', $this->getEventsNeedingIntervention())->count(),
+            
         ];
 
         // Données pour les filtres
@@ -105,16 +102,7 @@ class EventController extends Controller
         return view('admin.events.create', compact('categories', 'promoteurs'));
     }
 
-    /**
-     * Formulaire de création événement hybride
-     */
-    public function createHybrid()
-    {
-        $categories = EventCategory::orderBy('name')->get();
-        $promoteurs = User::where('role', 'promoteur')->orderBy('name')->get();
 
-        return view('admin.events.create-hybrid', compact('categories', 'promoteurs'));
-    }
 
     /**
      * Sauvegarde nouvel événement standard
@@ -798,75 +786,8 @@ class EventController extends Controller
         return $createdTickets;
     }
 
-    /**
-     * Obtenir les IDs des événements nécessitant une intervention
-     */
-    private function getEventsNeedingIntervention(): array
-    {
-        $eventIds = [];
-
-        // Événements publiés sans billets
-        $publishedWithoutTickets = Event::where('status', 'published')
-            ->whereDoesntHave('ticketTypes')
-            ->pluck('id')
-            ->toArray();
-
-        // Événements proches sans billets actifs
-        $upcomingWithoutActiveTickets = Event::where('event_date', '<', now()->addDays(2))
-            ->whereDoesntHave('ticketTypes', function($query) {
-                $query->where('is_active', true)
-                      ->where('sale_start_date', '<=', now())
-                      ->where('sale_end_date', '>=', now());
-            })
-            ->pluck('id')
-            ->toArray();
-
-        // Événements avec promoteurs inactifs
-        $withInactivePromoters = Event::whereHas('promoteur', function($query) {
-                $query->where('last_login_at', '<', now()->subDays(7));
-            })
-            ->where('status', '!=', 'rejected')
-            ->pluck('id')
-            ->toArray();
-
-        return array_unique(array_merge(
-            $publishedWithoutTickets,
-            $upcomingWithoutActiveTickets,
-            $withInactivePromoters
-        ));
-    }
-
-    /**
-     * Vérifier si un événement nécessite une intervention
-     */
-    private function eventNeedsIntervention(Event $event): bool
-    {
-        // Événement publié sans billets
-        if ($event->status === 'published' && $event->ticketTypes->count() === 0) {
-            return true;
-        }
-
-        // Événement imminent sans billets actifs
-        if ($event->event_date < now()->addDays(2)) {
-            $hasActiveTickets = $event->ticketTypes()
-                ->where('is_active', true)
-                ->where('sale_start_date', '<=', now())
-                ->where('sale_end_date', '>=', now())
-                ->exists();
-            
-            if (!$hasActiveTickets) {
-                return true;
-            }
-        }
-
-        // Promoteur inactif depuis plus de 7 jours
-        if ($event->promoteur && $event->promoteur->last_login_at < now()->subDays(7)) {
-            return true;
-        }
-
-        return false;
-    }
-
+    
+    
     /**
      * Notifier le promoteur d'un changement de mode
      */
@@ -934,109 +855,8 @@ class EventController extends Controller
         }
     }
 
-    /**
-     * Générer un rapport d'intervention
-     */
-    public function generateInterventionReport(Event $event)
-    {
-        $report = [
-            'event' => [
-                'id' => $event->id,
-                'title' => $event->title,
-                'date' => $event->event_date->format('d/m/Y H:i'),
-                'status' => $event->status,
-                'management_mode' => $event->management_mode
-            ],
-            'promoter' => [
-                'name' => $event->promoteur->name ?? 'N/A',
-                'email' => $event->promoteur->email ?? 'N/A',
-                'last_login' => $event->promoteur->last_login_at?->format('d/m/Y H:i') ?? 'Jamais'
-            ],
-            'issues' => [],
-            'recommendations' => [],
-            'actions_taken' => $event->auditLogs()
-                ->whereIn('action', ['admin_takeover', 'tickets_created', 'management_mode_changed'])
-                ->with('user')
-                ->get()
-                ->map(function($log) {
-                    return [
-                        'action' => $log->action_label,
-                        'date' => $log->created_at->format('d/m/Y H:i'),
-                        'user' => $log->user->name,
-                        'description' => $log->description
-                    ];
-                })
-        ];
-
-        // Analyser les problèmes
-        if ($event->status === 'published' && $event->ticketTypes->count() === 0) {
-            $report['issues'][] = 'Événement publié sans billets disponibles';
-            $report['recommendations'][] = 'Créer immédiatement des types de billets';
-        }
-
-        if ($event->event_date < now()->addDays(2)) {
-            $report['issues'][] = 'Événement imminent (moins de 48h)';
-            $report['recommendations'][] = 'Vérifier que tout est prêt pour la vente';
-        }
-
-        if ($event->promoteur && $event->promoteur->last_login_at < now()->subDays(7)) {
-            $report['issues'][] = 'Promoteur inactif depuis plus de 7 jours';
-            $report['recommendations'][] = 'Contacter le promoteur ou prendre le contrôle temporaire';
-        }
-
-        return $report;
-    }
-
-    /**
-     * API pour obtenir les événements nécessitant une intervention (AJAX)
-     */
-    public function getInterventionEvents()
-    {
-        $events = Event::with(['promoteur', 'category', 'ticketTypes'])
-            ->whereIn('id', $this->getEventsNeedingIntervention())
-            ->get()
-            ->map(function($event) {
-                return [
-                    'id' => $event->id,
-                    'title' => $event->title,
-                    'promoter' => $event->promoteur->name ?? 'N/A',
-                    'date' => $event->event_date->format('d/m/Y'),
-                    'status' => $event->status,
-                    'management_mode' => $event->management_mode,
-                    'issues' => $this->getEventIssues($event),
-                    'priority' => $this->getEventPriority($event),
-                    'needs_intervention' => $this->eventNeedsIntervention($event)
-                ];
-            });
-
-        return response()->json($events);
-    }
-
-    /**
-     * Obtenir les problèmes d'un événement
-     */
-    private function getEventIssues(Event $event): array
-    {
-        $issues = [];
-
-        if ($event->status === 'published' && $event->ticketTypes->count() === 0) {
-            $issues[] = 'Publié sans billets';
-        }
-
-        if ($event->event_date <= now()->addDays(2)) {
-            $issues[] = 'Événement imminent';
-        }
-
-        if (!$event->ticketTypes->where('is_active', true)->count()) {
-            $issues[] = 'Aucun billet actif';
-        }
-
-        if ($event->promoteur && $event->promoteur->last_login_at < now()->subDays(7)) {
-            $issues[] = 'Promoteur inactif';
-        }
-
-        return $issues;
-    }
+    
+    
 
     /**
      * Obtenir la priorité d'un événement

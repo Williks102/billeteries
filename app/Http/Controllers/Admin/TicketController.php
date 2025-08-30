@@ -116,7 +116,7 @@ class TicketController extends Controller
                 'price' => $ticket->ticketType->price,
                 'created_ago' => $ticket->created_at->diffForHumans(),
                 'qr_exists' => !empty($ticket->qr_code),
-                'verify_url' => route('verify-ticket', $ticket->ticket_code),
+                'verify_url' => route('verify.ticket', $ticket->ticket_code),
             ];
 
             // Historique d'utilisation

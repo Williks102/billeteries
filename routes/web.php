@@ -523,16 +523,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/events/bulk-action', [AdminEventController::class, 'bulkAction'])->name('events.bulk-action');
     Route::get('/events-export', [AdminEventController::class, 'export'])->name('events.export');
 
-    // Formulaires de création hybride
-    Route::get('events/create-hybrid', [AdminEventController::class, 'createHybrid'])->name('events.create-hybrid');
-    Route::post('events/store-with-mode', [AdminEventController::class, 'storeWithMode'])->name('events.store-with-mode');
-
-    // Interface de gestion hybride
-    Route::get('events/{event}/manage-hybrid', [AdminEventController::class, 'manageHybrid'])->name('events.manage-hybrid');
-
-    // Changement de mode de gestion
-    Route::post('events/{event}/change-management-mode', [AdminEventController::class, 'changeManagementMode'])->name('events.change-management-mode');
-
+    
     // Gestion des billets par admin
     Route::get('events/{event}/manage-tickets', [AdminEventController::class, 'manageTickets'])->name('events.manage-tickets');
     Route::post('events/{event}/store-tickets', [AdminEventController::class, 'storeTickets'])->name('events.store-tickets');
@@ -547,8 +538,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 // Historique et audit
     Route::get('events/{event}/audit-history', [AdminEventController::class, 'auditHistory'])->name('events.audit-history');
 
-// Statistiques hybrides
-    Route::get('hybrid-management-stats', [AdminEventController::class, 'hybridStats'])->name('hybrid-management-stats');
+// 
 
 // APIs pour AJAX
     Route::get('api/intervention-events', [AdminEventController::class, 'getInterventionEvents'])->name('api.intervention-events');

@@ -432,7 +432,7 @@
             <!-- Footer avec infos de l'entreprise -->
             <div class="footer-info">
                 <strong>ClicBillet CI</strong> - Votre plateforme de billetterie en ligne<br>
-                🌐 www.clicbillet.ci | 📧 contact@clicbillet.ci | 📞 +225 XX XX XX XX<br>
+                🌐 <a href="https://www.clicbillet.com">www.clicbillet.com</a> | 📧 <a href="mailto:contact@clicbillet.com">contact@clicbillet.com</a> | 📞 +225 07 02 49 02 77<br>
                 <em>Billet généré le {{ now()->format('d/m/Y à H:i') }}</em>
             </div>
         </div>

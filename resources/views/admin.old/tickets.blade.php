@@ -216,7 +216,7 @@
                             <td>{{ $ticket->ticketType->name ?? 'N/A' }}</td>
                             <td class="fw-bold text-primary">{{ number_format($ticket->ticketType->price ?? 0) }} F</td>
                             <td>
-                                @php $order = $ticket->orderTickets->first()?->order; @endphp
+                                @php $order = $ticket->orderItem->first()?->order; @endphp
                                 @if($order && $order->user)
                                     <div class="d-flex align-items-center">
                                         <div class="user-avatar-sm me-2">

@@ -1,235 +1,283 @@
-<!-- Header unifié pour ClicBillet CI -->
+<!-- Header avec recherche desktop et navigation mobile optimisée -->
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
     <div class="container">
-        <!-- Logo -->
-        <a class="navbar-brand fw-bold d-flex align-items-center" href="{{ route('home') }}">
-            <i class="fas fa-ticket-alt me-2 text-orange"></i>
-            <span class="brand-text">ClicBillet</span>
-            <small class="text-muted ms-2 d-none d-md-inline">CI</small>
-        </a>
+        <!-- VERSION MOBILE uniquement (d-lg-none) -->
+        <div class="d-lg-none w-100 d-flex align-items-center justify-content-between">
+            <!-- Hamburger -->
+            <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- Logo centré -->
+            <a class="navbar-brand fw-bold d-flex align-items-center mx-auto" href="{{ route('home') }}">
+                <i class="fas fa-ticket-alt me-2 text-orange"></i>
+                <span class="brand-text">ClicBillet</span>
+            </a>
+            
+            <!-- Actions droite : Search + Compte -->
+            <div class="d-flex align-items-center gap-2">
+                <!-- Bouton recherche mobile -->
+                <button class="btn btn-link p-2 text-muted" type="button" data-bs-toggle="modal" data-bs-target="#mobileSearchModal">
+                    <i class="fas fa-search"></i>
+                </button>
+                
+                <!-- Menu compte mobile -->
+                @auth
+                    <div class="dropdown">
+                        <button class="btn btn-link p-2 text-muted" type="button" data-bs-toggle="dropdown">
+                            <div class="user-avatar">
+                                {{ substr(auth()->user()->name, 0, 1) }}
+                            </div>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li class="px-3 py-2 border-bottom">
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar me-2">{{ substr(auth()->user()->name, 0, 1) }}</div>
+                                    <div>
+                                        <div class="user-name">{{ auth()->user()->name }}</div>
+                                        <div class="user-role">{{ ucfirst(auth()->user()->user_type) }}</div>
+                                    </div>
+                                </div>
+                            </li>
+                            @if(auth()->user()->isPromoteur())
+                                <li><a class="dropdown-item" href="{{ route('promoteur.dashboard') }}"><i class="fas fa-tachometer-alt me-2"></i>Tableau de bord</a></li>
+                            @elseif(auth()->user()->isAcheteur())
+                                <li><a class="dropdown-item" href="{{ route('acheteur.dashboard') }}"><i class="fas fa-tachometer-alt me-2"></i>Tableau de bord</a></li>
+                            @elseif(auth()->user()->isAdmin())
+                                <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}"><i class="fas fa-tachometer-alt me-2"></i>Tableau de bord</a></li>
+                            @endif
+                            <li>
+                                <form method="POST" action="{{ route('logout') }}" class="d-inline w-100">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item text-danger w-100 text-start">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                @else
+                    <a href="{{ route('login') }}" class="btn btn-link p-2 text-muted">
+                        <i class="fas fa-user"></i>
+                    </a>
+                @endauth
+            </div>
+        </div>
         
-        <!-- Bouton mobile toggle -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <!-- Navigation principale -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <!-- Menu principal (gauche) -->
+        <!-- VERSION DESKTOP (d-none d-lg-flex) -->
+        <div class="d-none d-lg-flex w-100 align-items-center">
+            <!-- Logo -->
+            <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="{{ route('home') }}">
+                <i class="fas fa-ticket-alt me-2 text-orange"></i>
+                <span class="brand-text">ClicBillet</span>
+                <small class="text-muted ms-2">CI</small>
+            </a>
+            
+            <!-- Menu navigation -->
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
-                        <i class="fas fa-home me-1 d-lg-none"></i>Accueil
+                        Accueil
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('events.all') ? 'active' : '' }}" 
-                       href="{{ route('events.all') }}">
-                        <i class="fas fa-calendar-alt me-1"></i>Tous les événements
+                    <a class="nav-link {{ request()->routeIs('events.all') ? 'active' : '' }}" href="{{ route('events.all') }}">
+                        Événements
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('pages.contact') ? 'active' : '' }}" href="{{ route('pages.contact') }}">
+                        Contact
                     </a>
                 </li>
             </ul>
             
-            <!-- Navigation droite -->
-            <ul class="navbar-nav align-items-center">
-                
-                <!-- Panier (visible seulement pour les acheteurs non connectés ou connectés) -->
-                @if(!auth()->check() || (auth()->check() && auth()->user()->isAcheteur()))
-                <li class="nav-item me-3">
-                    <a class="nav-link position-relative cart-link" href="{{ route('cart.show') }}" id="cartLink">
+            <!-- BARRE DE RECHERCHE DESKTOP -->
+            <div class="search-container me-4">
+                <form action="{{ route('search') }}" method="GET" class="d-flex">
+                    <div class="input-group search-input-group">
+                        <input type="text" 
+                               class="form-control search-input" 
+                               name="q" 
+                               placeholder="Rechercher un événement..."
+                               value="{{ request('q') }}"
+                               autocomplete="off">
+                        <button class="btn btn-search" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Menu utilisateur desktop -->
+            <ul class="navbar-nav">
+                <!-- Panier -->
+                <li class="nav-item">
+                    <a class="nav-link cart-link position-relative" href="{{ route('cart.show') }}">
                         <i class="fas fa-shopping-cart"></i>
-                        <span class="cart-badge badge bg-orange position-absolute top-0 start-100 translate-middle" 
-                              id="cartBadge" style="display: none;">0</span>
-                        <span class="d-lg-none ms-2">Panier</span>
+                        @if(session('cart') && count(session('cart')) > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-orange cart-badge">
+                                {{ array_sum(array_column(session('cart'), 'quantity')) }}
+                            </span>
+                        @endif
                     </a>
                 </li>
-                @endif
                 
-                @guest
-                    <!-- Utilisateur non connecté -->
-                    <li class="nav-item me-2">
-                        <a class="nav-link" href="{{ route('login') }}">
-                            <i class="fas fa-sign-in-alt me-1"></i>
-                            <span class="d-none d-lg-inline">Connexion</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-orange btn-sm" href="{{ route('register') }}">
-                            <i class="fas fa-user-plus me-1"></i>S'inscrire
-                        </a>
-                    </li>
-                @else
-                    <!-- Utilisateur connecté -->
+                @auth
+                    <!-- Menu utilisateur connecté -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
-                           role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            
-                            <!-- Avatar et infos utilisateur -->
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
                             <div class="user-avatar me-2">
-                                @if(auth()->user()->isAdmin())
-                                    <i class="fas fa-shield-alt text-danger"></i>
-                                @elseif(auth()->user()->isPromoteur())
-                                    <i class="fas fa-bullhorn text-warning"></i>
-                                @else
-                                    <i class="fas fa-user text-primary"></i>
-                                @endif
+                                {{ substr(auth()->user()->name, 0, 1) }}
                             </div>
-                            
-                            <div class="d-flex flex-column d-none d-lg-block">
-                                <span class="user-name">{{ auth()->user()->name }}</span>
-                                <small class="user-role text-muted">
-                                    @if(auth()->user()->isAdmin())
-                                        Administrateur
-                                    @elseif(auth()->user()->isPromoteur())
-                                        Promoteur
-                                    @else
-                                        Acheteur
-                                    @endif
-                                </small>
+                            <div class="text-start d-none d-xl-block">
+                                <div class="user-name">{{ auth()->user()->name }}</div>
+                                <div class="user-role">{{ ucfirst(auth()->user()->user_type) }}</div>
                             </div>
-                            
-                            <span class="d-lg-none ms-2">{{ auth()->user()->name }}</span>
                         </a>
-                        
-                        <!-- Menu déroulant adaptatif selon le rôle -->
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <!-- En-tête du menu -->
-                            <li class="dropdown-header d-lg-none">
-                                <strong>{{ auth()->user()->name }}</strong><br>
-                                <small class="text-muted">
-                                    @if(auth()->user()->isAdmin())
-                                        <i class="fas fa-shield-alt text-danger me-1"></i>Administrateur
-                                    @elseif(auth()->user()->isPromoteur())
-                                        <i class="fas fa-bullhorn text-warning me-1"></i>Promoteur
-                                    @else
-                                        <i class="fas fa-user text-primary me-1"></i>Acheteur
-                                    @endif
-                                </small>
-                            </li>
-                            <li><hr class="dropdown-divider d-lg-none"></li>
-                            
-                            @if(auth()->user()->isAdmin())
-                                <!-- Menu Admin -->
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.dashboard') }}">
-                                        <i class="fas fa-tachometer-alt me-2"></i>Tableau de bord
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.users') }}">
-                                        <i class="fas fa-users me-2"></i>Utilisateurs
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.events') }}">
-                                        <i class="fas fa-calendar me-2"></i>Événements
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.orders') }}">
-                                        <i class="fas fa-shopping-cart me-2"></i>Commandes
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.commissions') }}">
-                                        <i class="fas fa-coins me-2"></i>Commissions
-                                    </a>
-                                </li>
-                                
-                            @elseif(auth()->user()->isPromoteur())
-                                <!-- Menu Promoteur -->
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('promoteur.dashboard') }}">
-                                        <i class="fas fa-tachometer-alt me-2"></i>Tableau de bord
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('promoteur.events.index') }}">
-                                        <i class="fas fa-calendar me-2"></i>Mes événements
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('promoteur.events.create') }}">
-                                        <i class="fas fa-plus me-2"></i>Créer un événement
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('promoteur.sales') }}">
-                                        <i class="fas fa-chart-line me-2"></i>Ventes
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('promoteur.scanner.index') }}">
-                                        <i class="fas fa-qrcode me-2"></i>Scanner QR
-                                    </a>
-                                </li>
-                                
-                            @else
-                                <!-- Menu Acheteur -->
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('acheteur.dashboard') }}">
-                                        <i class="fas fa-tachometer-alt me-2"></i>Mes billets
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('acheteur.tickets') }}">
-                                        <i class="fas fa-ticket-alt me-2"></i>Historique
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('cart.show') }}">
-                                        <i class="fas fa-shopping-cart me-2"></i>Mon panier
-                                    </a>
-                                </li>
+                            @if(auth()->user()->isPromoteur())
+                                <li><a class="dropdown-item" href="{{ route('promoteur.dashboard') }}"><i class="fas fa-tachometer-alt me-2"></i>Tableau de bord</a></li>
+                            @elseif(auth()->user()->isAcheteur())
+                                <li><a class="dropdown-item" href="{{ route('acheteur.dashboard') }}"><i class="fas fa-tachometer-alt me-2"></i>Tableau de bord</a></li>
+                            @elseif(auth()->user()->isAdmin())
+                                <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}"><i class="fas fa-tachometer-alt me-2"></i>Tableau de bord</a></li>
                             @endif
-                            
-                            <!-- Options communes -->
-                            <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item" href="{{ 
-                                    auth()->user()->isAdmin() ? route('admin.dashboard') : 
-                                    (auth()->user()->isPromoteur() ? route('promoteur.profile') : route('acheteur.profile')) 
-                                }}">
-                                    <i class="fas fa-user-cog me-2"></i>
-                                    {{ auth()->user()->isAdmin() ? 'Paramètres admin' : 'Mon profil' }}
-                                </a>
-                            </li>
-                            
-                            @if(!auth()->user()->isAdmin())
-                            <li>
-                                <a class="dropdown-item" href="{{ route('home') }}">
-                                    <i class="fas fa-home me-2"></i>Retour à l'accueil
-                                </a>
-                            </li>
-                            @else
-                            <li>
-                                <a class="dropdown-item" href="{{ route('home') }}">
-                                    <i class="fas fa-eye me-2"></i>Voir le site public
-                                </a>
-                            </li>
-                            @endif
-                            
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item text-danger" href="{{ route('logout') }}"
-                                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
-                                </a>
+                                <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                    </button>
+                                </form>
                             </li>
                         </ul>
                     </li>
-                    
-                    <!-- Formulaire de déconnexion -->
-                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                        @csrf
-                    </form>
-                @endguest
+                @else
+                    <!-- Boutons connexion/inscription -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('login') }}">Connexion</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('register') }}">
+                            <span class="btn btn-orange btn-sm">Créer un compte</span>
+                        </a>
+                    </li>
+                @endauth
+            </ul>
+        </div>
+        
+        <!-- Menu collapse pour mobile -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav d-block d-md-none">
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
+                        <i class="fas fa-home me-2"></i>Accueil
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('events.all') ? 'active' : '' }}" href="{{ route('events.all') }}">
+                        <i class="fas fa-calendar me-2"></i>Événements
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('pages.contact') ? 'active' : '' }}" href="{{ route('pages.contact') }}">
+                        <i class="fas fa-envelope me-2"></i>Contact
+                    </a>
+                </li>
+                
+                <!-- Panier dans le menu mobile -->
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('cart.show') ? 'active' : '' }}" href="{{ route('cart.show') }}">
+                        <i class="fas fa-shopping-cart me-2"></i>Panier
+                        @if(session('cart') && count(session('cart')) > 0)
+                            <span class="badge bg-orange ms-1">
+                                {{ array_sum(array_column(session('cart'), 'quantity')) }}
+                            </span>
+                        @endif
+                    </a>
+                </li>
+                
+                @auth
+                    <li class="nav-item border-top mt-3 pt-3">
+                        @if(auth()->user()->isPromoteur())
+                            <a class="nav-link" href="{{ route('promoteur.dashboard') }}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Tableau de bord
+                            </a>
+                        @elseif(auth()->user()->isAcheteur())
+                            <a class="nav-link" href="{{ route('acheteur.dashboard') }}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Tableau de bord
+                            </a>
+                        @elseif(auth()->user()->isAdmin())
+                            <a class="nav-link" href="{{ route('admin.dashboard') }}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Tableau de bord
+                            </a>
+                        @endif
+                    </li>
+                    <li class="nav-item">
+                        <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                            @csrf
+                            <button type="submit" class="nav-link border-0 bg-transparent text-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                            </button>
+                        </form>
+                    </li>
+                @else
+                    <li class="nav-item border-top mt-3 pt-3">
+                        <a class="nav-link" href="{{ route('login') }}">
+                            <i class="fas fa-sign-in-alt me-2"></i>Connexion
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('register') }}">
+                            <i class="fas fa-user-plus me-2"></i>Créer un compte
+                        </a>
+                    </li>
+                @endauth
             </ul>
         </div>
     </div>
 </nav>
 
-<!-- Styles CSS pour le header -->
+<!-- Modal recherche mobile -->
+<div class="modal fade" id="mobileSearchModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Rechercher un événement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ route('search') }}" method="GET">
+                    <div class="input-group mb-3">
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               name="q" 
+                               placeholder="Tapez le nom d'un événement..."
+                               autocomplete="off"
+                               autofocus>
+                        <button class="btn btn-orange" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Suggestions de recherche -->
+                <div class="mt-4">
+                    <h6 class="text-muted mb-3">Recherches populaires</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ route('search', ['q' => 'concert']) }}" class="btn btn-outline-secondary btn-sm">Concert</a>
+                        <a href="{{ route('search', ['q' => 'festival']) }}" class="btn btn-outline-secondary btn-sm">Festival</a>
+                        <a href="{{ route('search', ['q' => 'spectacle']) }}" class="btn btn-outline-secondary btn-sm">Spectacle</a>
+                        <a href="{{ route('search', ['q' => 'théâtre']) }}" class="btn btn-outline-secondary btn-sm">Théâtre</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styles CSS -->
 <style>
 :root {
     --primary-orange: #FF6B35;
@@ -237,6 +285,7 @@
     --dark-blue: #1a237e;
 }
 
+/* Styles généraux */
 .text-orange {
     color: var(--primary-orange) !important;
 }
@@ -261,6 +310,7 @@
     color: white;
 }
 
+/* Logo */
 .navbar-brand {
     color: var(--dark-blue) !important;
     transition: all 0.3s ease;
@@ -275,6 +325,7 @@
     font-weight: 700;
 }
 
+/* Navigation */
 .nav-link {
     color: #6c757d !important;
     font-weight: 500;
@@ -289,6 +340,78 @@
     background: rgba(255, 107, 53, 0.1);
 }
 
+/* Barre de recherche desktop */
+.search-container {
+    min-width: 350px;
+}
+
+.search-input-group {
+    background: #f8f9fa;
+    border-radius: 25px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.search-input-group:focus-within {
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.search-input {
+    border: none;
+    background: transparent;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+}
+
+.search-input:focus {
+    box-shadow: none;
+    background: transparent;
+}
+
+.btn-search {
+    background: var(--primary-orange);
+    border: none;
+    color: white;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+}
+
+.btn-search:hover {
+    background: var(--secondary-orange);
+    color: white;
+}
+
+/* Avatar utilisateur */
+.user-avatar {
+    width: 35px;
+    height: 35px;
+    background: rgba(255, 107, 53, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-orange);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.user-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #333;
+}
+
+.user-role {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Badge panier */
 .cart-link {
     position: relative;
 }
@@ -303,39 +426,56 @@
     justify-content: center;
 }
 
-.user-avatar {
-    width: 35px;
-    height: 35px;
-    background: rgba(255, 107, 53, 0.1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Mobile styles */
+@media (max-width: 991.98px) {
+    .navbar-toggler {
+        border: none;
+        padding: 8px;
+    }
+    
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
+    
+    /* Centrer le logo sur mobile */
+    .navbar-brand {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    /* Ajustement des boutons d'action mobile */
+    .btn-link {
+        border: none;
+        background: none;
+        color: #6c757d;
+    }
+    
+    .btn-link:hover {
+        color: var(--primary-orange);
+    }
 }
 
-.user-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.2;
+/* Modal recherche mobile */
+.modal-fullscreen .modal-body {
+    padding: 2rem 1rem;
 }
 
-.user-role {
-    font-size: 0.75rem;
-    line-height: 1;
+.modal-fullscreen .form-control-lg {
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
 }
 
+/* Dropdown menu */
 .dropdown-menu {
     border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
-    padding: 0.5rem 0;
-    min-width: 250px;
+    overflow: hidden;
 }
 
 .dropdown-item {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    margin: 0 0.5rem;
+    padding: 12px 20px;
     transition: all 0.2s ease;
 }
 
@@ -344,130 +484,8 @@
     color: var(--primary-orange);
 }
 
-.dropdown-divider {
-    margin: 0.5rem 1rem;
-}
-
-.dropdown-header {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
-}
-
-.navbar-toggler {
-    border: none !important;
-    box-shadow: none !important;
-}
-
-.navbar-toggler:focus {
-    box-shadow: none;
-}
-
-/* Responsive */
-@media (max-width: 991px) {
-    .navbar-nav {
-        padding-top: 1rem;
-    }
-    
-    .nav-link {
-        padding: 0.75rem 1rem;
-        margin: 2px 0;
-    }
-    
-    .dropdown-menu {
-        min-width: auto;
-        width: 100%;
-        margin-top: 0.5rem;
-    }
-}
-
-/* Animation pour le badge du panier */
-@keyframes bounce {
-    0%, 20%, 53%, 80%, 100% {
-        transform: translate(-50%, -50%) scale(1);
-    }
-    40%, 43% {
-        transform: translate(-50%, -50%) scale(1.1);
-    }
-    70% {
-        transform: translate(-50%, -50%) scale(1.05);
-    }
-    90% {
-        transform: translate(-50%, -50%) scale(1.02);
-    }
-}
-
-.cart-badge.animate {
-    animation: bounce 0.6s ease-in-out;
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
 }
 </style>
-
-<!-- JavaScript pour la gestion du panier -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Mettre à jour le badge du panier
-    updateCartBadge();
-    
-    // Écouter les changements du panier (si vous utilisez des événements personnalisés)
-    document.addEventListener('cartUpdated', updateCartBadge);
-});
-
-function updateCartBadge() {
-    // Récupérer les données du panier via AJAX
-    fetch('{{ route("cart.data") }}')
-        .then(response => response.json())
-        .then(data => {
-            const badge = document.getElementById('cartBadge');
-            const count = data.totalItems || 0;
-            
-            if (count > 0) {
-                badge.textContent = count;
-                badge.style.display = 'flex';
-                badge.classList.add('animate');
-                
-                // Retirer l'animation après qu'elle soit terminée
-                setTimeout(() => {
-                    badge.classList.remove('animate');
-                }, 600);
-            } else {
-                badge.style.display = 'none';
-            }
-        })
-        .catch(error => {
-            console.log('Erreur lors de la récupération du panier:', error);
-        });
-}
-
-// Fonction utilitaire pour ajouter un item au panier (à appeler depuis vos pages)
-function addToCart(ticketTypeId, quantity = 1) {
-    fetch('{{ route("cart.add") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            ticket_type_id: ticketTypeId,
-            quantity: quantity
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            updateCartBadge();
-            // Optionnel: afficher une notification
-            showNotification('Billet ajouté au panier !', 'success');
-        }
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        showNotification('Erreur lors de l\'ajout au panier', 'error');
-    });
-}
-
-// Fonction pour afficher des notifications (optionnelle)
-function showNotification(message, type = 'info') {
-    // Vous pouvez implémenter votre système de notifications ici
-    // Par exemple avec Toast Bootstrap ou une autre librairie
-    console.log(`${type.toUpperCase()}: ${message}`);
-}
-</script>

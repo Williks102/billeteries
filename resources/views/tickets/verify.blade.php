@@ -32,19 +32,19 @@
                                 <div class="alert alert-success border-0 shadow-sm">
                                     <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
                                     <h4 class="text-success mb-2">✅ Billet Valide</h4>
-                                    <p class="mb-0">{{ $info['message'] }}</p>
+                                    <p class="mb-0">{{ $info['status_message'] }}</p>
                                 </div>
                             @elseif($ticket->used_at)
                                 <div class="alert alert-warning border-0 shadow-sm">
                                     <i class="fas fa-exclamation-triangle fa-2x mb-2 text-warning"></i>
                                     <h4 class="text-warning mb-2">⚠️ Billet Déjà Utilisé</h4>
-                                    <p class="mb-0">{{ $info['message'] }}</p>
+                                    <p class="mb-0">{{ $info['status_message'] }}</p>
                                 </div>
                             @else
                                 <div class="alert alert-danger border-0 shadow-sm">
                                     <i class="fas fa-times-circle fa-2x mb-2 text-danger"></i>
                                     <h4 class="text-danger mb-2">❌ Billet Non Valide</h4>
-                                    <p class="mb-0">{{ $info['message'] }}</p>
+                                    <p class="mb-0">{{ $info['status_message'] }}</p>
                                 </div>
                             @endif
                         </div>

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'acheteur' => \App\Http\Middleware\AcheteurMiddleware::class,
             'execution.time' => \App\Http\Middleware\SetExecutionTime::class,
             'layout' => \App\Http\Middleware\SetLayoutMiddleware::class,
+            'role' => \App\Http\Middleware\CheckUserRole::class,
         ]);
         $middleware->append(\App\Http\Middleware\SetExecutionTime::class);
         $middleware->append(\App\Http\Middleware\SetLayoutMiddleware::class);

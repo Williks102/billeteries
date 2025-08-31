@@ -1,231 +1,159 @@
-{{-- resources/views/tickets/verify.blade.php --}}
-{{-- Page publique de vérification des billets --}}
-{{-- =============================================== --}}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Vérification Billet - ClicBillet CI</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .verify-container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .verify-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-            max-width: 500px;
-            width: 100%;
-        }
-        .verify-header {
-            background: linear-gradient(135deg, #1a237e, #FF6B35);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .verify-body {
-            padding: 30px;
-        }
-        .status-valid {
-            color: #28a745;
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .status-invalid {
-            color: #dc3545;
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .status-used {
-            color: #856404;
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .ticket-info {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .info-row:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-        }
-        .info-label {
-            font-weight: 600;
-            color: #495057;
-        }
-        .info-value {
-            color: #212529;
-        }
-        .qr-code-display {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .ticket-code-display {
-            background: #1a237e;
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-align: center;
-            margin: 20px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="verify-container">
-        <div class="verify-card">
-            <div class="verify-header">
-                <h1 class="mb-2">
-                    <i class="fas fa-ticket-alt me-2"></i>
-                    Vérification Billet
-                </h1>
-                <p class="mb-0">ClicBillet CI</p>
-            </div>
-            
-            <div class="verify-body">
-                @if($error)
-                    {{-- Erreur --}}
-                    <div class="status-invalid">
-                        <i class="fas fa-times-circle fa-3x mb-3"></i>
-                        <h4>Billet Non Valide</h4>
-                        <p class="mb-0">{{ $error }}</p>
-                        @if(isset($ticket_code))
-                            <div class="ticket-code-display mt-3">
-                                {{ $ticket_code }}
-                            </div>
-                        @endif
-                    </div>
-                @elseif($ticket && isset($info))
-                    {{-- Ticket trouvé --}}
-                    <div class="ticket-code-display">
-                        {{ $ticket->ticket_code }}
-                    </div>
-                    
-                    @if($ticket->status === 'used')
-                        {{-- Billet déjà utilisé --}}
-                        <div class="status-used">
-                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-                            <h4>Billet Déjà Utilisé</h4>
-                            <p class="mb-2">Ce billet a déjà été scanné et utilisé.</p>
-                            @if($ticket->used_at)
-                                <small>Utilisé le : {{ $ticket->used_at->format('d/m/Y à H:i') }}</small>
+{{-- resources/views/tickets/public-verify.blade.php --}}
+{{-- Vue publique LECTURE SEULE pour vérification de validité --}}
+
+@extends('layouts.app')
+
+@section('title', 'Vérification de Billet')
+
+@section('content')
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-gradient-primary text-white text-center py-4">
+                    <h2 class="mb-0">
+                        <i class="fas fa-shield-alt me-3"></i>
+                        Vérification Publique
+                    </h2>
+                    <p class="mb-0 mt-2 opacity-90">Validation de l'authenticité du billet</p>
+                </div>
+                
+                <div class="card-body p-5">
+                    @if($ticket && !$error)
+                        {{-- BILLET TROUVÉ --}}
+                        
+                        {{-- Statut principal --}}
+                        <div class="text-center mb-4">
+                            @if($info['is_valid'] && $info['status'] === 'sold')
+                                <div class="alert alert-success border-0 shadow-sm">
+                                    <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                                    <h4 class="text-success mb-3">✅ Billet Authentique</h4>
+                                    <p class="mb-0">{{ $info['status_message'] }}</p>
+                                </div>
+                            @elseif($info['status'] === 'used')
+                                <div class="alert alert-warning border-0 shadow-sm">
+                                    <i class="fas fa-check-double fa-3x mb-3 text-warning"></i>
+                                    <h4 class="text-warning mb-3">✅ Billet Authentique (Utilisé)</h4>
+                                    <p class="mb-0">{{ $info['status_message'] }}</p>
+                                </div>
+                            @else
+                                <div class="alert alert-danger border-0 shadow-sm">
+                                    <i class="fas fa-times-circle fa-3x mb-3 text-danger"></i>
+                                    <h4 class="text-danger mb-3">❌ Billet Non Valide</h4>
+                                    <p class="mb-0">{{ $info['status_message'] }}</p>
+                                </div>
                             @endif
                         </div>
-                    @elseif($info['is_valid'])
-                        {{-- Billet valide --}}
-                        <div class="status-valid">
-                            <i class="fas fa-check-circle fa-3x mb-3"></i>
-                            <h4>Billet Valide</h4>
-                            <p class="mb-0">Ce billet est authentique et valide pour l'entrée.</p>
+
+                        {{-- Informations publiques de l'événement --}}
+                        <div class="row mb-4">
+                            <div class="col-md-8 mx-auto">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-primary mb-3">
+                                            <i class="fas fa-calendar-alt me-2"></i>Événement
+                                        </h5>
+                                        
+                                        <div class="mb-2">
+                                            <h6 class="fw-bold">{{ $info['event']['title'] }}</h6>
+                                        </div>
+                                        
+                                        <div class="row text-muted small">
+                                            <div class="col-sm-6">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ $info['event']['date'] }}
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <i class="fas fa-map-marker-alt me-1"></i>
+                                                {{ $info['event']['location'] }}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-2">
+                                            <span class="badge bg-secondary">{{ $info['ticket_type'] }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        {{-- Notice sécurité --}}
+                        <div class="alert alert-info border-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle fa-2x me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Information</h6>
+                                    <p class="mb-0 small">Cette page vérifie uniquement l'authenticité du billet. 
+                                    Pour les opérations de scan et validation, utilisez l'interface dédiée aux organisateurs.</p>
+                                </div>
+                            </div>
+                        </div>
+
                     @else
-                        {{-- Billet invalide --}}
-                        <div class="status-invalid">
-                            <i class="fas fa-times-circle fa-3x mb-3"></i>
-                            <h4>Billet Non Valide</h4>
-                            <p class="mb-0">Ce billet ne peut pas être utilisé.</p>
+                        {{-- BILLET NON TROUVÉ OU ERREUR --}}
+                        <div class="text-center py-5">
+                            <div class="alert alert-danger border-0 shadow-sm">
+                                <i class="fas fa-search fa-3x mb-3 text-danger"></i>
+                                <h4 class="text-danger mb-3">Billet Non Trouvé</h4>
+                                <p class="mb-0">{{ $error ?? 'Le billet demandé n\'existe pas.' }}</p>
+                                @if(isset($ticket_code))
+                                    <small class="text-muted d-block mt-2">Code recherché: <code>{{ $ticket_code }}</code></small>
+                                @endif
+                            </div>
+
+                            <div class="mt-4">
+                                <h6 class="text-muted mb-3">Que faire ?</h6>
+                                <ul class="list-unstyled text-start" style="max-width: 400px; margin: 0 auto;">
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Vérifiez que le code est correct</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Scannez à nouveau le QR code</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Contactez l'organisateur si nécessaire</li>
+                                </ul>
+                            </div>
                         </div>
                     @endif
                     
-                    {{-- Informations du billet --}}
-                    <div class="ticket-info">
-                        <h5 class="mb-3">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Informations du Billet
-                        </h5>
-                        
-                        <div class="info-row">
-                            <span class="info-label">Événement :</span>
-                            <span class="info-value">{{ $info['event']['title'] }}</span>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="info-label">Date :</span>
-                            <span class="info-value">{{ $info['event']['date'] }}</span>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="info-label">Heure :</span>
-                            <span class="info-value">{{ $info['event']['time'] }}</span>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="info-label">Lieu :</span>
-                            <span class="info-value">{{ $info['event']['venue'] }}</span>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="info-label">Type :</span>
-                            <span class="info-value">{{ $info['ticket_type'] }}</span>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="info-label">Porteur :</span>
-                            <span class="info-value">{{ $info['holder']['name'] }}</span>
-                        </div>
-                        
-                        @if($info['order'])
-                            <div class="info-row">
-                                <span class="info-label">Commande :</span>
-                                <span class="info-value">#{{ $info['order']['number'] }}</span>
-                            </div>
-                        @endif
+                    {{-- Actions --}}
+                    <div class="text-center mt-4">
+                        <a href="{{ route('home') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-2"></i>Retour à l'accueil
+                        </a>
                     </div>
-                @else
-                    {{-- État inconnu --}}
-                    <div class="status-invalid">
-                        <i class="fas fa-question-circle fa-3x mb-3"></i>
-                        <h4>État Inconnu</h4>
-                        <p class="mb-0">Impossible de déterminer l'état de ce billet.</p>
-                    </div>
-                @endif
-                
-                {{-- Actions --}}
-                <div class="text-center mt-4">
-                    <a href="{{ route('home') }}" class="btn btn-primary">
-                        <i class="fas fa-home me-2"></i>
-                        Retour à l'accueil
-                    </a>
                 </div>
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+
+@push('styles')
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.card {
+    border-radius: 15px;
+}
+
+.alert {
+    border-radius: 12px;
+}
+
+.badge {
+    font-size: 0.85em;
+}
+
+code {
+    background: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: 2rem !important;
+    }
+}
+</style>
+@endpush
+@endsection

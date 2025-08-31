@@ -79,7 +79,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
 // ==================== VÉRIFICATION TICKETS (PUBLIQUE) ====================
 Route::get('/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verify'])->name('tickets.verify');
 Route::get('/api/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verifyApi'])->name('api.tickets.verify');
-Route::post('/api/scan-ticket', [TicketVerificationController::class, 'scan'])->name('api.tickets.scan');
+//Route::post('/api/scan-ticket', [TicketVerificationController::class, 'scan'])->name('api.tickets.scan');
 
 // ==================== ROUTES AUTHENTIFIÉES ====================
 
@@ -214,6 +214,10 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/recent', [ScannerController::class, 'recent'])->name('recent');
             Route::get('/search', [ScannerController::class, 'search'])->name('search');
         });
+
+        Route::get('/scanner/verify/{ticketCode}', [TicketVerificationController::class, 'authenticatedVerify'])->name('tickets.authenticated.verify');
+        Route::post('/api/authenticated-scan', [TicketVerificationController::class, 'authenticatedScan'])->name('api.authenticated-scan');
+        
         
         // Ventes et commissions
         Route::get('/sales', [SalesController::class, 'index'])->name('sales');

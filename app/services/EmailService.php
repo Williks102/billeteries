@@ -41,25 +41,33 @@ class EmailService
      * Envoyer email de confirmation de paiement avec billets
      */
     public function sendPaymentConfirmation(Order $order)
-    {
-        try {
-            Mail::to($order->user->email)
-                ->send(new PaymentConfirmation($order));
+{
+    try {
+        Mail::to($order->user->email)
+            ->send(new PaymentConfirmation($order));
 
-            Log::info("Email confirmation paiement envoyé", [
-                'order_id' => $order->id,
-                'email' => $order->user->email
-            ]);
+        // Nettoyer le PDF temporaire après envoi
+        $this->cleanupTempPDF($order->order_number);
 
-            return true;
-        } catch (\Exception $e) {
-            Log::error("Erreur envoi email confirmation paiement", [
-                'order_id' => $order->id,
-                'error' => $e->getMessage()
-            ]);
-            return false;
-        }
+        Log::info("Email confirmation paiement avec PDF envoyé", [
+            'order_id' => $order->id,
+            'email' => $order->user->email,
+            'is_guest' => $order->user->is_guest,
+            'pdf_attached' => true
+        ]);
+
+        return true;
+    } catch (\Exception $e) {
+        Log::error("Erreur envoi email confirmation paiement", [
+            'order_id' => $order->id,
+            'error' => $e->getMessage()
+        ]);
+        
+        // Nettoyer quand même en cas d'erreur
+        $this->cleanupTempPDF($order->order_number);
+        return false;
     }
+}
 
     /**
      * Notifier le promoteur d'une nouvelle vente
@@ -155,4 +163,66 @@ class EmailService
             return false;
         }
     }
+
+    /**
+ * Nettoyer les PDF temporaires après envoi
+ */
+public function cleanupTempPDF($orderNumber)
+{
+    try {
+        $tempPath = storage_path('app/temp/billets-' . $orderNumber . '.pdf');
+        if (file_exists($tempPath)) {
+            unlink($tempPath);
+            Log::info("PDF temporaire supprimé", [
+                'file' => basename($tempPath),
+                'order_number' => $orderNumber
+            ]);
+            return true;
+        }
+        return false;
+    } catch (\Exception $e) {
+        Log::error("Erreur suppression PDF temporaire", [
+            'order_number' => $orderNumber,
+            'error' => $e->getMessage()
+        ]);
+        return false;
+    }
+}
+
+/**
+ * Nettoyer tous les PDF temporaires anciens (plus de 1h)
+ */
+public function cleanupOldTempPDFs()
+{
+    try {
+        $tempDir = storage_path('app/temp');
+        if (!is_dir($tempDir)) {
+            return 0;
+        }
+
+        $files = glob($tempDir . '/billets-*.pdf');
+        $cleaned = 0;
+        $oneHourAgo = time() - 3600; // 1 heure
+
+        foreach ($files as $file) {
+            if (filemtime($file) < $oneHourAgo) {
+                if (unlink($file)) {
+                    $cleaned++;
+                }
+            }
+        }
+
+        Log::info("Nettoyage PDF temporaires anciens", [
+            'files_deleted' => $cleaned,
+            'total_checked' => count($files)
+        ]);
+
+        return $cleaned;
+    } catch (\Exception $e) {
+        Log::error("Erreur nettoyage PDF temporaires", [
+            'error' => $e->getMessage()
+        ]);
+        return 0;
+    }
+}
 }

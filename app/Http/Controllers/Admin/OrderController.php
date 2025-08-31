@@ -129,16 +129,16 @@ class OrderController extends Controller
                 'event.promoteur', 
                 'orderItems.ticketType', 
                 'tickets',
-                'commissions.promoteur'
+                'commission.promoteur'
             ]);
 
             // Statistiques de la commande - Avec protection contre null
             $stats = [
-                'total_tickets' => $order->tickets ? $order->tickets->count() : 0,
-                'used_tickets' => $order->tickets ? $order->tickets->where('status', 'used')->count() : 0,
-                'remaining_tickets' => $order->tickets ? $order->tickets->where('status', 'sold')->count() : 0,
-                'commission_amount' => $order->commissions ? $order->commissions->sum('commission_amount') : 0,
-                'net_revenue' => $order->total_amount - ($order->commissions ? $order->commissions->sum('commission_amount') : 0),
+                'total_tickets' => $order->tickets->count(),
+                'used_tickets' => $order->tickets->where('status', 'used')->count(),
+                'remaining_tickets' => $order->tickets->where('status', 'sold')->count(),
+                'commission_amount' => optional($order->commission)->commission_amount ?? 0,
+                'net_revenue' => $order->total_amount - (optional($order->commission)->commission_amount ?? 0),
             ];
 
             // Historique des actions sur cette commande

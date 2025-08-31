@@ -23,7 +23,7 @@
             </p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.orders.pdf', $order) }}" class="btn btn-outline-orange">
+            <a href="{{ route('admin.orders.export', $order) }}" class="btn btn-outline-orange">
                 <i class="fas fa-file-pdf me-2"></i>PDF
             </a>
             <div class="dropdown">
@@ -285,7 +285,7 @@
                     <h5 class="modal-title">Changer le statut</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST">
+                <form action="{{ route('admin.orders.update-status', $order) }}" method="POST">
                     @csrf
                     @method('PATCH')
                     <div class="modal-body">

@@ -51,7 +51,48 @@ class PaymentConfirmation extends Mailable
      * Get the attachments for the message.
      */
     public function attachments(): array
-    {
-        return [];
+{
+    try {
+        // Charger les relations pour le PDF
+        $this->order->load(['event.category', 'tickets.ticketType', 'orderItems.ticketType', 'user']);
+        
+        // Générer le PDF avec votre template existant
+        $pdf = \PDF::loadView('acheteur.tickets-pdf', ['order' => $this->order]);
+        $pdf->setPaper('A4', 'portrait');
+        
+        // Nom du fichier
+        $fileName = 'Billets-' . $this->order->order_number . '.pdf';
+        
+        // Fichier temporaire
+        $tempPath = storage_path('app/temp/' . $fileName);
+        
+        // Créer le dossier si nécessaire
+        if (!file_exists(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0755, true);
+        }
+        
+        // Sauvegarder le PDF
+        file_put_contents($tempPath, $pdf->output());
+        
+        \Log::info("PDF joint à l'email", [
+            'order_id' => $this->order->id,
+            'file_name' => $fileName,
+            'is_guest' => $this->order->user->is_guest
+        ]);
+        
+        return [
+            \Illuminate\Mail\Mailables\Attachment::fromPath($tempPath)
+                ->as($fileName)
+                ->withMime('application/pdf')
+        ];
+        
+    } catch (\Exception $e) {
+        \Log::error("Erreur PDF email", [
+            'order_id' => $this->order->id,
+            'error' => $e->getMessage()
+        ]);
+        return []; // Pas de PDF en cas d'erreur
     }
+
+}
 }

@@ -189,7 +189,7 @@ async function processTicket() {
     }
     
     try {
-        const response = await fetch('{{ route("promoteur.scanner.scan") }}', {
+        const response = await fetch('{{ route("promoteur.scanner.verify") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

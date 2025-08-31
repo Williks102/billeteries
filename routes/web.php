@@ -215,7 +215,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/search', [ScannerController::class, 'search'])->name('search');
         });
 
-        Route::get('/scanner/verify/{ticketCode}', [TicketVerificationController::class, 'authenticatedVerify'])->name('tickets.authenticated.verify');
+        Route::post('/scanner/verify/{ticketCode}', [TicketVerificationController::class, 'authenticatedVerify'])->name('tickets.authenticated.verify');
         Route::post('/api/authenticated-scan', [TicketVerificationController::class, 'authenticatedScan'])->name('api.authenticated-scan');
         
         

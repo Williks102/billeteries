@@ -3,67 +3,406 @@
 namespace App\Http\Controllers\Promoteur;
 
 use App\Http\Controllers\Controller;
-use App\Models\Event;
-use App\Models\Order;
-use App\Models\Commission;
-use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Models\Event;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Ticket;
+use App\Models\TicketType;
+use App\Models\Commission;
 
 class SalesController extends Controller
 {
-    /**
-     * Page des ventes du promoteur
-     */
     public function index(Request $request)
     {
         $promoteurId = Auth::id();
         $period = $request->get('period', 'all');
         
-        // Query de base pour les commandes du promoteur
-        $ordersQuery = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
-            $query->where('promoter_id', $promoteurId);
-        })->where('payment_status', 'paid');
+        try {
+            // Définir la période
+            $startDate = $this->getStartDate($period);
+            $endDate = now();
+            
+            // Gérer les dates personnalisées depuis le formulaire de filtres
+            if ($request->filled('start_date')) {
+                $startDate = Carbon::parse($request->start_date)->startOfDay();
+            }
+            if ($request->filled('end_date')) {
+                $endDate = Carbon::parse($request->end_date)->endOfDay();
+            }
+            
+            // Formatter les dates pour la vue
+            $dateFormatted = $this->formatDatesForView($startDate, $endDate, $period);
+            $startDate = $dateFormatted['startDate'];
+            $endDate = $dateFormatted['endDate'];
+            
+            // Statistiques générales (pour $stats)
+            $stats = $this->getSalesStats($promoteurId, $startDate, $endDate);
+            
+            // CORRECTION MAJEURE: Créer $totalStats pour les cartes de statistiques
+            $totalStats = [
+                'total_revenue' => $stats['total_revenue'],
+                'total_tickets' => $stats['total_tickets_sold'], 
+                'total_orders' => $stats['total_orders'],
+                'average_order' => $stats['average_order_value']
+            ];
+            
+            // Commandes avec les bonnes relations
+            $orders = $this->getOrders($promoteurId, $startDate, $endDate);
+            
+            // Événements avec données de ventes
+            $eventsWithSales = $this->getEventsWithSales($promoteurId, $startDate, $endDate);
+            
+            // Ventes par jour pour le graphique
+            $dailySales = $this->getDailySales($promoteurId, $startDate, $endDate);
+            
+            // Ventes par événement
+            $salesByEvent = $this->getSalesByEvent($promoteurId, $startDate, $endDate);
+            
+            return view('promoteur.sales.index', compact(
+                'orders', 
+                'stats', 
+                'totalStats',  // AJOUTÉ pour les cartes de stats
+                'period',
+                'startDate',   // AJOUTÉ pour le formulaire de filtres
+                'endDate',     // AJOUTÉ pour le formulaire de filtres
+                'eventsWithSales',
+                'dailySales',
+                'salesByEvent'
+            ));
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur dans SalesController@index: ' . $e->getMessage(), [
+                'promoteur_id' => $promoteurId,
+                'period' => $period,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Données par défaut en cas d'erreur
+            $stats = $this->getDefaultStats();
+            $totalStats = [
+                'total_revenue' => 0,
+                'total_tickets' => 0,
+                'total_orders' => 0,
+                'average_order' => 0
+            ];
+            
+            // Dates par défaut
+            $dateFormatted = $this->formatDatesForView(null, null, $period);
+            
+            return view('promoteur.sales.index', [
+                'orders' => collect(),
+                'stats' => $stats,
+                'totalStats' => $totalStats,  // AJOUTÉ
+                'period' => $period,
+                'startDate' => $dateFormatted['startDate'],    // AJOUTÉ
+                'endDate' => $dateFormatted['endDate'],        // AJOUTÉ
+                'eventsWithSales' => collect(),
+                'dailySales' => collect(),
+                'salesByEvent' => collect()
+            ])->with('error', 'Erreur lors du chargement des données de vente');
+        }
+    }
 
-        // Filtrer par période
-        switch ($period) {
-            case 'today':
-                $ordersQuery->whereDate('created_at', today());
-                break;
-            case 'week':
-                $ordersQuery->where('created_at', '>=', now()->subDays(7));
-                break;
-            case 'month':
-                $ordersQuery->where('created_at', '>=', now()->subMonth());
-                break;
-            case 'year':
-                $ordersQuery->where('created_at', '>=', now()->subYear());
-                break;
+    /**
+     * Obtenir les statistiques de ventes - CORRECTIONS SQL AMBIGUÏTÉ
+     */
+    private function getSalesStats($promoteurId, $startDate, $endDate)
+    {
+        // UTILISER EXACTEMENT LES MÊMES REQUÊTES QUE DANS PromoteurController::dashboard()
+        
+        // Revenus totaux (même requête que dashboard)
+        $totalRevenue = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
+                $query->where('promoter_id', $promoteurId);
+            })
+            ->where('payment_status', 'paid')
+            ->when($startDate, function($query) use ($startDate, $endDate) {
+                $query->whereBetween('orders.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            })
+            ->sum('total_amount');
+
+        // Billets vendus (même requête que dashboard) - CORRECTION AMBIGUÏTÉ
+        $totalTicketsSold = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
+                $query->where('promoter_id', $promoteurId);
+            })
+            ->where('tickets.status', '!=', 'available') // PRÉCISER LA TABLE
+            ->when($startDate, function($query) use ($startDate, $endDate) {
+                $query->whereBetween('tickets.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            })
+            ->count();
+
+        // Nombre de commandes
+        $totalOrders = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
+                $query->where('promoter_id', $promoteurId);
+            })
+            ->where('payment_status', 'paid')
+            ->when($startDate, function($query) use ($startDate, $endDate) {
+                $query->whereBetween('orders.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            })
+            ->count();
+
+        // Commissions (même requête que dashboard)
+        $pendingCommissions = Commission::where('promoter_id', $promoteurId)
+            ->where('status', 'pending')
+            ->when($startDate, function($query) use ($startDate, $endDate) {
+                $query->whereBetween('commissions.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            })
+            ->sum('commission_amount');
+
+        $totalCommissions = Commission::where('promoter_id', $promoteurId)
+            ->when($startDate, function($query) use ($startDate, $endDate) {
+                $query->whereBetween('commissions.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            })
+            ->sum('commission_amount');
+
+        // Nombre d'événements
+        $totalEvents = Event::where('promoter_id', $promoteurId)
+            ->when($startDate, function($query) use ($startDate, $endDate) {
+                $query->whereBetween('events.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            })
+            ->count();
+
+        $publishedEvents = Event::where('promoter_id', $promoteurId)
+            ->where('status', 'published')
+            ->when($startDate, function($query) use ($startDate, $endDate) {
+                $query->whereBetween('events.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            })
+            ->count();
+
+        return [
+            'total_revenue' => $totalRevenue,
+            'total_tickets_sold' => $totalTicketsSold,
+            'total_orders' => $totalOrders,
+            'total_commissions' => $totalCommissions,
+            'pending_commissions' => $pendingCommissions,
+            'total_events' => $totalEvents,
+            'published_events' => $publishedEvents,
+            'average_order_value' => $totalOrders > 0 ? $totalRevenue / $totalOrders : 0,
+        ];
+    }
+
+    /**
+     * Obtenir les commandes avec relations complètes - CORRIGÉ AMBIGUÏTÉ SQL
+     */
+    private function getOrders($promoteurId, $startDate, $endDate)
+    {
+        return Order::with([
+            'orderItems.ticketType.event',
+            'user'
+        ])
+        ->whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
+            $query->where('promoter_id', $promoteurId);
+        })
+        ->where('payment_status', 'paid')
+        ->when($startDate, function($query) use ($startDate, $endDate) {
+            $query->whereBetween('orders.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+        })
+        ->orderBy('orders.created_at', 'desc') // PRÉCISER LA TABLE
+        ->paginate(20);
+    }
+
+    /**
+     * Obtenir les événements avec données de ventes - CORRIGÉ AMBIGUÏTÉ SQL
+     */
+    private function getEventsWithSales($promoteurId, $startDate, $endDate)
+    {
+        // Utiliser les relations qui existent vraiment dans Event.php
+        return Event::where('promoter_id', $promoteurId)
+            ->with(['ticketTypes', 'category', 'orders' => function($query) use ($startDate, $endDate) {
+                $query->where('payment_status', 'paid');
+                if ($startDate) {
+                    $query->whereBetween('orders.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+                }
+            }])
+            ->get()
+            ->map(function($event) use ($startDate, $endDate) {
+                // Calculer les statistiques pour chaque événement
+                $ordersQuery = $event->orders()->where('payment_status', 'paid');
+                
+                if ($startDate) {
+                    $ordersQuery->whereBetween('orders.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+                }
+                
+                $ordersForPeriod = $ordersQuery->get();
+                $revenue = $ordersForPeriod->sum('total_amount');
+                $ordersCount = $ordersForPeriod->count();
+                
+                // Billets vendus via les tickets - CORRECTION AMBIGUÏTÉ
+                $ticketsSoldQuery = $event->tickets()->where('tickets.status', '!=', 'available'); // PRÉCISER LA TABLE
+                
+                if ($startDate) {
+                    $ticketsSoldQuery->whereBetween('tickets.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+                }
+                
+                $ticketsSold = $ticketsSoldQuery->count();
+
+                return [
+                    'event' => $event,
+                    'revenue' => $revenue,
+                    'orders_count' => $ordersCount,
+                    'tickets_sold' => $ticketsSold,
+                ];
+            })
+            ->filter(function($item) {
+                return $item['revenue'] > 0 || $item['tickets_sold'] > 0;
+            })
+            ->sortByDesc('revenue');
+    }
+
+    /**
+     * Obtenir les ventes journalières pour le graphique - CORRIGÉ AMBIGUÏTÉ SQL
+     */
+    private function getDailySales($promoteurId, $startDate, $endDate)
+    {
+        if (!$startDate) {
+            $startDate = now()->subDays(7); // 7 derniers jours par défaut
         }
 
-        $orders = $ordersQuery->with(['user', 'orderItems.ticketType.event'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        // Retourner des objets compatibles avec la vue qui utilise $day->date et $day->revenue
+        $dailySales = collect();
+        $currentDate = Carbon::parse($startDate);
+        $endDate = Carbon::parse($endDate);
 
-        // Statistiques pour la période
-        $stats = $this->getSalesStats($promoteurId, $period);
-        
-        // Événements avec ventes pour le filtre
-        $eventsWithSales = Event::where('promoter_id', $promoteurId)
-            ->whereHas('ticketTypes.orderItems.order', function($query) {
-                $query->where('status', 'paid');
-            })
-            ->withCount('orders')
-            ->orderBy('orders_count', 'desc')
+        while ($currentDate->lte($endDate)) {
+            // Même requête que dans weeklyStats du dashboard - CORRECTION AMBIGUÏTÉ
+            $revenue = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
+                    $query->where('promoter_id', $promoteurId);
+                })
+                ->where('payment_status', 'paid')
+                ->whereDate('orders.created_at', $currentDate) // PRÉCISER LA TABLE
+                ->sum('total_amount');
+
+            // Créer un objet stdClass pour que la vue puisse utiliser $day->date
+            $dayObject = new \stdClass();
+            $dayObject->date = $currentDate->format('Y-m-d');
+            $dayObject->revenue = $revenue;
+            $dayObject->formatted_date = $currentDate->format('d/m');
+
+            $dailySales->push($dayObject);
+
+            $currentDate->addDay();
+        }
+
+        return $dailySales;
+    }
+
+    /**
+     * Obtenir les ventes par événement - CORRIGÉ AMBIGUÏTÉ SQL  
+     */
+    private function getSalesByEvent($promoteurId, $startDate, $endDate)
+    {
+        // Récupérer les événements avec leurs relations existantes
+        $events = Event::where('promoter_id', $promoteurId)
+            ->with(['ticketTypes', 'category', 'orders'])
             ->get();
 
-        return view('promoteur.sales.index', compact(
-            'orders', 
-            'stats', 
-            'period',
-            'eventsWithSales'
-        ));
+        return $events->map(function($event) use ($startDate, $endDate) {
+            // Utiliser la relation orders() qui existe dans Event.php
+            $ordersQuery = $event->orders()->where('payment_status', 'paid');
+            
+            if ($startDate) {
+                $ordersQuery->whereBetween('orders.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            }
+            
+            $orders = $ordersQuery->get();
+            $revenue = $orders->sum('total_amount');
+            $ordersCount = $orders->count();
+
+            // Utiliser la relation tickets() - CORRECTION AMBIGUÏTÉ SQL
+            $ticketsSoldQuery = $event->tickets()->where('tickets.status', '!=', 'available'); // PRÉCISER LA TABLE
+            
+            if ($startDate) {
+                $ticketsSoldQuery->whereBetween('tickets.created_at', [$startDate, $endDate]); // PRÉCISER LA TABLE
+            }
+            
+            $ticketsSold = $ticketsSoldQuery->count();
+
+            return [
+                'event' => $event,
+                'revenue' => $revenue,
+                'orders_count' => $ordersCount,
+                'tickets_sold' => $ticketsSold,
+            ];
+        })->filter(function($item) {
+            // Ne garder que les événements avec des ventes
+            return $item['revenue'] > 0 || $item['tickets_sold'] > 0;
+        })->sortByDesc('revenue'); // Trier par revenus décroissants
+    }
+
+    /**
+     * Définir la date de début selon la période
+     */
+    private function getStartDate($period)
+    {
+        switch ($period) {
+            case 'today':
+                return now()->startOfDay();
+            case 'week':
+                return now()->startOfWeek();
+            case 'month':
+                return now()->startOfMonth();
+            case 'year':
+                return now()->startOfYear();
+            default:
+                return null; // Toutes les données
+        }
+    }
+
+    /**
+     * Statistiques par défaut en cas d'erreur - MISE À JOUR COMPLÈTE
+     */
+    private function getDefaultStats()
+    {
+        return [
+            'total_revenue' => 0,
+            'total_tickets_sold' => 0,
+            'total_orders' => 0,
+            'total_commissions' => 0,
+            'pending_commissions' => 0,
+            'total_events' => 0,
+            'published_events' => 0,
+            'average_order_value' => 0,
+        ];
+    }
+
+    /**
+     * NOUVELLE MÉTHODE : Formatter les dates pour la vue
+     */
+    private function formatDatesForView($startDate, $endDate, $period)
+    {
+        // Dates par défaut selon la période
+        if (!$startDate || !$endDate) {
+            switch ($period) {
+                case 'today':
+                    $startDate = now()->startOfDay();
+                    $endDate = now()->endOfDay();
+                    break;
+                case 'week':
+                    $startDate = now()->startOfWeek();
+                    $endDate = now()->endOfWeek();
+                    break;
+                case 'month':
+                    $startDate = now()->startOfMonth();
+                    $endDate = now()->endOfMonth();
+                    break;
+                case 'year':
+                    $startDate = now()->startOfYear();
+                    $endDate = now()->endOfYear();
+                    break;
+                default:
+                    $startDate = now()->startOfMonth();
+                    $endDate = now()->endOfMonth();
+            }
+        }
+
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ];
     }
 
     /**
@@ -75,380 +414,24 @@ class SalesController extends Controller
         $type = $request->get('type', 'overview');
         $period = $request->get('period', 'month');
         
-        $data = [];
-        
-        switch ($type) {
-            case 'overview':
-                $data = $this->getOverviewReport($promoteurId, $period);
-                break;
-            case 'events':
-                $data = $this->getEventsReport($promoteurId, $period);
-                break;
-            case 'financial':
-                $data = $this->getFinancialReport($promoteurId, $period);
-                break;
-            case 'commissions':
-                $data = $this->getCommissionsReport($promoteurId, $period);
-                break;
-        }
-
-        return view('promoteur.sales.reports', compact('data', 'type', 'period'));
-    }
-
-    /**
-     * Exporter les données de ventes
-     */
-    public function export(Request $request)
-    {
-        $promoteurId = Auth::id();
-        $format = $request->get('format', 'csv');
-        $period = $request->get('period', 'month');
-        $type = $request->get('type', 'sales');
-
-        // Récupérer les données selon le type
-        $data = $this->getExportData($promoteurId, $type, $period);
-
-        switch ($format) {
-            case 'csv':
-                return $this->exportToCsv($data, $type);
-            case 'excel':
-                return $this->exportToExcel($data, $type);
-            case 'pdf':
-                return $this->exportToPdf($data, $type);
-            default:
-                return back()->with('error', 'Format d\'export non supporté');
-        }
-    }
-
-    /**
-     * Obtenir les statistiques de ventes - CORRIGÉ
-     */
-    private function getSalesStats($promoteurId, $period)
-    {
-        $query = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
-            $query->where('promoter_id', $promoteurId);
-        })->where('payment_status', 'paid');
-
-        // Appliquer le filtre de période
-        switch ($period) {
-            case 'today':
-                $query->whereDate('created_at', today());
-                break;
-            case 'week':
-                $query->where('created_at', '>=', now()->subDays(7));
-                break;
-            case 'month':
-                $query->where('created_at', '>=', now()->subMonth());
-                break;
-        }
-
-        $orders = $query->with('orderItems.ticketType')->get();
-
-        $totalRevenue = $orders->sum('total_amount');
-        $totalOrders = $orders->count();
-        $totalTickets = $orders->sum(function($order) {
-            return $order->orderItems->sum('quantity');
-        });
-
-        // Calcul des tickets utilisés - CORRIGÉ
-        $ticketsUsed = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                $query->where('promoter_id', $promoteurId);
-            })
-            ->where('status', 'used');
-
-        // Appliquer le même filtre de période pour les tickets utilisés
-        switch ($period) {
-            case 'today':
-                $ticketsUsed->whereDate('updated_at', today());
-                break;
-            case 'week':
-                $ticketsUsed->where('updated_at', '>=', now()->subDays(7));
-                break;
-            case 'month':
-                $ticketsUsed->where('updated_at', '>=', now()->subMonth());
-                break;
-        }
-
-        $totalTicketsUsed = $ticketsUsed->count();
-
-        return [
-            'total_revenue' => $totalRevenue,
-            'total_orders' => $totalOrders,
-            'total_tickets' => $totalTickets,
-            'tickets_used' => $totalTicketsUsed,
-            'average_order_value' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 0) : 0,
-            'usage_rate' => $totalTickets > 0 ? round(($totalTicketsUsed / $totalTickets) * 100, 1) : 0
-        ];
-    }
-
-    /**
-     * Rapport d'aperçu général
-     */
-    private function getOverviewReport($promoteurId, $period)
-    {
-        $stats = $this->getSalesStats($promoteurId, $period);
-        
-        // Top événements
-        $topEvents = Event::where('promoter_id', $promoteurId)
-            ->withSum(['orders as revenue' => function($query) {
-                $query->where('payment_status', 'paid');
-            }], 'total_amount')
-            ->orderBy('revenue', 'desc')
-            ->take(10)
-            ->get();
-
-        // Évolution des ventes (graphique)
-        $salesEvolution = $this->getSalesEvolution($promoteurId, $period);
-
-        return compact('stats', 'topEvents', 'salesEvolution');
-    }
-
-    /**
-     * Rapport par événements - CORRIGÉ
-     */
-    private function getEventsReport($promoteurId, $period)
-    {
-        $events = Event::where('promoter_id', $promoteurId)
-            ->with(['ticketTypes.orderItems.order'])
-            ->get()
-            ->map(function($event) {
-                $orders = $event->orders()->where('payment_status', 'paid')->get();
-                $allTickets = $event->ticketTypes->flatMap->tickets;
-                
-                return [
-                    'event' => $event,
-                    'total_revenue' => $orders->sum('total_amount'),
-                    'total_orders' => $orders->count(),
-                    'total_tickets' => $orders->sum(function($order) {
-                        return $order->orderItems->sum('quantity');
-                    }),
-                    'tickets_used' => $allTickets->where('status', 'used')->count(),
-                    'tickets_unused' => $allTickets->where('status', 'sold')->count()
-                ];
-            })
-            ->sortByDesc('total_revenue');
-
-        return compact('events');
-    }
-
-    /**
-     * Rapport financier
-     */
-    private function getFinancialReport($promoteurId, $period)
-    {
-        $commissions = Commission::where('promoter_id', $promoteurId)
-            ->with('event')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $monthlyBreakdown = $commissions->groupBy(function($commission) {
-            return $commission->created_at->format('Y-m');
-        })->map(function($group) {
-            return [
-                'total' => $group->sum('commission_amount'),
-                'paid' => $group->where('status', 'paid')->sum('commission_amount'),
-                'pending' => $group->where('status', 'pending')->sum('commission_amount')
+        try {
+            $startDate = $this->getStartDate($period);
+            $endDate = now();
+            
+            $data = [
+                'stats' => $this->getSalesStats($promoteurId, $startDate, $endDate),
+                'topEvents' => $this->getEventsWithSales($promoteurId, $startDate, $endDate)->take(10),
+                'dailySales' => $this->getDailySales($promoteurId, $startDate, $endDate),
+                'period' => $period,
+                'type' => $type
             ];
-        });
 
-        return compact('commissions', 'monthlyBreakdown');
-    }
-
-    /**
-     * Rapport des commissions
-     */
-    private function getCommissionsReport($promoteurId, $period)
-    {
-        return Commission::where('promoter_id', $promoteurId)
-            ->with(['event', 'order'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
-    }
-
-    /**
-     * Obtenir l'évolution des ventes pour graphique
-     */
-    private function getSalesEvolution($promoteurId, $period)
-    {
-        $days = match($period) {
-            'week' => 7,
-            'month' => 30,
-            'year' => 365,
-            default => 30
-        };
-
-        $evolution = [];
-        
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $date = now()->subDays($i);
+            return view('promoteur.sales.reports', compact('data', 'type', 'period'));
             
-            $revenue = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
-                    $query->where('promoter_id', $promoteurId);
-                })
-                ->where('payment_status', 'paid')
-                ->whereDate('created_at', $date)
-                ->sum('total_amount');
-                
-            $evolution[] = [
-                'date' => $date->format($days > 31 ? 'M d' : 'd/m'),
-                'revenue' => $revenue
-            ];
+        } catch (\Exception $e) {
+            Log::error('Erreur dans SalesController@reports: ' . $e->getMessage());
+            
+            return back()->with('error', 'Erreur lors du chargement des rapports');
         }
-
-        return $evolution;
-    }
-
-    /**
-     * Obtenir les données pour export
-     */
-    private function getExportData($promoteurId, $type, $period)
-    {
-        switch ($type) {
-            case 'sales':
-                return $this->getSalesExportData($promoteurId, $period);
-            case 'commissions':
-                return $this->getCommissionsExportData($promoteurId, $period);
-            case 'tickets':
-                return $this->getTicketsExportData($promoteurId, $period);
-            default:
-                return [];
-        }
-    }
-
-    /**
-     * Export CSV
-     */
-    private function exportToCsv($data, $type)
-    {
-        $filename = "promoteur_{$type}_" . now()->format('Y-m-d') . '.csv';
-        
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
-
-        $callback = function() use ($data, $type) {
-            $file = fopen('php://output', 'w');
-            
-            // En-têtes selon le type
-            $headers = $this->getCsvHeaders($type);
-            fputcsv($file, $headers);
-            
-            // Données
-            foreach ($data as $row) {
-                fputcsv($file, $this->formatCsvRow($row, $type));
-            }
-            
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
-    }
-
-    /**
-     * Obtenir les en-têtes CSV selon le type
-     */
-    private function getCsvHeaders($type)
-    {
-        return match($type) {
-            'sales' => ['Date', 'Événement', 'Client', 'Email', 'Montant', 'Billets', 'Statut'],
-            'commissions' => ['Date', 'Événement', 'Commande', 'Montant', 'Commission', 'Statut'],
-            'tickets' => ['Code', 'Événement', 'Type', 'Client', 'Statut', 'Utilisé le'],
-            default => []
-        };
-    }
-
-    /**
-     * Formater une ligne pour CSV - CORRIGÉ
-     */
-    private function formatCsvRow($row, $type)
-    {
-        return match($type) {
-            'sales' => [
-                $row->created_at->format('d/m/Y'),
-                $row->orderItems->first()->ticketType->event->title ?? '',
-                $row->user->name,
-                $row->user->email,
-                number_format($row->total_amount, 0),
-                $row->orderItems->sum('quantity'),
-                $row->status
-            ],
-            'tickets' => [
-                $row->ticket_code,
-                $row->ticketType->event->title,
-                $row->ticketType->name,
-                $row->orderItem->order->user->name ?? 'N/A',
-                $row->status,
-                $row->status === 'used' ? $row->updated_at->format('d/m/Y H:i') : ''
-            ],
-            default => []
-        };
-    }
-
-    /**
-     * Données d'export pour les ventes
-     */
-    private function getSalesExportData($promoteurId, $period)
-    {
-        $query = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
-            $query->where('promoter_id', $promoteurId);
-        })->where('payment_status', 'paid');
-
-        // Appliquer le filtre de période
-        $this->applyPeriodFilter($query, $period);
-
-        return $query->with(['user', 'orderItems.ticketType.event'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }
-
-    /**
-     * Données d'export pour les tickets - CORRIGÉ
-     */
-    private function getTicketsExportData($promoteurId, $period)
-    {
-        $query = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-            $query->where('promoter_id', $promoteurId);
-        });
-
-        $this->applyPeriodFilter($query, $period);
-
-        return $query->with(['ticketType.event', 'orderItem.order.user'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }
-
-    /**
-     * Appliquer un filtre de période à une query
-     */
-    private function applyPeriodFilter($query, $period)
-    {
-        switch ($period) {
-            case 'today':
-                $query->whereDate('created_at', today());
-                break;
-            case 'week':
-                $query->where('created_at', '>=', now()->subDays(7));
-                break;
-            case 'month':
-                $query->where('created_at', '>=', now()->subMonth());
-                break;
-            case 'year':
-                $query->where('created_at', '>=', now()->subYear());
-                break;
-        }
-    }
-
-    // Méthodes d'export Excel et PDF à implémenter si nécessaire
-    private function exportToExcel($data, $type)
-    {
-        // Implémentation Excel avec PhpSpreadsheet si besoin
-        return $this->exportToCsv($data, $type);
-    }
-
-    private function exportToPdf($data, $type)
-    {
-        // Implémentation PDF avec DomPDF si besoin
-        return $this->exportToCsv($data, $type);
     }
 }

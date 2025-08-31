@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Contrôleur pour la vérification publique des tickets - VERSION COMPLÈTE CORRIGÉE
- * Corrige l'erreur SQL en utilisant updated_at au lieu de used_at
+ * Corrige l'erreur "Undefined array key 'time'" et l'erreur SQL used_at
  */
 class TicketVerificationController extends Controller
 {
@@ -60,18 +60,18 @@ class TicketVerificationController extends Controller
             return view('tickets.verify', [
                 'ticket' => null,
                 'error' => 'Erreur lors de la vérification',
-                'ticket_code' => $ticketCode ?? 'Unknown'
+                'ticket_code' => $ticketCode ?? 'N/A'
             ]);
         }
     }
 
     /**
-     * API de vérification pour scanner (AJAX/Mobile)
+     * API de vérification (JSON) 
      * Route: GET /api/verify-ticket/{ticketCode}
      */
     public function verifyApi($ticketCode)
     {
-        Log::info("API vérification ticket : {$ticketCode}");
+        Log::info("Vérification API ticket : {$ticketCode}");
         
         try {
             $ticket = Ticket::where('ticket_code', strtoupper(trim($ticketCode)))
@@ -81,261 +81,33 @@ class TicketVerificationController extends Controller
             if (!$ticket) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Billet non trouvé',
-                    'ticket_code' => $ticketCode
+                    'error' => 'Billet non trouvé'
                 ], 404);
             }
 
-            $info = $this->getTicketVerificationInfo($ticket);
-
+            $verificationInfo = $this->getTicketVerificationInfo($ticket);
+            
             return response()->json([
                 'success' => true,
-                'ticket' => $info,
-                'can_scan' => $info['is_valid'] && $ticket->status !== 'used'
+                'ticket' => [
+                    'code' => $ticket->ticket_code,
+                    'status' => $ticket->status,
+                    'info' => $verificationInfo
+                ]
             ]);
             
         } catch (\Exception $e) {
-            Log::error("Erreur API vérification ticket {$ticketCode}", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            Log::error("Erreur vérification API ticket {$ticketCode}", [
+                'error' => $e->getMessage()
             ]);
             
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur serveur',
-                'ticket_code' => $ticketCode
+                'error' => 'Erreur lors de la vérification'
             ], 500);
         }
     }
 
-    /**
-     * Scanner un ticket (marquer comme utilisé) - CORRECTION COMPLÈTE
-     * Route: POST /api/scan-ticket
-     * 
-     * CORRIGE L'ERREUR SQL en n'utilisant plus markAsUsed() ni used_at
-     */
-    public function scan(Request $request)
-    {
-        Log::info('Tentative scan public ticket', [
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent()
-        ]);
-
-        try {
-            $validated = $request->validate([
-                'ticket_code' => 'required|string|max:20'
-            ]);
-
-            $ticketCode = strtoupper(trim($validated['ticket_code']));
-            
-            Log::info("Tentative scan public : {$ticketCode}");
-
-            $ticket = Ticket::where('ticket_code', $ticketCode)
-                ->with(['ticketType.event', 'orderItem.order.user'])
-                ->first();
-
-            if (!$ticket) {
-                Log::warning("Ticket non trouvé pour scan : {$ticketCode}");
-                
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Billet non trouvé',
-                    'message' => 'Le code de billet fourni n\'existe pas dans notre système'
-                ], 404);
-            }
-
-            if ($ticket->status === 'used') {
-                Log::info("Tentative scan ticket déjà utilisé : {$ticketCode}");
-                
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Billet déjà utilisé',
-                    'message' => 'Ce billet a déjà été utilisé le ' . $ticket->updated_at->format('d/m/Y à H:i'),
-                    'ticket_info' => [
-                        'code' => $ticket->ticket_code,
-                        'status' => 'used',
-                        'used_at' => $ticket->updated_at->format('d/m/Y H:i')
-                    ]
-                ], 400);
-            }
-
-            if ($ticket->status !== 'sold') {
-                Log::warning("Tentative scan ticket non valide : {$ticketCode}, statut: {$ticket->status}");
-                
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Billet non valide',
-                    'message' => 'Ce billet ne peut pas être utilisé (statut: ' . $ticket->status . ')',
-                    'ticket_info' => [
-                        'code' => $ticket->ticket_code,
-                        'status' => $ticket->status
-                    ]
-                ], 400);
-            }
-
-            $event = $ticket->ticketType->event;
-            if ($event->status !== 'published') {
-                Log::warning("Tentative scan pour événement non publié : {$ticketCode}");
-                
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Événement non disponible',
-                    'message' => 'L\'événement associé à ce billet n\'est plus disponible'
-                ], 400);
-            }
-
-            $scannedBy = auth()->check() ? auth()->user()->name : 'Scanner Public';
-            
-            DB::beginTransaction();
-            
-            try {
-                // ⚡ CORRECTION PRINCIPALE: N'utilise plus markAsUsed()
-                $updated = $ticket->update(['status' => 'used']);
-
-                if (!$updated) {
-                    throw new \Exception('Échec de la mise à jour du ticket');
-                }
-
-                DB::commit();
-
-                Log::info("Scan public réussi : {$ticketCode}", [
-                    'ticket_id' => $ticket->id,
-                    'event_id' => $event->id,
-                    'scanned_by' => $scannedBy
-                ]);
-                
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Billet marqué comme utilisé avec succès !',
-                    'ticket_info' => [
-                        'code' => $ticket->ticket_code,
-                        'event' => $event->title,
-                        'type' => $ticket->ticketType->name,
-                        'client' => $ticket->orderItem->order->user->name ?? 'N/A',
-                        'email' => $ticket->orderItem->order->user->email ?? 'N/A',
-                        'status' => 'used'
-                    ],
-                    'scanned_at' => now()->toISOString(),
-                    'scanned_by' => $scannedBy
-                ]);
-
-            } catch (\Exception $dbError) {
-                DB::rollback();
-                
-                Log::error("Échec transaction marquage ticket : {$ticketCode}", [
-                    'error' => $dbError->getMessage()
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Erreur de base de données',
-                    'message' => 'Impossible de marquer le billet comme utilisé'
-                ], 500);
-            }
-            
-        } catch (ValidationException $e) {
-            Log::warning('Données de scan invalides', [
-                'errors' => $e->validator->errors(),
-                'request' => $request->all()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'error' => 'Données invalides',
-                'message' => 'Les données fournies ne sont pas valides : ' . implode(', ', $e->validator->errors()->all()),
-                'errors' => $e->validator->errors()
-            ], 422);
-            
-        } catch (\Exception $e) {
-            Log::error('Erreur scan public ticket', [
-                'ticket_code' => $request->input('ticket_code'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'error' => 'Erreur serveur',
-                'message' => 'Une erreur inattendue est survenue: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Test de l'API (endpoint de diagnostic)
-     * Route: GET /api/test-scan
-     */
-    public function testScan()
-    {
-        $columns = Schema::getColumnListing('tickets');
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'API de scan opérationnelle',
-            'timestamp' => now()->toISOString(),
-            'version' => '1.0.0-compatible',
-            'database_info' => [
-                'tickets_columns' => $columns,
-                'has_used_at' => in_array('used_at', $columns),
-                'has_scanned_by' => in_array('scanned_by', $columns),
-                'solution' => 'Utilise updated_at comme substitute pour used_at'
-            ]
-        ]);
-    }
-
-    /**
-     * Obtenir les informations de vérification d'un ticket
-     * Version compatible avec la structure actuelle (utilise updated_at)
-     */
-    private function getTicketVerificationInfo($ticket)
-    {
-        $event = $ticket->ticketType->event;
-        $order = $ticket->orderItem->order ?? null;
-        $user = $order->user ?? null;
-
-        $usedAt = null;
-        if ($ticket->status === 'used') {
-            $usedAt = $ticket->updated_at->format('d/m/Y à H:i');
-        }
-
-        return [
-            'is_valid' => $ticket->status === 'sold' || $ticket->status === 'used',
-            'can_be_used' => $ticket->status === 'sold',
-            'status' => $ticket->status,
-            'status_message' => $this->getStatusMessage($ticket, $usedAt),
-            'ticket_type' => $ticket->ticketType->name,
-            'event' => [
-                'title' => $event->title,
-                'date' => $event->event_date->format('d/m/Y H:i'),
-                'location' => $event->location ?? 'Lieu à définir',
-                'status' => $event->status
-            ],
-            'holder' => [
-                'name' => $user->name ?? 'N/A',
-                'email' => $user->email ?? 'N/A'
-            ],
-            'order' => $order ? [
-                'number' => $order->order_number,
-                'date' => $order->created_at->format('d/m/Y H:i')
-            ] : null,
-            'used_at' => $usedAt
-        ];
-    }
-
-    /**
-     * Message de statut human-readable
-     */
-    private function getStatusMessage($ticket, $usedAt = null)
-    {
-        return match($ticket->status) {
-            'sold' => 'Billet valide et non utilisé',
-            'used' => 'Billet déjà utilisé' . ($usedAt ? " le {$usedAt}" : ''),
-            'cancelled' => 'Billet annulé',
-            'available' => 'Billet disponible (non vendu)',
-            default => 'Statut inconnu: ' . $ticket->status
-        };
-    }
     /**
      * Vue publique - LECTURE SEULE
      * Affiche uniquement la validité sans informations sensibles
@@ -368,8 +140,12 @@ class TicketVerificationController extends Controller
                 'status_message' => $this->getPublicStatusMessage($ticket),
                 'event' => [
                     'title' => $ticket->ticketType->event->title,
-                    'date' => $ticket->ticketType->event->event_date->format('d/m/Y H:i'),
-                    'location' => $ticket->ticketType->event->location ?? 'Lieu à définir'
+                    'date' => $ticket->ticketType->event->event_date->format('d/m/Y'),
+                    'time' => $ticket->ticketType->event->event_time->format('H:i'),
+                    'venue' => $ticket->ticketType->event->venue ?? 'Lieu à définir',
+                    'address' => $ticket->ticketType->event->address ?? null,
+                    'location' => $ticket->ticketType->event->venue ?? 'Lieu à définir',
+                    'category' => $ticket->ticketType->event->category->name ?? null
                 ],
                 'ticket_type' => $ticket->ticketType->name,
                 // PAS d'informations personnelles ici
@@ -393,7 +169,8 @@ class TicketVerificationController extends Controller
             ]);
         }
     }
-        /**
+
+    /**
      * Vue authentifiée - CONTRÔLE COMPLET
      * Pour les promoteurs/admins avec actions de scan
      * Route: GET /scanner/verify/{ticketCode}
@@ -442,8 +219,12 @@ class TicketVerificationController extends Controller
                 'ticket_type' => $ticket->ticketType->name,
                 'event' => [
                     'title' => $ticket->ticketType->event->title,
-                    'date' => $ticket->ticketType->event->event_date->format('d/m/Y H:i'),
-                    'location' => $ticket->ticketType->event->location ?? 'Lieu à définir',
+                    'date' => $ticket->ticketType->event->event_date->format('d/m/Y'),
+                    'time' => $ticket->ticketType->event->event_time->format('H:i'),
+                    'venue' => $ticket->ticketType->event->venue ?? 'Lieu à définir',
+                    'address' => $ticket->ticketType->event->address ?? null,
+                    'location' => $ticket->ticketType->event->venue ?? 'Lieu à définir',
+                    'category' => $ticket->ticketType->event->category->name ?? null,
                     'status' => $ticket->ticketType->event->status
                 ],
                 'holder' => [
@@ -537,7 +318,12 @@ class TicketVerificationController extends Controller
                 return response()->json([
                     'success' => false,
                     'error' => 'Billet déjà utilisé',
-                    'message' => 'Ce billet a déjà été utilisé le ' . ($ticket->used_at ? $ticket->used_at->format('d/m/Y à H:i') : $ticket->updated_at->format('d/m/Y à H:i'))
+                    'message' => 'Ce billet a déjà été utilisé le ' . $ticket->updated_at->format('d/m/Y à H:i'),
+                    'ticket_info' => [
+                        'code' => $ticket->ticket_code,
+                        'status' => 'used',
+                        'used_at' => $ticket->updated_at->format('d/m/Y H:i')
+                    ]
                 ], 400);
             }
 
@@ -545,43 +331,53 @@ class TicketVerificationController extends Controller
                 return response()->json([
                     'success' => false,
                     'error' => 'Billet non valide',
-                    'message' => 'Ce billet ne peut pas être utilisé (statut: ' . $ticket->status . ')'
+                    'message' => 'Ce billet ne peut pas être utilisé (statut: ' . $ticket->status . ')',
+                    'ticket_info' => [
+                        'code' => $ticket->ticket_code,
+                        'status' => $ticket->status
+                    ]
                 ], 400);
             }
 
-            // Marquer comme utilisé
-            \DB::beginTransaction();
-            
-            try {
-                // Utiliser markAsUsed si disponible, sinon update direct
-                if (method_exists($ticket, 'markAsUsed')) {
-                    $success = $ticket->markAsUsed($user->name);
-                    if (!$success) {
-                        throw new \Exception('Échec de markAsUsed');
-                    }
-                } else {
-                    $ticket->update(['status' => 'used']);
-                }
+            $event = $ticket->ticketType->event;
+            if ($event->status !== 'published') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Événement non disponible',
+                    'message' => 'L\'événement associé à ce billet n\'est plus disponible'
+                ], 400);
+            }
 
+            // Marquer comme utilisé (CORRECTIF : utilise updated_at)
+            try {
+                \DB::beginTransaction();
+                
+                $ticket->status = 'used';
+                $ticket->save(); // updated_at sera automatiquement mis à jour
+                
                 \DB::commit();
 
-                Log::info("Scan authentifié réussi : {$ticketCode}", [
-                    'user_id' => $user->id,
-                    'user_name' => $user->name,
+                Log::info("Ticket scanné avec succès : {$ticketCode}", [
+                    'scanned_by_user_id' => $user->id,
                     'ticket_id' => $ticket->id
                 ]);
-                
+
                 return response()->json([
                     'success' => true,
-                    'message' => 'Billet scanné avec succès par ' . $user->name,
-                    'ticket_info' => [
-                        'code' => $ticket->ticket_code,
-                        'event' => $ticket->ticketType->event->title,
-                        'type' => $ticket->ticketType->name,
-                        'status' => 'used'
-                    ],
-                    'scanned_by' => $user->name,
-                    'scanned_at' => now()->toISOString()
+                    'message' => 'Billet scanné avec succès',
+                    'data' => [
+                        'ticket_code' => $ticket->ticket_code,
+                        'event_title' => $event->title,
+                        'holder_name' => $ticket->orderItem->order->user->name,
+                        'ticket_info' => [
+                            'code' => $ticket->ticket_code,
+                            'event' => $ticket->ticketType->event->title,
+                            'type' => $ticket->ticketType->name,
+                            'status' => 'used'
+                        ],
+                        'scanned_by' => $user->name,
+                        'scanned_at' => now()->toISOString()
+                    ]
                 ]);
 
             } catch (\Exception $dbError) {
@@ -611,6 +407,232 @@ class TicketVerificationController extends Controller
                 'message' => 'Une erreur est survenue lors du scan'
             ], 500);
         }
+    }
+
+    /**
+     * Scanner un ticket (marquer comme utilisé) - VERSION PUBLIQUE
+     * Route: POST /api/scan-ticket
+     * 
+     * CORRIGE L'ERREUR SQL en n'utilisant plus markAsUsed() ni used_at
+     */
+    public function scan(Request $request)
+    {
+        Log::info('Tentative scan public ticket', [
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent()
+        ]);
+
+        try {
+            $validated = $request->validate([
+                'ticket_code' => 'required|string|max:20'
+            ]);
+
+            $ticketCode = strtoupper(trim($validated['ticket_code']));
+            
+            Log::info("Tentative scan public : {$ticketCode}");
+
+            $ticket = Ticket::where('ticket_code', $ticketCode)
+                ->with(['ticketType.event', 'orderItem.order.user'])
+                ->first();
+
+            if (!$ticket) {
+                Log::warning("Ticket non trouvé pour scan : {$ticketCode}");
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Billet non trouvé',
+                    'message' => 'Le code de billet fourni n\'existe pas dans notre système'
+                ], 404);
+            }
+
+            if ($ticket->status === 'used') {
+                Log::info("Tentative scan ticket déjà utilisé : {$ticketCode}");
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Billet déjà utilisé',
+                    'message' => 'Ce billet a déjà été utilisé le ' . $ticket->updated_at->format('d/m/Y à H:i'),
+                    'ticket_info' => [
+                        'code' => $ticket->ticket_code,
+                        'status' => 'used',
+                        'used_at' => $ticket->updated_at->format('d/m/Y H:i')
+                    ]
+                ], 400);
+            }
+
+            if ($ticket->status !== 'sold') {
+                Log::warning("Tentative scan ticket non valide : {$ticketCode}, statut: {$ticket->status}");
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Billet non valide',
+                    'message' => 'Ce billet ne peut pas être utilisé (statut: ' . $ticket->status . ')',
+                    'ticket_info' => [
+                        'code' => $ticket->ticket_code,
+                        'status' => $ticket->status
+                    ]
+                ], 400);
+            }
+
+            $event = $ticket->ticketType->event;
+            if ($event->status !== 'published') {
+                Log::warning("Tentative scan pour événement non publié : {$ticketCode}");
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Événement non disponible',
+                    'message' => 'L\'événement associé à ce billet n\'est plus disponible'
+                ], 400);
+            }
+
+            $scannedBy = auth()->check() ? auth()->user()->name : 'Unknown';
+
+            // CORRECTIF : Marquer comme utilisé en utilisant updated_at
+            try {
+                \DB::beginTransaction();
+                
+                $ticket->status = 'used';
+                $ticket->save(); // updated_at sera automatiquement mis à jour par Eloquent
+                
+                \DB::commit();
+
+                Log::info("Scan public réussi : {$ticketCode}", [
+                    'ticket_id' => $ticket->id,
+                    'scanned_by' => $scannedBy
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Billet scanné avec succès',
+                    'ticket_info' => [
+                        'code' => $ticket->ticket_code,
+                        'event' => $event->title,
+                        'holder' => $ticket->orderItem->order->user->name ?? 'Unknown',
+                        'status' => 'used',
+                        'scanned_at' => now()->toISOString(),
+                        'scanned_by' => $scannedBy
+                    ]
+                ]);
+
+            } catch (\Exception $saveError) {
+                \DB::rollback();
+                
+                Log::error("Erreur sauvegarde scan : {$ticketCode}", [
+                    'error' => $saveError->getMessage()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Erreur de scan',
+                    'message' => 'Impossible de marquer le billet comme utilisé'
+                ], 500);
+            }
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Données invalides',
+                'message' => 'Le code de billet fourni n\'est pas valide'
+            ], 422);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur scan public', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur serveur',
+                'message' => 'Une erreur est survenue lors du scan'
+            ], 500);
+        }
+    }
+
+    /**
+     * Test de l'API (endpoint de diagnostic)
+     * Route: GET /api/test-scan
+     */
+    public function testScan()
+    {
+        $columns = Schema::getColumnListing('tickets');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'API de scan opérationnelle',
+            'timestamp' => now()->toISOString(),
+            'version' => '1.0.1-fixed',
+            'database_info' => [
+                'tickets_columns' => $columns,
+                'has_used_at' => in_array('used_at', $columns),
+                'has_scanned_by' => in_array('scanned_by', $columns),
+                'solution' => 'Utilise updated_at comme substitute pour used_at'
+            ]
+        ]);
+    }
+
+    /**
+     * Obtenir les informations de vérification d'un ticket
+     * Version CORRIGÉE avec toutes les données requises par la vue
+     */
+    private function getTicketVerificationInfo($ticket)
+    {
+        $event = $ticket->ticketType->event;
+        $order = $ticket->orderItem->order ?? null;
+        $user = $order->user ?? null;
+
+        $usedAt = null;
+        if ($ticket->status === 'used') {
+            if ($ticket->used_at) {
+                $usedAt = $ticket->used_at->format('d/m/Y à H:i');
+            } else {
+                // Fallback sur updated_at si used_at n'existe pas
+                $usedAt = $ticket->updated_at->format('d/m/Y à H:i');
+            }
+        }
+
+        // CORRECTION : Fournir TOUTES les données utilisées dans la vue
+        $eventDate = $event->event_date;
+        
+        return [
+            'is_valid' => $ticket->status === 'sold' || $ticket->status === 'used',
+            'can_be_used' => $ticket->status === 'sold',
+            'status' => $ticket->status,
+            'status_message' => $this->getStatusMessage($ticket, $usedAt),
+            'ticket_type' => $ticket->ticketType->name,
+            'event' => [
+                'title' => $event->title,
+                'date' => $eventDate->format('d/m/Y'),      // Date seule
+                'time' => $eventDate->format('H:i'),        // Heure seule
+                'venue' => $event->venue ?? 'Lieu à définir',        // AJOUT : venue
+                'address' => $event->address ?? null,       // AJOUT : address
+                'location' => $event->location ?? $event->venue ?? 'Lieu à définir', // Alternative/fallback
+                'category' => $event->category->name ?? null, // AJOUT : category
+                'status' => $event->status
+            ],
+            'holder' => [
+                'name' => $user->name ?? 'N/A',
+                'email' => $user->email ?? 'N/A'
+            ],
+            'order' => $order ? [
+                'number' => $order->order_number,
+                'date' => $order->created_at->format('d/m/Y H:i')
+            ] : null,
+            'used_at' => $usedAt
+        ];
+    }
+
+    /**
+     * Message de statut human-readable
+     */
+    private function getStatusMessage($ticket, $usedAt = null)
+    {
+        return match($ticket->status) {
+            'sold' => 'Billet valide et non utilisé',
+            'used' => 'Billet déjà utilisé' . ($usedAt ? " le {$usedAt}" : ''),
+            'cancelled' => 'Billet annulé',
+            'available' => 'Billet disponible (non vendu)',
+            default => 'Statut inconnu: ' . $ticket->status
+        };
     }
 
     /**

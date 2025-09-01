@@ -69,6 +69,8 @@ class EmailService
     }
 }
 
+
+
     /**
      * Notifier le promoteur d'une nouvelle vente
      */
@@ -223,6 +225,29 @@ public function cleanupOldTempPDFs()
             'error' => $e->getMessage()
         ]);
         return 0;
+    }
+}
+/**
+ * Envoyer email de bienvenue après inscription
+ */
+public function sendWelcomeEmail(User $user)
+{
+    try {
+        Mail::to($user->email)->send(new \App\Mail\WelcomeEmail($user));
+
+        Log::info("Email bienvenue envoyé", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'role' => $user->role
+        ]);
+
+        return true;
+    } catch (\Exception $e) {
+        Log::error("Erreur envoi email bienvenue", [
+            'user_id' => $user->id,
+            'error' => $e->getMessage()
+        ]);
+        return false;
     }
 }
 }

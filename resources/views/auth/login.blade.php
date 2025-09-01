@@ -178,6 +178,35 @@
                 transform: translateY(0);
             }
         }
+
+        /* Styles pour les liens de récupération */
+.auth-links { 
+    text-align: center; 
+    margin: 20px 0;
+}
+.auth-links a { 
+    color: #FF6B35; 
+    text-decoration: none; 
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+.auth-links a:hover { 
+    color: #e55a2b; 
+    text-decoration: underline;
+}
+.forgot-password-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+.forgot-password-link:hover {
+    background-color: #fff3f0;
+    transform: translateY(-1px);
+}
         
         /* Responsive */
         @media (max-width: 480px) {
@@ -273,6 +302,16 @@
                 <i class="fas fa-sign-in-alt me-2"></i>Se connecter
             </button>
         </form>
+
+        {{-- 🔥 NOUVEAU : Lien de récupération de mot de passe --}}
+<div class="auth-links">
+    @if (Route::has('password.request'))
+        <a href="{{ route('password.request') }}" class="forgot-password-link">
+            <i class="fas fa-key"></i>
+            Mot de passe oublié ?
+        </a>
+    @endif
+</div>
 
         <!-- Pied de page -->
         <div class="auth-footer">

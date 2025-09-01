@@ -95,7 +95,8 @@ class GuestCheckoutController extends Controller
             // 3. Envoyer les confirmations
             foreach ($orders as $order) {
                 \Log::info('=== ENVOI EMAIL ===', ['order_id' => $order->id]);
-                $this->sendConfirmationEmail($order);
+                $emailService = app(\App\Services\EmailService::class);
+                $emailService->sendAllOrderEmails($order);
             }
             \Log::info('=== EMAILS ENVOYÉS ===');
             
@@ -450,5 +451,40 @@ class GuestCheckoutController extends Controller
         } while (Ticket::where('ticket_code', $code)->exists());
         
         return $code;
+    }
+    /**
+ * 🔥 NOUVELLE MÉTHODE : Envoyer tous les emails pour une commande invité
+ */
+private function sendAllOrderEmails(Order $order)
+{
+    try {
+        $emailService = app(\App\Services\EmailService::class);
+        
+        Log::info("Début envoi emails commande invité", [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'client_email' => $order->user->email,
+            'is_guest' => $order->user->is_guest,
+            'promoteur_email' => $order->event->promoteur->email ?? 'N/A'
+        ]);
+        
+        // Utiliser le service email existant qui envoie TOUT
+        $emailService->sendAllOrderEmails($order);
+        
+        Log::info("Tous les emails envoyés avec succès", [
+            'order_id' => $order->id,
+            'client_type' => 'invité'
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error("Erreur envoi emails commande invité", [
+            'order_id' => $order->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        // Ne pas faire échouer la commande pour un problème d'email
+        // Juste logger l'erreur
+    }
     }
 }

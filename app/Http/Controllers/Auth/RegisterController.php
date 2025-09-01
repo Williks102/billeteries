@@ -7,6 +7,10 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use App\Services\EmailService;
+use App\Mail\WelcomeEmail;
+use Illuminate\Support\Facades\Mail;
+
 
 class RegisterController extends Controller
 {
@@ -126,16 +130,40 @@ class RegisterController extends Controller
      * @return mixed
      */
     protected function registered(\Illuminate\Http\Request $request, $user)
-    {
-        // Redirection personnalisée selon le rôle
-        if ($user->isAdmin()) {
-            return redirect()->route('admin.dashboard');
-        } elseif ($user->isPromoteur()) {
-            return redirect()->route('promoteur.dashboard');
-        } elseif ($user->isAcheteur()) {
-            return redirect()->route('acheteur.dashboard');
-        }
+{
+    // Envoyer l'email de bienvenue
+    $this->sendWelcomeEmail($user);
+    
+    // Redirection personnalisée selon le rôle (garder votre code existant)
+    if ($user->isAdmin()) {
+        return redirect()->route('admin.dashboard');
+    } elseif ($user->isPromoteur()) {
+        return redirect()->route('promoteur.dashboard');
+    } elseif ($user->isAcheteur()) {
+        return redirect()->route('acheteur.dashboard');
+    }
+    
+    return redirect($this->redirectPath());
+    }
+
+    protected function sendWelcomeEmail(User $user)
+{
+    try {
+        Mail::to($user->email)->send(new WelcomeEmail($user));
         
-        return redirect($this->redirectPath());
+        \Log::info("Email de bienvenue envoyé", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'role' => $user->role
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error("Erreur envoi email bienvenue", [
+            'user_id' => $user->id,
+            'error' => $e->getMessage()
+        ]);
+        
+        // Ne pas faire échouer l'inscription pour un problème d'email
+    }
     }
 }

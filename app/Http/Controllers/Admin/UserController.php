@@ -467,4 +467,51 @@ class UserController extends Controller
                 ->with('error', 'Erreur lors de l\'export');
         }
     }
+  
+    
+/**
+ * Envoyer un lien de reset password pour un utilisateur (action admin)
+ */
+public function resetPassword(Request $request, User $user)
+{
+    try {
+        // Générer un token de reset
+        $token = \Illuminate\Support\Str::random(60);
+        
+        // Sauvegarder le token
+        \DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            [
+                'token' => \Hash::make($token),
+                'created_at' => now()
+            ]
+        );
+        
+        // Envoyer l'email
+        \Mail::to($user->email)->send(new \App\Mail\ResetPasswordMail($token, $user->email));
+        
+        Log::info('Reset password envoyé par admin', [
+            'admin_id' => auth()->id(),
+            'target_user_id' => $user->id,
+            'target_email' => $user->email
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Email de réinitialisation envoyé avec succès !'
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Erreur reset password admin', [
+            'admin_id' => auth()->id(),
+            'target_user_id' => $user->id,
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de l\'envoi'
+        ], 500);
+    }
+}
 }

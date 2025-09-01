@@ -230,6 +230,9 @@ Route::middleware(['auth'])->group(function () {
     });
     // ==================== ESPACE ADMIN - CONTRÔLEURS SPÉCIALISÉS ====================
 Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::post('/admin/users/{user}/reset-password', [App\Http\Controllers\Admin\UserController::class, 'resetPassword'])
+         ->name('admin.users.reset-password');
+
     
     // ===== DASHBOARD ET FONCTIONS GÉNÉRALES (AdminController) =====
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');

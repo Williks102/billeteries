@@ -434,4 +434,295 @@ class SalesController extends Controller
             return back()->with('error', 'Erreur lors du chargement des rapports');
         }
     }
+
+    /**
+ * Export des données de ventes
+ */
+public function export(Request $request)
+{
+    $promoteurId = Auth::id();
+    $type = $request->get('type', 'sales');
+    $format = $request->get('format', 'csv');
+    $period = $request->get('period', 'month');
+    
+    try {
+        // Calculer les dates
+        $dates = $this->getDateRange($period);
+        $startDate = $dates['startDate'];
+        $endDate = $dates['endDate'];
+        
+        switch($type) {
+            case 'events':
+                return $this->exportEvents($promoteurId, $startDate, $endDate, $format);
+            case 'sales':
+                return $this->exportSales($promoteurId, $startDate, $endDate, $format);
+            case 'commissions':
+                return $this->exportCommissions($promoteurId, $startDate, $endDate, $format);
+            default:
+                return $this->exportSales($promoteurId, $startDate, $endDate, $format);
+        }
+        
+    } catch (\Exception $e) {
+        Log::error('Erreur export promoteur', [
+            'promoteur_id' => $promoteurId,
+            'type' => $type,
+            'error' => $e->getMessage()
+        ]);
+        
+        return back()->with('error', 'Erreur lors de l\'export : ' . $e->getMessage());
+    }
+}
+
+/**
+ * Export des ventes
+ */
+private function exportSales($promoteurId, $startDate, $endDate, $format)
+{
+    // Récupérer les données de ventes
+    $sales = DB::table('orders')
+        ->join('users', 'orders.user_id', '=', 'users.id')
+        ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+        ->join('ticket_types', 'order_items.ticket_type_id', '=', 'ticket_types.id')
+        ->join('events', 'ticket_types.event_id', '=', 'events.id')
+        ->where('events.promoter_id', $promoteurId)
+        ->where('orders.payment_status', 'paid')
+        ->whereBetween('orders.created_at', [$startDate, $endDate])
+        ->select([
+            'orders.order_number',
+            'orders.created_at as date_commande',
+            'orders.total_amount as montant_total',
+            'users.name as client_nom',
+            'users.email as client_email',
+            'users.phone as client_telephone',
+            'events.title as evenement',
+            'ticket_types.name as type_billet',
+            'order_items.quantity as quantite',
+            'order_items.unit_price as prix_unitaire',
+            'order_items.total_price as prix_total'
+        ])
+        ->orderBy('orders.created_at', 'desc')
+        ->get();
+    
+    if ($format === 'excel') {
+        return $this->exportToExcel($sales, 'ventes', [
+            'order_number' => 'N° Commande',
+            'date_commande' => 'Date',
+            'montant_total' => 'Montant Total',
+            'client_nom' => 'Client',
+            'client_email' => 'Email',
+            'client_telephone' => 'Téléphone',
+            'evenement' => 'Événement',
+            'type_billet' => 'Type Billet',
+            'quantite' => 'Quantité',
+            'prix_unitaire' => 'Prix Unitaire',
+            'prix_total' => 'Prix Total'
+        ]);
+    } else {
+        return $this->exportToCSV($sales, 'ventes', [
+            'order_number' => 'N° Commande',
+            'date_commande' => 'Date',
+            'montant_total' => 'Montant Total',
+            'client_nom' => 'Client',
+            'client_email' => 'Email',
+            'client_telephone' => 'Téléphone',
+            'evenement' => 'Événement',
+            'type_billet' => 'Type Billet',
+            'quantite' => 'Quantité',
+            'prix_unitaire' => 'Prix Unitaire',
+            'prix_total' => 'Prix Total'
+        ]);
+    }
+}
+
+/**
+ * Export des événements
+ */
+private function exportEvents($promoteurId, $startDate, $endDate, $format)
+{
+    $events = DB::table('events')
+        ->leftJoin('ticket_types', 'events.id', '=', 'ticket_types.event_id')
+        ->leftJoin('order_items', 'ticket_types.id', '=', 'order_items.ticket_type_id')
+        ->leftJoin('orders', function($join) use ($startDate, $endDate) {
+            $join->on('order_items.order_id', '=', 'orders.id')
+                 ->where('orders.payment_status', 'paid')
+                 ->whereBetween('orders.created_at', [$startDate, $endDate]);
+        })
+        ->where('events.promoter_id', $promoteurId)
+        ->select([
+            'events.title as evenement',
+            'events.event_date as date_evenement',
+            'events.venue as lieu',
+            'events.status as statut',
+            DB::raw('COALESCE(COUNT(DISTINCT orders.id), 0) as nb_commandes'),
+            DB::raw('COALESCE(SUM(order_items.quantity), 0) as billets_vendus'),
+            DB::raw('COALESCE(SUM(order_items.total_price), 0) as revenus')
+        ])
+        ->groupBy('events.id', 'events.title', 'events.event_date', 'events.venue', 'events.status')
+        ->orderBy('events.event_date', 'desc')
+        ->get();
+    
+    $headers = [
+        'evenement' => 'Événement',
+        'date_evenement' => 'Date',
+        'lieu' => 'Lieu',
+        'statut' => 'Statut',
+        'nb_commandes' => 'Nb Commandes',
+        'billets_vendus' => 'Billets Vendus',
+        'revenus' => 'Revenus (FCFA)'
+    ];
+    
+    if ($format === 'excel') {
+        return $this->exportToExcel($events, 'evenements', $headers);
+    } else {
+        return $this->exportToCSV($events, 'evenements', $headers);
+    }
+}
+
+/**
+ * Export des commissions
+ */
+private function exportCommissions($promoteurId, $startDate, $endDate, $format)
+{
+    $commissions = DB::table('commissions')
+        ->join('orders', 'commissions.order_id', '=', 'orders.id')
+        ->join('events', 'commissions.event_id', '=', 'events.id')
+        ->where('commissions.promoter_id', $promoteurId)
+        ->whereBetween('commissions.created_at', [$startDate, $endDate])
+        ->select([
+            'orders.order_number as commande',
+            'events.title as evenement',
+            'commissions.created_at as date_commission',
+            'commissions.gross_amount as montant_brut',
+            'commissions.commission_amount as commission',
+            'commissions.net_amount as montant_net',
+            'commissions.status as statut'
+        ])
+        ->orderBy('commissions.created_at', 'desc')
+        ->get();
+    
+    $headers = [
+        'commande' => 'N° Commande',
+        'evenement' => 'Événement',
+        'date_commission' => 'Date',
+        'montant_brut' => 'Montant Brut',
+        'commission' => 'Commission',
+        'montant_net' => 'Montant Net',
+        'statut' => 'Statut'
+    ];
+    
+    if ($format === 'excel') {
+        return $this->exportToExcel($commissions, 'commissions', $headers);
+    } else {
+        return $this->exportToCSV($commissions, 'commissions', $headers);
+    }
+}
+
+/**
+ * Export vers CSV
+ */
+private function exportToCSV($data, $filename, $headers)
+{
+    $csvData = [];
+    
+    // Ajouter les en-têtes
+    $csvData[] = array_values($headers);
+    
+    // Ajouter les données
+    foreach ($data as $row) {
+        $csvRow = [];
+        foreach (array_keys($headers) as $key) {
+            $value = $row->$key ?? '';
+            
+            // Formater les dates
+            if (str_contains($key, 'date') || str_contains($key, '_at')) {
+                try {
+                    $value = \Carbon\Carbon::parse($value)->format('d/m/Y H:i');
+                } catch (\Exception $e) {
+                    // Garder la valeur originale si erreur
+                }
+            }
+            
+            // Formater les montants
+            if (str_contains($key, 'montant') || str_contains($key, 'prix') || str_contains($key, 'revenus') || str_contains($key, 'commission')) {
+                $value = number_format((float)$value, 0, ',', ' ');
+            }
+            
+            $csvRow[] = $value;
+        }
+        $csvData[] = $csvRow;
+    }
+    
+    // Générer le fichier CSV
+    $filename = $filename . '_' . now()->format('Y-m-d_H-i-s') . '.csv';
+    
+    $callback = function() use ($csvData) {
+        $file = fopen('php://output', 'w');
+        
+        // BOM pour UTF-8
+        fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        foreach ($csvData as $row) {
+            fputcsv($file, $row, ';'); // Utiliser ; comme séparateur pour Excel français
+        }
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Pragma' => 'no-cache',
+        'Expires' => '0'
+    ]);
+}
+
+/**
+ * Export vers Excel (nécessite une librairie comme PhpSpreadsheet)
+ */
+private function exportToExcel($data, $filename, $headers)
+{
+    // Si PhpSpreadsheet n'est pas installé, fallback vers CSV
+    if (!class_exists('\PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+        return $this->exportToCSV($data, $filename, $headers);
+    }
+    
+    // TODO: Implémenter l'export Excel si PhpSpreadsheet est disponible
+    // Pour l'instant, utiliser CSV
+    return $this->exportToCSV($data, $filename, $headers);
+}
+
+/**
+ * Obtenir les plages de dates (méthode utilitaire si pas déjà présente)
+ */
+private function getDateRange($period)
+{
+    switch($period) {
+        case 'today':
+            return [
+                'startDate' => now()->startOfDay(),
+                'endDate' => now()->endOfDay()
+            ];
+        case 'week':
+            return [
+                'startDate' => now()->startOfWeek(),
+                'endDate' => now()->endOfWeek()
+            ];
+        case 'month':
+            return [
+                'startDate' => now()->startOfMonth(),
+                'endDate' => now()->endOfMonth()
+            ];
+        case 'year':
+            return [
+                'startDate' => now()->startOfYear(),
+                'endDate' => now()->endOfYear()
+            ];
+        default:
+            return [
+                'startDate' => now()->startOfMonth(),
+                'endDate' => now()->endOfMonth()
+            ];
+     }
+    }
 }

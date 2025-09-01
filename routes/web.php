@@ -199,6 +199,13 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('events', PromoteurEventController::class);
         Route::post('/events/{event}/publish', [PromoteurEventController::class, 'publish'])->name('events.publish');
         Route::post('/events/{event}/unpublish', [PromoteurEventController::class, 'unpublish'])->name('events.unpublish');
+
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [Promoteur\ReportsController::class, 'index'])->name('index');
+            Route::get('/events', [Promoteur\ReportsController::class, 'index'])->defaults('type', 'events')->name('events');
+            Route::get('/financial', [Promoteur\ReportsController::class, 'index'])->defaults('type', 'financial')->name('financial');
+            Route::get('/export', [Promoteur\ReportsController::class, 'export'])->name('export');
+});
         
         // Gestion des types de tickets (NESTED RESOURCE)
         Route::prefix('events/{event}')->name('events.')->group(function () {

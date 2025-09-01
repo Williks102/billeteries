@@ -339,7 +339,7 @@
                 <h5 class="modal-title">Changer le mot de passe</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="passwordForm" method="POST" action="{{ route('promoteur.password.update') }}">
+            <form id="passwordForm" method="POST" action="{{ route('promoteur.profile.update') }}">
                 @csrf
                 @method('PATCH')
                 <div class="modal-body">

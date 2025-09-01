@@ -120,56 +120,59 @@ class PromoteurController extends Controller
      * Profil du promoteur
      */
     public function profile()
-    {
-        $promoteur = Auth::user();
+{
+    $user = Auth::user(); // ✅ AJOUTER cette ligne
+    $promoteur = $user; // Alias pour compatibilité
+    
+    try {
+        $promoteurId = $user->id;
         
-        try {
-            $promoteurId = $promoteur->id;
-            
-            // Statistiques du promoteur - CORRIGÉ
-            $stats = [
-                'total_events' => Event::where('promoter_id', $promoteurId)->count(),
-                'published_events' => Event::where('promoter_id', $promoteurId)->where('status', 'published')->count(),
-                'total_revenue' => Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
-                        $query->where('promoter_id', $promoteurId);
-                    })
-                    ->where('payment_status', 'paid')
-                    ->sum('total_amount'),
-                'total_commissions' => Commission::where('promoter_id', $promoteurId)->sum('net_amount'),
-                'paid_commissions' => Commission::where('promoter_id', $promoteurId)
-                    ->where('status', 'paid')
-                    ->sum('commission_amount'),
-                'pending_commissions' => Commission::where('promoter_id', $promoteurId)
-                    ->where('status', 'pending')
-                    ->sum('commission_amount'),
-                'total_tickets_sold' => Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                        $query->where('promoter_id', $promoteurId);
-                    })->where('status', '!=', 'available')->count(),
-                'join_date' => $promoteur->created_at,
-                'last_event' => Event::where('promoter_id', $promoteurId)->latest()->first()
-            ];
-            
-            return view('promoteur.profile', compact('promoteur', 'stats'));
-            
-        } catch (\Exception $e) {
-            \Log::error('Erreur lors du chargement du profil promoteur: ' . $e->getMessage());
-            
-            return view('promoteur.profile', [
-                'promoteur' => $promoteur,
-                'stats' => [
-                    'total_events' => 0,
-                    'published_events' => 0,
-                    'total_revenue' => 0,
-                    'total_commissions' => 0,
-                    'paid_commissions' => 0,
-                    'pending_commissions' => 0,
-                    'total_tickets_sold' => 0,
-                    'join_date' => $promoteur->created_at,
-                    'last_event' => null
-                ]
-            ])->with('error', 'Erreur lors du chargement des statistiques');
-        }
+        // Statistiques du promoteur
+        $stats = [
+            'total_events' => Event::where('promoter_id', $promoteurId)->count(),
+            'published_events' => Event::where('promoter_id', $promoteurId)->where('status', 'published')->count(),
+            'total_revenue' => Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
+                    $query->where('promoter_id', $promoteurId);
+                })
+                ->where('payment_status', 'paid')
+                ->sum('total_amount'),
+            'total_commissions' => Commission::where('promoter_id', $promoteurId)->sum('net_amount'),
+            'paid_commissions' => Commission::where('promoter_id', $promoteurId)
+                ->where('status', 'paid')
+                ->sum('commission_amount'),
+            'pending_commissions' => Commission::where('promoter_id', $promoteurId)
+                ->where('status', 'pending')
+                ->sum('commission_amount'),
+            'total_tickets_sold' => Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
+                    $query->where('promoter_id', $promoteurId);
+                })->where('status', '!=', 'available')->count(),
+            'join_date' => $user->created_at,
+            'last_event' => Event::where('promoter_id', $promoteurId)->latest()->first()
+        ];
+        
+        // ✅ PASSER LES DEUX VARIABLES
+        return view('promoteur.profile', compact('user', 'promoteur', 'stats'));
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur lors du chargement du profil promoteur: ' . $e->getMessage());
+        
+        return view('promoteur.profile', [
+            'user' => $user, // ✅ AJOUTER
+            'promoteur' => $user, // ✅ AJOUTER
+            'stats' => [
+                'total_events' => 0,
+                'published_events' => 0,
+                'total_revenue' => 0,
+                'total_commissions' => 0,
+                'paid_commissions' => 0,
+                'pending_commissions' => 0,
+                'total_tickets_sold' => 0,
+                'join_date' => $user->created_at,
+                'last_event' => null
+            ]
+        ])->with('error', 'Erreur lors du chargement des statistiques');
     }
+}
 
     /**
      * Mettre à jour le profil du promoteur

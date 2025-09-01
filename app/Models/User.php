@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str; // 🔥 AJOUTER
+use Illuminate\Support\Facades\Log; // 🔥 AJOUTER
 
 class User extends Authenticatable
 {
@@ -16,6 +18,7 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'customer_code',
     ];
 
     protected $hidden = [
@@ -149,4 +152,66 @@ class User extends Authenticatable
                                     ->sum('order_items.quantity') ?? 0,
         ];
     }
+
+    /**
+ * Générer un code client unique
+ */
+public static function generateCustomerCode($role = 'acheteur')
+{
+    $prefix = match($role) {
+        'admin' => 'ADM',
+        'promoteur' => 'PRO', 
+        'acheteur' => 'CLI',
+        default => 'USR'
+    };
+
+    do {
+        // Format: CLI-250901-A7B2 (Préfixe-AAMMJJ-Code4)
+        $code = $prefix . '-' . now()->format('ymd') . '-' . strtoupper(Str::random(4));
+    } while (self::where('customer_code', $code)->exists());
+    
+    return $code;
+}
+
+/**
+ * Assigner un code client automatiquement
+ */
+public function assignCustomerCode()
+{
+    if (!$this->customer_code) {
+        $this->customer_code = self::generateCustomerCode($this->role);
+        $this->save();
+        
+        \Log::info("Code client assigné", [
+            'user_id' => $this->id,
+            'customer_code' => $this->customer_code,
+            'role' => $this->role
+        ]);
+    }
+    
+    return $this->customer_code;
+}
+
+/**
+ * Event automatique : Assigner code après création
+ */
+protected static function boot()
+{
+    parent::boot();
+
+    // Assigner automatiquement un code client après création
+    static::created(function ($user) {
+        if (!$user->customer_code) {
+            $user->assignCustomerCode();
+        }
+    });
+}
+
+/**
+ * Rechercher par code client
+ */
+public static function findByCustomerCode($code)
+{
+    return self::where('customer_code', strtoupper($code))->first();
+}
 }

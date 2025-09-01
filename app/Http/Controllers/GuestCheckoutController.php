@@ -232,6 +232,8 @@ class GuestCheckoutController extends Controller
             if (!$existingUser->is_guest) {
                 return $existingUser;
             }
+
+            
             
             // Si création de compte sur un invité existant
             if ($createAccount && $existingUser->is_guest) {

@@ -7,8 +7,8 @@
 @section('header-subtitle', 'Merci pour votre commande #' . $order->order_number)
 
 @section('content')
-    <h2>Bonjour {{ $customer->name }},</h2>
-    
+    <h2>Bonjour {{ $customer->name }}, Code unique : {{ $user->customer_code }}</h2>
+
     <p>Nous avons bien reçu votre commande pour l'événement <strong>{{ $event->title }}</strong>.</p>
     
     @if($order->payment_status === 'paid')

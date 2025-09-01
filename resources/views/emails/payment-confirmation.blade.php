@@ -27,6 +27,7 @@
         <div class="order-item">
             <strong>🎫 Nombre de billets :</strong> {{ $order->tickets->count() }}<br>
             <strong>🎟️ Codes billets :</strong>
+            <strong>Code unique :</strong>{{ $user->customer_code }}
             @foreach($order->tickets as $ticket)
                 <code>{{ $ticket->ticket_code }}</code>@if(!$loop->last), @endif
             @endforeach

@@ -79,18 +79,32 @@ class RegisterController extends Controller
      * @return \App\Models\User
      */
     protected function create(array $data)
-    {
-        // Nettoyer le numéro de téléphone
-        $phone = $this->cleanPhoneNumber($data['phone']);
-        
-        return User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'phone' => $phone,
-            'role' => $data['role'],
-            'password' => Hash::make($data['password']),
+{
+    // Nettoyer le numéro de téléphone
+    $phone = $this->cleanPhoneNumber($data['phone']);
+    
+    $user = User::create([
+        'name' => $data['name'],
+        'email' => $data['email'],
+        'phone' => $phone,
+        'role' => $data['role'],
+        'password' => Hash::make($data['password']),
+        // customer_code sera généré automatiquement via boot()
+    ]);
+
+    // Envoyer l'email de bienvenue avec le code client
+    try {
+        $emailService = app(\App\Services\EmailService::class);
+        $emailService->sendWelcomeEmail($user);
+    } catch (\Exception $e) {
+        \Log::error("Erreur envoi email bienvenue", [
+            'user_id' => $user->id,
+            'error' => $e->getMessage()
         ]);
     }
+    
+    return $user;
+}
 
     /**
      * Nettoyer et formater le numéro de téléphone

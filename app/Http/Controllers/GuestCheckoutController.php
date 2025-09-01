@@ -382,7 +382,7 @@ class GuestCheckoutController extends Controller
         for ($i = 0; $i < $item['quantity']; $i++) {
             $ticket = Ticket::create([
                 'ticket_type_id' => $ticketType->id,
-                'ticket_code' => $this->generateTicketCode(),
+                'ticket_code' => Ticket::generateTicketCode(),
                 'status' => 'sold',
             ]);
             
@@ -443,17 +443,7 @@ class GuestCheckoutController extends Controller
         return $number;
     }
     
-    /**
-     * Générer un code de billet unique
-     */
-    private function generateTicketCode()
-    {
-        do {
-            $code = 'TKT-' . strtoupper(Str::random(10));
-        } while (Ticket::where('ticket_code', $code)->exists());
-        
-        return $code;
-    }
+
     /**
  * 🔥 NOUVELLE MÉTHODE : Envoyer tous les emails pour une commande invité
  */

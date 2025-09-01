@@ -1,316 +1,297 @@
-{{-- resources/views/acheteur/tickets-pdf.blade.php - STYLE EVENTPOP CORRIGÉ --}}
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>Billets - {{ $order->event->title ?? 'Événement' }}</title>
+    <title>E-Billet - {{ $order->order_number }}</title>
     <style>
         @page {
-            margin: 15mm;
-            size: A4 portrait;
+            margin: 0;
+            size: A4;
         }
         
         body {
-            font-family: 'DejaVu Sans', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            line-height: 1.4;
-            color: #333;
-            font-size: 14px;
-        }
-        
-        .ticket {
-            page-break-inside: avoid;
-            page-break-after: always;
-            border: 2px solid #000;
+            font-family: 'Arial', sans-serif;
             background: white;
-            margin: 0;
-            padding: 0;
-            height: 240mm;
-            position: relative;
+            color: #333;
         }
-        
-        .ticket-header {
-            padding: 20px 25px;
-            border-bottom: 1px solid #ddd;
-            background: #fafafa;
-            display: table;
+
+        .ticket-container {
             width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        
-        .header-left {
-            display: table-cell;
-            vertical-align: middle;
+
+        /* Header avec logo et numéro de commande */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 40px;
+            border-bottom: 3px solid #6366f1;
         }
-        
-        .header-right {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: right;
-        }
-        
+
         .logo {
             font-size: 32px;
             font-weight: bold;
-            color: #FF6B35;
-            letter-spacing: -1px;
+            color: #6366f1;
+            text-transform: lowercase;
         }
-        
+
         .order-number {
             font-size: 16px;
             font-weight: bold;
-            color: #666;
+            color: #333;
         }
-        
+
+        /* Section principale de l'événement */
         .event-section {
-            padding: 25px;
-            border-bottom: 1px solid #ddd;
-            height: 120px;
+            display: flex;
+            padding: 40px;
+            border-bottom: 2px solid #e5e7eb;
         }
-        
-        .event-main {
-            display: table;
-            width: 100%;
-            height: 100%;
-        }
-        
+
         .event-info {
-            display: table-cell;
-            width: 70%;
-            vertical-align: top;
-            padding-right: 20px;
+            flex: 1;
+            padding-right: 30px;
         }
-        
-        .ticket-type-info {
-            display: table-cell;
-            width: 30%;
-            vertical-align: top;
-            text-align: right;
-        }
-        
+
         .event-title {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: bold;
-            color: #000;
-            margin: 0 0 8px 0;
-            text-transform: uppercase;
+            color: #111;
+            margin-bottom: 15px;
+            line-height: 1.2;
         }
-        
-        .event-details {
-            font-size: 15px;
-            color: #666;
-            margin: 3px 0;
-        }
-        
-        .ticket-type {
-            font-size: 22px;
-            font-weight: bold;
-            color: #000;
-            margin: 0 0 5px 0;
-        }
-        
-        .ticket-price {
-            font-size: 18px;
-            font-weight: bold;
-            color: #000;
-        }
-        
-        .qr-codes-section {
-            text-align: center;
-            padding: 15px 25px;
-            height: 120px;
-        }
-        
-        .qr-title {
-            font-size: 11px;
+
+        .event-datetime {
+            font-size: 16px;
             color: #666;
             margin-bottom: 8px;
         }
-        
-        .qr-codes {
-            margin: 8px 0;
+
+        .event-venue {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 25px;
         }
-        
-        .qr-code {
-            display: inline-block;
-            width: 75px;
-            height: 75px;
-            border: 1px solid #ddd;
-            background: white;
-            margin: 0 8px;
-            vertical-align: top;
+
+        .ticket-type-price {
+            display: flex;
+            align-items: center;
+            gap: 30px;
         }
-        
-        .qr-placeholder {
-            padding: 15px 5px;
-            font-size: 9px;
-            color: #999;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .barcode-section {
-            margin: 8px 0;
-            text-align: center;
-        }
-        
-        .barcode-lines {
-            height: 25px;
-            background: repeating-linear-gradient(
-                90deg,
-                #000 0px, #000 1px,
-                transparent 1px, transparent 2px,
-                #000 2px, #000 3px,
-                transparent 3px, transparent 5px
-            );
-            margin: 3px auto;
-            width: 180px;
-        }
-        
-        .reference-code {
-            font-size: 13px;
-            font-weight: bold;
-            color: #000;
-            letter-spacing: 1px;
-        }
-        
-        .eticket-label {
-            background: #000;
+
+        .ticket-type {
+            background: #111;
             color: white;
-            padding: 6px 12px;
-            font-size: 13px;
+            padding: 8px 20px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .ticket-price {
+            font-size: 20px;
+            font-weight: bold;
+            color: #111;
+        }
+
+        /* Section QR Code */
+        .qr-section {
+            flex: none;
+            width: 200px;
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .qr-title {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.3;
+        }
+
+        .qr-codes {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .qr-code img {
+            width: 120px;
+            height: 120px;
+        }
+
+        .qr-placeholder {
+            width: 80px;
+            height: 80px;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .reference-code {
+            font-size: 14px;
+            font-weight: bold;
+            color: #111;
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        /* Label E-TICKET */
+        .eticket-label {
+            background: #111;
+            color: white;
+            padding: 8px 20px;
+            font-size: 14px;
             font-weight: bold;
             letter-spacing: 1px;
             position: absolute;
-            left: 25px;
-            bottom: 140px;
+            left: 40px;
+            margin-top: -20px;
         }
-        
-        .bottom-section {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 120px;
-            padding: 20px 25px;
-            background: #fafafa;
-            border-top: 1px solid #ddd;
+
+        /* Section détails client et commande */
+        .details-section {
+            display: flex;
+            padding: 30px 40px;
+            gap: 60px;
+            background: #f8f9fa;
         }
-        
-        .bottom-info {
-            display: table;
-            width: 100%;
-            height: 60px;
+
+        .client-details, .order-details {
+            flex: 1;
         }
-        
-        .client-info, .order-info {
-            display: table-cell;
-            width: 50%;
-            vertical-align: top;
-        }
-        
-        .order-info {
-            text-align: right;
-        }
-        
+
         .section-title {
-            font-size: 11px;
+            font-size: 14px;
             font-weight: bold;
-            color: #666;
+            color: #111;
+            margin-bottom: 10px;
             text-transform: uppercase;
+        }
+
+        .detail-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111;
             margin-bottom: 5px;
         }
-        
-        .section-content {
-            font-size: 15px;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 2px;
-        }
-        
-        .section-sub {
-            font-size: 13px;
+
+        .detail-info {
+            font-size: 14px;
             color: #666;
+            margin-bottom: 3px;
         }
-        
+
+        .detail-order {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 5px;
+        }
+
+        /* Section conditions */
         .terms-section {
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
-            height: 40px;
-            overflow: hidden;
+            padding: 25px 40px;
+            border-top: 1px solid #e5e7eb;
         }
-        
+
         .terms-title {
-            font-size: 10px;
+            font-size: 12px;
             font-weight: bold;
-            color: #000;
-            margin-bottom: 5px;
+            color: #111;
+            margin-bottom: 8px;
+            text-transform: uppercase;
         }
-        
+
         .terms-text {
-            font-size: 9px;
+            font-size: 11px;
             color: #666;
-            line-height: 1.2;
+            line-height: 1.4;
+        }
+
+        /* Responsive pour impression */
+        @media print {
+            .ticket-container {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+
+        /* Page break entre billets */
+        .page-break {
+            page-break-before: always;
         }
     </style>
 </head>
 <body>
     @foreach($order->tickets as $index => $ticket)
-        <div class="ticket">
-            {{-- Header avec logo et commande --}}
-            <div class="ticket-header">
-                <div class="header-left">
-                    <div class="logo">clicbillet</div>
-                </div>
-                <div class="header-right">
-                    <div class="order-number">COMMANDE #{{ $order->order_number }}</div>
-                </div>
-            </div>
+        <div class="ticket-container {{ $index > 0 ? 'page-break' : '' }}">
             
-            {{-- Section événement --}}
+            <!-- Header -->
+            <div class="header">
+                <div class="logo">clicbillet</div>
+                <div class="order-number">COMMANDE #{{ $order->order_number }}</div>
+            </div>
+
+            <!-- Section principale -->
             <div class="event-section">
-                <div class="event-main">
-                    <div class="event-info">
-                        <div class="event-title">{{ $order->event->title ?? 'ÉVÉNEMENT' }}</div>
-                        <div class="event-details">
-                            {{ $order->event->formatted_event_date ?? 'Date TBD' }}
-                            @if($order->event->formatted_event_time)
-                                {{ $order->event->formatted_event_time }}
-                            @else
-                                - Heure TBD
-                            @endif
-                        </div>
-                        <div class="event-details">{{ $order->event->venue ?? 'Lieu à définir' }}</div>
+                <div class="event-info">
+                    <div class="event-title">
+                        {{ $order->event->title }}
                     </div>
                     
-                    <div class="ticket-type-info">
+                    <div class="event-datetime">
+                        {{ $order->event->formatted_event_date ?? 'Date à déterminer' }}
+                        @if($order->event->formatted_event_time)
+                            {{ $order->event->formatted_event_time }}
+                        @endif
+                    </div>
+                    
+                    <div class="event-venue">
+                        {{ $order->event->venue ?? 'Lieu à déterminer' }}
+                    </div>
+
+                    <div class="ticket-type-price">
                         <div class="ticket-type">
                             @if($ticket->ticketType)
-                                {{ strtoupper($ticket->ticketType->name) }}
+                                {{ $ticket->ticketType->name }}
                             @else
                                 STANDARD
                             @endif
                         </div>
                         <div class="ticket-price">
                             @if($ticket->ticketType)
-                                {{ number_format($ticket->ticketType->price, 0, ',', ' ') }}
+                                {{ number_format($ticket->ticketType->price, 0, ',', ' ') }} FCFA
                             @else
-                                0
+                                0 FCFA
                             @endif
-                            FCFA
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            {{-- QR Codes avec logique de votre ancien template --}}
-            <div class="qr-codes-section">
-                <div class="qr-title">Code QR d'exemple pour<br>Accès à l'événement</div>
-                
-                <div class="qr-codes">
-                    {{-- QR Code 1 - Utilise votre logique existante --}}
-                    <div class="qr-code">
+
+                <!-- Section QR Code -->
+                <div class="qr-section">
+                    <div class="qr-title">
+                        Code QR d'exemple pour<br>Accès à l'événement
+                    </div>
+                    
+                    <div class="qr-codes">
                         @php
                             $qrCodeBase64 = null;
                             try {
@@ -320,71 +301,57 @@
                             }
                         @endphp
                         
-                        @if($qrCodeBase64)
-                            <img src="{{ $qrCodeBase64 }}" 
-                                 style="width: 73px; height: 73px;" 
-                                 alt="QR Code">
-                        @else
-                            <div class="qr-placeholder">QR<br>CODE</div>
-                        @endif
+                        <!-- QR Code unique -->
+                        <div class="qr-code">
+                            @if($qrCodeBase64)
+                                <img src="{{ $qrCodeBase64 }}" alt="QR Code" style="width: 120px; height: 120px;">
+                            @else
+                                <div class="qr-placeholder" style="width: 120px; height: 120px; font-size: 12px;">QR<br>CODE</div>
+                            @endif
+                        </div>
                     </div>
                     
-                    {{-- QR Code 2 - Même logique --}}
-                    <div class="qr-code">
-                        @if($qrCodeBase64)
-                            <img src="{{ $qrCodeBase64 }}" 
-                                 style="width: 73px; height: 73px;" 
-                                 alt="QR Code">
-                        @else
-                            <div class="qr-placeholder">QR<br>CODE</div>
-                        @endif
+                    <div class="reference-code">
+                        RÉF: {{ $ticket->ticket_code }}
                     </div>
-                </div>
-                
-                {{-- Code-barres stylisé --}}
-                <div class="barcode-section">
-                    <div class="barcode-lines"></div>
-                    <div class="reference-code">RÉF: {{ $ticket->ticket_code }}</div>
                 </div>
             </div>
-            
-            {{-- Label E-BILLET --}}
+
+            <!-- Label E-TICKET -->
             <div class="eticket-label">E-BILLET</div>
-            
-            {{-- Section inférieure - BLOC COMPACT --}}
-            <div class="bottom-section">
-                <div class="bottom-info">
-                    {{-- Informations client (bloc compact) --}}
-                    <div class="client-info">
-                        <div class="section-title">Détenteur du billet</div>
-                        <div class="section-content">{{ $order->user->name }}</div>
-                        @if($order->user->phone)
-                            <div class="section-sub">{{ $order->user->phone }}</div>
-                        @endif
-                        <div class="section-sub">{{ $order->user->email }}</div>
-                        @if($order->user->customer_code)
-                            <div class="section-sub">Code: {{ $order->user->customer_code }}</div>
-                        @endif
-                    </div>
-                    
-                    {{-- Informations commande (bloc compact) --}}
-                    <div class="order-info">
-                        <div class="section-title">Commande</div>
-                        <div class="section-content">#{{ $order->order_number }}</div>
-                        <div class="section-sub">{{ $order->created_at->format('d/m/Y H:i:s') }}</div>
-                        <div class="section-sub">(UTC +00:00)</div>
-                    </div>
+
+            <!-- Section détails -->
+            <div class="details-section">
+                <!-- Détails client -->
+                <div class="client-details">
+                    <div class="section-title">Détenteur du billet</div>
+                    <div class="detail-name">{{ $order->user->name }}</div>
+                    @if($order->user->phone)
+                        <div class="detail-info">{{ $order->user->phone }}</div>
+                    @endif
+                    <div class="detail-info">{{ $order->user->email }}</div>
                 </div>
                 
-                {{-- Conditions générales compactes --}}
-                <div class="terms-section">
-                    <div class="terms-title">CONDITIONS GÉNÉRALES POUR LE DÉTENTEUR DU BILLET</div>
-                    <div class="terms-text">
-                        Ce document contient des informations privées et confidentielles. 
-                        Le Code QR et la référence sont secrets - vous en êtes responsable. 
-                        <strong>Billet nominatif et incessible. Pièce d'identité requise à l'entrée.</strong>
-                        Organisé par <strong>{{ strtoupper($order->event->promoteur->name ?? 'L\'ORGANISATEUR') }}</strong>.
-                    </div>
+                <!-- Détails commande -->
+                <div class="order-details">
+                    <div class="section-title">Commande</div>
+                    <div class="detail-order">#{{ $order->order_number }}</div>
+                    <div class="detail-info">{{ $order->created_at->format('d/m/Y H:i:s') }}</div>
+                    <div class="detail-info">(UTC +00:00)</div>
+                </div>
+            </div>
+
+            <!-- Conditions générales -->
+            <div class="terms-section">
+                <div class="terms-title">Conditions générales pour le détenteur du billet</div>
+                <div class="terms-text">
+                    Ce document contient des informations privées et confidentielles incluant des informations personnelles, 
+                    des informations de contact personnel, et toute autre information demandée par 
+                    <strong>{{ strtoupper($order->event->promoteur->name ?? 'L\'ORGANISATEUR') }}</strong>, 
+                    l'organisateur de cet événement. Le Code QR (code-barres bidimensionnel), la référence (Code de référence) 
+                    sont secrets, vous comprenez que vous, le propriétaire / acheteur du billet, 
+                    détenez la seule responsabilité de la confidentialité de ce code. 
+                    <strong>Billet nominatif et incessible. Pièce d'identité requise à l'entrée.</strong>
                 </div>
             </div>
         </div>

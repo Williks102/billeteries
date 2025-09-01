@@ -128,22 +128,42 @@ class EmailService
     /**
      * Envoyer tous les emails pour une nouvelle commande
      */
+    
     public function sendAllOrderEmails(Order $order)
-    {
-        // 1. Email confirmation au client
-        $this->sendOrderConfirmation($order);
+{
+    Log::info("Début sendAllOrderEmails", [
+        'order_id' => $order->id,
+        'payment_status' => $order->payment_status,
+        'is_guest' => $order->user->is_guest ?? false,
+        'email' => $order->user->email
+    ]);
 
-        // 2. Si payé, email avec billets
-        if ($order->payment_status === 'paid') {
-            $this->sendPaymentConfirmation($order);
-        }
+    // 1. Email confirmation au client
+    $this->sendOrderConfirmation($order);
 
-        // 3. Notification promoteur
-        $this->notifyPromoteurNewSale($order);
-
-        // 4. Notification admin
-        $this->notifyAdminNewOrder($order);
+    // 2. 🔥 FIX: Si payé, email avec billets PDF (pour guests aussi !)
+    if ($order->payment_status === 'paid') {
+        Log::info("Commande payée détectée, envoi PDF", [
+            'order_id' => $order->id,
+            'is_guest' => $order->user->is_guest ?? false
+        ]);
+        
+        $this->sendPaymentConfirmation($order);
+    } else {
+        Log::warning("Commande non payée, pas de PDF", [
+            'order_id' => $order->id,
+            'payment_status' => $order->payment_status
+        ]);
     }
+
+    // 3. Notification promoteur
+    $this->notifyPromoteurNewSale($order);
+
+    // 4. Notification admin
+    $this->notifyAdminNewOrder($order);
+    
+    Log::info("Fin sendAllOrderEmails", ['order_id' => $order->id]);
+}
 
     /**
      * Test d'envoi d'email

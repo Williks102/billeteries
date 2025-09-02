@@ -120,7 +120,7 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     })->name('choose');
 });
 
-// Dans routes/web.php, remplacez la route existante par :
+
 
 Route::post('/api/check-email', function(Request $request) {
     try {

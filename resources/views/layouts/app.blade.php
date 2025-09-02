@@ -96,8 +96,9 @@
         
         /* Footer */
         footer {
-    background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%) !important;
+    background: linear-gradient(135deg, #1a252f 0%, #1a252f 100%) !important;
 }
+        footer .footer-description{color: white !important;}
 
 /* Liens du footer */
 .footer-link {
@@ -412,7 +413,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                         <i class="fas fa-ticket-alt me-2" style="color: #FF6B35;"></i>
                         ClicBillet CI
                     </h5>
-                    <p class="mb-3 text-light-emphasis">
+                    <p class="mb-3 footer-description">
                         La plateforme de référence pour découvrir et réserver vos événements favoris en Côte d'Ivoire. 
                         Concerts, théâtre, sports, conférences... Tout en quelques clics !
                     </p>
@@ -421,7 +422,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                     <div class="social-links">
                         <h6 class="fw-semibold mb-3">Suivez-nous</h6>
                         <div class="d-flex gap-3">
-                            <a href="#" class="text-white-50 hover-orange fs-4" title="Facebook">
+                            <a href="facebook.com/clicbillet" class="text-white-50 hover-orange fs-4" title="Facebook">
                                 <i class="fab fa-facebook-f"></i>
                             </a>
                             <a href="#" class="text-white-50 hover-orange fs-4" title="Twitter">
@@ -521,12 +522,12 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                             </a>
                         </li>
                         <li class="mb-2">
-                            <a href="{{ route('pages.cms', 'contact') }}" class="text-light text-decoration-none footer-link">
+                            <a href="{{ route('pages.contact') }}" class="text-light text-decoration-none footer-link">
                                 <i class="fas fa-envelope me-2"></i>Contact
                             </a>
                         </li>
                         <li class="mb-2">
-                            <a href="{{ route('pages.cms', 'support') }}" class="text-light text-decoration-none footer-link">
+                            <a href="{{ route('pages.support') }}" class="text-light text-decoration-none footer-link">
                                 <i class="fas fa-headset me-2"></i>Support
                             </a>
                         </li>
@@ -573,12 +574,12 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                     @empty
                         {{-- Fallback --}}
                         <li class="mb-2">
-                            <a href="{{ route('pages.cms', 'about') }}" class="text-light text-decoration-none footer-link">
+                            <a href="#" class="text-light text-decoration-none footer-link">
                                 <i class="fas fa-info-circle me-2"></i>À propos
                             </a>
                         </li>
                         <li class="mb-2">
-                            <a href="{{ route('pages.cms', 'pricing') }}" class="text-light text-decoration-none footer-link">
+                            <a href="{{ route('pages.pricing') }}" class="text-light text-decoration-none footer-link">
                                 <i class="fas fa-tag me-2"></i>Tarifs
                             </a>
                         </li>
@@ -610,17 +611,17 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                     @empty
                         {{-- Fallback --}}
                         <li class="mb-2">
-                            <a href="{{ route('pages.cms', 'terms') }}" class="text-light text-decoration-none footer-link">
+                            <a href="{{ route('pages.terms') }}" class="text-light text-decoration-none footer-link">
                                 <i class="fas fa-file-contract me-2"></i>Conditions d'utilisation
                             </a>
                         </li>
                         <li class="mb-2">
-                            <a href="{{ route('pages.cms', 'privacy') }}" class="text-light text-decoration-none footer-link">
+                            <a href="{{ route('pages.privacy') }}" class="text-light text-decoration-none footer-link">
                                 <i class="fas fa-shield-alt me-2"></i>Politique de confidentialité
                             </a>
                         </li>
                         <li class="mb-2">
-                            <a href="{{ route('pages.cms', 'legal') }}" class="text-light text-decoration-none footer-link">
+                            <a href="{{ route('pages.legal') }}" class="text-light text-decoration-none footer-link">
                                 <i class="fas fa-gavel me-2"></i>Mentions légales
                             </a>
                         </li>
@@ -649,8 +650,8 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                     {{-- Informations de contact rapide --}}
                     <div class="text-white-50 small">
                         <i class="fas fa-envelope me-1"></i>
-                        <a href="mailto:contact@clicbillet.ci" class="text-white-50 text-decoration-none">
-                            contact@clicbillet.ci
+                        <a href="mailto:contact@clicbillet.com" class="text-white-50 text-decoration-none">
+                            contact@clicbillet.com
                         </a>
                     </div>
                     

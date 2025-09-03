@@ -9,7 +9,7 @@
         padding: 1.5rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         margin-bottom: 1.5rem;
-        border-left: 4px solid #FF6B35;
+        border-left: 1px solid #f1eeed81;
         transition: transform 0.3s ease;
     }
     
@@ -168,12 +168,12 @@
     <div class="col-md-3">
         <div class="stat-card text-center">
             <div class="mb-2">
-                <i class="fas fa-money-bill-wave fa-2x" style="color: #FF6B35;"></i>
+                <i class="fas fa-chart-line fa-2x" style="color: #FF6B35;"></i>
             </div>
-            <h4>{{ number_format($stats['pending_commissions'] ?? 0) }} F</h4>
-            <p class="text-muted mb-0">Commissions en attente</p>
-            <small class="text-warning">
-                À recevoir
+            <h4>{{ number_format($stats['monthly_revenue'] ?? 0) }} F</h4>
+            <p class="text-muted mb-0">Revenus ce mois</p>
+            <small class="text-info">
+                <i class="fas fa-calendar me-1"></i>{{ date('F Y') }}
             </small>
         </div>
     </div>

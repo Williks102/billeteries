@@ -5,7 +5,7 @@
     <div class="booking-header">
         <h3>
             <i class="fas fa-ticket-alt me-2"></i>
-            Réservez vos billets
+            Réservation
         </h3>
         @if($event->ticketTypes->count() > 0)
             <div class="booking-preview">

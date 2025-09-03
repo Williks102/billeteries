@@ -15,106 +15,100 @@ class PromoteurController extends Controller
     /**
      * Dashboard principal du promoteur - CORRIGÉ
      */
-    public function dashboard()
-    {
-        try {
-            $promoteur = Auth::user();
-            $promoteurId = $promoteur->id;
-
-            // Statistiques principales
-            $stats = [
-                'total_events' => Event::where('promoter_id', $promoteurId)->count(),
-                'published_events' => Event::where('promoter_id', $promoteurId)->where('status', 'published')->count(),
-                'upcoming_events' => Event::where('promoter_id', $promoteurId)
-                    ->where('status', 'published')
-                    ->where('event_date', '>=', now())
-                    ->count(),
-                'total_revenue' => Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
-                        $query->where('promoter_id', $promoteurId);
-                    })
-                    ->where('payment_status', 'paid')
-                    ->sum('total_amount'),
-                'pending_commissions' => Commission::where('promoter_id', $promoteurId)
-                    ->where('status', 'pending')
-                    ->sum('commission_amount'),
-                'total_tickets_sold' => Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                        $query->where('promoter_id', $promoteurId);
-                    })->where('status', '!=', 'available')->count() // Tous sauf disponibles
-            ];
-
-            // Événements récents
-            $recentEvents = Event::where('promoter_id', $promoteurId)
-                ->with(['category', 'ticketTypes'])
-                ->withCount(['orders', 'tickets'])
-                ->orderBy('created_at', 'desc')
-                ->take(5)
-                ->get();
-
-            // Commandes récentes
-            $recentOrders = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
-                    $query->where('promoter_id', $promoteurId);
-                })
-                ->with(['user', 'orderItems.ticketType.event'])
-                ->where('payment_status', 'paid')
-                ->orderBy('created_at', 'desc')
-                ->take(8)
-                ->get();
-
-            // Prochains événements
-            $upcomingEvents = Event::where('promoter_id', $promoteurId)
-                ->where('status', 'published')
-                ->where('event_date', '>=', now())
-                ->orderBy('event_date', 'asc')
-                ->take(3)
-                ->get();
-
-            // Statistiques des 7 derniers jours pour graphique
-            $weeklyStats = [];
-            for ($i = 6; $i >= 0; $i--) {
-                $date = now()->subDays($i);
-                $revenue = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
-                        $query->where('promoter_id', $promoteurId);
-                    })
-                    ->where('payment_status', 'paid')
-                    ->whereDate('created_at', $date)
-                    ->sum('total_amount');
-                    
-                $weeklyStats[] = [
-                    'date' => $date->format('D j'),
-                    'revenue' => $revenue
-                ];
-            }
-
-            return view('promoteur.dashboard', compact(
-                'stats', 
-                'recentEvents', 
-                'recentOrders', 
-                'upcomingEvents',
-                'weeklyStats'
-            ));
+   public function dashboard()
+{
+    try {
+        $promoteurId = Auth::id();
+        
+        // Statistiques principales - CORRIGÉES
+        $stats = [
+            // Événements
+            'total_events' => Event::where('promoter_id', $promoteurId)->count(),
+            'published_events' => Event::where('promoter_id', $promoteurId)
+                ->where('status', 'published')->count(),
+            'events_this_month' => Event::where('promoter_id', $promoteurId)
+                ->whereMonth('created_at', now()->month)->count(),
             
-        } catch (\Exception $e) {
-            \Log::error('Erreur dans promoteur.dashboard: ' . $e->getMessage());
+            // Billets vendus
+            'total_tickets_sold' => Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
+                $query->where('promoter_id', $promoteurId);
+            })->where('status', '!=', 'available')->count(),
             
-            // Données par défaut en cas d'erreur
-            $stats = [
-                'total_events' => 0,
-                'published_events' => 0,
-                'upcoming_events' => 0,
-                'total_revenue' => 0,
-                'pending_commissions' => 0,
-                'total_tickets_sold' => 0,
-            ];
+            'tickets_this_week' => Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
+                $query->where('promoter_id', $promoteurId);
+            })->where('status', '!=', 'available')
+            ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+            ->count(),
             
-            return view('promoteur.dashboard', [
-                'stats' => $stats,
-                'recentEvents' => collect(),
-                'recentOrders' => collect(),
-                'upcomingEvents' => collect(),
-                'weeklyStats' => []
-            ])->with('error', 'Erreur lors du chargement du dashboard');
-        }
+            // Revenus NETS (ce que garde le promoteur après commission plateforme)
+            'total_revenue' => Commission::where('promoter_id', $promoteurId)
+                ->where('status', 'paid')
+                ->sum('net_amount'), // Le montant NET que garde le promoteur
+            
+            'monthly_revenue' => Commission::where('promoter_id', $promoteurId)
+                ->where('status', 'paid')
+                ->whereMonth('created_at', now()->month)
+                ->sum('net_amount'),
+            
+            // Calcul croissance
+            'revenue_growth' => $this->calculateRevenueGrowth($promoteurId),
+        ];
+        
+        // Événements récents
+        $recentEvents = Event::where('promoter_id', $promoteurId)
+            ->with(['ticketTypes', 'category'])
+            ->latest()
+            ->take(5)
+            ->get();
+        
+        // Commandes récentes sur mes événements
+        $recentOrders = Order::whereHas('orderItems.ticketType.event', function($query) use ($promoteurId) {
+                $query->where('promoter_id', $promoteurId);
+            })
+            ->with(['user', 'event'])
+            ->where('payment_status', 'paid')
+            ->latest()
+            ->take(5)
+            ->get();
+        
+        // Événements à venir
+        $upcomingEvents = Event::where('promoter_id', $promoteurId)
+            ->where('event_date', '>', now())
+            ->orderBy('event_date')
+            ->take(3)
+            ->get();
+        
+        return view('promoteur.dashboard', compact(
+            'stats', 
+            'recentEvents', 
+            'recentOrders', 
+            'upcomingEvents'
+        ));
+        
+    } catch (\Exception $e) {
+        \Log::error('Erreur dashboard promoteur: ' . $e->getMessage());
+        
+        // Données par défaut en cas d'erreur
+        $stats = [
+            'total_events' => 0,
+            'published_events' => 0,
+            'events_this_month' => 0,
+            'total_revenue' => 0,
+            'monthly_revenue' => 0,
+            'total_tickets_sold' => 0,
+            'tickets_this_week' => 0,
+            'revenue_growth' => 0,
+        ];
+        
+        return view('promoteur.dashboard', [
+            'stats' => $stats,
+            'recentEvents' => collect(),
+            'recentOrders' => collect(),
+            'upcomingEvents' => collect(),
+        ])->with('error', 'Erreur lors du chargement du dashboard');
     }
+}
+
 
     /**
      * Profil du promoteur
@@ -334,4 +328,25 @@ class PromoteurController extends Controller
                 ->count()
         ]);
     }
+    /**
+ * Calculer la croissance des revenus par rapport au mois précédent
+ */
+private function calculateRevenueGrowth($promoteurId)
+{
+    $thisMonth = Commission::where('promoter_id', $promoteurId)
+        ->where('status', 'paid')
+        ->whereMonth('created_at', now()->month)
+        ->sum('net_amount');
+    
+    $lastMonth = Commission::where('promoter_id', $promoteurId)
+        ->where('status', 'paid')
+        ->whereMonth('created_at', now()->subMonth()->month)
+        ->sum('net_amount');
+    
+    if ($lastMonth > 0) {
+        return round((($thisMonth - $lastMonth) / $lastMonth) * 100, 1);
+    }
+    
+    return $thisMonth > 0 ? 100 : 0;
+}
 }

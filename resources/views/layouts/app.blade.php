@@ -422,7 +422,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                     <div class="social-links">
                         <h6 class="fw-semibold mb-3">Suivez-nous</h6>
                         <div class="d-flex gap-3">
-                            <a href="facebook.com/clicbillet" class="text-white-50 hover-orange fs-4" title="Facebook">
+                            <a href="#" class="text-white-50 hover-orange fs-4" title="Facebook">
                                 <i class="fab fa-facebook-f"></i>
                             </a>
                             <a href="#" class="text-white-50 hover-orange fs-4" title="Twitter">

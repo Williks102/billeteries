@@ -1,6 +1,6 @@
 {{-- ================================================ --}}
-{{-- resources/views/checkout/guest.blade.php --}}
-{{-- Checkout invité intégré avec sélection de paiement --}}
+{{-- resources/views/checkout/guest.blade.php ADAPTÉ --}}
+{{-- Design moderne + logique métier complète --}}
 {{-- ================================================ --}}
 
 @extends('layouts.app')
@@ -42,7 +42,7 @@
                 
                 {{-- ===== RÉSUMÉ DES BILLETS ===== --}}
                 <div class="card mb-4">
-                    <div class="card-header bg-light">
+                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-ticket-alt me-2"></i>Vos billets</h5>
                     </div>
                     <div class="card-body p-0">
@@ -62,27 +62,20 @@
                                 <div class="col-md-6">
                                     <h6 class="mb-1">{{ $item['event_title'] }}</h6>
                                     <p class="text-muted mb-1">
-                                        <i class="fas fa-calendar me-1"></i>{{ $item['event_date'] ?? 'Date TBD' }}
+                                        <i class="fas fa-calendar me-1"></i>{{ $item['event_date'] ?? 'Date à confirmer' }}
                                     </p>
-                                    <p class="text-muted mb-0">
-                                        <i class="fas fa-map-marker-alt me-1"></i>{{ $item['event_venue'] ?? 'Lieu TBD' }}
-                                    </p>
+                                    <small class="text-muted">{{ $item['ticket_name'] }} - {{ $item['quantity'] }}x</small>
+                                    @if(isset($item['event_venue']))
+                                        <div class="text-muted mt-1">
+                                            <i class="fas fa-map-marker-alt me-1"></i>{{ $item['event_venue'] }}
+                                        </div>
+                                    @endif
                                 </div>
                                 <div class="col-md-2 text-center">
-                                    <div class="ticket-type-info">
-                                        <strong>{{ $item['ticket_name'] }}</strong>
-                                        <div class="text-muted">{{ $item['quantity'] }} billet(s)</div>
-                                    </div>
+                                    <span class="badge bg-primary">{{ $item['quantity'] }}</span>
                                 </div>
                                 <div class="col-md-2 text-end">
-                                    <div class="price-info">
-                                        <div class="unit-price text-muted">
-                                            {{ number_format($item['unit_price']) }} FCFA/unité
-                                        </div>
-                                        <div class="total-price">
-                                            <strong>{{ number_format($item['total_price']) }} FCFA</strong>
-                                        </div>
-                                    </div>
+                                    <strong>{{ number_format($item['total_price']) }} FCFA</strong>
                                 </div>
                             </div>
                         </div>
@@ -92,46 +85,42 @@
 
                 {{-- ===== MODE DE COMMANDE ===== --}}
                 <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Comment souhaitez-vous commander ?</h5>
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-user-cog me-2"></i>Type de commande</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            {{-- Mode invité --}}
-                            <div class="col-md-6">
-                                <div class="mode-option selected" id="guestMode">
-                                    <input type="radio" class="btn-check" name="mode" id="guest" value="guest" checked>
-                                    <label class="btn btn-outline-primary w-100 p-3" for="guest">
-                                        <i class="fas fa-bolt fa-2x mb-2"></i>
-                                        <br><strong>Commande express</strong>
-                                        <br><small>Sans créer de compte</small>
-                                    </label>
+                            <div class="col-md-6 mb-3">
+                                <div class="mode-option" id="guestMode">
+                                    <div class="btn btn-outline-primary w-100 p-3">
+                                        <i class="fas fa-bolt fs-4 mb-2 d-block"></i>
+                                        <strong>Commande express</strong>
+                                        <small class="d-block text-muted">Achat rapide sans compte</small>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            {{-- Mode avec compte --}}
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-3">
                                 <div class="mode-option" id="accountMode">
-                                    <input type="radio" class="btn-check" name="mode" id="account" value="account">
-                                    <label class="btn btn-outline-success w-100 p-3" for="account">
-                                        <i class="fas fa-user-plus fa-2x mb-2"></i>
-                                        <br><strong>Créer un compte</strong>
-                                        <br><small>Gérer mes billets</small>
-                                    </label>
+                                    <div class="btn btn-outline-success w-100 p-3">
+                                        <i class="fas fa-user-plus fs-4 mb-2 d-block"></i>
+                                        <strong>Créer un compte</strong>
+                                        <small class="d-block text-muted">Gérer vos billets facilement</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        <input type="hidden" name="create_account" id="create_account" value="0">
                     </div>
                 </div>
 
                 {{-- ===== INFORMATIONS PERSONNELLES ===== --}}
                 <div class="card mb-4">
-                    <div class="card-header bg-light">
+                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-user me-2"></i>Vos informations</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-3">
                                 <label for="first_name" class="form-label">Prénom *</label>
                                 <input type="text" class="form-control @error('first_name') is-invalid @enderror" 
                                        id="first_name" name="first_name" value="{{ old('first_name') }}" required>
@@ -139,7 +128,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-3">
                                 <label for="last_name" class="form-label">Nom *</label>
                                 <input type="text" class="form-control @error('last_name') is-invalid @enderror" 
                                        id="last_name" name="last_name" value="{{ old('last_name') }}" required>
@@ -147,10 +136,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
-                        
-                        <div class="row mt-3">
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-3">
                                 <label for="email" class="form-label">Email *</label>
                                 <input type="email" class="form-control @error('email') is-invalid @enderror" 
                                        id="email" name="email" value="{{ old('email') }}" required>
@@ -158,7 +144,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-3">
                                 <label for="phone" class="form-label">Téléphone *</label>
                                 <input type="tel" class="form-control @error('phone') is-invalid @enderror" 
                                        id="phone" name="phone" value="{{ old('phone') }}" required>
@@ -171,13 +157,13 @@
                         {{-- Section création de compte (cachée par défaut) --}}
                         <div id="accountSection" style="display: none;">
                             <hr class="my-4">
-                            <h6><i class="fas fa-key me-2"></i>Sécurité du compte</h6>
-                            
-                            <input type="hidden" name="create_account" id="create_account" value="0">
+                            <h6 class="text-success mb-3">
+                                <i class="fas fa-user-plus me-2"></i>Création de votre compte
+                            </h6>
                             
                             <div id="passwordFields" style="display: none;">
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-md-6 mb-3">
                                         <label for="password" class="form-label">Mot de passe *</label>
                                         <input type="password" class="form-control @error('password') is-invalid @enderror" 
                                                id="password" name="password">
@@ -185,17 +171,17 @@
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-6 mb-3">
                                         <label for="password_confirmation" class="form-label">Confirmer mot de passe *</label>
                                         <input type="password" class="form-control" 
                                                id="password_confirmation" name="password_confirmation">
                                     </div>
                                 </div>
-                                
-                                <div class="alert alert-info mt-3">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Avantages du compte :</strong> Gérer vos billets, historique des commandes, réservations futures
-                                </div>
+                            </div>
+                            
+                            <div class="alert alert-success">
+                                <i class="fas fa-star me-2"></i>
+                                <strong>Avantages du compte :</strong> Gérer vos billets, historique des commandes, réservations futures
                             </div>
                         </div>
                     </div>
@@ -203,40 +189,29 @@
 
                 {{-- ===== MOYEN DE PAIEMENT ===== --}}
                 <div class="card">
-                    <div class="card-header bg-light">
+                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Moyen de paiement</h5>
                     </div>
                     <div class="card-body">
                         {{-- Options de paiement --}}
                         <div class="payment-methods mb-4">
                             {{-- PaiementPro --}}
-                            <div class="payment-method-option">
+                            <div class="payment-method-option mb-3">
                                 <input type="radio" class="btn-check" name="payment_method" 
                                        id="paiementpro_guest" value="paiementpro" checked>
-                                <label class="btn btn-outline-primary w-100 mb-3" for="paiementpro_guest">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-credit-card fa-2x me-3 text-primary"></i>
-                                        <div class="text-start">
-                                            <h6 class="mb-1">Paiement en ligne</h6>
-                                            <small class="text-muted">Carte bancaire, Mobile Money, Orange Money, Flooz</small>
-                                        </div>
-                                        <div class="ms-auto">
-                                            <span class="badge bg-success">Instantané</span>
-                                        </div>
-                                    </div>
-                                </label>
+                                
                             </div>
 
                             {{-- Virement bancaire --}}
                             <div class="payment-method-option">
                                 <input type="radio" class="btn-check" name="payment_method" 
                                        id="bank_transfer_guest" value="bank_transfer">
-                                <label class="btn btn-outline-secondary w-100" for="bank_transfer_guest">
+                                <label class="btn btn-outline-secondary w-100 p-3 text-start" for="bank_transfer_guest">
                                     <div class="d-flex align-items-center">
-                                        <i class="fas fa-university fa-2x me-3 text-secondary"></i>
-                                        <div class="text-start">
-                                            <h6 class="mb-1">Virement bancaire</h6>
-                                            <small class="text-muted">Instructions envoyées par email</small>
+                                        <i class="fas fa-university fs-4 me-3"></i>
+                                        <div>
+                                            <strong>Virement bancaire</strong>
+                                            <small class="d-block text-muted">Validation manuelle sous 24h</small>
                                         </div>
                                     </div>
                                 </label>
@@ -244,73 +219,58 @@
                         </div>
 
                         {{-- Canaux PaiementPro --}}
-                        <div id="paiementpro-channels-guest" class="paiementpro-options">
-                            <h6 class="mb-3">Choisissez votre méthode :</h6>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="card_guest" value="CARD" checked>
-                                    <label class="btn btn-outline-info w-100 p-3" for="card_guest">
-                                        <i class="fas fa-credit-card fa-2x mb-2"></i>
-                                        <br><strong>Carte bancaire</strong>
-                                        <br><small>Visa, Mastercard</small>
+                        <div id="paiementpro-channels-guest" class="channels-section">
+                            <h6 class="mb-3">Choisissez votre moyen de paiement :</h6>
+                            <div class="payment-options">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="channel" id="channel_card_guest" value="CARD">
+                                    <label class="form-check-label" for="channel_card_guest">
+                                        Carte bancaire
                                     </label>
                                 </div>
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="momo_guest" value="MOMO">
-                                    <label class="btn btn-outline-warning w-100 p-3" for="momo_guest">
-                                        <i class="fas fa-mobile-alt fa-2x mb-2"></i>
-                                        <br><strong>Mobile Money</strong>
-                                        <br><small>MTN, Moov</small>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="channel" id="channel_momo_guest" value="MOMO">
+                                    <label class="form-check-label" for="channel_momo_guest">
+                                        MTN Momo 
                                     </label>
                                 </div>
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="orange_guest" value="OMCIV2">
-                                    <label class="btn btn-outline-warning w-100 p-3" for="orange_guest">
-                                        <i class="fas fa-mobile fa-2x mb-2"></i>
-                                        <br><strong>Orange Money</strong>
-                                        <br><small>Orange CI</small>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="channel" id="channel_omci_guest" value="OMCIV2">
+                                    <label class="form-check-label" for="channel_omci_guest">
+                                        Orange Money
                                     </label>
                                 </div>
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="flooz_guest" value="FLOOZ">
-                                    <label class="btn btn-outline-info w-100 p-3" for="flooz_guest">
-                                        <i class="fas fa-wallet fa-2x mb-2"></i>
-                                        <br><strong>Flooz</strong>
-                                        <br><small>Portefeuille digital</small>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="channel" id="channel_flooz_guest" value="FLOOZ">
+                                    <label class="form-check-label" for="channel_flooz_guest">
+                                        Moov Money
                                     </label>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Informations virement --}}
-                        <div id="bank-transfer-info-guest" class="bank-transfer-options" style="display: none;">
-                            <div class="alert alert-info">
-                                <h6><i class="fas fa-info-circle me-2"></i>Comment ça marche ?</h6>
-                                <ol class="mb-0">
-                                    <li>Vous validez votre commande</li>
-                                    <li>Nous vous envoyons les coordonnées bancaires par email</li>
-                                    <li>Vous effectuez le virement</li>
-                                    <li>Vos billets sont envoyés dès réception du paiement</li>
-                                </ol>
+                        {{-- Info virement bancaire --}}
+                        <div id="bank-transfer-info-guest" class="alert alert-info" style="display: none;">
+                            <h6><i class="fas fa-info-circle me-2"></i>Instructions de virement</h6>
+                            <p class="mb-2">Votre commande sera réservée. Effectuez le virement vers :</p>
+                            <div class="bank-details">
+                                <strong>Banque :</strong> [Nom de votre banque]<br>
+                                <strong>IBAN :</strong> [Votre IBAN]<br>
+                                <strong>Référence :</strong> <span class="text-primary">COMMANDE-[Généré automatiquement]</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- ===== SIDEBAR RÉCAPITULATIF ===== --}}
+            {{-- Sidebar droite - Résumé --}}
             <div class="col-lg-4">
-                <div class="card sticky-top" style="top: 2rem;">
-                    <div class="card-header bg-orange text-white">
-                        <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Récapitulatif</h5>
-                    </div>
-                    <div class="card-body">
-                        {{-- Détail des prix --}}
-                        <div class="order-summary">
+                <div class="summary-sidebar">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Récapitulatif</h5>
+                        </div>
+                        <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Sous-total</span>
                                 <span>{{ number_format($cartTotal) }} FCFA</span>
@@ -322,55 +282,45 @@
                             <hr>
                             <div class="d-flex justify-content-between mb-3">
                                 <strong>Total à payer</strong>
-                                <strong class="text-orange">{{ number_format($finalTotal) }} FCFA</strong>
+                                <strong class="text-primary">{{ number_format($finalTotal) }} FCFA</strong>
                             </div>
-                        </div>
 
-                        {{-- Avantages commande express --}}
-                        <div class="alert alert-success mb-3">
-                            <h6><i class="fas fa-bolt me-2"></i>Commande express</h6>
-                            <ul class="mb-0 small">
-                                <li>✅ Pas d'inscription nécessaire</li>
-                                <li>✅ Billets par email instantané</li>
-                                <li>✅ Paiement 100% sécurisé</li>
-                            </ul>
-                        </div>
+                            {{-- Avantages commande express --}}
+                            <div class="alert alert-success mb-3">
+                                <h6><i class="fas fa-bolt me-2"></i>Commande express</h6>
+                                <ul class="mb-0 small">
+                                    <li>✅ Pas d'inscription nécessaire</li>
+                                    <li>✅ Billets par email instantané</li>
+                                    <li>✅ Paiement 100% sécurisé</li>
+                                </ul>
+                            </div>
 
-                        {{-- Conditions générales --}}
-                        <div class="form-check mb-3">
-                            <input class="form-check-input @error('terms_accepted') is-invalid @enderror" 
-                                   type="checkbox" name="terms_accepted" id="terms_accepted_guest" required>
-                            <label class="form-check-label small" for="terms_accepted_guest">
-                                J'accepte les <a href="{{ route('pages.terms') }}" target="_blank">conditions générales</a>
-                                et la <a href="{{ route('pages.privacy') }}" target="_blank">politique de confidentialité</a>
-                            </label>
-                            @error('terms_accepted')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                            {{-- Conditions générales --}}
+                            <div class="form-check mb-3">
+                                <input class="form-check-input @error('terms_accepted') is-invalid @enderror" 
+                                       type="checkbox" name="terms_accepted" id="terms_accepted_guest" required>
+                                <label class="form-check-label small" for="terms_accepted_guest">
+                                    J'accepte les <a href="{{ route('pages.terms') }}" target="_blank">conditions générales</a>
+                                    et la <a href="{{ route('pages.privacy') }}" target="_blank">politique de confidentialité</a>
+                                </label>
+                                @error('terms_accepted')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                        {{-- Bouton de paiement --}}
-                        <button type="submit" class="btn btn-orange btn-lg w-100" id="pay-button-guest">
-                            <i class="fas fa-bolt me-2"></i>
-                            <span id="pay-button-text-guest">Commande express</span>
-                        </button>
+                            {{-- Bouton de paiement --}}
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="pay-button-guest">
+                                <i class="fas fa-bolt me-2"></i>
+                                <span id="pay-button-text-guest">Commande express</span>
+                            </button>
 
-                        {{-- Lien connexion --}}
-                        <div class="text-center mt-3">
-                            <small class="text-muted">
-                                Déjà client ? 
-                                <a href="{{ route('login') }}?redirect={{ urlencode(route('checkout.show')) }}">
-                                    Se connecter
-                                </a>
-                            </small>
-                        </div>
-
-                        {{-- Informations de sécurité --}}
-                        <div class="text-center mt-2">
-                            <small class="text-muted">
-                                <i class="fas fa-shield-alt me-1 text-success"></i>
-                                Paiement 100% sécurisé
-                            </small>
+                            {{-- Informations de sécurité --}}
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-shield-alt me-1 text-success"></i>
+                                    Paiement 100% sécurisé
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -379,19 +329,51 @@
     </form>
 </div>
 
-{{-- CSS identique au checkout normal --}}
+{{-- CSS MODERNE avec correction header --}}
 <style>
+/* ====================== VARIABLES & BASE ====================== */
+:root {
+    --primary-orange: #FF6B35;
+    --primary-dark: #E55A2B;
+    --header-height: 70px;
+    --shadow-light: 0 2px 20px rgba(0,0,0,0.08);
+    --shadow-medium: 0 4px 25px rgba(0,0,0,0.15);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* FIX HEADER - Solution principale */
+.navbar.fixed-top,
+.main-navbar,
+header.navbar {
+    position: fixed !important;
+    top: 0 !important;
+    z-index: 9999 !important;
+    backdrop-filter: blur(10px);
+    transition: var(--transition-smooth);
+}
+
+.navbar.scrolled {
+    box-shadow: var(--shadow-medium) !important;
+    background: rgba(255,255,255,0.95) !important;
+}
+
+body {
+    padding-top: var(--header-height) !important;
+}
+
+/* ====================== CHECKOUT DESIGN ====================== */
 .checkout-steps {
     display: flex;
     justify-content: center;
     margin: 2rem 0;
+    padding: 0 1rem;
 }
 
 .step {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin: 0 2rem;
+    margin: 0 1.5rem;
     position: relative;
 }
 
@@ -406,77 +388,236 @@
     color: #6c757d;
     font-weight: bold;
     margin-bottom: 0.5rem;
+    transition: var(--transition-smooth);
 }
 
 .step.completed .step-number {
     background: #28a745;
     color: white;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
 }
 
 .step.active .step-number {
-    background: #ff6b35;
+    background: var(--primary-orange);
     color: white;
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
 }
 
+/* ====================== CARTES MODERNES ====================== */
+.card {
+    border: none;
+    box-shadow: var(--shadow-light);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+}
+
+/* ====================== MODE SELECTION ====================== */
 .mode-option {
-    transition: all 0.3s ease;
+    transition: var(--transition-smooth);
     cursor: pointer;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.mode-option .btn {
+    border-radius: 12px;
+    transition: var(--transition-smooth);
 }
 
 .mode-option.selected .btn {
-    background-color: var(--bs-primary);
+    background: var(--primary-orange);
     color: white;
-    border-color: var(--bs-primary);
+    border-color: var(--primary-orange);
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
 }
 
-.payment-method-option .btn-check:checked + .btn {
-    background-color: var(--bs-primary);
-    color: white;
-    border-color: var(--bs-primary);
+/* ====================== PAYMENT OPTIONS SIMPLE ====================== */
+.payment-options .form-check {
+    padding-left: 1.5rem;
+}
+
+.payment-options .form-check-input {
+    margin-top: 0.25rem;
+}
+
+.payment-options .form-check-label {
+    font-size: 1rem;
+    cursor: pointer;
+    margin-left: 0.5rem;
+}
+
+.channels-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #dee2e6;
+}
+
+/* ====================== CART ITEMS ====================== */
+.cart-item {
+    transition: var(--transition-smooth);
 }
 
 .cart-item:hover {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f8f9fa, #ffffff);
+    transform: translateX(5px);
 }
 
 .event-placeholder {
     width: 60px;
     height: 60px;
-    background: #e9ecef;
+    background: linear-gradient(135deg, #e9ecef, #dee2e6);
     display: flex;
     align-items: center;
     justify-content: center;
     color: #6c757d;
+    border-radius: 8px;
+}
+
+/* ====================== SIDEBAR ====================== */
+.summary-sidebar {
+    position: sticky;
+    top: calc(var(--header-height) + 2rem);
+    max-height: calc(100vh - var(--header-height) - 4rem);
+    overflow-y: auto;
+}
+
+/* ====================== BOUTONS ====================== */
+.btn-primary {
+    background: var(--primary-orange);
+    border-color: var(--primary-orange);
+    border-radius: 8px;
+    font-weight: 600;
+    transition: var(--transition-smooth);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+}
+
+/* ====================== ANIMATIONS ====================== */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: slideInUp 0.6s ease-out forwards;
+}
+
+.card:nth-child(2) { animation-delay: 0.1s; }
+.card:nth-child(3) { animation-delay: 0.2s; }
+.card:nth-child(4) { animation-delay: 0.3s; }
+
+/* ====================== RESPONSIVE ====================== */
+@media (max-width: 768px) {
+    :root {
+        --header-height: 60px;
+    }
+    
+    body {
+        padding-top: 60px !important;
+    }
+    
+    .checkout-steps {
+        margin: 1rem 0;
+    }
+    
+    .step {
+        margin: 0 0.75rem;
+    }
+    
+    .summary-sidebar {
+        position: relative;
+        top: auto;
+        max-height: none;
+        margin-bottom: 2rem;
+    }
+    
+    .mode-option .btn {
+        padding: 1.5rem 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .checkout-steps {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .step {
+        margin: 0;
+        min-width: 80px;
+    }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Gestion des modes de commande
+    // ====================== HEADER SCROLL EFFECT ======================
+    const header = document.querySelector('.navbar, .main-navbar, header');
+    if (header) {
+        header.classList.add('fixed-top');
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+    }
+
+    // ====================== VOTRE LOGIQUE MÉTIER COMPLÈTE ======================
+    
+    // Éléments du DOM
     const guestMode = document.getElementById('guestMode');
     const accountMode = document.getElementById('accountMode');
     const accountSection = document.getElementById('accountSection');
     const createAccountInput = document.getElementById('create_account');
     const passwordFields = document.getElementById('passwordFields');
     
-    // Gestion des moyens de paiement
     const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
     const paiementproChannels = document.getElementById('paiementpro-channels-guest');
     const bankTransferInfo = document.getElementById('bank-transfer-info-guest');
     const payButton = document.getElementById('pay-button-guest');
     const payButtonText = document.getElementById('pay-button-text-guest');
 
-    // Mode invité par défaut
+    // Gestion des modes de commande
     guestMode.addEventListener('click', function() {
         selectMode('guest');
     });
     
-    // Mode avec compte
     accountMode.addEventListener('click', function() {
         selectMode('account');
     });
     
     function selectMode(mode) {
+        // Reset des sélections
         document.querySelectorAll('.mode-option').forEach(option => {
             option.classList.remove('selected');
         });
@@ -498,7 +639,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Gestion des moyens de paiement
     function togglePaymentOptions() {
-        const selectedMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        const selectedMethod = document.querySelector('input[name="payment_method"]:checked')?.value;
         
         if (selectedMethod === 'paiementpro') {
             paiementproChannels.style.display = 'block';
@@ -525,15 +666,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Écouter les changements
+    // Écouter les changements de paiement
     paymentMethods.forEach(method => {
         method.addEventListener('change', togglePaymentOptions);
     });
 
-    // Initialiser
+    // Initialisation
+    selectMode('guest'); // Mode invité par défaut
     togglePaymentOptions();
 
-    // Gestion du formulaire
+    // Gestion de la soumission du formulaire
     document.getElementById('guest-checkout-form').addEventListener('submit', function(e) {
         const termsAccepted = document.getElementById('terms_accepted_guest').checked;
         
@@ -543,10 +685,25 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Désactiver le bouton
+        // Animation de chargement
         payButton.disabled = true;
         payButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Traitement en cours...';
     });
+
+    // Animation d'entrée pour les cartes
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    console.log('✅ Checkout guest moderne initié avec logique métier complète');
 });
 </script>
+
 @endsection

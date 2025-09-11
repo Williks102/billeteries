@@ -1,758 +1,472 @@
+{{-- ================================================ --}}
+{{-- resources/views/checkout/guest.blade.php --}}
+{{-- Checkout invité intégré avec sélection de paiement --}}
+{{-- ================================================ --}}
+
 @extends('layouts.app')
 
-@section('title', 'Finaliser votre commande')
-
-@push('styles')
-<style>
-:root {
-    --primary-orange: #FF6B35;
-    --primary-dark: #E55A2B;
-    --success-green: #28a745;
-    --warning-yellow: #ffc107;
-    --border-color: #e9ecef;
-    --light-gray: #f8f9fa;
-    --shadow-light: 0 2px 10px rgba(0,0,0,0.1);
-    --shadow-medium: 0 4px 20px rgba(0,0,0,0.15);
-    --transition-smooth: all 0.3s ease;
-}
-
-/* Container principal */
-.checkout-container {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    min-height: calc(100vh - 80px);
-    padding: 2rem 0;
-}
-
-.checkout-card {
-    background: white;
-    border-radius: 20px;
-    box-shadow: var(--shadow-light);
-    overflow: hidden;
-    margin-bottom: 2rem;
-    border: 1px solid var(--border-color);
-}
-
-/* Header avec progression */
-.checkout-header {
-    background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
-    color: white;
-    padding: 2rem;
-    text-align: center;
-}
-
-.checkout-header h1 {
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-.checkout-header p {
-    margin-bottom: 1rem;
-    opacity: 0.9;
-}
-
-.progress-steps {
-    display: flex;
-    justify-content: center;
-    margin-top: 1rem;
-    gap: 2rem;
-}
-
-.step {
-    display: flex;
-    align-items: center;
-    color: rgba(255,255,255,0.7);
-    font-size: 0.9rem;
-}
-
-.step.active {
-    color: white;
-    font-weight: 600;
-}
-
-.step-number {
-    background: rgba(255,255,255,0.2);
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 0.5rem;
-    font-weight: bold;
-}
-
-.step.active .step-number {
-    background: white;
-    color: var(--primary-orange);
-}
-
-/* Section principale */
-.checkout-content {
-    padding: 2rem;
-}
-
-/* Choix du mode de commande */
-.purchase-mode {
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.purchase-mode h4 {
-    color: #333;
-    margin-bottom: 1.5rem;
-    font-weight: 600;
-}
-
-.mode-options {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    margin-top: 1rem;
-}
-
-.mode-option {
-    flex: 1;
-    max-width: 300px;
-    background: #f8f9fa;
-    border: 2px solid #e9ecef;
-    border-radius: 15px;
-    padding: 1.5rem;
-    cursor: pointer;
-    transition: var(--transition-smooth);
-    text-align: center;
-    position: relative;
-}
-
-.mode-option.selected {
-    border-color: var(--primary-orange);
-    background: rgba(255, 107, 53, 0.05);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-medium);
-}
-
-.mode-option:hover {
-    border-color: var(--primary-orange);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-medium);
-}
-
-.mode-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.75rem;
-    color: var(--primary-orange);
-}
-
-.mode-title {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #333;
-    font-size: 1.1rem;
-}
-
-.mode-description {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 0.75rem;
-}
-
-.mode-benefits {
-    font-size: 0.8rem;
-    color: var(--success-green);
-    font-weight: 500;
-}
-
-/* Formulaire */
-.form-section {
-    background: #f8f9fa;
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.form-section h5 {
-    color: #333;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-}
-
-.form-floating {
-    margin-bottom: 1rem;
-}
-
-.form-control {
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    transition: var(--transition-smooth);
-    font-size: 0.95rem;
-}
-
-.form-control:focus {
-    border-color: var(--primary-orange);
-    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
-}
-
-.form-control.is-valid {
-    border-color: var(--success-green);
-    background-color: rgba(40, 167, 69, 0.05);
-}
-
-.form-control.is-invalid {
-    border-color: #dc3545;
-    background-color: rgba(220, 53, 69, 0.05);
-}
-
-.form-text {
-    font-size: 0.8rem;
-    color: #6c757d;
-    margin-top: 0.25rem;
-}
-
-/* Section création de compte */
-.account-section {
-    border: 2px dashed #dee2e6;
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin-top: 1rem;
-    transition: var(--transition-smooth);
-}
-
-.account-section.active {
-    border-color: var(--primary-orange);
-    border-style: solid;
-    background: rgba(255, 107, 53, 0.02);
-}
-
-.account-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    cursor: pointer;
-}
-
-.account-toggle input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--primary-orange);
-}
-
-.account-toggle label {
-    cursor: pointer;
-    font-weight: 500;
-    margin: 0;
-}
-
-.account-benefits {
-    background: #e8f5e8;
-    border: 1px solid var(--success-green);
-    border-radius: 10px;
-    padding: 1rem;
-    margin-top: 1rem;
-}
-
-.benefit-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.benefit-item:last-child {
-    margin-bottom: 0;
-}
-
-.benefit-item i {
-    color: var(--success-green);
-    width: 16px;
-}
-
-/* Résumé de commande */
-.order-summary {
-    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
-    border-radius: 15px;
-    padding: 1.5rem;
-    border: 1px solid #ffcc02;
-    position: sticky;
-    top: 2rem;
-}
-
-.summary-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    color: #333;
-}
-
-.summary-header h5 {
-    margin: 0;
-    font-weight: 600;
-}
-
-.cart-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-}
-
-.cart-item:last-child {
-    border-bottom: none;
-}
-
-.item-details {
-    flex: 1;
-}
-
-.item-name {
-    font-weight: 600;
-    color: #333;
-    font-size: 0.95rem;
-    margin-bottom: 0.25rem;
-}
-
-.item-info {
-    font-size: 0.8rem;
-    color: #666;
-}
-
-.item-price {
-    font-weight: 600;
-    color: var(--primary-orange);
-    white-space: nowrap;
-}
-
-.summary-total {
-    border-top: 2px solid rgba(0,0,0,0.1);
-    padding-top: 1rem;
-    margin-top: 1rem;
-}
-
-.total-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-}
-
-.total-final {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--primary-orange);
-    border-top: 1px solid rgba(0,0,0,0.1);
-    padding-top: 0.75rem;
-    margin-top: 0.75rem;
-}
-
-/* Bouton de commande */
-.btn-order {
-    background: linear-gradient(135deg, var(--primary-orange), var(--primary-dark));
-    border: none;
-    color: white;
-    font-weight: bold;
-    font-size: 1.1rem;
-    padding: 1rem 2rem;
-    border-radius: 15px;
-    width: 100%;
-    transition: var(--transition-smooth);
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-}
-
-.btn-order:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
-    color: white;
-}
-
-.btn-order:disabled {
-    background: #ccc;
-    transform: none;
-    box-shadow: none;
-    cursor: not-allowed;
-}
-
-/* CGV */
-.terms-section {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1.5rem;
-}
-
-.form-check {
-    margin-bottom: 1rem;
-}
-
-.form-check-input {
-    width: 1.2rem;
-    height: 1.2rem;
-    margin-top: 0.1rem;
-}
-
-.form-check-input:checked {
-    background-color: var(--primary-orange);
-    border-color: var(--primary-orange);
-}
-
-.form-check-label {
-    margin-left: 0.5rem;
-    font-size: 0.95rem;
-    line-height: 1.4;
-}
-
-/* Sécurité et confiance */
-.security-badges {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e9ecef;
-}
-
-.security-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--success-green);
-    background: rgba(40, 167, 69, 0.1);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    border: 1px solid rgba(40, 167, 69, 0.3);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .checkout-container {
-        padding: 1rem;
-    }
-    
-    .checkout-header {
-        padding: 1.5rem 1rem;
-    }
-    
-    .progress-steps {
-        flex-direction: column;
-        gap: 0.5rem;
-        margin-top: 1rem;
-    }
-    
-    .mode-options {
-        flex-direction: column;
-    }
-    
-    .checkout-content {
-        padding: 1.5rem;
-    }
-    
-    .order-summary {
-        position: static;
-        margin-top: 2rem;
-    }
-    
-    .security-badges {
-        flex-direction: column;
-        align-items: center;
-    }
-}
-
-/* États de chargement */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.btn-order.loading {
-    position: relative;
-}
-
-.btn-order.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px;
-    height: 20px;
-    border: 2px solid transparent;
-    border-top: 2px solid white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: translate(-50%, -50%) rotate(0deg); }
-    100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
-</style>
-@endpush
+@section('title', 'Commande rapide')
 
 @section('content')
-<div class="checkout-container">
-    <div class="container">
-        <!-- Header avec progression -->
-        <div class="checkout-card">
-            <div class="checkout-header">
-                <h1><i class="fas fa-shopping-cart me-2"></i>Finaliser votre commande</h1>
-                <p>Rapide, sécurisé et sans engagement</p>
-                
-                <div class="progress-steps">
-                    <div class="step">
-                        <div class="step-number">✓</div>
-                        Panier
-                    </div>
-                    <div class="step active">
-                        <div class="step-number">2</div>
-                        Informations
-                    </div>
-                    <div class="step">
-                        <div class="step-number">3</div>
-                        Confirmation
-                    </div>
-                </div>
+<div class="container py-4">
+    {{-- Header --}}
+    <div class="checkout-header text-center mb-4">
+        <h1 class="h3 mb-2">
+            <i class="fas fa-bolt me-2"></i>
+            Commande express
+        </h1>
+        <p class="text-muted">Achetez rapidement sans créer de compte</p>
+        
+        <div class="checkout-steps">
+            <div class="step completed">
+                <span class="step-number">1</span>
+                <span>Sélection</span>
+            </div>
+            <div class="step active">
+                <span class="step-number">2</span>
+                <span>Informations</span>
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                <span>Paiement</span>
             </div>
         </div>
+    </div>
 
+    <form action="{{ route('checkout.guest.process') }}" method="POST" id="guest-checkout-form">
+        @csrf
+        
         <div class="row">
-            <div class="col-lg-8">
-                <!-- Choix du mode -->
-                <div class="checkout-card">
-                    <div class="checkout-content">
-                        <div class="purchase-mode">
-                            <h4>Comment souhaitez-vous procéder ?</h4>
-                            
-                            <div class="mode-options">
-                                <div class="mode-option selected" data-mode="guest" id="guestMode">
-                                    <div class="mode-icon">⚡</div>
-                                    <div class="mode-title">Commande express</div>
-                                    <div class="mode-description">Rapide et simple, sans créer de compte</div>
-                                    <div class="mode-benefits">✓ En 2 minutes seulement</div>
+            {{-- Colonne principale --}}
+            <div class="col-lg-8 mb-4">
+                
+                {{-- ===== RÉSUMÉ DES BILLETS ===== --}}
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-ticket-alt me-2"></i>Vos billets</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        @foreach($cart as $item)
+                        <div class="cart-item border-bottom p-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    @if($item['event_image'])
+                                        <img src="{{ Storage::url($item['event_image']) }}" 
+                                             class="img-fluid rounded" alt="Événement">
+                                    @else
+                                        <div class="event-placeholder rounded">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </div>
+                                    @endif
                                 </div>
-                                
-                                <div class="mode-option" data-mode="account" id="accountMode">
-                                    <div class="mode-icon">👤</div>
-                                    <div class="mode-title">Avec création de compte</div>
-                                    <div class="mode-description">Gérez vos commandes et billets facilement</div>
-                                    <div class="mode-benefits">✓ Historique • ✓ Réimpression • ✓ Support</div>
+                                <div class="col-md-6">
+                                    <h6 class="mb-1">{{ $item['event_title'] }}</h6>
+                                    <p class="text-muted mb-1">
+                                        <i class="fas fa-calendar me-1"></i>{{ $item['event_date'] ?? 'Date TBD' }}
+                                    </p>
+                                    <p class="text-muted mb-0">
+                                        <i class="fas fa-map-marker-alt me-1"></i>{{ $item['event_venue'] ?? 'Lieu TBD' }}
+                                    </p>
+                                </div>
+                                <div class="col-md-2 text-center">
+                                    <div class="ticket-type-info">
+                                        <strong>{{ $item['ticket_name'] }}</strong>
+                                        <div class="text-muted">{{ $item['quantity'] }} billet(s)</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <div class="price-info">
+                                        <div class="unit-price text-muted">
+                                            {{ number_format($item['unit_price']) }} FCFA/unité
+                                        </div>
+                                        <div class="total-price">
+                                            <strong>{{ number_format($item['total_price']) }} FCFA</strong>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        @endforeach
+                    </div>
+                </div>
 
-                        <!-- Formulaire -->
-                        <form id="checkoutForm" method="POST" action="{{ route('checkout.guest.process') }}">
-                            @csrf
-                            
-                            <!-- Informations personnelles -->
-                            <div class="form-section">
-                                <h5><i class="fas fa-user me-2"></i>Vos informations</h5>
-                                
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control @error('first_name') is-invalid @enderror" 
-                                                   id="first_name" name="first_name" 
-                                                   placeholder="Prénom" value="{{ old('first_name') }}" required>
-                                            <label for="first_name">Prénom *</label>
-                                            @error('first_name')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control @error('last_name') is-invalid @enderror" 
-                                                   id="last_name" name="last_name" 
-                                                   placeholder="Nom" value="{{ old('last_name') }}" required>
-                                            <label for="last_name">Nom *</label>
-                                            @error('last_name')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-floating">
-                                    <input type="email" class="form-control @error('email') is-invalid @enderror" 
-                                           id="email" name="email" 
-                                           placeholder="Email" value="{{ old('email') }}" required>
-                                    <label for="email">Adresse email *</label>
-                                    <div class="form-text">Vos billets seront envoyés à cette adresse</div>
-                                    @error('email')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                
-                                <div class="form-floating">
-                                    <input type="tel" class="form-control @error('phone') is-invalid @enderror" 
-                                           id="phone" name="phone" 
-                                           placeholder="Téléphone" value="{{ old('phone') }}" required>
-                                    <label for="phone">Numéro de téléphone *</label>
-                                    @error('phone')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-
-                            <!-- Section création de compte (conditionnelle) -->
-                            <div class="account-section" id="accountSection" style="display: none;">
-                                <div class="account-toggle">
-                                    <input type="checkbox" id="create_account" name="create_account" value="1" {{ old('create_account') ? 'checked' : '' }}>
-                                    <label for="create_account">
-                                        <strong>Créer un compte pour gérer mes billets</strong>
+                {{-- ===== MODE DE COMMANDE ===== --}}
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Comment souhaitez-vous commander ?</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {{-- Mode invité --}}
+                            <div class="col-md-6">
+                                <div class="mode-option selected" id="guestMode">
+                                    <input type="radio" class="btn-check" name="mode" id="guest" value="guest" checked>
+                                    <label class="btn btn-outline-primary w-100 p-3" for="guest">
+                                        <i class="fas fa-bolt fa-2x mb-2"></i>
+                                        <br><strong>Commande express</strong>
+                                        <br><small>Sans créer de compte</small>
                                     </label>
                                 </div>
+                            </div>
+                            
+                            {{-- Mode avec compte --}}
+                            <div class="col-md-6">
+                                <div class="mode-option" id="accountMode">
+                                    <input type="radio" class="btn-check" name="mode" id="account" value="account">
+                                    <label class="btn btn-outline-success w-100 p-3" for="account">
+                                        <i class="fas fa-user-plus fa-2x mb-2"></i>
+                                        <br><strong>Créer un compte</strong>
+                                        <br><small>Gérer mes billets</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                                <div id="passwordFields" style="display: none;">
-                                    <div class="form-floating">
+                {{-- ===== INFORMATIONS PERSONNELLES ===== --}}
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-user me-2"></i>Vos informations</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">Prénom *</label>
+                                <input type="text" class="form-control @error('first_name') is-invalid @enderror" 
+                                       id="first_name" name="first_name" value="{{ old('first_name') }}" required>
+                                @error('first_name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Nom *</label>
+                                <input type="text" class="form-control @error('last_name') is-invalid @enderror" 
+                                       id="last_name" name="last_name" value="{{ old('last_name') }}" required>
+                                @error('last_name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control @error('email') is-invalid @enderror" 
+                                       id="email" name="email" value="{{ old('email') }}" required>
+                                @error('email')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label">Téléphone *</label>
+                                <input type="tel" class="form-control @error('phone') is-invalid @enderror" 
+                                       id="phone" name="phone" value="{{ old('phone') }}" required>
+                                @error('phone')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        {{-- Section création de compte (cachée par défaut) --}}
+                        <div id="accountSection" style="display: none;">
+                            <hr class="my-4">
+                            <h6><i class="fas fa-key me-2"></i>Sécurité du compte</h6>
+                            
+                            <input type="hidden" name="create_account" id="create_account" value="0">
+                            
+                            <div id="passwordFields" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="password" class="form-label">Mot de passe *</label>
                                         <input type="password" class="form-control @error('password') is-invalid @enderror" 
-                                               id="password" name="password" placeholder="Mot de passe">
-                                        <label for="password">Mot de passe (min. 6 caractères)</label>
+                                               id="password" name="password">
                                         @error('password')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
-                                    
-                                    <div class="form-floating">
-                                        <input type="password" class="form-control @error('password_confirmation') is-invalid @enderror" 
-                                               id="password_confirmation" name="password_confirmation" 
-                                               placeholder="Confirmer le mot de passe">
-                                        <label for="password_confirmation">Confirmer le mot de passe</label>
-                                    </div>
-
-                                    <div class="account-benefits">
-                                        <div class="benefit-item">
-                                            <i class="fas fa-check-circle"></i>
-                                            Accès à l'historique de toutes vos commandes
-                                        </div>
-                                        <div class="benefit-item">
-                                            <i class="fas fa-check-circle"></i>
-                                            Réimpression de vos billets à tout moment
-                                        </div>
-                                        <div class="benefit-item">
-                                            <i class="fas fa-check-circle"></i>
-                                            Support client prioritaire
-                                        </div>
-                                        <div class="benefit-item">
-                                            <i class="fas fa-check-circle"></i>
-                                            Notifications pour vos événements favoris
-                                        </div>
+                                    <div class="col-md-6">
+                                        <label for="password_confirmation" class="form-label">Confirmer mot de passe *</label>
+                                        <input type="password" class="form-control" 
+                                               id="password_confirmation" name="password_confirmation">
                                     </div>
                                 </div>
+                                
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Avantages du compte :</strong> Gérer vos billets, historique des commandes, réservations futures
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ===== MOYEN DE PAIEMENT ===== --}}
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Moyen de paiement</h5>
+                    </div>
+                    <div class="card-body">
+                        {{-- Options de paiement --}}
+                        <div class="payment-methods mb-4">
+                            {{-- PaiementPro --}}
+                            <div class="payment-method-option">
+                                <input type="radio" class="btn-check" name="payment_method" 
+                                       id="paiementpro_guest" value="paiementpro" checked>
+                                <label class="btn btn-outline-primary w-100 mb-3" for="paiementpro_guest">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-credit-card fa-2x me-3 text-primary"></i>
+                                        <div class="text-start">
+                                            <h6 class="mb-1">Paiement en ligne</h6>
+                                            <small class="text-muted">Carte bancaire, Mobile Money, Orange Money, Flooz</small>
+                                        </div>
+                                        <div class="ms-auto">
+                                            <span class="badge bg-success">Instantané</span>
+                                        </div>
+                                    </div>
+                                </label>
                             </div>
 
-                            <!-- CGV et bouton -->
-                            <div class="terms-section">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input @error('terms_accepted') is-invalid @enderror" 
-                                           id="terms_accepted" name="terms_accepted" required {{ old('terms_accepted') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="terms_accepted">
-                                        J'accepte les <a href="{{ route('pages.terms') }}" target="_blank" class="text-decoration-none fw-bold">conditions générales de vente</a> 
-                                        et la <a href="{{ route('pages.privacy') }}" target="_blank" class="text-decoration-none fw-bold">politique de confidentialité</a> *
+                            {{-- Virement bancaire --}}
+                            <div class="payment-method-option">
+                                <input type="radio" class="btn-check" name="payment_method" 
+                                       id="bank_transfer_guest" value="bank_transfer">
+                                <label class="btn btn-outline-secondary w-100" for="bank_transfer_guest">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-university fa-2x me-3 text-secondary"></i>
+                                        <div class="text-start">
+                                            <h6 class="mb-1">Virement bancaire</h6>
+                                            <small class="text-muted">Instructions envoyées par email</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {{-- Canaux PaiementPro --}}
+                        <div id="paiementpro-channels-guest" class="paiementpro-options">
+                            <h6 class="mb-3">Choisissez votre méthode :</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="channel" 
+                                           id="card_guest" value="CARD" checked>
+                                    <label class="btn btn-outline-info w-100 p-3" for="card_guest">
+                                        <i class="fas fa-credit-card fa-2x mb-2"></i>
+                                        <br><strong>Carte bancaire</strong>
+                                        <br><small>Visa, Mastercard</small>
                                     </label>
-                                    @error('terms_accepted')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
                                 </div>
-
-                                <button type="submit" class="btn-order mt-3" id="submitBtn">
-                                    <i class="fas fa-lock me-2"></i>
-                                    <span class="btn-text">Confirmer ma commande</span>
-                                </button>
-
-                                <div class="security-badges">
-                                    <div class="security-badge">
-                                        <i class="fas fa-shield-alt"></i>
-                                        Paiement sécurisé
-                                    </div>
-                                    <div class="security-badge">
-                                        <i class="fas fa-clock"></i>
-                                        Billets instantanés
-                                    </div>
-                                    <div class="security-badge">
-                                        <i class="fas fa-headset"></i>
-                                        Support 24/7
-                                    </div>
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="channel" 
+                                           id="momo_guest" value="MOMO">
+                                    <label class="btn btn-outline-warning w-100 p-3" for="momo_guest">
+                                        <i class="fas fa-mobile-alt fa-2x mb-2"></i>
+                                        <br><strong>Mobile Money</strong>
+                                        <br><small>MTN, Moov</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="channel" 
+                                           id="orange_guest" value="OMCIV2">
+                                    <label class="btn btn-outline-warning w-100 p-3" for="orange_guest">
+                                        <i class="fas fa-mobile fa-2x mb-2"></i>
+                                        <br><strong>Orange Money</strong>
+                                        <br><small>Orange CI</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="channel" 
+                                           id="flooz_guest" value="FLOOZ">
+                                    <label class="btn btn-outline-info w-100 p-3" for="flooz_guest">
+                                        <i class="fas fa-wallet fa-2x mb-2"></i>
+                                        <br><strong>Flooz</strong>
+                                        <br><small>Portefeuille digital</small>
+                                    </label>
                                 </div>
                             </div>
-                        </form>
+                        </div>
+
+                        {{-- Informations virement --}}
+                        <div id="bank-transfer-info-guest" class="bank-transfer-options" style="display: none;">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle me-2"></i>Comment ça marche ?</h6>
+                                <ol class="mb-0">
+                                    <li>Vous validez votre commande</li>
+                                    <li>Nous vous envoyons les coordonnées bancaires par email</li>
+                                    <li>Vous effectuez le virement</li>
+                                    <li>Vos billets sont envoyés dès réception du paiement</li>
+                                </ol>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Résumé de commande -->
+            {{-- ===== SIDEBAR RÉCAPITULATIF ===== --}}
             <div class="col-lg-4">
-                <div class="order-summary">
-                    <div class="summary-header">
-                        <i class="fas fa-receipt"></i>
-                        <h5>Résumé de votre commande</h5>
+                <div class="card sticky-top" style="top: 2rem;">
+                    <div class="card-header bg-orange text-white">
+                        <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Récapitulatif</h5>
                     </div>
-
-                    @foreach($cart as $item)
-                        <div class="cart-item">
-                            <div class="item-details">
-                                <div class="item-name">{{ $item['ticket_name'] }}</div>
-                                <div class="item-info">
-                                    {{ $item['event_title'] }} • Qté: {{ $item['quantity'] }}
-                                </div>
-                                <div class="item-info">
-                                    📅 {{ $item['event_date'] ?? 'Date à confirmer' }}
-                                </div>
+                    <div class="card-body">
+                        {{-- Détail des prix --}}
+                        <div class="order-summary">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Sous-total</span>
+                                <span>{{ number_format($cartTotal) }} FCFA</span>
                             </div>
-                            <div class="item-price">
-                                {{ number_format($item['total_price']) }} FCFA
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Frais de service</span>
+                                <span>{{ number_format($serviceFee) }} FCFA</span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between mb-3">
+                                <strong>Total à payer</strong>
+                                <strong class="text-orange">{{ number_format($finalTotal) }} FCFA</strong>
                             </div>
                         </div>
-                    @endforeach
 
-                    <div class="summary-total">
-                        <div class="total-row">
-                            <span>Sous-total</span>
-                            <span>{{ number_format($cartTotal) }} FCFA</span>
+                        {{-- Avantages commande express --}}
+                        <div class="alert alert-success mb-3">
+                            <h6><i class="fas fa-bolt me-2"></i>Commande express</h6>
+                            <ul class="mb-0 small">
+                                <li>✅ Pas d'inscription nécessaire</li>
+                                <li>✅ Billets par email instantané</li>
+                                <li>✅ Paiement 100% sécurisé</li>
+                            </ul>
                         </div>
-                        <div class="total-row">
-                            <span>Frais de service</span>
-                            <span>{{ number_format($serviceFee) }} FCFA</span>
-                        </div>
-                        <div class="total-row total-final">
-                            <span><strong>Total à payer</strong></span>
-                            <span><strong>{{ number_format($finalTotal) }} FCFA</strong></span>
-                        </div>
-                    </div>
 
-                    <!-- Retour au panier -->
-                    <div class="text-center mt-3">
-                        <a href="{{ route('cart.show') }}" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-arrow-left me-2"></i>Modifier mon panier
-                        </a>
+                        {{-- Conditions générales --}}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input @error('terms_accepted') is-invalid @enderror" 
+                                   type="checkbox" name="terms_accepted" id="terms_accepted_guest" required>
+                            <label class="form-check-label small" for="terms_accepted_guest">
+                                J'accepte les <a href="{{ route('pages.terms') }}" target="_blank">conditions générales</a>
+                                et la <a href="{{ route('pages.privacy') }}" target="_blank">politique de confidentialité</a>
+                            </label>
+                            @error('terms_accepted')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        {{-- Bouton de paiement --}}
+                        <button type="submit" class="btn btn-orange btn-lg w-100" id="pay-button-guest">
+                            <i class="fas fa-bolt me-2"></i>
+                            <span id="pay-button-text-guest">Commande express</span>
+                        </button>
+
+                        {{-- Lien connexion --}}
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                Déjà client ? 
+                                <a href="{{ route('login') }}?redirect={{ urlencode(route('checkout.show')) }}">
+                                    Se connecter
+                                </a>
+                            </small>
+                        </div>
+
+                        {{-- Informations de sécurité --}}
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-shield-alt me-1 text-success"></i>
+                                Paiement 100% sécurisé
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
-@endsection
 
-@push('scripts')
+{{-- CSS identique au checkout normal --}}
+<style>
+.checkout-steps {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 2rem;
+    position: relative;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e9ecef;
+    color: #6c757d;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.step.completed .step-number {
+    background: #28a745;
+    color: white;
+}
+
+.step.active .step-number {
+    background: #ff6b35;
+    color: white;
+}
+
+.mode-option {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.mode-option.selected .btn {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
+.payment-method-option .btn-check:checked + .btn {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
+.cart-item:hover {
+    background-color: #f8f9fa;
+}
+
+.event-placeholder {
+    width: 60px;
+    height: 60px;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    
     // Gestion des modes de commande
     const guestMode = document.getElementById('guestMode');
     const accountMode = document.getElementById('accountMode');
     const accountSection = document.getElementById('accountSection');
-    const createAccountCheckbox = document.getElementById('create_account');
+    const createAccountInput = document.getElementById('create_account');
     const passwordFields = document.getElementById('passwordFields');
-    const submitBtn = document.getElementById('submitBtn');
     
-    // Mode invité (par défaut)
+    // Gestion des moyens de paiement
+    const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
+    const paiementproChannels = document.getElementById('paiementpro-channels-guest');
+    const bankTransferInfo = document.getElementById('bank-transfer-info-guest');
+    const payButton = document.getElementById('pay-button-guest');
+    const payButtonText = document.getElementById('pay-button-text-guest');
+
+    // Mode invité par défaut
     guestMode.addEventListener('click', function() {
         selectMode('guest');
     });
@@ -763,7 +477,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function selectMode(mode) {
-        // Reset des sélections
         document.querySelectorAll('.mode-option').forEach(option => {
             option.classList.remove('selected');
         });
@@ -771,237 +484,69 @@ document.addEventListener('DOMContentLoaded', function() {
         if (mode === 'guest') {
             guestMode.classList.add('selected');
             accountSection.style.display = 'none';
-            createAccountCheckbox.checked = false;
+            createAccountInput.value = '0';
             passwordFields.style.display = 'none';
             updateButtonText('guest');
         } else {
             accountMode.classList.add('selected');
             accountSection.style.display = 'block';
-            accountSection.classList.add('active');
-            createAccountCheckbox.checked = true;
+            createAccountInput.value = '1';
             passwordFields.style.display = 'block';
             updateButtonText('account');
         }
     }
-    
-    // Gestion de la case à cocher création de compte
-    createAccountCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            passwordFields.style.display = 'block';
-            accountSection.classList.add('active');
-            // Rendre les champs mot de passe obligatoires
-            document.getElementById('password').required = true;
-            document.getElementById('password_confirmation').required = true;
-            updateButtonText('account');
-        } else {
-            passwordFields.style.display = 'none';
-            accountSection.classList.remove('active');
-            // Rendre les champs mot de passe optionnels
-            document.getElementById('password').required = false;
-            document.getElementById('password_confirmation').required = false;
-            updateButtonText('guest');
+
+    // Gestion des moyens de paiement
+    function togglePaymentOptions() {
+        const selectedMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        
+        if (selectedMethod === 'paiementpro') {
+            paiementproChannels.style.display = 'block';
+            bankTransferInfo.style.display = 'none';
+        } else if (selectedMethod === 'bank_transfer') {
+            paiementproChannels.style.display = 'none';
+            bankTransferInfo.style.display = 'block';
         }
-    });
-    
-    // Mettre à jour le texte du bouton
-    function updateButtonText(mode) {
-        const btnText = submitBtn.querySelector('.btn-text');
-        if (mode === 'account') {
-            btnText.textContent = 'Créer mon compte et commander';
+        
+        updateButtonText();
+    }
+
+    function updateButtonText(mode = null) {
+        if (!mode) {
+            mode = createAccountInput.value === '1' ? 'account' : 'guest';
+        }
+        
+        const selectedPayment = document.querySelector('input[name="payment_method"]:checked')?.value;
+        
+        if (selectedPayment === 'bank_transfer') {
+            payButtonText.textContent = mode === 'account' ? 'Créer compte et commander' : 'Valider la commande';
         } else {
-            btnText.textContent = 'Confirmer ma commande';
+            payButtonText.textContent = mode === 'account' ? 'Créer compte et payer' : 'Commande express';
         }
     }
-    
-    // Validation en temps réel de l'email
-    const emailInput = document.getElementById('email');
-    let emailTimeout;
-    
-    /*
-    emailInput.addEventListener('input', function() {
-        clearTimeout(emailTimeout);
-        const email = this.value;
-        
-        if (email && email.includes('@')) {
-            emailTimeout = setTimeout(() => {
-                checkEmailAvailability(email);
-            }, 1000); // Attendre 1s après que l'utilisateur ait arrêté de taper
-        }
+
+    // Écouter les changements
+    paymentMethods.forEach(method => {
+        method.addEventListener('change', togglePaymentOptions);
     });
-    */
-    
-    async function checkEmailAvailability(email) {
-    try {
-        const response = await fetch('/api/check-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({ email: email })
-        });
+
+    // Initialiser
+    togglePaymentOptions();
+
+    // Gestion du formulaire
+    document.getElementById('guest-checkout-form').addEventListener('submit', function(e) {
+        const termsAccepted = document.getElementById('terms_accepted_guest').checked;
         
-        // Vérifier si la réponse est OK
-        if (!response.ok) {
-            console.error('Erreur API check-email:', response.status, response.statusText);
-            return; // Sortir silencieusement en cas d'erreur serveur
-        }
-        
-        const data = await response.json();
-        const emailInput = document.getElementById('email');
-        
-        // Vérifier si la réponse contient les données attendues
-        if (!data.hasOwnProperty('available') || !data.hasOwnProperty('exists')) {
-            console.error('Réponse API invalide:', data);
-            return;
-        }
-        
-        if (!data.available && createAccountCheckbox.checked) {
-            emailInput.classList.add('is-invalid');
-            emailInput.classList.remove('is-valid');
-            
-            // Afficher message d'erreur
-            let feedback = emailInput.parentNode.querySelector('.invalid-feedback');
-            if (!feedback) {
-                feedback = document.createElement('div');
-                feedback.className = 'invalid-feedback';
-                emailInput.parentNode.appendChild(feedback);
-            }
-            feedback.textContent = 'Un compte existe déjà avec cet email. Décochez "Créer un compte" ou connectez-vous.';
-            
-            // Proposer de décocher la création de compte (optionnel)
-            setTimeout(() => {
-                if (confirm('Un compte existe déjà avec cet email. Voulez-vous continuer sans créer de nouveau compte ?')) {
-                    createAccountCheckbox.checked = false;
-                    createAccountCheckbox.dispatchEvent(new Event('change'));
-                    emailInput.classList.remove('is-invalid');
-                    emailInput.classList.add('is-valid');
-                    if (feedback) feedback.remove();
-                }
-            }, 1000);
-            
-        } else {
-            emailInput.classList.remove('is-invalid');
-            emailInput.classList.add('is-valid');
-            
-            // Supprimer message d'erreur s'il existe
-            const feedback = emailInput.parentNode.querySelector('.invalid-feedback');
-            if (feedback) feedback.remove();
-        }
-        
-    } catch (error) {
-        console.error('Erreur vérification email:', error);
-        // En cas d'erreur, ne pas bloquer l'utilisateur, juste logger
-        const emailInput = document.getElementById('email');
-        emailInput.classList.remove('is-invalid');
-        
-        // Supprimer les messages d'erreur existants
-        const feedback = emailInput.parentNode.querySelector('.invalid-feedback');
-        if (feedback) feedback.remove();
-    }
-}
-    
-    // Gestion de la soumission du formulaire
-    document.getElementById('checkoutForm').addEventListener('submit', function(e) {
-        const btn = document.getElementById('submitBtn');
-        
-        // Validation des champs obligatoires
-        const requiredFields = ['first_name', 'last_name', 'email', 'phone'];
-        let isValid = true;
-        
-        requiredFields.forEach(fieldName => {
-            const field = document.getElementById(fieldName);
-            if (!field.value.trim()) {
-                field.classList.add('is-invalid');
-                isValid = false;
-            } else {
-                field.classList.remove('is-invalid');
-                field.classList.add('is-valid');
-            }
-        });
-        
-        // Validation mot de passe si création de compte
-        if (createAccountCheckbox.checked) {
-            const password = document.getElementById('password');
-            const passwordConfirm = document.getElementById('password_confirmation');
-            
-            if (!password.value || password.value.length < 6) {
-                password.classList.add('is-invalid');
-                isValid = false;
-            }
-            
-            if (password.value !== passwordConfirm.value) {
-                passwordConfirm.classList.add('is-invalid');
-                isValid = false;
-            }
-        }
-        
-        // Validation CGV
-        const termsAccepted = document.getElementById('terms_accepted');
-        if (!termsAccepted.checked) {
-            termsAccepted.classList.add('is-invalid');
-            isValid = false;
-        }
-        
-        if (!isValid) {
+        if (!termsAccepted) {
             e.preventDefault();
-            scrollToFirstError();
+            alert('Veuillez accepter les conditions générales');
             return;
         }
-        
-        // Animation de chargement
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.querySelector('.btn-text').textContent = 'Traitement en cours...';
+
+        // Désactiver le bouton
+        payButton.disabled = true;
+        payButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Traitement en cours...';
     });
-    
-    function scrollToFirstError() {
-        const firstError = document.querySelector('.is-invalid');
-        if (firstError) {
-            firstError.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
-            });
-            firstError.focus();
-        }
-    }
-    
-    // Validation temps réel des mots de passe
-    const passwordInput = document.getElementById('password');
-    const passwordConfirmInput = document.getElementById('password_confirmation');
-    
-    if (passwordInput && passwordConfirmInput) {
-        function validatePasswords() {
-            const password = passwordInput.value;
-            const confirm = passwordConfirmInput.value;
-            
-            // Validation longueur
-            if (password.length > 0 && password.length < 6) {
-                passwordInput.classList.add('is-invalid');
-                passwordInput.classList.remove('is-valid');
-            } else if (password.length >= 6) {
-                passwordInput.classList.remove('is-invalid');
-                passwordInput.classList.add('is-valid');
-            }
-            
-            // Validation concordance
-            if (confirm.length > 0) {
-                if (password === confirm && password.length >= 6) {
-                    passwordConfirmInput.classList.remove('is-invalid');
-                    passwordConfirmInput.classList.add('is-valid');
-                } else {
-                    passwordConfirmInput.classList.add('is-invalid');
-                    passwordConfirmInput.classList.remove('is-valid');
-                }
-            }
-        }
-        
-        passwordInput.addEventListener('input', validatePasswords);
-        passwordConfirmInput.addEventListener('input', validatePasswords);
-    }
-    
-    // Auto-focus sur le premier champ
-    document.getElementById('first_name').focus();
 });
 </script>
-@endpush
+@endsection

@@ -76,6 +76,21 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('/status', [CartController::class, 'getStatus'])->name('status');
 });
 
+Route::prefix('payments/paiementpro')->name('payments.paiementpro.')->group(function () {
+    
+    // 🚨 CRITIQUE : Webhook PaiementPro (appelé par leur serveur)
+    Route::post('/notification', [App\Http\Controllers\Payments\PaiementProController::class, 'notification'])
+         ->name('notification');
+    
+    // 🚨 OBLIGATOIRE : Retour utilisateur après paiement
+    Route::get('/return', [App\Http\Controllers\Payments\PaiementProController::class, 'return'])
+         ->name('return');
+    
+    // ⚠️ RECOMMANDÉE : Page d'annulation
+    Route::get('/cancel', [App\Http\Controllers\Payments\PaiementProController::class, 'cancel'])
+         ->name('cancel');
+});
+
 // ==================== VÉRIFICATION TICKETS (PUBLIQUE) ====================
 Route::get('/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verify'])->name('tickets.verify');
 Route::get('/api/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verifyApi'])->name('api.tickets.verify');
@@ -106,7 +121,7 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     // Checkout invité (sans auth)
     Route::prefix('guest')->name('guest.')->group(function () {
         Route::get('/', [GuestCheckoutController::class, 'show'])->name('show');
-        Route::post('/process', [GuestCheckoutController::class, 'process'])->name('process');
+        Route::post('/process', [GuestCheckoutController::class, 'process'])->name('process'); // 🆕 Ici aussi
         Route::get('/confirmation/{token}', [GuestCheckoutController::class, 'confirmation'])->name('confirmation');
         Route::post('/create-account/{token}', [GuestCheckoutController::class, 'createAccountAfterPurchase'])->name('create-account');
     });
@@ -156,9 +171,9 @@ Route::post('/api/check-email', function(Request $request) {
 Route::middleware(['auth'])->group(function () {
     
     // ==================== CHECKOUT ====================
-    Route::prefix('checkout')->name('checkout.')->group(function () {
+    Route::middleware('auth')->prefix('checkout')->name('checkout.')->group(function () {
         Route::get('/', [CheckoutController::class, 'show'])->name('show');
-        Route::post('/process', [CheckoutController::class, 'process'])->name('process');
+        Route::post('/process', [CheckoutController::class, 'process'])->name('process'); // Une seule route !
         Route::post('/direct', [CheckoutController::class, 'direct'])->name('direct');
         Route::get('/confirmation/{order}', [CheckoutController::class, 'confirmation'])->name('confirmation');
     });

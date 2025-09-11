@@ -57,6 +57,10 @@ class AppServiceProvider extends ServiceProvider
         }
     });
 
+        $this->app->singleton(PaiementProService::class, function ($app) {
+        return new PaiementProService();
+    });
+
        Blade::directive('autoLayout', function ($expression) {
         return "<?php 
             \$user = auth()->user();

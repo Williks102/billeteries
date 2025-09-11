@@ -132,121 +132,175 @@ class CheckoutController extends Controller
         $request->validate([
             'billing_email' => 'required|email',
             'billing_phone' => 'required|string|max:20',
-            'terms_accepted' => 'required|accepted'
+            'terms_accepted' => 'required|accepted',
+            'payment_method' => 'required|in:paiementpro,bank_transfer',
+            'channel' => 'required_if:payment_method,paiementpro|in:CARD,MOMO,OMCIV2,FLOOZ,PAYPAL'
         ]);
 
-        // ===== DÉTERMINER LE TYPE DE CHECKOUT =====
-        $isDirectBooking = session()->has('direct_booking');
-        $cart = $isDirectBooking ? session()->get('direct_booking', []) : session()->get('cart', []);
-        
-        if (empty($cart)) {
-            return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
-        }
-
-        // ===== VÉRIFIER LES TIMERS =====
-        if ($isDirectBooking) {
-            $bookingTimer = session()->get('booking_timer');
-            if (!$bookingTimer || now()->gt($bookingTimer)) {
-                session()->forget(['direct_booking', 'booking_timer']);
-                return redirect()->route('home')->with('error', 'Votre réservation a expiré. Veuillez recommencer.');
-            }
-        } else {
-            $cartTimer = session()->get('cart_timer');
-            if ($cartTimer && now()->gt($cartTimer)) {
-                session()->forget(['cart', 'cart_timer']);
-                return redirect()->route('cart.show')->with('error', 'Votre panier a expiré. Veuillez recommencer.');
-            }
-        }
-
         try {
+            // ===== RÉCUPÉRER LE PANIER =====
+            $isDirectBooking = session()->has('direct_booking');
+            $cart = $isDirectBooking ? session()->get('direct_booking', []) : session()->get('cart', []);
+            
+            if (empty($cart)) {
+                return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
+            }
+
+            Log::info('Début checkout avec PaiementPro', [
+                'user_id' => auth()->id(),
+                'payment_method' => $request->payment_method,
+                'channel' => $request->channel,
+                'cart_items' => count($cart)
+            ]);
+
             DB::beginTransaction();
 
-            // ===== GROUPER LES BILLETS PAR ÉVÉNEMENT =====
+            // ===== CRÉER LES COMMANDES (VOTRE LOGIQUE EXISTANTE) =====
             $eventGroups = [];
             foreach ($cart as $item) {
-                $eventId = $item['event_id'];
-                if (!isset($eventGroups[$eventId])) {
-                    $eventGroups[$eventId] = [];
-                }
-                $eventGroups[$eventId][] = $item;
+                $eventGroups[$item['event_id']][] = $item;
             }
 
             $orders = [];
-
-            // ===== CRÉER UNE COMMANDE PAR ÉVÉNEMENT =====
             foreach ($eventGroups as $eventId => $items) {
                 $eventTotal = array_sum(array_column($items, 'total_price'));
                 
-                // Créer la commande
+                // Créer la commande EN PENDING (changement pour PaiementPro)
                 $order = Order::create([
                     'user_id' => Auth::id(),
                     'event_id' => $eventId,
                     'total_amount' => $eventTotal,
-                    'payment_status' => 'pending',
-                    'payment_method' => 'manual',
+                    'payment_status' => 'pending', // ⚠️ CHANGEMENT: pending au lieu de paid
+                    'payment_method' => $request->payment_method,
                     'order_number' => Order::generateOrderNumber(),
                     'billing_email' => $request->billing_email,
                     'billing_phone' => $request->billing_phone,
-                    'booking_type' => $isDirectBooking ? 'direct_reservation' : 'cart_order'
                 ]);
 
-                Log::info('Commande créée', [
-                    'order_id' => $order->id,
-                    'order_number' => $order->order_number,
-                    'event_id' => $eventId,
-                    'user_id' => Auth::id()
-                ]);
-
-                // ===== CRÉER LES ITEMS ET BILLETS =====
+                // ===== CRÉER ITEMS ET BILLETS (VOTRE MÉTHODE EXISTANTE) =====
                 foreach ($items as $item) {
                     $this->createOrderItemWithTickets($order, $item);
                 }
 
-                // ===== MARQUER COMME PAYÉ =====
-                $order->markAsPaid('MANUAL-' . time());
-                
                 // ===== CRÉER LA COMMISSION =====
                 $this->createCommissionForOrder($order);
-                
-                // 🔥 CRUCIAL : ENVOYER TOUS LES EMAILS
-                $this->sendOrderEmails($order);
                 
                 $orders[] = $order;
             }
 
-            // ===== NETTOYER LES SESSIONS =====
+            DB::commit();
+
+            // ===== TRAITEMENT SELON LE MOYEN DE PAIEMENT =====
+            
+            if ($request->payment_method === 'paiementpro') {
+                return $this->processPaiementPro($orders[0], $request->channel, $isDirectBooking);
+            } 
+            elseif ($request->payment_method === 'bank_transfer') {
+                return $this->processBankTransfer($orders, $isDirectBooking);
+            }
+
+        } catch (\Exception $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollback();
+            }
+            
+            Log::error('Erreur checkout avec PaiementPro', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()
+                ->with('error', 'Erreur lors du traitement : ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * 🆕 NOUVELLE : Traitement PaiementPro
+     */
+    private function processPaiementPro(Order $order, $channel, $isDirectBooking = false)
+    {
+        try {
+            $paiementProService = app(PaiementProService::class);
+            
+            // Marquer en traitement
+            $order->update(['payment_status' => 'processing']);
+
+            // Initialiser PaiementPro
+            $result = $paiementProService->initTransaction($order, [
+                'channel' => $channel
+            ]);
+
+            if ($result['success']) {
+                // Nettoyer les sessions après succès
+                if ($isDirectBooking) {
+                    session()->forget(['direct_booking', 'booking_timer']);
+                } else {
+                    session()->forget(['cart', 'cart_timer']);
+                }
+
+                Log::info('Redirection PaiementPro réussie', [
+                    'order_id' => $order->id,
+                    'session_id' => $result['sessionId']
+                ]);
+
+                // Redirection vers PaiementPro
+                return redirect($result['redirectUrl']);
+            } else {
+                // Remettre en pending en cas d'erreur
+                $order->update(['payment_status' => 'pending']);
+                throw new \Exception('Erreur PaiementPro : ' . $result['error']);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Erreur processPaiementPro', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
+
+            $order->update(['payment_status' => 'pending']);
+            throw $e;
+        }
+    }
+
+    /**
+     * 🆕 NOUVELLE : Traitement virement bancaire
+     */
+    private function processBankTransfer(array $orders, $isDirectBooking = false)
+    {
+        try {
+            foreach ($orders as $order) {
+                // Marquer comme en attente de virement
+                $order->update(['payment_status' => 'pending_transfer']);
+                
+                // Envoyer email avec instructions
+                $this->sendBankTransferInstructions($order);
+            }
+
+            // Nettoyer les sessions
             if ($isDirectBooking) {
                 session()->forget(['direct_booking', 'booking_timer']);
             } else {
                 session()->forget(['cart', 'cart_timer']);
             }
 
-            DB::commit();
+            $message = count($orders) > 1 
+                ? 'Commandes créées ! Instructions de virement envoyées par email.'
+                : 'Commande créée ! Instructions de virement envoyées par email.';
 
-            $successMessage = $isDirectBooking 
-                ? 'Réservation confirmée avec succès ! Vos billets vous ont été envoyés par email.'
-                : 'Commande validée avec succès ! Vos billets vous ont été envoyés par email.';
-
-            return redirect()->route('acheteur.dashboard')->with('success', $successMessage);
+            return redirect()->route('acheteur.orders')
+                           ->with('success', $message);
 
         } catch (\Exception $e) {
-            DB::rollback();
-            
-            Log::error('Erreur checkout process', [
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            Log::error('Erreur processBankTransfer', [
+                'orders' => array_column($orders, 'id'),
+                'error' => $e->getMessage()
             ]);
-            
-            $errorMessage = $isDirectBooking 
-                ? 'Erreur lors de la confirmation de votre réservation : ' . $e->getMessage()
-                : 'Erreur lors de la validation de votre commande : ' . $e->getMessage();
-            
-            return redirect()->back()
-                ->with('error', $errorMessage)
-                ->withInput();
+            throw $e;
         }
     }
+
 
     /**
      * Confirmation de commande
@@ -289,19 +343,23 @@ class CheckoutController extends Controller
             'total_price' => $item['total_price'],
         ]);
 
-        // Générer les billets individuels
+        // ✅ GÉNÉRER LES BILLETS (VOTRE LOGIQUE EXACTE)
         $tickets = [];
         for ($i = 0; $i < $item['quantity']; $i++) {
             $ticket = Ticket::create([
                 'ticket_type_id' => $ticketType->id,
                 'ticket_code' => Ticket::generateTicketCode(),
-                'status' => 'sold',
+                'status' => 'reserved', // ⚠️ CHANGEMENT: reserved jusqu'au paiement
             ]);
 
-            $ticket->generateQRCode();
+            // Générer QR Code si la méthode existe
+            if (method_exists($ticket, 'generateQRCode')) {
+                $ticket->generateQRCode();
+            }
+
             $tickets[] = $ticket;
 
-            // Associer à la commande
+            // ✅ VOTRE LOGIQUE PIVOT (inchangée)
             DB::table('order_tickets')->insert([
                 'order_id' => $order->id,
                 'ticket_id' => $ticket->id,
@@ -323,6 +381,7 @@ class CheckoutController extends Controller
 
         return $orderItem;
     }
+
 
     /**
      * 🔥 NOUVELLE MÉTHODE CRUCIALE : Envoyer tous les emails
@@ -360,39 +419,46 @@ class CheckoutController extends Controller
      */
     private function createCommissionForOrder($order)
     {
+        // Calculer la commission
+        $commissionData = $order->calculateCommission();
+        
+        // Créer l'enregistrement de commission
+        Commission::create([
+            'order_id' => $order->id,
+            'promoter_id' => $order->event->promoter_id,
+            'gross_amount' => $commissionData['gross_amount'],
+            'commission_rate' => $commissionData['commission_rate'],
+            'commission_amount' => $commissionData['commission_amount'],
+            'net_amount' => $commissionData['net_amount'],
+            'platform_fee' => $commissionData['platform_fee'] ?? 0,
+            'status' => 'pending'
+        ]);
+        
+        Log::info('Commission créée', [
+            'order_id' => $order->id,
+            'commission_amount' => $commissionData['commission_amount']
+        ]);
+    }
+
+    private function sendBankTransferInstructions($order)
+    {
         try {
-            $commissionData = $order->calculateCommission();
+            $emailService = app(EmailService::class);
+            $emailService->sendBankTransferInstructions($order);
             
-            Commission::create([
+            Log::info('Instructions virement envoyées', [
                 'order_id' => $order->id,
-                'promoter_id' => $order->event->promoter_id,
-                'gross_amount' => $commissionData['gross_amount'],
-                'commission_rate' => $commissionData['commission_rate'],
-                'commission_amount' => $commissionData['commission_amount'],
-                'net_amount' => $commissionData['net_amount'],
-                'platform_fee' => $commissionData['platform_fee'],
-                'status' => 'pending'
+                'email' => $order->billing_email
             ]);
-            
-            Log::info('Commission créée', [
-                'order_id' => $order->id,
-                'promoter_id' => $order->event->promoter_id,
-                'commission_amount' => $commissionData['commission_amount']
-            ]);
-            
-            return true;
-            
+
         } catch (\Exception $e) {
-            Log::error('Erreur création commission', [
+            Log::error('Erreur envoi instructions virement', [
                 'order_id' => $order->id,
-                'event_id' => $order->event_id,
-                'promoter_id' => $order->event->promoter_id ?? 'NULL',
                 'error' => $e->getMessage()
             ]);
-            
-            throw $e;
         }
     }
+
 
     /**
      * 🔥 MÉTHODE MANQUANTE : Libérer le stock en cas d'erreur

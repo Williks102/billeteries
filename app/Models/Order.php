@@ -16,6 +16,7 @@ class Order extends Model
         'total_amount',
         'payment_status',
         'payment_method',
+        'paid_at',
         'payment_reference',
         'order_number',
         'billing_email',
@@ -24,6 +25,7 @@ class Order extends Model
 
     protected $casts = [
         'total_amount' => 'integer', // Montant en FCFA
+        'paid_at' => 'datetime',
     ];
 
     /**
@@ -64,6 +66,11 @@ class Order extends Model
         return $query->where('payment_status', 'paid');
     }
 
+    public function scopePendingPayment($query)
+    {
+        return $query->whereIn('payment_status', ['pending', 'failed']);
+    }
+
     public function scopePending($query)
     {
         return $query->where('payment_status', 'pending');
@@ -72,6 +79,12 @@ class Order extends Model
     public function scopeFailed($query)
     {
         return $query->where('payment_status', 'failed');
+
+    }
+
+    public function scopeProcessing($query)
+    {
+        return $query->where('payment_status', 'processing');
     }
 
     /**
@@ -255,5 +268,108 @@ class Order extends Model
     public function canDownloadTickets()
     {
         return $this->isPaid() && $this->tickets()->count() > 0;
+    }
+
+    /**
+     * NOUVELLE RELATION : Paiements liés à cette commande
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * NOUVELLE RELATION : Dernier paiement PaiementPro
+     */
+    public function latestPaiementProPayment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class, 'id', 'order_id')
+                    ->where('payment_method', 'paiementpro')
+                    ->latest();
+    }
+
+    /**
+     * NOUVEAU : Vérifier si la commande peut être payée
+     */
+    public function canBePaid(): bool
+    {
+        return in_array($this->payment_status, ['pending', 'failed']);
+    }
+
+    /**
+     * NOUVEAU : Marquer comme payée (appelé par PaiementPro webhook)
+     */
+
+
+    /**
+     * NOUVEAU : Marquer paiement comme échoué
+     */
+    public function markPaymentAsFailed(): void
+    {
+        $this->update([
+            'payment_status' => 'failed'
+        ]);
+    }
+
+    /**
+     * AMÉLIORATION : Status avec plus de détails
+     */
+    public function getPaymentStatusLabelAttribute(): string
+    {
+        return match($this->payment_status) {
+            'pending' => 'En attente',
+            'processing' => 'En cours de traitement',
+            'paid' => 'Payé',
+            'failed' => 'Échec',
+            'cancelled' => 'Annulé',
+            'refunded' => 'Remboursé',
+            default => 'Inconnu'
+        };
+    }
+
+    /**
+     * AMÉLIORATION : Icône pour le statut
+     */
+    public function getPaymentStatusIconAttribute(): string
+    {
+        return match($this->payment_status) {
+            'pending' => 'fas fa-clock text-warning',
+            'processing' => 'fas fa-spinner fa-spin text-info',
+            'paid' => 'fas fa-check-circle text-success',
+            'failed' => 'fas fa-times-circle text-danger',
+            'cancelled' => 'fas fa-ban text-secondary',
+            'refunded' => 'fas fa-undo text-warning',
+            default => 'fas fa-question-circle text-muted'
+        };
+    }
+
+    /**
+     * NOUVEAU : Méthode pour obtenir l'URL de paiement selon le statut
+     */
+    public function getPaymentActionUrl(): ?string
+    {
+        if ($this->canBePaid()) {
+            return route('checkout.payment-method', $this);
+        }
+
+        if ($this->payment_status === 'paid') {
+            return route('orders.show', $this);
+        }
+
+        return null;
+    }
+
+    /**
+     * NOUVEAU : Texte du bouton d'action selon le statut
+     */
+    public function getPaymentActionText(): ?string
+    {
+        return match($this->payment_status) {
+            'pending' => 'Payer maintenant',
+            'failed' => 'Réessayer le paiement',
+            'paid' => 'Voir la commande',
+            'processing' => 'Paiement en cours...',
+            default => null
+        };
     }
 }

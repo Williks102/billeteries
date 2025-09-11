@@ -279,7 +279,7 @@ class GuestCheckoutController extends Controller
                 'ticket_type_id' => $ticketType->id,
                 'ticket_code' => Ticket::generateTicketCode(),
                 'status' => 'reserved', // ⚠️ CHANGEMENT: reserved jusqu'au paiement
-                'holder_name' => $order->user->name,
+                //'holder_name' => $order->user->name,
                 'holder_email' => $order->billing_email,
             ]);
 

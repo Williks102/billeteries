@@ -368,7 +368,7 @@ class TicketVerificationController extends Controller
                     'data' => [
                         'ticket_code' => $ticket->ticket_code,
                         'event_title' => $event->title,
-                        'holder_name' => $ticket->orderItem->order->user->name,
+                        //'holder_name' => $ticket->orderItem->order->user->name,
                         'ticket_info' => [
                             'code' => $ticket->ticket_code,
                             'event' => $ticket->ticketType->event->title,

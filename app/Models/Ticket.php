@@ -18,8 +18,8 @@ class Ticket extends Model
         'ticket_code',
         'status',
         'seat_number',
-        'holder_name',
-        'holder_email',
+        //'holder_name',
+        //'holder_email',
         'qr_code_path',
         'validation_data',
         'holder_phone',
@@ -373,8 +373,8 @@ public function markAsUsed($scannedBy = null)
         return [
             'ticket_code' => $this->ticket_code,
             'status' => $this->status,
-            'holder_name' => $this->holder_name,
-            'holder_email' => $this->holder_email,
+            //'holder_name' => $this->holder_name,
+            //'holder_email' => $this->holder_email,
             'event_title' => $this->ticketType->event->title ?? 'N/A',
             'event_date' => $this->ticketType->event->event_date ? 
                 $this->ticketType->event->event_date->format('d/m/Y') : 'N/A',

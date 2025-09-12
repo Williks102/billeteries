@@ -13,8 +13,9 @@ use Illuminate\Support\Facades\Validator;
 class PaiementProController extends Controller
 {
     private PaiementProService $paiementProService;
+    private EmailService $emailService;
 
-    public function __construct(PaiementProService $paiementProService)
+    public function __construct(PaiementProService $paiementProService, EmailService $emailService)
     {
         $this->paiementProService = $paiementProService;
         $this->emailService = $emailService;

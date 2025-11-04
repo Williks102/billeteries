@@ -430,15 +430,6 @@ use Illuminate\Support\Facades\Storage;
     box-shadow: 0 15px 40px rgba(0,0,0,0.15) !important;
 }
 
-.event-image {
-    height: 200px;
-    object-fit: cover;
-}
-
-.event-image-placeholder {
-    height: 200px;
-    background: #f8f9fa;
-}
 
 .event-details .detail-item {
     font-size: 0.9rem;

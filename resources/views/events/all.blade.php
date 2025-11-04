@@ -373,19 +373,7 @@ use Illuminate\Support\Facades\Storage;
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
-.event-image {
-    height: 200px;
-    object-fit: cover;
-    width: 100%;
-}
 
-.event-image-placeholder {
-    height: 200px;
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
 .event-meta small {
     font-size: 0.875rem;
@@ -403,21 +391,7 @@ use Illuminate\Support\Facades\Storage;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.event-thumbnail {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-}
 
-.event-thumbnail-placeholder {
-    width: 80px;
-    height: 80px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
 .view-toggle .btn {
     border-color: #dee2e6;

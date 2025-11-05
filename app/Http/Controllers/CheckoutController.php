@@ -53,7 +53,7 @@ class CheckoutController extends Controller
         }
 
         $cartTotal = array_sum(array_column($cart, 'total_price'));
-        $serviceFee = 500; // Frais de service fixes
+        $serviceFee = $cartTotal > 0 ? 500 : 0;
         $finalTotal = $cartTotal + $serviceFee;
 
         return view('checkout.show', compact(

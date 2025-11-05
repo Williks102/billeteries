@@ -180,12 +180,16 @@ class Order extends Model
      */
     public function createCommission()
     {
-        if ($this->isPaid() && !$this->commission) {
-            $commissionData = $this->calculateCommission();
-            
-            Commission::create([
-                'order_id' => $this->id,
-                'promoter_id' => $this->event->promoter_id,
+        if ($this->total_amount == 0) {
+        return;
+    }
+    
+    if ($this->isPaid() && !$this->commission) {
+        $commissionData = $this->calculateCommission();
+        
+        Commission::create([
+            'order_id' => $this->id,
+            'promoter_id' => $this->event->promoter_id,
                 'gross_amount' => $commissionData['gross_amount'],
                 'commission_rate' => $commissionData['commission_rate'],
                 'commission_amount' => $commissionData['commission_amount'],

@@ -218,28 +218,30 @@
                 </div>
             </div>
 
-            {{-- ===== SIDEBAR RÉCAPITULATIF ===== --}}
-            <div class="col-lg-4">
-                <div class="card sticky-top" style="top: 2rem;">
-                    <div class="card-header bg-orange text-white">
-                        <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Récapitulatif</h5>
-                    </div>
-                    <div class="card-body">
-                        {{-- Détail des prix --}}
-                        <div class="order-summary">
-                            <div class="d-flex justify-content-between mb-2">
+                {{-- ===== SIDEBAR RÉCAPITULATIF ===== --}}
+                <div class="col-lg-4">
+                    <div class="card sticky-top" style="top: 2rem;">
+                        <div class="card-header bg-orange text-white">
+                            <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Récapitulatif</h5>
+                        </div>
+                        <div class="card-body">
+                            {{-- Détail des prix --}}
+                            <div class="order-summary">
+                                <div class="d-flex justify-content-between mb-2">
                                 <span>Sous-total</span>
                                 <span>{{ number_format($cartTotal) }} FCFA</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Frais de service</span>
-                                <span>{{ number_format($serviceFee) }} FCFA</span>
-                            </div>
-                            <hr>
-                            <div class="d-flex justify-content-between mb-3">
-                                <strong>Total à payer</strong>
-                                <strong class="text-orange">{{ number_format($finalTotal) }} FCFA</strong>
-                            </div>
+                                </div>
+                                @if($serviceFee > 0)
+                                <div class="d-flex justify-content-between mb-2">
+        <span>Frais de service</span>
+    <span>{{ number_format($serviceFee) }} FCFA</span>
+</div>
+@endif
+<hr>
+<div class="d-flex justify-content-between mb-3">
+    <strong>Total à payer</strong>
+    <strong class="text-orange">{{ number_format($finalTotal) }} FCFA</strong>
+</div>
                         </div>
 
                         {{-- Conditions générales --}}

@@ -14,7 +14,19 @@ class CommissionCalculator
     public static function calculateForEvent($event, $price, $quantity = 1)
     {
         $totalAmount = $price * $quantity;
-        
+        if ($totalAmount == 0) {
+        return [
+            'gross_amount' => 0,
+            'commission_rate' => 0,
+            'commission_amount' => 0,
+            'net_amount' => 0,
+            'platform_fee_per_ticket' => 0,
+            'total_platform_fees' => 0,
+            'promoter_percentage' => 100,
+            'platform_percentage' => 0,
+            'is_free' => true,
+        ];
+
         // Obtenir les paramètres de commission
         $commissionSetting = CommissionSetting::getCommissionForEvent($event, $event->promoter_id);
         

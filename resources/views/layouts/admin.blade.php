@@ -568,7 +568,7 @@
                     <i class="fas fa-shield-alt"></i>
                     <span class="sidebar-brand-text">ClicBillet CI</span>
                 </a>
-                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <button class="sidebar-toggle" data-action="toggle-sidebar">
                     <i class="fas fa-chevron-left"></i>
                 </button>
             </div>
@@ -586,7 +586,7 @@
 
                 <!-- Utilisateurs -->
                 <li class="submenu-parent {{ request()->routeIs('admin.users.*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('users', this)" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                    <a href="#" data-action="toggle-submenu" data-menu="users" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                         <i class="fas fa-users"></i>
                         <span class="sidebar-menu-text">Utilisateurs</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -604,7 +604,7 @@
                 <!-- Événements -->
                 <!-- Événements -->
                 <li class="submenu-parent {{ request()->routeIs('admin.events.*') || request()->routeIs('admin.intervention-dashboard') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('events', this)" class="{{ request()->routeIs('admin.events.*') || request()->routeIs('admin.intervention-dashboard') ? 'active' : '' }}">
+                    <a href="#" data-action="toggle-submenu" data-menu="events" class="{{ request()->routeIs('admin.events.*') || request()->routeIs('admin.intervention-dashboard') ? 'active' : '' }}">
                         <i class="fas fa-calendar-check"></i>
                         <span class="sidebar-menu-text">Événements</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -627,7 +627,7 @@
 
                 <!-- Commandes -->
                 <li class="submenu-parent {{ request()->routeIs('admin.orders.*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('orders', this)" class="{{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
+                    <a href="#" data-action="toggle-submenu" data-menu="orders" class="{{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
                         <i class="fas fa-shopping-bag"></i>
                         <span class="sidebar-menu-text">Commandes</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -644,7 +644,7 @@
 
                 <!-- Tickets -->
                 <li class="submenu-parent {{ request()->routeIs('admin.tickets.*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('tickets', this)" class="{{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}">
+                    <a href="#" data-action="toggle-submenu" data-menu="tickets" class="{{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}">
                         <i class="fas fa-ticket-alt"></i>
                         <span class="sidebar-menu-text">Tickets</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -678,7 +678,7 @@
 
                 <!-- Paramètres -->
                 <li class="submenu-parent {{ request()->routeIs('admin.settings.*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('settings', this)" class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+                    <a href="#" data-action="toggle-submenu" data-menu="settings" class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
                         <i class="fas fa-cog"></i>
                         <span class="sidebar-menu-text">Paramètres</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -703,7 +703,7 @@
         <!-- Topbar -->
         <header class="admin-topbar">
             <div class="topbar-left">
-                <button class="mobile-toggle" onclick="toggleMobileSidebar()">
+                <button class="mobile-toggle" data-action="toggle-mobile-sidebar">
                     <i class="fas fa-bars"></i>
                 </button>
                 <nav class="topbar-breadcrumb">
@@ -719,7 +719,7 @@
 
             <div class="topbar-user">
                 <!-- Notifications -->
-                <div class="topbar-notifications" onclick="toggleNotifications()">
+                <div class="topbar-notifications" data-action="toggle-notifications">
                     <i class="fas fa-bell"></i>
                     <span class="notification-badge">3</span>
                 </div>
@@ -757,7 +757,7 @@
         </header>
 
         <!-- Mobile Overlay -->
-        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+        <div class="mobile-overlay" id="mobileOverlay" data-action="close-mobile-sidebar"></div>
 
         <!-- Main Content -->
         <main class="admin-main">
@@ -791,117 +791,8 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <script>
-        // Sidebar state management
-        let sidebarState = localStorage.getItem('sidebar-state') || 'open';
-        
-        // Initialize sidebar state
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('adminSidebar');
-            
-            if (window.innerWidth <= 1024 && window.innerWidth > 768) {
-                sidebar.classList.add('mini');
-                sidebarState = 'mini';
-            } else if (window.innerWidth <= 768) {
-                sidebar.classList.add('mobile-hidden');
-                sidebarState = 'mobile-hidden';
-            } else if (sidebarState === 'mini') {
-                sidebar.classList.add('mini');
-            }
-        });
+    <script src="{{ asset('js/layout-admin.js') }}" defer></script>
 
-        // Toggle sidebar (desktop)
-        function toggleSidebar() {
-            const sidebar = document.getElementById('adminSidebar');
-            
-            if (sidebar.classList.contains('mini')) {
-                sidebar.classList.remove('mini');
-                sidebarState = 'open';
-            } else {
-                sidebar.classList.add('mini');
-                sidebarState = 'mini';
-            }
-            
-            localStorage.setItem('sidebar-state', sidebarState);
-        }
-
-        // Toggle mobile sidebar
-        function toggleMobileSidebar() {
-            const sidebar = document.getElementById('adminSidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            
-            sidebar.classList.toggle('mobile-open');
-            overlay.classList.toggle('active');
-        }
-
-        // Close mobile sidebar
-        function closeMobileSidebar() {
-            const sidebar = document.getElementById('adminSidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            
-            sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('active');
-        }
-
-        // Toggle submenu
-        function toggleSubmenu(menuId, element) {
-            const submenu = document.getElementById('submenu-' + menuId);
-            const parent = element.closest('li');
-            const isOpen = submenu.classList.contains('open');
-            
-            // Sur mobile, ne pas fermer les autres submenus pour une meilleure UX
-            const isMobile = window.innerWidth <= 768;
-            
-            if (!isMobile) {
-                // Desktop : fermer les autres submenus
-                document.querySelectorAll('.sidebar-submenu').forEach(menu => {
-                    if (menu !== submenu) {
-                        menu.classList.remove('open');
-                        menu.closest('li').classList.remove('open');
-                    }
-                });
-            }
-            
-            // Toggle current submenu
-            if (isOpen) {
-                submenu.classList.remove('open');
-                parent.classList.remove('open');
-            } else {
-                submenu.classList.add('open');
-                parent.classList.add('open');
-            }
-            
-            // Empêcher la navigation
-            return false;
-        }
-
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            const sidebar = document.getElementById('adminSidebar');
-            
-            if (window.innerWidth <= 768) {
-                sidebar.classList.add('mobile-hidden');
-                sidebar.classList.remove('mini', 'mobile-open');
-            } else if (window.innerWidth <= 1024) {
-                sidebar.classList.add('mini');
-                sidebar.classList.remove('mobile-hidden', 'mobile-open');
-            } else {
-                sidebar.classList.remove('mobile-hidden', 'mobile-open');
-                if (sidebarState === 'open') {
-                    sidebar.classList.remove('mini');
-                }
-            }
-            
-            // Close mobile overlay
-            document.getElementById('mobileOverlay').classList.remove('active');
-        });
-
-        // Notifications placeholder
-        function toggleNotifications() {
-            // Implement notifications dropdown
-            console.log('Toggle notifications');
-        }
-    </script>
     
     @stack('scripts')
 </body>

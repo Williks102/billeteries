@@ -28,7 +28,7 @@ class PaiementProController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'order_id' => 'required|exists:orders,id',
-            'channel' => 'nullable|in:CARD,MOMO,OMCIV2,FLOOZ,PAYPAL'
+            'channel' => 'nullable|in:CARD,MOMO,OMCIV2,FLOOZ,PAYPAL,WAVECI'
         ]);
 
         if ($validator->fails()) {

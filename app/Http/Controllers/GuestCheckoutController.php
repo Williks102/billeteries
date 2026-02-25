@@ -58,7 +58,7 @@ class GuestCheckoutController extends Controller
                 'phone' => 'required|string|min:10',
                 'terms_accepted' => 'required',
                 'payment_method' => 'required|in:paiementpro,bank_transfer',
-                'channel' => 'required_if:payment_method,paiementpro|in:CARD,MOMO,OMCIV2,FLOOZ,PAYPAL'
+                'channel' => 'required_if:payment_method,paiementpro|in:CARD,MOMO,OMCIV2,FLOOZ,PAYPAL,WAVECI'
             ];
             
             // Mot de passe requis seulement si création de compte

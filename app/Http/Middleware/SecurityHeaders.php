@@ -23,7 +23,7 @@ class SecurityHeaders
                "base-uri 'self'; " .
                "frame-ancestors 'self'; " .
                // AJOUT : Autorisation de paiementpro.net pour le checkout
-               "form-action 'self' https://clicbillet.com https://www.clicbillet.com https://*.paiementpro.net https://paiementpro.net https://mpayment.orange-money.com; ".
+               "form-action 'self' https://clicbillet.com https://www.clicbillet.com https://*.paiementpro.net https://paiementpro.net https://mpayment.orange-money.com https://multi.app.orange-money.com https://maxit-link.com https://pay.wave.com https://www.wave.com https://*.confirm.wave.com https://promo.wave.com; ".
 
                "upgrade-insecure-requests;";
 

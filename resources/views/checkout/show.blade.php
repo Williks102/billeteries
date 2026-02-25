@@ -195,10 +195,19 @@
                                            id="flooz" value="FLOOZ">
                                     <label class="btn btn-outline-info w-100 p-3" for="flooz">
                                         <i class="fas fa-wallet fa-2x mb-2"></i>
-                                        <br><strong>Flooz</strong>
+                                        <br><strong>Moov Money</strong>
                                         <br><small>Portefeuille digital</small>
                                     </label>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="channel" 
+                                           id="wave" value="WAVECI">
+                                    <label class="btn btn-outline-primary w-100 p-3" for="wave">
+                                        <i class="fab fa-wave fa-2x mb-2"></i>
+                                        <br><strong>Wave CI</strong>
+                                        <br><small>Paiement mobile</small>
+                                    </label>
                             </div>
                         </div>
 

@@ -135,7 +135,7 @@ class CheckoutController extends Controller
             'billing_phone' => 'required|string|max:20',
             'terms_accepted' => 'required|accepted',
             'payment_method' => 'required|in:paiementpro,bank_transfer',
-            'channel' => 'required_if:payment_method,paiementpro|in:CARD,MOMO,OMCIV2,FLOOZ,PAYPAL'
+            'channel' => 'required_if:payment_method,paiementpro|in:CARD,MOMO,OMCIV2,FLOOZ,PAYPAL,WAVECI'
         ]);
 
         try {

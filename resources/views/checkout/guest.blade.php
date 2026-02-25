@@ -240,6 +240,13 @@
                                         Orange Money
                                     </label>
                                 </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="channel" id="channel_wave_guest" value="WAVECI">
+                                    <label class="form-check-label" for="channel_wave_guest">
+                                        Wave ci
+                                    </label>
+                                </div>
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="radio" name="channel" id="channel_flooz_guest" value="FLOOZ">
                                     <label class="form-check-label" for="channel_flooz_guest">

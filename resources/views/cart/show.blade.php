@@ -857,17 +857,18 @@
 
                     <div class="summary-row">
                         <span>Sous-total</span>
-                        <span>{{ number_format($cartTotal) }} FCFA</span>
+                     <span>{{ number_format($cartTotal) }} FCFA</span>
                     </div>
+                        @if($cartTotal > 0)
                     <div class="summary-row">
-                        <span>Frais de service</span>
+                    <span>Frais de service</span>
                         <span>500 FCFA</span>
                     </div>
+                    @endif
                     <div class="summary-row">
-                        <span><strong>Total</strong></span>
-                        <span><strong>{{ number_format($cartTotal + 500) }} FCFA</strong></span>
-                    </div>
-
+                <span><strong>Total</strong></span>
+                <span><strong>{{ number_format($cartTotal + ($cartTotal > 0 ? 500 : 0)) }} FCFA</strong></span>
+                        </div>
                     {{-- Boutons de checkout selon le statut --}}
                     <div class="d-grid mt-4">
                         @guest
@@ -1051,17 +1052,19 @@
     <div class="cart-modal-footer">
         <div class="mobile-summary">
             <div class="mobile-summary-row">
-                <span>Sous-total</span>
-                <span id="mobileSubtotal">{{ number_format($cartTotal) }} FCFA</span>
-            </div>
-            <div class="mobile-summary-row">
-                <span>Frais de service</span>
-                <span>500 FCFA</span>
-            </div>
-            <div class="mobile-summary-row">
-                <span><strong>Total</strong></span>
-                <span><strong id="mobileTotal">{{ number_format($cartTotal + 500) }} FCFA</strong></span>
-            </div>
+    <span>Sous-total</span>
+    <span id="mobileSubtotal">{{ number_format($cartTotal) }} FCFA</span>
+</div>
+@if($cartTotal > 0)
+<div class="mobile-summary-row">
+    <span>Frais de service</span>
+    <span>500 FCFA</span>
+</div>
+@endif
+<div class="mobile-summary-row">
+    <span><strong>Total</strong></span>
+    <span><strong id="mobileTotal">{{ number_format($cartTotal + ($cartTotal > 0 ? 500 : 0)) }} FCFA</strong></span>
+</div>
         </div>
         
         {{-- Boutons d'action selon le statut de connexion --}}

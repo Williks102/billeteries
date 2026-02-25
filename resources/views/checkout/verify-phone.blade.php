@@ -69,7 +69,7 @@
             <button 
                 id="resend-code" 
                 class="text-blue-600 hover:text-blue-800 text-sm"
-                onclick="resendCode()"
+                data-action="resend-code"
             >
                 Renvoyer le code
             </button>
@@ -88,54 +88,10 @@
     </div>
 </div>
 
-<script>
-function resendCode() {
-    const button = document.getElementById('resend-code');
-    const originalText = button.textContent;
-    
-    button.textContent = 'Envoi en cours...';
-    button.disabled = true;
-    
-    fetch('{{ route("checkout.resend-code") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({
-            phone: '{{ $phone }}'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Code renvoyé avec succès !');
-        } else {
-            alert('Erreur lors du renvoi : ' + (data.error || 'Erreur inconnue'));
-        }
-    })
-    .catch(error => {
-        alert('Erreur de connexion');
-    })
-    .finally(() => {
-        button.textContent = originalText;
-        button.disabled = false;
-        
-        // Délai de 60 secondes avant de pouvoir renvoyer
-        setTimeout(() => {
-            button.disabled = false;
-        }, 60000);
-    });
-}
-
-// Auto-submit quand 6 chiffres sont saisis
-document.getElementById('otp_code').addEventListener('input', function(e) {
-    const value = e.target.value.replace(/\D/g, '');
-    e.target.value = value;
-    
-    if (value.length === 6) {
-        e.target.form.submit();
-    }
-});
-</script>
+<div id="checkout-verify-phone-config"
+     data-resend-url="{{ route('checkout.resend-code') }}"
+     data-csrf="{{ csrf_token() }}"
+     data-phone="{{ $phone }}"
+     hidden></div>
+<script src="{{ asset('js/checkout-verify-phone.js') }}" defer></script>
 @endsection

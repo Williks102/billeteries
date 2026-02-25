@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use App\Models\Event;
 use App\Models\Commission;
 use App\Services\EmailService;
+use App\Services\PaiementProService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -53,7 +54,7 @@ class CheckoutController extends Controller
         }
 
         $cartTotal = array_sum(array_column($cart, 'total_price'));
-        $serviceFee = 500; // Frais de service fixes
+        $serviceFee = $cartTotal > 0 ? 500 : 0;
         $finalTotal = $cartTotal + $serviceFee;
 
         return view('checkout.show', compact(
@@ -419,13 +420,15 @@ class CheckoutController extends Controller
      */
     private function createCommissionForOrder($order)
     {
+        $event = $order->event;
+
         // Calculer la commission
         $commissionData = $order->calculateCommission();
-        
+
         // Créer l'enregistrement de commission
         Commission::create([
             'order_id' => $order->id,
-            'promoter_id' => $order->event->promoter_id,
+            'promoter_id' => $event->promoter_id,
             'gross_amount' => $commissionData['gross_amount'],
             'commission_rate' => $commissionData['commission_rate'],
             'commission_amount' => $commissionData['commission_amount'],
@@ -433,11 +436,13 @@ class CheckoutController extends Controller
             'platform_fee' => $commissionData['platform_fee'] ?? 0,
             'status' => 'pending'
         ]);
-        
+
         Log::info('Commission créée', [
             'order_id' => $order->id,
             'commission_amount' => $commissionData['commission_amount']
         ]);
+
+        return true;
     }
 
     private function sendBankTransferInstructions($order)

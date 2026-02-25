@@ -1,15 +1,4 @@
 <?php return array (
-  'barryvdh/laravel-debugbar' => 
-  array (
-    'aliases' => 
-    array (
-      'Debugbar' => 'Barryvdh\\Debugbar\\Facades\\Debugbar',
-    ),
-    'providers' => 
-    array (
-      0 => 'Barryvdh\\Debugbar\\ServiceProvider',
-    ),
-  ),
   'barryvdh/laravel-dompdf' => 
   array (
     'aliases' => 
@@ -20,27 +9,6 @@
     'providers' => 
     array (
       0 => 'Barryvdh\\DomPDF\\ServiceProvider',
-    ),
-  ),
-  'laravel/pail' => 
-  array (
-    'providers' => 
-    array (
-      0 => 'Laravel\\Pail\\PailServiceProvider',
-    ),
-  ),
-  'laravel/sail' => 
-  array (
-    'providers' => 
-    array (
-      0 => 'Laravel\\Sail\\SailServiceProvider',
-    ),
-  ),
-  'laravel/telescope' => 
-  array (
-    'providers' => 
-    array (
-      0 => 'Laravel\\Telescope\\TelescopeServiceProvider',
     ),
   ),
   'laravel/tinker' => 
@@ -73,13 +41,6 @@
     'providers' => 
     array (
       0 => 'Carbon\\Laravel\\ServiceProvider',
-    ),
-  ),
-  'nunomaduro/collision' => 
-  array (
-    'providers' => 
-    array (
-      0 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
     ),
   ),
   'nunomaduro/termwind' => 

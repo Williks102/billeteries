@@ -218,28 +218,30 @@
                 </div>
             </div>
 
-            {{-- ===== SIDEBAR RÉCAPITULATIF ===== --}}
-            <div class="col-lg-4">
-                <div class="card sticky-top" style="top: 2rem;">
-                    <div class="card-header bg-orange text-white">
-                        <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Récapitulatif</h5>
-                    </div>
-                    <div class="card-body">
-                        {{-- Détail des prix --}}
-                        <div class="order-summary">
-                            <div class="d-flex justify-content-between mb-2">
+                {{-- ===== SIDEBAR RÉCAPITULATIF ===== --}}
+                <div class="col-lg-4">
+                    <div class="card sticky-top" style="top: 2rem;">
+                        <div class="card-header bg-orange text-white">
+                            <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Récapitulatif</h5>
+                        </div>
+                        <div class="card-body">
+                            {{-- Détail des prix --}}
+                            <div class="order-summary">
+                                <div class="d-flex justify-content-between mb-2">
                                 <span>Sous-total</span>
                                 <span>{{ number_format($cartTotal) }} FCFA</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Frais de service</span>
-                                <span>{{ number_format($serviceFee) }} FCFA</span>
-                            </div>
-                            <hr>
-                            <div class="d-flex justify-content-between mb-3">
-                                <strong>Total à payer</strong>
-                                <strong class="text-orange">{{ number_format($finalTotal) }} FCFA</strong>
-                            </div>
+                                </div>
+                                @if($serviceFee > 0)
+                                <div class="d-flex justify-content-between mb-2">
+        <span>Frais de service</span>
+    <span>{{ number_format($serviceFee) }} FCFA</span>
+</div>
+@endif
+<hr>
+<div class="d-flex justify-content-between mb-3">
+    <strong>Total à payer</strong>
+    <strong class="text-orange">{{ number_format($finalTotal) }} FCFA</strong>
+</div>
                         </div>
 
                         {{-- Conditions générales --}}
@@ -352,51 +354,5 @@
 }
 </style>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
-    const paiementproChannels = document.getElementById('paiementpro-channels');
-    const bankTransferInfo = document.getElementById('bank-transfer-info');
-    const payButton = document.getElementById('pay-button');
-    const payButtonText = document.getElementById('pay-button-text');
-
-    // Gestion de l'affichage des options selon le moyen de paiement
-    function togglePaymentOptions() {
-        const selectedMethod = document.querySelector('input[name="payment_method"]:checked').value;
-        
-        if (selectedMethod === 'paiementpro') {
-            paiementproChannels.style.display = 'block';
-            bankTransferInfo.style.display = 'none';
-            payButtonText.textContent = 'Procéder au paiement';
-        } else if (selectedMethod === 'bank_transfer') {
-            paiementproChannels.style.display = 'none';
-            bankTransferInfo.style.display = 'block';
-            payButtonText.textContent = 'Valider la commande';
-        }
-    }
-
-    // Écouter les changements de méthode de paiement
-    paymentMethods.forEach(method => {
-        method.addEventListener('change', togglePaymentOptions);
-    });
-
-    // Initialiser l'affichage
-    togglePaymentOptions();
-
-    // Gestion du formulaire
-    document.getElementById('checkout-form').addEventListener('submit', function(e) {
-        const termsAccepted = document.getElementById('terms_accepted').checked;
-        
-        if (!termsAccepted) {
-            e.preventDefault();
-            alert('Veuillez accepter les conditions générales');
-            return;
-        }
-
-        // Désactiver le bouton et afficher le chargement
-        payButton.disabled = true;
-        payButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Traitement en cours...';
-    });
-});
-</script>
+<script src="{{ asset('js/checkout-show.js') }}" defer></script>
 @endsection

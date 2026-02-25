@@ -1,0 +1,222 @@
+/* ================================================================
+   CLICBILLET CI - CORRECTION IMAGES ÉVÉNEMENTS
+   Standard adopté : Ratio 2:1 (Eventbrite) avec fallback 16:9 mobile
+   Date : Novembre 2025
+   ================================================================ */
+
+/* ===== STYLE PRINCIPAL POUR TOUTES LES IMAGES D'ÉVÉNEMENTS ===== */
+
+.event-image,
+.card-img-top.event-image {
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
+/* Fallback mobile - ratio 16:9 plus adapté aux petits écrans */
+@media (max-width: 768px) {
+    .event-image,
+    .card-img-top.event-image {
+        aspect-ratio: 16 / 9;
+    }
+}
+
+/* ===== SUPPORT POUR NAVIGATEURS ANCIENS ===== */
+/* Si aspect-ratio n'est pas supporté, on utilise une hauteur fixe */
+
+@supports not (aspect-ratio: 2 / 1) {
+    .event-image,
+    .card-img-top.event-image {
+        height: 250px;
+    }
+    
+    @media (max-width: 768px) {
+        .event-image,
+        .card-img-top.event-image {
+            height: 200px;
+        }
+    }
+}
+
+/* ===== CARTES D'ÉVÉNEMENTS - TOUTES LES PAGES ===== */
+
+/* Page d'accueil (welcome.blade.php) */
+.event-item .event-image,
+.event-card .event-image {
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    width: 100%;
+    height: auto;
+    border-radius: 12px 12px 0 0; /* Arrondi uniquement en haut */
+}
+
+/* Liste des événements (events/all.blade.php) */
+.events-page .event-image {
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    width: 100%;
+    height: auto;
+    border-radius: 12px 12px 0 0;
+}
+
+/* Dashboard promoteur (promoteur/events/index.blade.php) */
+.promoteur-events .event-card .event-image {
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    width: 100%;
+    height: auto;
+    border-radius: 12px 12px 0 0;
+}
+
+/* Admin (admin/events/index.blade.php) */
+.admin-events .event-image {
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
+/* Événements similaires (partials/event-details-desktop.blade.php) */
+.similar-event-card .event-image,
+.similar-event-card img {
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+
+@media (max-width: 768px) {
+    /* Toutes les images passent en 16:9 sur mobile */
+    .event-item .event-image,
+    .event-card .event-image,
+    .events-page .event-image,
+    .promoteur-events .event-card .event-image,
+    .similar-event-card .event-image,
+    .similar-event-card img {
+        aspect-ratio: 16 / 9;
+    }
+}
+
+/* Petits mobiles (iPhone SE, etc.) */
+@media (max-width: 576px) {
+    .event-image,
+    .card-img-top.event-image {
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+    }
+}
+
+/* ===== IMAGES MINIATURES ET VIGNETTES ===== */
+
+/* Images dans les tableaux admin */
+.admin-table .event-image,
+.table .event-image {
+    width: 60px;
+    height: 60px;
+    aspect-ratio: 1 / 1; /* Carré pour les miniatures */
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* Images dans les commandes (acheteur/orders.blade.php) */
+.order-card .event-image,
+.mobile-event-image img {
+    aspect-ratio: 1 / 1; /* Carré pour les petites vignettes */
+    object-fit: cover;
+    border-radius: 8px;
+    max-width: 80px;
+    max-height: 80px;
+}
+
+/* ===== PLACEHOLDER SI PAS D'IMAGE ===== */
+
+.event-image-placeholder {
+    aspect-ratio: 2 / 1;
+    background: linear-gradient(135deg, #FF6B35, #E55A2B);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: white;
+}
+
+.event-image-placeholder i {
+    font-size: 3rem;
+    opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+    .event-image-placeholder {
+        aspect-ratio: 16 / 9;
+    }
+}
+
+/* ===== EFFETS ET ANIMATIONS ===== */
+
+/* Conteneur avec overflow hidden pour effet zoom */
+.event-card,
+.event-item {
+    overflow: hidden;
+}
+
+/* Effet zoom au hover sur desktop uniquement */
+@media (min-width: 769px) {
+    .event-card:hover .event-image,
+    .event-item:hover .event-image {
+        transform: scale(1.05);
+        transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+}
+
+/* ===== OPTIMISATIONS PERFORMANCE ===== */
+
+/* Chargement paresseux des images */
+.event-image[loading="lazy"] {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+/* Indication de chargement */
+.event-image:not([src]),
+.event-image[src=""] {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    position: relative;
+}
+
+.event-image:not([src])::after,
+.event-image[src=""]::after {
+    content: "⏳";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+}
+
+/* ===== ACCESSIBILITÉ ===== */
+
+/* Meilleur contraste pour les badges sur images */
+.event-card .badge {
+    backdrop-filter: blur(5px);
+    background-color: rgba(255, 107, 53, 0.95) !important;
+}
+
+/* Focus visible pour navigation clavier */
+.event-card:focus-within .event-image {
+    outline: 3px solid #FF6B35;
+    outline-offset: 2px;
+}
+
+/* ===== PRINT STYLES ===== */
+
+@media print {
+    .event-image {
+        aspect-ratio: 2 / 1;
+        page-break-inside: avoid;
+    }
+}

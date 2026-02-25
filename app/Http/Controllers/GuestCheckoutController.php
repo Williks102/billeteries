@@ -32,7 +32,7 @@ class GuestCheckoutController extends Controller
         // Vérifications de disponibilité...
         
         $cartTotal = array_sum(array_column($cart, 'total_price'));
-        $serviceFee = 500;
+        $serviceFee = $cartTotal > 0 ? 500 : 0;
         $finalTotal = $cartTotal + $serviceFee;
 
         return view('checkout.guest', compact('cart', 'cartTotal', 'serviceFee', 'finalTotal'));

@@ -373,19 +373,7 @@ use Illuminate\Support\Facades\Storage;
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
-.event-image {
-    height: 200px;
-    object-fit: cover;
-    width: 100%;
-}
 
-.event-image-placeholder {
-    height: 200px;
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
 .event-meta small {
     font-size: 0.875rem;
@@ -403,21 +391,7 @@ use Illuminate\Support\Facades\Storage;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.event-thumbnail {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-}
 
-.event-thumbnail-placeholder {
-    width: 80px;
-    height: 80px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
 .view-toggle .btn {
     border-color: #dee2e6;
@@ -452,36 +426,6 @@ use Illuminate\Support\Facades\Storage;
 @endpush
 
 @push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Toggle entre vue grille et liste
-    const gridViewBtn = document.getElementById('grid-view');
-    const listViewBtn = document.getElementById('list-view');
-    const eventsGrid = document.getElementById('events-grid');
-    const eventsList = document.getElementById('events-list');
-
-    gridViewBtn.addEventListener('click', function() {
-        gridViewBtn.classList.add('active');
-        listViewBtn.classList.remove('active');
-        eventsGrid.classList.remove('d-none');
-        eventsList.classList.add('d-none');
-    });
-
-    listViewBtn.addEventListener('click', function() {
-        listViewBtn.classList.add('active');
-        gridViewBtn.classList.remove('active');
-        eventsList.classList.remove('d-none');
-        eventsGrid.classList.add('d-none');
-    });
-
-    // Auto-submit du formulaire lors du changement de filtre
-    const filterSelects = document.querySelectorAll('select[name="category"], select[name="date_filter"], select[name="sort"]');
-    filterSelects.forEach(select => {
-        select.addEventListener('change', function() {
-            this.form.submit();
-        });
-    });
-});
-</script>
+<script src="{{ asset('js/events-all.js') }}" defer></script>
 @endpush
 @endsection

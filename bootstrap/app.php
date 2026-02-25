@@ -20,11 +20,17 @@ return Application::configure(basePath: dirname(__DIR__))
             'layout' => \App\Http\Middleware\SetLayoutMiddleware::class,
             'role' => \App\Http\Middleware\CheckUserRole::class,
         ]);
+        
         $middleware->append(\App\Http\Middleware\SetExecutionTime::class);
         $middleware->append(\App\Http\Middleware\SetLayoutMiddleware::class);
+        
+        // 🔥 Ajouter le middleware CSRF au groupe web (DOIT être DANS la fonction)
+        $middleware->web(append: [
+            \App\Http\Middleware\VerifyCsrfToken::class,
+        ]);
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
-
-    

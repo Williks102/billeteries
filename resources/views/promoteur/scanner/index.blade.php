@@ -318,6 +318,11 @@ async function startCamera() {
 }
 
 // ========== DÉTECTION QR AMÉLIORÉE ==========
+// Variable globale pour empêcher le rescan immédiat
+let lastScannedCode = null;
+let lastScanTime = 0;
+const SCAN_COOLDOWN = 5000; // 5 secondes de cooldown
+
 function startQRDetection() {
     const video = document.getElementById('cameraFeed');
     const canvas = document.getElementById('cameraCanvas');
@@ -359,14 +364,25 @@ function startQRDetection() {
                         }
                     }
                     
+                    // ✅ PROTECTION CONTRE LE RESCAN IMMÉDIAT
+                    const now = Date.now();
+                    if (lastScannedCode === ticketCode && (now - lastScanTime) < SCAN_COOLDOWN) {
+                        console.log('⏸️ Scan ignoré - même code scanné il y a moins de 5 secondes');
+                        return; // Ignorer ce scan
+                    }
+                    
+                    // ✅ Mémoriser le dernier scan
+                    lastScannedCode = ticketCode;
+                    lastScanTime = now;
+                    
                     // Remplir automatiquement le champ de saisie
                     document.getElementById('ticketCode').value = ticketCode;
                     
-                    // Déclencher automatiquement la vérification
-                    processTicket();
+                    // ✅ ARRÊTER LA CAMÉRA AVANT DE TRAITER
+                    stopCamera();
                     
-                    // Arrêter la caméra après détection
-                    toggleCamera();
+                    // Déclencher la vérification
+                    processTicket();
                     
                     // Effet visuel de succès
                     if (typeof playSuccessSound === 'function') {

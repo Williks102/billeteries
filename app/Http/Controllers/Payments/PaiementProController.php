@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Payments;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\PaiementProService;
+use App\Jobs\SendOrderEmailsJob;
 use App\Services\EmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -383,10 +384,10 @@ class PaiementProController extends Controller
         try {
             Log::info("📧 Envoi emails confirmation pour commande {$order->order_number}");
 
-            // ✅ UTILISE VOTRE SERVICE EXISTANT
-            $this->emailService->sendAllOrderEmails($order);
+            // Mise en file d'attente pour ne pas bloquer la réponse webhook
+            SendOrderEmailsJob::dispatch($order->id);
 
-            Log::info("✅ Emails envoyés avec succès pour commande {$order->order_number}");
+            Log::info("✅ Emails mis en file d'attente pour commande {$order->order_number}");
 
         } catch (\Exception $e) {
             Log::error("❌ Erreur envoi emails pour commande {$order->order_number}", [

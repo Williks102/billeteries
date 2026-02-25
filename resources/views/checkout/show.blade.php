@@ -354,51 +354,5 @@
 }
 </style>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
-    const paiementproChannels = document.getElementById('paiementpro-channels');
-    const bankTransferInfo = document.getElementById('bank-transfer-info');
-    const payButton = document.getElementById('pay-button');
-    const payButtonText = document.getElementById('pay-button-text');
-
-    // Gestion de l'affichage des options selon le moyen de paiement
-    function togglePaymentOptions() {
-        const selectedMethod = document.querySelector('input[name="payment_method"]:checked').value;
-        
-        if (selectedMethod === 'paiementpro') {
-            paiementproChannels.style.display = 'block';
-            bankTransferInfo.style.display = 'none';
-            payButtonText.textContent = 'Procéder au paiement';
-        } else if (selectedMethod === 'bank_transfer') {
-            paiementproChannels.style.display = 'none';
-            bankTransferInfo.style.display = 'block';
-            payButtonText.textContent = 'Valider la commande';
-        }
-    }
-
-    // Écouter les changements de méthode de paiement
-    paymentMethods.forEach(method => {
-        method.addEventListener('change', togglePaymentOptions);
-    });
-
-    // Initialiser l'affichage
-    togglePaymentOptions();
-
-    // Gestion du formulaire
-    document.getElementById('checkout-form').addEventListener('submit', function(e) {
-        const termsAccepted = document.getElementById('terms_accepted').checked;
-        
-        if (!termsAccepted) {
-            e.preventDefault();
-            alert('Veuillez accepter les conditions générales');
-            return;
-        }
-
-        // Désactiver le bouton et afficher le chargement
-        payButton.disabled = true;
-        payButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Traitement en cours...';
-    });
-});
-</script>
+<script src="{{ asset('js/checkout-show.js') }}" defer></script>
 @endsection

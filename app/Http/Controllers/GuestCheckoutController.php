@@ -113,7 +113,7 @@ class GuestCheckoutController extends Controller
     private function processPaiementPro(Order $order, $channel, $isGuest = true)
     {
         try {
-            $paiementProService = app(PaiementProService::class);
+            $paiementProService = app(\App\Services\PaiementProService::class);
             
             // Marquer en traitement
             $order->update(['payment_status' => 'processing']);

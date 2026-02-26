@@ -59,3 +59,21 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## File d'attente (Queue)
+
+Le projet utilise désormais la **queue Laravel** pour externaliser l'envoi des emails de commande/paiement.
+
+### Lancer les workers
+
+```bash
+php artisan queue:work --queue=emails,default
+```
+
+### Vérifier les jobs en base
+
+```bash
+php artisan queue:monitor emails
+```
+
+> Le driver par défaut est `database` (`config/queue.php`). Pensez à exécuter les migrations avant le démarrage en production.

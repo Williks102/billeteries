@@ -20,9 +20,9 @@ class EmailService
     {
         try {
             Mail::to($order->user->email)
-                ->send(new OrderConfirmation($order));
+                ->queue(new OrderConfirmation($order));
 
-            Log::info("Email confirmation commande envoyé", [
+            Log::info("Email confirmation commande mis en file", [
                 'order_id' => $order->id,
                 'email' => $order->user->email
             ]);
@@ -44,12 +44,12 @@ class EmailService
 {
     try {
         Mail::to($order->user->email)
-            ->send(new PaymentConfirmation($order));
+            ->queue(new PaymentConfirmation($order));
 
         // Nettoyer le PDF temporaire après envoi
         $this->cleanupTempPDF($order->order_number);
 
-        Log::info("Email confirmation paiement avec PDF envoyé", [
+        Log::info("Email confirmation paiement avec PDF mis en file", [
             'order_id' => $order->id,
             'email' => $order->user->email,
             'is_guest' => $order->user->is_guest,
@@ -80,9 +80,9 @@ class EmailService
             $promoteur = $order->event->promoteur;
 
             Mail::to($promoteur->email)
-                ->send(new PromoteurNewSale($order));
+                ->queue(new PromoteurNewSale($order));
 
-            Log::info("Email promoteur nouvelle vente envoyé", [
+            Log::info("Email promoteur nouvelle vente mis en file", [
                 'order_id' => $order->id,
                 'promoteur_email' => $promoteur->email
             ]);
@@ -107,10 +107,10 @@ class EmailService
 
             foreach ($admins as $admin) {
                 Mail::to($admin->email)
-                    ->send(new AdminNewOrder($order));
+                    ->queue(new AdminNewOrder($order));
             }
 
-            Log::info("Email admin nouvelle commande envoyé", [
+            Log::info("Email admin nouvelle commande mis en file", [
                 'order_id' => $order->id,
                 'admin_count' => $admins->count()
             ]);
@@ -253,9 +253,9 @@ public function cleanupOldTempPDFs()
 public function sendWelcomeEmail(User $user)
 {
     try {
-        Mail::to($user->email)->send(new \App\Mail\WelcomeEmail($user));
+        Mail::to($user->email)->queue(new \App\Mail\WelcomeEmail($user));
 
-        Log::info("Email bienvenue envoyé", [
+        Log::info("Email bienvenue mis en file", [
             'user_id' => $user->id,
             'email' => $user->email,
             'role' => $user->role

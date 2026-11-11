@@ -30,8 +30,14 @@ return new class extends Migration
         // Les try/catch ci-dessus sont sans effet (les commandes du Blueprint s'exécutent après la closure) :
         // on teste donc explicitement. Après le renommage 2025_07_28_122001, la clé étrangère d'origine
         // (commissions_promoteur_id_foreign) couvre déjà promoter_id : ne pas en ajouter une seconde.
-        $hasPromoterForeignKey = collect(Schema::getForeignKeys('commissions'))
-            ->contains(fn ($fk) => $fk['columns'] === ['promoter_id']);
+        // Si l'inspection des clés étrangères échoue (moteur exotique), on suppose qu'elle existe : une clé
+        // redondante en moins est sans conséquence, un échec de migration au premier démarrage serait coûteux.
+        try {
+            $hasPromoterForeignKey = collect(Schema::getForeignKeys('commissions'))
+                ->contains(fn ($fk) => $fk['columns'] === ['promoter_id']);
+        } catch (\Throwable $e) {
+            $hasPromoterForeignKey = true;
+        }
 
         if (Schema::hasColumn('commissions', 'promoter_id') && !$hasPromoterForeignKey) {
             Schema::table('commissions', function (Blueprint $table) {

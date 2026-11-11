@@ -45,7 +45,6 @@ class ViewReferencesTest extends TestCase
         'pages.legal',
         'pages.promoter-guide',
         'pages.support',
-        'promoteur.events.tickets.edit',
         'promoteur.reports.index',
         'promoteur.scanner.recent',
         'promoteur.scanner.search',

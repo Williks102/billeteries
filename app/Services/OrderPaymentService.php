@@ -109,6 +109,10 @@ class OrderPaymentService
         });
 
         if ($confirmedNow) {
+            // QR émis APRÈS le commit (jamais sous verrou) : un échec n'annule jamais la confirmation,
+            // un billet sans QR est régénéré à la demande par Ticket::qrDataUri().
+            $this->issueQrCodes($locked);
+
             try {
                 app(EmailService::class)->sendPaymentConfirmation($locked);
             } catch (\Throwable $e) {
@@ -122,6 +126,38 @@ class OrderPaymentService
         $order->refresh();
 
         return $order;
+    }
+
+    /**
+     * Génère et persiste (tickets.qr_code) le QR de TOUS les billets d'une commande payée.
+     * Local, sans réseau ni fichier. Échecs journalisés sans PII, jamais propagés.
+     */
+    public function issueQrCodes(Order $order): void
+    {
+        try {
+            $tickets = Ticket::whereIn('id', DB::table('order_tickets')->where('order_id', $order->id)->pluck('ticket_id'))->get();
+        } catch (\Throwable $e) {
+            Log::error('Lecture des billets pour QR impossible', ['order_id' => $order->id, 'exception' => get_class($e)]);
+
+            return;
+        }
+
+        foreach ($tickets as $ticket) {
+            try {
+                if ($ticket->qrDataUri() === null && $ticket->isIssued()) {
+                    Log::warning('QR non généré après confirmation (régénération à la demande)', [
+                        'order_id' => $order->id,
+                        'ticket_id' => $ticket->id,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Échec génération QR après confirmation', [
+                    'order_id' => $order->id,
+                    'ticket_id' => $ticket->id,
+                    'exception' => get_class($e),
+                ]);
+            }
+        }
     }
 
     /**

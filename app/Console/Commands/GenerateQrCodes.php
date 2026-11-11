@@ -18,7 +18,7 @@ class GenerateQrCodes extends Command
         $query = Ticket::where('status', 'sold');
         
         if (!$this->option('force')) {
-            $query->whereNull('qr_code_path');
+            $query->whereNull('qr_code');
         }
         
         $tickets = $query->get();

@@ -111,7 +111,13 @@ public function index(Request $request)
             'commission'
         ]);
 
-        return view('acheteur.order-detail', compact('order'));
+        return view('acheteur.order-detail', [
+            'order' => $order,
+            'awaitingPayment' => $order->isAwaitingPayment(),
+            'paymentInfo' => \App\Services\CheckoutService::manualPaymentInfo($order->payment_method),
+            'paymentDeadline' => $order->paymentDeadline(),
+            'demoSimulatedPayment' => $order->isPaid() && $order->payment_reference === \App\Services\CheckoutService::DEMO_REFERENCE,
+        ]);
     }
 
     public function download(Order $order)

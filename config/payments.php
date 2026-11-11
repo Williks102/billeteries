@@ -79,6 +79,10 @@ return [
     // Les réglages promoteur / catégorie (table commission_settings) restent prioritaires.
     'default_commission_rate' => (float) env('DEFAULT_COMMISSION_RATE', 6),
 
+    // MODE DÉMO : confirme automatiquement chaque commande à la fin du checkout (référence DEMO-AUTO).
+    // DÉSACTIVÉ PAR DÉFAUT. Démo uniquement : les billets deviennent gratuits. Ne JAMAIS l'activer en production.
+    'demo_auto_confirm' => (bool) env('DEMO_AUTO_CONFIRM_PAYMENTS', false),
+
     'currency' => [
         'code' => 'XOF',
         'symbol' => 'FCFA',

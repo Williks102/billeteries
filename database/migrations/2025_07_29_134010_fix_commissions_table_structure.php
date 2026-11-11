@@ -11,9 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('commissions', function (Blueprint $table) {
-            // Vérifier si la colonne promoteur_id existe, sinon la créer
-            if (!Schema::hasColumn('commissions', 'promoteur_id')) {
+        // Idempotence (correctif B1) : la migration 2025_07_28_122001 a déjà renommé promoteur_id en
+        // promoter_id (la clé étrangère garde son ancien nom commissions_promoteur_id_foreign). Recréer
+        // promoteur_id avec une clé étrangère du même nom échouerait (MySQL/TiDB : erreur 1826).
+        // On ne recrée donc l'ancienne colonne que si AUCUNE des deux colonnes n'existe.
+        $needsLegacyPromoterColumn = !Schema::hasColumn('commissions', 'promoteur_id')
+            && !Schema::hasColumn('commissions', 'promoter_id');
+
+        Schema::table('commissions', function (Blueprint $table) use ($needsLegacyPromoterColumn) {
+            if ($needsLegacyPromoterColumn) {
                 $table->unsignedBigInteger('promoteur_id')->after('order_id');
                 $table->foreign('promoteur_id')->references('id')->on('users')->onDelete('cascade');
             }
@@ -28,7 +34,10 @@ return new class extends Migration
                 $table->index('status');
             }
             
-            if (!Schema::hasIndex('commissions', 'commissions_promoteur_id_status_index')) {
+            // Index composite sur l'ancienne colonne : seulement si elle existe (ou vient d'être recréée).
+            // Avec promoter_id, l'index équivalent est créé par 2025_08_02_195133.
+            if (($needsLegacyPromoterColumn || Schema::hasColumn('commissions', 'promoteur_id'))
+                && !Schema::hasIndex('commissions', 'commissions_promoteur_id_status_index')) {
                 $table->index(['promoteur_id', 'status']);
             }
             

@@ -2,17 +2,36 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up()
 {
-    DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('available', 'sold', 'used', 'cancelled', 'reserved') DEFAULT 'available'");
+        if (! in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+            // Autres moteurs (SQLite des tests) : ALTER ... MODIFY n'existe pas ; Laravel gère l'ENUM via ->change().
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->enum('status', ['available', 'sold', 'used', 'cancelled', 'reserved'])->default('available')->change();
+            });
+
+            return;
+        }
+
+        DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('available', 'sold', 'used', 'cancelled', 'reserved') DEFAULT 'available'");
 }
 
 public function down()
 {
-    DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('available', 'sold', 'used', 'cancelled') DEFAULT 'available'");
+        if (! in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+            // Autres moteurs (SQLite des tests) : ALTER ... MODIFY n'existe pas ; Laravel gère l'ENUM via ->change().
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->enum('status', ['available', 'sold', 'used', 'cancelled'])->default('available')->change();
+            });
+
+            return;
+        }
+
+        DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('available', 'sold', 'used', 'cancelled') DEFAULT 'available'");
 }
 };

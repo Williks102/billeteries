@@ -27,13 +27,17 @@ return new class extends Migration
         // Les tables events et commission_settings sont déjà propres avec seulement promoter_id
         
         // S'assurer que les contraintes de clés étrangères sont en place pour promoter_id
-        Schema::table('commissions', function (Blueprint $table) {
-            try {
+        // Les try/catch ci-dessus sont sans effet (les commandes du Blueprint s'exécutent après la closure) :
+        // on teste donc explicitement. Après le renommage 2025_07_28_122001, la clé étrangère d'origine
+        // (commissions_promoteur_id_foreign) couvre déjà promoter_id : ne pas en ajouter une seconde.
+        $hasPromoterForeignKey = collect(Schema::getForeignKeys('commissions'))
+            ->contains(fn ($fk) => $fk['columns'] === ['promoter_id']);
+
+        if (Schema::hasColumn('commissions', 'promoter_id') && !$hasPromoterForeignKey) {
+            Schema::table('commissions', function (Blueprint $table) {
                 $table->foreign('promoter_id')->references('id')->on('users')->onDelete('cascade');
-            } catch (\Exception $e) {
-                // Ignorer si la contrainte existe déjà
-            }
-        });
+            });
+        }
     }
 
     public function down(): void

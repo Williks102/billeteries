@@ -65,6 +65,15 @@ class TicketController extends Controller
 
         $ticket->load(['ticketType.event.category']);
 
-        return view('acheteur.ticket-detail', compact('ticket'));
+        // Le QR n'est fourni à la vue que si le billet est émis (paiement confirmé) : sinon null.
+        $order ??= $ticket->order;
+        $isIssued = $ticket->isIssued();
+
+        return view('acheteur.ticket-detail', [
+            'ticket' => $ticket,
+            'order' => $order,
+            'isIssued' => $isIssued,
+            'qrDataUri' => $isIssued ? $ticket->qrDataUri() : null,
+        ]);
     }
 }

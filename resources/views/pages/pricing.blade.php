@@ -284,6 +284,12 @@
 @endpush
 
 @section('content')
+@php
+    $defaultRate = (float) config('payments.default_commission_rate');
+    $defaultRateLabel = rtrim(rtrim(number_format($defaultRate, 2, ',', ''), '0'), ',');
+    $exampleCommission = (int) round(5000 * $defaultRate / 100);
+    $exampleNet = number_format(5000 - $exampleCommission, 0, ',', ' ');
+@endphp
 <!-- Hero Section -->
 <div class="hero-section">
     <div class="container">
@@ -297,14 +303,14 @@
 <div class="container">
     <!-- Commission principale -->
     <div class="commission-highlight">
-        <div class="commission-rate">10<small style="font-size: 0.6em;">%</small></div>
+        <div class="commission-rate">{{ $defaultRateLabel }}<small style="font-size: 0.6em;">%</small></div>
         <div class="commission-subtitle">Et puis c'est tout !</div>
         <p class="mb-0">Vendez les tickets de votre événement sur <strong>ClicBillet CI</strong></p>
     </div>
 
     <!-- Description des avantages -->
     <div class="text-center mb-5">
-        <p class="lead">Avec notre plateforme, la commission est de <strong>10 %</strong> du prix du ticket (taux par défaut), sans aucun frais fixe. Profitez d'une place de marché 24/7 et de milliers de participants potentiels. Vous ne trouverez pas meilleur service pour vendre vos tickets en Côte d'Ivoire.</p>
+        <p class="lead">Avec notre plateforme, la commission est de <strong>{{ $defaultRateLabel }} %</strong> du prix du ticket (taux par défaut), sans aucun frais fixe. Profitez d'une place de marché 24/7 et de milliers de participants potentiels. Vous ne trouverez pas meilleur service pour vendre vos tickets en Côte d'Ivoire.</p>
     </div>
 
     <!-- Calculateur -->
@@ -323,7 +329,7 @@
                     <label class="form-label text-center d-block mb-3">
                         <strong>Prix d'un ticket</strong>
                     </label>
-                    <input type="number" id="ticketPrice" class="form-control" 
+                    <input type="number" id="ticketPrice" data-commission-rate="{{ $defaultRate }}" class="form-control" 
                            placeholder="Entrez un montant *" min="0" step="500" value="5000">
                     <small class="text-muted d-block text-center mt-2">En FCFA</small>
                 </div>
@@ -335,7 +341,7 @@
                         <small class="text-muted">Le prix affiché est le prix payé : aucun frais supplémentaire pour l'acheteur</small>
                     </div>
                     <div class="result-box result-earnings">
-                        <div class="result-amount" id="organizerEarnings">4 500 F</div>
+                        <div class="result-amount" id="organizerEarnings">{{ $exampleNet }} F</div>
                         <div>Vous recevrez</div>
                         <small class="text-muted">Vos revenus nets</small>
                     </div>
@@ -344,7 +350,7 @@
                 <div class="text-center mt-3">
                     <small class="text-muted">
                         <i class="fas fa-info-circle me-1"></i>
-                        Commission ClicBillet : 10 % du prix du ticket (taux par défaut), sans frais fixe
+                        Commission ClicBillet : {{ $defaultRateLabel }} % du prix du ticket (taux par défaut), sans frais fixe
                     </small>
                 </div>
             </div>
@@ -498,7 +504,7 @@
                     </h3>
                     <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#pricingFAQ">
                         <div class="accordion-body">
-                            <p><strong>Non, transparence totale !</strong> Seule la commission (10 % du prix du ticket par défaut) est déduite de vos ventes ; l'acheteur paie uniquement le prix du billet. Aucun frais caché, aucune surprise.</p>
+                            <p><strong>Non, transparence totale !</strong> Seule la commission ({{ $defaultRateLabel }} % du prix du ticket par défaut) est déduite de vos ventes ; l'acheteur paie uniquement le prix du billet. Aucun frais caché, aucune surprise.</p>
                         </div>
                     </div>
                 </div>

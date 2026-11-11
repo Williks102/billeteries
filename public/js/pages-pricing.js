@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const organizerEarningsEl = document.getElementById('organizerEarnings');
     
     // Configuration ClicBillet CI
-    const COMMISSION_RATE = 10; // 10 % (taux par défaut de la plateforme)
+    // Taux injecté par la vue (data-commission-rate <- config('payments.default_commission_rate'))
+    const COMMISSION_RATE = parseFloat(priceInput.dataset.commissionRate);
     
     function updateCalculations() {
         const ticketPrice = parseInt(priceInput.value) || 0;

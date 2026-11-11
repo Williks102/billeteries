@@ -2,8 +2,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const priceInput = document.getElementById('ticket-price');
     const quantityInput = document.getElementById('ticket-quantity');
     
-    // Configuration de base (à adapter selon vos paramètres)
-    const COMMISSION_RATE = 10; // 10%
+    // Taux injecté par la vue (data-commission-rate <- config('payments.default_commission_rate'))
+    const COMMISSION_RATE = parseFloat(priceInput.dataset.commissionRate);
     // Aucun frais fixe : la plateforme ne prélève que la commission sur le prix des billets
     
     function updateCalculations() {

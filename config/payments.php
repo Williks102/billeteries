@@ -74,6 +74,11 @@ return [
         ],
     ],
 
+    // Taux de commission PAR DÉFAUT de la plateforme (% du prix des billets), source de vérité unique :
+    // lue par Order::calculateCommission, CommissionCalculator, la page de tarifs et les calculateurs JS.
+    // Les réglages promoteur / catégorie (table commission_settings) restent prioritaires.
+    'default_commission_rate' => (float) env('DEFAULT_COMMISSION_RATE', 6),
+
     'currency' => [
         'code' => 'XOF',
         'symbol' => 'FCFA',

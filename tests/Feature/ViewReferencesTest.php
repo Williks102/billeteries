@@ -25,7 +25,6 @@ class ViewReferencesTest extends TestCase
         'events.recommendations',
         'events.search',
         'events.trending',
-        'promoteur.events.tickets.edit',
         'promoteur.reports.index',
         'promoteur.scanner.recent',
         'promoteur.scanner.search',

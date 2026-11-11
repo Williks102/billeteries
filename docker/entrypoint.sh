@@ -19,6 +19,20 @@ for var in APP_KEY APP_URL DB_HOST DB_DATABASE DB_USERNAME DB_PASSWORD; do
     fi
 done
 
+# 1b. APP_KEY tolérante (I2) : une clé base64 de 32 octets sans préfixe « base64: » (par exemple celle générée par
+#     Render) reçoit le préfixe ; une clé de 32 caractères bruts est acceptée. Sinon on s'arrête avec un message clair.
+#     La clé n'est JAMAIS affichée : la commande l'écrit sur la sortie standard, capturée ici sans être journalisée.
+if ! NORMALIZED_APP_KEY="$(art app:normalize-key --print)"; then
+    die "APP_KEY invalide (voir le message ci-dessus, la valeur n'est pas affichée ; voir docs/deploiement-render.md)."
+fi
+case "$NORMALIZED_APP_KEY" in
+    base64:*) ;;
+    ????????????????????????????????) ;;
+    *) die "APP_KEY : la normalisation a renvoyé une valeur inattendue (la valeur n'est pas affichée)." ;;
+esac
+export APP_KEY="$NORMALIZED_APP_KEY"
+unset NORMALIZED_APP_KEY
+
 # 2. Port : Render injecte PORT (10000 par défaut). Apache le lit via ${PORT} dans sa configuration.
 export PORT="${PORT:-10000}"
 log "Apache écoutera sur le port $PORT."

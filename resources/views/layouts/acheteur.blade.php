@@ -751,6 +751,7 @@
     @stack('styles')
 </head>
 <body>
+    @include('partials.demo-banner')
     <div class="acheteur-wrapper">
         <!-- Mobile Overlay -->
         <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>

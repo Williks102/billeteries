@@ -559,6 +559,7 @@
     @stack('styles')
 </head>
 <body>
+    @include('partials.demo-banner')
     <div class="admin-wrapper">
         <!-- Sidebar -->
         <nav class="admin-sidebar" id="adminSidebar">

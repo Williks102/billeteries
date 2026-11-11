@@ -133,10 +133,10 @@ class RenderDeploymentTest extends TestCase
     {
         $dockerfile = $this->read('Dockerfile');
 
-        $this->assertStringContainsString('composer install --no-dev --optimize-autoloader --no-interaction', $dockerfile);
+        $this->assertStringContainsString('composer install --no-dev', $dockerfile);
         $this->assertStringContainsString('composer dump-autoload --no-dev', $dockerfile);
         $this->assertStringContainsString('php:8.3', $dockerfile);
-        $this->assertStringContainsString('--with-freetype --with-jpeg --with-webp', $dockerfile);
+        $this->assertStringContainsString('install-php-extensions gd', $dockerfile);
         foreach (['pdo_mysql', 'bcmath', 'zip', 'intl', 'exif', 'gd'] as $extension) {
             $this->assertStringContainsString($extension, $dockerfile);
         }
@@ -223,6 +223,75 @@ class RenderDeploymentTest extends TestCase
             config('database.connections.mysql.options'),
             [\PDO::MYSQL_ATTR_SSL_CA => 1, \PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => 1]
         ));
+    }
+
+    /** Mineur (relecteur) : la mutation DB_SSL_VERIFY true -> false restait verte ; on recharge réellement la config. */
+    public function test_database_config_maps_ssl_environment_to_pdo_options(): void
+    {
+        $this->assertTrue(extension_loaded('pdo_mysql'), 'pdo_mysql requis pour ce test');
+
+        $cases = [
+            ['true', true],
+            ['1', true],
+            ['false', false],
+            ['0', false],
+        ];
+
+        foreach ($cases as [$raw, $expected]) {
+            foreach (['DB_SSL_CA' => '/etc/ssl/certs/ca-certificates.crt', 'DB_SSL_VERIFY' => $raw] as $key => $value) {
+                $_ENV[$key] = $_SERVER[$key] = $value;
+            }
+
+            try {
+                $config = require base_path('config/database.php');
+                $options = $config['connections']['mysql']['options'];
+
+                $this->assertSame('/etc/ssl/certs/ca-certificates.crt', $options[\PDO::MYSQL_ATTR_SSL_CA]);
+                $this->assertSame($expected, $options[\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT], "DB_SSL_VERIFY=$raw");
+            } finally {
+                unset($_ENV['DB_SSL_CA'], $_ENV['DB_SSL_VERIFY'], $_SERVER['DB_SSL_CA'], $_SERVER['DB_SSL_VERIFY']);
+            }
+        }
+    }
+
+    public function test_dockerfile_is_multistage_pinned_and_without_obsolete_packages(): void
+    {
+        $dockerfile = $this->read('Dockerfile');
+
+        // I-trixie : libfreetype6-dev n'existe plus sur Debian 13 ; on n'utilise plus ce nom (ni la base « flottante »).
+        $this->assertStringNotContainsString('libfreetype6-dev', $dockerfile);
+        $this->assertDoesNotMatchRegularExpression('/^FROM php:8\.3-apache\s*$/m', $dockerfile, 'Base non épinglée');
+        $this->assertMatchesRegularExpression('/^FROM php:8\.3-apache-bookworm$/m', $dockerfile);
+
+        // F1 : multi-stage ; composer, git et unzip ne sont pas dans l'étape finale.
+        $this->assertGreaterThanOrEqual(2, preg_match_all('/^FROM /m', $dockerfile));
+        $final = substr($dockerfile, strrpos($dockerfile, "\nFROM ") + 1);
+        $this->assertStringNotContainsString('composer', preg_replace('/^\s*#.*$/m', '', $final), 'composer ne doit pas être dans l\'image finale');
+        $this->assertDoesNotMatchRegularExpression('/\b(git|unzip)\b/', preg_replace('/^\s*#.*$/m', '', $final));
+        $this->assertStringContainsString('--no-dev', $dockerfile);
+    }
+
+    public function test_entrypoint_normalizes_app_key_without_printing_it(): void
+    {
+        $script = $this->read('docker/entrypoint.sh');
+
+        $this->assertStringContainsString('app:normalize-key --print', $script);
+        $this->assertStringContainsString('export APP_KEY=', $script);
+        // la valeur n'est jamais passée à echo/log
+        $this->assertDoesNotMatchRegularExpression('/(echo|log)[^\n]*\$\{?(NORMALIZED_APP_KEY|APP_KEY)/', $script);
+    }
+
+    public function test_apache_config_hardens_uploads_and_static_headers(): void
+    {
+        $conf = $this->read('docker/apache-render.conf');
+
+        $this->assertStringContainsString('/var/www/html/public/storage', $conf);
+        $this->assertStringContainsString('php_admin_flag engine off', $conf);
+        $this->assertStringContainsString('X-Content-Type-Options', $conf);
+        $this->assertStringContainsString('Strict-Transport-Security', $conf);
+        $this->assertMatchesRegularExpression('/disable_functions "[^"]*shell_exec/', $conf);
+        // proc_open reste utilisable par le CLI (schedule:work) : seule la config Apache l'interdit
+        $this->assertDoesNotMatchRegularExpression('/disable_functions/', $this->read('docker/php.ini'));
     }
 
     public function test_no_provider_references_dev_only_packages_unconditionally(): void

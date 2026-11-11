@@ -30,10 +30,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('- Types de billets : ' . \App\Models\TicketType::count());
         $this->command->info('- Billets générés : ' . \App\Models\Ticket::count());
         $this->command->info('');
-        $this->command->info('👤 Comptes de test :');
-        $this->command->info('Admin : admin@billetterie-ci.com / admin123');
-        $this->command->info('Promoteur : promoteur@test.com / password');
-        $this->command->info('Acheteur : acheteur@test.com / password');
+        $this->command->info('Comptes de démo créés hors production (mots de passe : SEED_*_PASSWORD ou aléatoires).');
         $this->command->info('');
         $this->command->info('🎫 Événements créés :');
         $this->command->info('- Magic System Live au Palais de la Culture');

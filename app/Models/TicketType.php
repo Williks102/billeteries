@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class TicketType extends Model
 {
@@ -137,17 +138,46 @@ class TicketType extends Model
     /**
      * Méthodes de gestion du stock
      */
-    public function reserveTickets($quantity)
+    /**
+     * Réservation atomique : verrou de ligne + revérification de disponibilité sous verrou.
+     * Seul point d'incrément de quantity_sold (ne pas ré-incrémenter côté appelant).
+     */
+    public function reserveTickets($quantity): bool
     {
-        if ($this->canPurchaseQuantity($quantity)) {
-            $this->increment('quantity_sold', $quantity);
-            return true;
+        $quantity = (int) $quantity;
+        if ($quantity <= 0) {
+            return false;
         }
-        return false;
+
+        return DB::transaction(function () use ($quantity) {
+            $fresh = static::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (!$fresh || !$fresh->canPurchaseQuantity($quantity)) {
+                return false;
+            }
+
+            $fresh->increment('quantity_sold', $quantity);
+            $this->quantity_sold = $fresh->quantity_sold;
+            $this->syncOriginalAttribute('quantity_sold');
+
+            return true;
+        });
     }
 
-    public function releaseTickets($quantity)
+    /**
+     * Libération de stock (ne descend jamais sous 0). À appeler sous transaction.
+     */
+    public function releaseTickets($quantity): void
     {
-        $this->decrement('quantity_sold', $quantity);
+        $quantity = (int) $quantity;
+        if ($quantity <= 0) {
+            return;
+        }
+
+        static::whereKey($this->getKey())
+            ->where('quantity_sold', '>=', $quantity)
+            ->decrement('quantity_sold', $quantity);
+
+        $this->refresh();
     }
 }

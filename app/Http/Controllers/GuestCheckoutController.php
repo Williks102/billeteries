@@ -9,6 +9,7 @@ use App\Models\TicketType;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Commission;
+use App\Services\CheckoutService;
 use App\Services\PaiementProService;
 use App\Services\EmailService;
 use Illuminate\Support\Facades\Hash;
@@ -74,15 +75,17 @@ class GuestCheckoutController extends Controller
                 return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
             }
 
-            DB::beginTransaction();
+            // Utilisateur + commandes + stock + billets dans UNE transaction (prix recalculés côté serveur)
+            [$user, $orders] = DB::transaction(function () use ($request, $cart) {
+                $user = $this->handleUser($request);
 
-            // 1. Gérer l'utilisateur
-            $user = $this->handleUser($request);
-            
-            // 2. Créer les commandes (VOTRE LOGIQUE ADAPTÉE)
-            $orders = $this->createOrdersFromCart($cart, $user, $request);
-            
-            DB::commit();
+                return [$user, $this->createOrdersFromCart($cart, $user, $request)];
+            });
+
+            // Preuve de possession liée à la session (retour/annulation/création de compte)
+            foreach ($orders as $o) {
+                app(CheckoutService::class)->rememberGuestOrder($o);
+            }
 
             // 3. Traitement selon le moyen de paiement
             if ($request->payment_method === 'paiementpro') {
@@ -94,13 +97,8 @@ class GuestCheckoutController extends Controller
             }
 
         } catch (\Exception $e) {
-            if (DB::transactionLevel() > 0) {
-                DB::rollBack();
-            }
-            
             Log::error('Erreur checkout invité avec PaiementPro', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             
             return back()->with('error', 'Erreur: ' . $e->getMessage())->withInput();
@@ -112,44 +110,12 @@ class GuestCheckoutController extends Controller
      */
     private function processPaiementPro(Order $order, $channel, $isGuest = true)
     {
-        try {
-            $paiementProService = app(\App\Services\PaiementProService::class);
-            
-            // Marquer en traitement
-            $order->update(['payment_status' => 'processing']);
+        // Libère le stock et lève une exception si l'init échoue
+        $redirectUrl = app(CheckoutService::class)->initPaiementPro($order, $channel);
 
-            // Initialiser PaiementPro
-            $result = $paiementProService->initTransaction($order, [
-                'channel' => $channel
-            ]);
+        session()->forget(['cart', 'cart_timer']);
 
-            if ($result['success']) {
-                // Nettoyer la session après succès
-                session()->forget(['cart', 'cart_timer']);
-
-                Log::info('Redirection PaiementPro invité réussie', [
-                    'order_id' => $order->id,
-                    'session_id' => $result['sessionId'],
-                    'is_guest' => $isGuest
-                ]);
-
-                // Redirection vers PaiementPro
-                return redirect($result['redirectUrl']);
-            } else {
-                // Remettre en pending
-                $order->update(['payment_status' => 'pending']);
-                throw new \Exception('Erreur PaiementPro : ' . $result['error']);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Erreur redirection PaiementPro invité', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage()
-            ]);
-
-            $order->update(['payment_status' => 'pending']);
-            throw $e;
-        }
+        return redirect($redirectUrl);
     }
 
     /**
@@ -201,141 +167,19 @@ class GuestCheckoutController extends Controller
      */
     private function createOrdersFromCart($cart, $user, $request)
     {
-        Log::info('Début création commandes invité');
-        
+        $service = app(CheckoutService::class);
         $orders = [];
-        $eventGroups = [];
 
-        // Grouper par événement
-        foreach ($cart as $item) {
-            $eventGroups[$item['event_id']][] = $item;
-        }
-
-        foreach ($eventGroups as $eventId => $items) {
-            $eventTotal = array_sum(array_column($items, 'total_price'));
-            
-            $order = Order::create([
-                'user_id' => $user->id,
-                'event_id' => $eventId,
-                'total_amount' => $eventTotal + 500, // + frais de service
-                'payment_status' => 'pending', // ⚠️ CHANGEMENT: pending pour PaiementPro
+        foreach ($service->buildEventGroups($cart) as $eventId => $group) {
+            $orders[] = $service->createOrder($user->id, $eventId, $group, [
                 'payment_method' => $request->payment_method,
-                'order_number' => Order::generateOrderNumber(),
                 'billing_email' => $request->email,
                 'billing_phone' => $request->phone,
-                'guest_token' => $user->is_guest ? Str::random(32) : null
-            ]);
-
-            // ✅ UTILISER VOTRE MÉTHODE EXISTANTE (adaptée)
-            foreach ($items as $item) {
-                $this->createOrderItemWithTickets($order, $item);
-            }
-
-            // Créer commission
-            $this->createCommissionForOrder($order);
-            
-            $orders[] = $order;
-
-            Log::info('Commande invité créée', [
-                'order_id' => $order->id,
-                'order_number' => $order->order_number,
-                'total_amount' => $order->total_amount
+                'guest_token' => $user->is_guest ? Str::random(32) : null,
             ]);
         }
 
         return $orders;
-    }
-
-    /**
-     * ✅ VOTRE LOGIQUE EXACTE adaptée pour les invités
-     */
-    private function createOrderItemWithTickets($order, $item)
-    {
-        $ticketType = TicketType::findOrFail($item['ticket_type_id']);
-        
-        // Vérification finale de disponibilité
-        if (!$ticketType->canPurchaseQuantity($item['quantity'])) {
-            throw new \Exception("Le billet '{$item['ticket_name']}' n'est plus disponible.");
-        }
-
-        // Réserver le stock
-        if (!$ticketType->reserveTickets($item['quantity'])) {
-            throw new \Exception("Impossible de réserver {$item['quantity']} billets.");
-        }
-
-        // Créer l'item de commande
-        $orderItem = OrderItem::create([
-            'order_id' => $order->id,
-            'ticket_type_id' => $ticketType->id,
-            'quantity' => $item['quantity'],
-            'unit_price' => $item['unit_price'],
-            'total_price' => $item['total_price']
-        ]);
-
-        // ✅ GÉNÉRER LES BILLETS (VOTRE LOGIQUE EXACTE)
-        $tickets = [];
-        for ($i = 0; $i < $item['quantity']; $i++) {
-            $ticket = Ticket::create([
-                'ticket_type_id' => $ticketType->id,
-                'ticket_code' => Ticket::generateTicketCode(),
-                'status' => 'reserved', // ⚠️ CHANGEMENT: reserved jusqu'au paiement
-                //'holder_name' => $order->user->name,
-                'holder_email' => $order->billing_email,
-            ]);
-
-            // Générer QR Code si la méthode existe
-            if (method_exists($ticket, 'generateQRCode')) {
-                $ticket->generateQRCode();
-            }
-
-            $tickets[] = $ticket;
-
-            // ✅ VOTRE LOGIQUE PIVOT (inchangée)
-            DB::table('order_tickets')->insert([
-                'order_id' => $order->id,
-                'ticket_id' => $ticket->id,
-                'order_item_id' => $orderItem->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        // Mettre à jour le stock vendu
-        $ticketType->increment('quantity_sold', $item['quantity']);
-
-        Log::info('Billets invité créés', [
-            'order_id' => $order->id,
-            'quantity' => $item['quantity'],
-            'tickets_created' => count($tickets)
-        ]);
-
-        return $orderItem;
-    }
-
-    /**
-     * ✅ VOTRE LOGIQUE DE COMMISSION (inchangée)
-     */
-    private function createCommissionForOrder($order)
-    {
-        // Utiliser le système de calcul de commission existant
-        $commissionData = $order->calculateCommission();
-        
-        Commission::create([
-            'order_id' => $order->id,
-            'promoter_id' => $order->event->promoter_id,
-            'gross_amount' => $commissionData['gross_amount'],
-            'commission_rate' => $commissionData['commission_rate'],
-            'commission_amount' => $commissionData['commission_amount'],
-            'net_amount' => $commissionData['net_amount'],
-            'platform_fee' => $commissionData['platform_fee'] ?? 0,
-            'payment_processor_fee' => $commissionData['payment_processor_fee'] ?? 0,
-            'status' => 'pending'
-        ]);
-
-        Log::info('Commission invité créée', [
-            'order_id' => $order->id,
-            'commission_amount' => $commissionData['commission_amount']
-        ]);
     }
 
     /**
@@ -473,6 +317,12 @@ class GuestCheckoutController extends Controller
         ]);
 
         $order = Order::where('guest_token', $token)->firstOrFail();
+
+        // Le token seul (URL) ne suffit pas : la session doit avoir créé cette commande
+        if (!app(CheckoutService::class)->ownsGuestOrder($order, (string) $token)) {
+            abort(403);
+        }
+
         $user = $order->user;
 
         if (!$user->is_guest) {

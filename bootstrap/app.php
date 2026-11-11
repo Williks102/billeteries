@@ -24,9 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SetExecutionTime::class);
         $middleware->append(\App\Http\Middleware\SetLayoutMiddleware::class);
         
-        // 🔥 Ajouter le middleware CSRF au groupe web (DOIT être DANS la fonction)
-        $middleware->web(append: [
-            \App\Http\Middleware\VerifyCsrfToken::class,
+        // Webhook PaiementPro : appelé serveur-à-serveur, sans jeton CSRF.
+        // Protégé par signature (hashcode) dans PaiementProService. Ne PAS exclure return/cancel.
+        $middleware->validateCsrfTokens(except: [
+            'payments/paiementpro/notification',
         ]);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         

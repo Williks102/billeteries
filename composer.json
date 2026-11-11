@@ -44,8 +44,10 @@
     },
     "scripts": {
         "test:routes": "@php vendor/bin/phpunit tests/Feature/RoutingConventionsTest.php",
+        "test:payments": "@php vendor/bin/phpunit tests/Feature/PaiementProWebhookSecurityTest.php tests/Feature/StockAndWebhookFlowTest.php",
         "check": [
-            "@test:routes"
+            "@test:routes",
+            "@test:payments"
         ],
         "setup-hooks": "git config core.hooksPath .githooks",
         "post-autoload-dump": [

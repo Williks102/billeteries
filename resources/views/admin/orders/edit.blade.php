@@ -82,7 +82,9 @@
                             @error('admin_notes') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <div class="action-bar mt-0">
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -101,10 +103,12 @@
                                        value="{{ old('payment_reference') }}">
                                 @error('payment_reference') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
-                            <button type="submit" class="btn btn-success"
-                                    onclick="return confirm('Confirmer la réception du paiement de {{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }} ?')">
-                                <i class="fas fa-check-circle" aria-hidden="true"></i> Confirmer le paiement
-                            </button>
+                            <div class="action-bar mt-0">
+                                <button type="submit" class="btn btn-success"
+                                        onclick="return confirm('Confirmer la réception du paiement de {{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }} ?')">
+                                    <i class="fas fa-check-circle" aria-hidden="true"></i> Confirmer le paiement
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>

@@ -84,13 +84,13 @@
         </button>
     @endif
 
-    <div class="tt-actions">
-        <a href="{{ $isCreate ? route('promoteur.events.show', $event) : route('promoteur.events.tickets.index', $event) }}"
-           class="btn btn-outline-secondary">{{ $isCreate ? 'Terminer plus tard' : 'Annuler' }}</a>
+    <div class="action-bar action-bar--sticky">
         <button type="submit" class="btn btn-orange">
             {{ $isCreate ? 'Créer les billets' : 'Enregistrer' }}
-            <i class="fas fa-check ms-2" aria-hidden="true"></i>
+            <i class="fas fa-check" aria-hidden="true"></i>
         </button>
+        <a href="{{ $isCreate ? route('promoteur.events.show', $event) : route('promoteur.events.tickets.index', $event) }}"
+           class="btn btn-outline-secondary action-bar__cancel">{{ $isCreate ? 'Terminer plus tard' : 'Annuler' }}</a>
     </div>
 </form>
 
@@ -110,16 +110,11 @@
     .tt-block-title { float: none; width: auto; font-size: 1.1rem; font-weight: 600; margin: 0 0 .75rem; padding-right: 56px; }
     .tt-remove { position: absolute; top: .5rem; right: .5rem; min-width: 44px; }
     .tt-revenue { display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; background: #f1f3f5; border-radius: 8px; padding: .75rem 1rem; margin-top: 1rem; }
-    .tt-actions { display: flex; gap: .75rem; justify-content: flex-end; }
     .tt-presets { display: grid; grid-template-columns: 1fr; gap: .5rem; margin-top: .75rem; }
     .tt-preset { text-align: left; justify-content: space-between !important; width: 100%; }
     .tt-form :focus-visible, .tt-page summary:focus-visible { outline: 3px solid #1a73e8; outline-offset: 2px; }
     @media (min-width: 576px) { .tt-presets { grid-template-columns: repeat(2, 1fr); } .tt-block, .tt-card { padding: 1.5rem; } }
     @media (min-width: 992px) { .tt-presets { grid-template-columns: repeat(4, 1fr); } }
-    @media (max-width: 575.98px) {
-        .tt-actions { flex-direction: column-reverse; position: sticky; bottom: 0; z-index: 20; background: #fff; margin: 0 -10px; padding: .75rem 10px calc(.75rem + env(safe-area-inset-bottom)); box-shadow: 0 -2px 8px rgba(0,0,0,.12); }
-        .tt-actions .btn { width: 100%; }
-    }
 </style>
 @endpush
 

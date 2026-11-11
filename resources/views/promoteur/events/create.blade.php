@@ -311,7 +311,7 @@
         <div class="card-custom">
             <div class="card-body p-4">
                 <div class="row align-items-center">
-                    <div class="col-md-8">
+                    <div class="col-lg-5">
                         <div class="d-flex align-items-center text-muted">
                             <i class="fas fa-lightbulb me-2 text-warning"></i>
                             <div>
@@ -320,16 +320,15 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-4 text-end">
-                        <div class="d-flex justify-content-end gap-3">
-                            <a href="{{ route('promoteur.dashboard') }}" class="btn btn-secondary">
-                                <i class="fas fa-times me-2"></i>Annuler
-                            </a>
-                            
+                    <div class="col-lg-7">
+                        <div class="action-bar mt-3 mt-lg-0">
                             <button type="submit" class="btn btn-orange btn-lg">
                                 <i class="fas fa-arrow-right me-2"></i>
                                 Créer et configurer les billets
                             </button>
+                            <a href="{{ route('promoteur.dashboard') }}" class="btn btn-secondary action-bar__cancel">
+                                <i class="fas fa-times me-2"></i>Annuler
+                            </a>
                         </div>
                     </div>
                 </div>

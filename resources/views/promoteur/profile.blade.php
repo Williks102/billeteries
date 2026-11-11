@@ -194,12 +194,12 @@
                         </div>
                     </div>
                     
-                    <div class="text-end d-none" id="saveButtons">
-                        <button type="button" class="btn btn-secondary me-2" onclick="cancelEdit()">
-                            Annuler
-                        </button>
+                    <div class="action-bar d-none" id="saveButtons">
                         <button type="submit" class="btn btn-orange">
                             <i class="fas fa-save me-2"></i>Sauvegarder
+                        </button>
+                        <button type="button" class="btn btn-secondary action-bar__cancel" onclick="cancelEdit()">
+                            Annuler
                         </button>
                     </div>
                 </form>

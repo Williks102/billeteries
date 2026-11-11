@@ -212,6 +212,8 @@ class CheckoutFinalFixesTest extends TestCase
                 throw new \RuntimeException('echec https://x/verify-ticket/' . $ticket->ticket_code);
             }
         });
+        $ticket->update(['qr_code' => null]); // sinon qrDataUri() renverrait la valeur en base sans passer par le service qui échoue
+        $ticket->qrDataUri();
         $ticket->generateQrCode();
         $ticket->getReliableQrCode();
         $ticket->getQrCodeBase64();

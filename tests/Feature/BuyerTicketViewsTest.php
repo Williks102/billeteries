@@ -26,8 +26,6 @@ class BuyerTicketViewsTest extends TestCase
         parent::setUp();
         $this->buildOrderSchema();
         Mail::fake();
-        // Production : tickets.order_item_id existe (lien utilisé par l'autorisation du contrôleur).
-        \Illuminate\Support\Facades\Schema::table('tickets', fn ($t) => $t->unsignedBigInteger('order_item_id')->nullable());
         View::share('demoMode', false);
         config(['payments.manual_methods.bank_transfer' => [
             'label' => 'Virement bancaire', 'instructions' => 'Virez le montant sur le compte ci-dessous.',
@@ -75,6 +73,30 @@ class BuyerTicketViewsTest extends TestCase
             ->assertViewHas('qrDataUri', null);
         $this->assertStringNotContainsString('data:image', $res->getContent());
         $this->assertStringNotContainsString('RUZHSElKSw', $res->getContent());
+    }
+
+    public function test_ticket_from_a_real_checkout_is_visible_to_its_owner(): void
+    {
+        $type = $this->ticketType(10);
+        $service = app(\App\Services\CheckoutService::class);
+        $cart = ['k' => ['ticket_type_id' => $type->id, 'event_id' => 1, 'quantity' => 1,
+            'ticket_name' => 'Std', 'unit_price' => 1, 'total_price' => 1]];
+        $groups = $service->buildEventGroups($cart);
+        $order = DB::transaction(fn () => $service->createOrder(1, 1, $groups[1], ['payment_method' => 'cash']));
+        $ticket = Ticket::first();
+
+        $this->assertNotNull($ticket->order_item_id, 'le billet est lié à sa ligne de commande dès la réservation');
+        $this->actingAs(User::find(1))->get(route('acheteur.tickets.show', $ticket))->assertOk()
+            ->assertViewHas('qrDataUri', null);
+        $this->actingAs($this->makeUser(31, 'acheteur'))->get(route('acheteur.tickets.show', $ticket))->assertForbidden();
+    }
+
+    public function test_legacy_ticket_without_order_item_id_is_visible_via_pivot_to_owner_only(): void
+    {
+        [$order, $ticket] = $this->order(true);
+        $ticket->update(['order_item_id' => null]); // billet ancien : lien uniquement par order_tickets
+        $this->actingAs(User::find(1))->get(route('acheteur.tickets.show', $ticket))->assertOk();
+        $this->actingAs($this->makeUser(32, 'acheteur'))->get(route('acheteur.tickets.show', $ticket))->assertForbidden();
     }
 
     // ===== (b) accès =====

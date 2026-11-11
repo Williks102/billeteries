@@ -442,6 +442,7 @@ class CheckoutService
         for ($i = 0; $i < $item['quantity']; $i++) {
             $ticket = Ticket::create([
                 'ticket_type_id' => $ticketType->id,
+                'order_item_id' => $orderItem->id,
                 'ticket_code' => Ticket::generateTicketCode(),
                 'status' => 'reserved', // vendu seulement après paiement confirmé
             ]);

@@ -81,7 +81,12 @@ return [
 
     // MODE DÉMO : confirme automatiquement chaque commande à la fin du checkout (référence DEMO-AUTO).
     // DÉSACTIVÉ PAR DÉFAUT. Démo uniquement : les billets deviennent gratuits. Ne JAMAIS l'activer en production.
-    'demo_auto_confirm' => (bool) env('DEMO_AUTO_CONFIRM_PAYMENTS', false),
+    // Garde-fou : en APP_ENV=production, le mode démo n'est actif que si DEMO_MODE_ACKNOWLEDGED=true est
+    // aussi posé (double confirmation explicite) ; sinon il est forcé à false (voir AppServiceProvider).
+    'demo_auto_confirm' => (bool) env('DEMO_AUTO_CONFIRM_PAYMENTS', false)
+        && (env('APP_ENV') !== 'production' || (bool) env('DEMO_MODE_ACKNOWLEDGED', false)),
+    'demo_blocked_in_production' => (bool) env('DEMO_AUTO_CONFIRM_PAYMENTS', false)
+        && env('APP_ENV') === 'production' && !(bool) env('DEMO_MODE_ACKNOWLEDGED', false),
 
     'currency' => [
         'code' => 'XOF',

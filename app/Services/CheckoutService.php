@@ -34,6 +34,12 @@ class CheckoutService
         return "Maximum {$max} billet" . ($max > 1 ? 's' : '') . ' par commande. Réduisez la quantité demandée.';
     }
 
+    /** Le TOTAL de billets du panier dépasse le plafond par commande (I-a) : même règle que assertWithinOrderLimits. */
+    public static function totalLimitMessage(int $max): string
+    {
+        return "Maximum {$max} billet" . ($max > 1 ? 's' : '') . ' au total par commande. Réduisez la quantité demandée.';
+    }
+
     /**
      * Plafond effectif de billets par commande (I1) = min(max_per_order du type, quota de billets par acheteur).
      * Sans max_per_order (null/0) : le quota par acheteur. Affichage et validation s'appuient sur cette valeur.
@@ -376,8 +382,8 @@ class CheckoutService
      * Alerte email aux admins, au plus 1 fois par heure et par événement.
      * B1 : le créneau (Cache::add atomique) est pris DANS le callback `terminating`, donc APRÈS le rollback de la
      * transaction de commande et hors verrous. Pris dans la transaction, avec CACHE_STORE=database, le refus
-     * annulait le marqueur (même connexion PDO) et chaque refus envoyait un email. Un échec d'envoi libère le
-     * créneau (nouvel essai possible) et est journalisé sans PII. Aucune donnée personnelle dans le message.
+     * annulait le marqueur (même connexion PDO) et chaque refus envoyait un email. Un échec d'envoi pose un backoff de
+     * 5 min (nouvel essai ensuite) et est journalisé sans PII. Aucune donnée personnelle dans le message.
      */
     private function alertAdminsEventCapReached(int $eventId, int $pending, int $cap): void
     {
@@ -405,7 +411,8 @@ class CheckoutService
                         fn ($m) => $m->to($admins)->subject("Alerte : événement #{$eventId} saturé de réservations en attente")
                     );
                 } catch (\Throwable $e) {
-                    Cache::forget($key);
+                    // Backoff : panne SMTP => pas de nouvel envoi synchrone à chaque refus pendant 5 min (au lieu de libérer le créneau)
+                    Cache::put($key, 1, 300);
                     throw $e;
                 }
             } catch (\Throwable $e) {

@@ -635,6 +635,14 @@ function updateQuantity(ticketId, delta) {
     const currentQty = ticketQuantities[ticketId] || 0;
     const maxQty = Math.min(ticketMaxes[ticketId], ticketAvailable[ticketId]);
     let newQty = Math.max(0, Math.min(maxQty, currentQty + delta));
+
+    // I-a : plafond sur le TOTAL de billets (même règle que le serveur : panier et checkout)
+    const maxTotal = {{ \App\Services\CheckoutService::maxTicketsPerOrder() }};
+    const othersTotal = Object.entries(ticketQuantities).reduce((sum, [id, q]) => sum + (String(id) === String(ticketId) ? 0 : q), 0);
+    if (delta > 0 && othersTotal + newQty > maxTotal) {
+        showLimitFeedback(ticketId);
+        return;
+    }
     
     // Vérifier les limites
     if (newQty === maxQty && delta > 0 && currentQty === maxQty) {
@@ -698,7 +706,8 @@ function updateSummary() {
         addToCartBtn.disabled = true;
         addToCartBtn.innerHTML = '<i class="fas fa-shopping-cart me-2"></i>Ajouter au panier';
     } else {
-        summaryDetails.innerHTML = summaryItems.join(' • ');
+        // S-9 : le nom du billet est du texte saisi par l'organisateur : jamais d'innerHTML
+        summaryDetails.textContent = summaryItems.join(' • ');
         totalPriceElement.textContent = new Intl.NumberFormat('fr-FR').format(totalPrice) + ' FCFA';
         addToCartBtn.disabled = false;
         addToCartBtn.innerHTML = `<i class="fas fa-shopping-cart me-2"></i>Ajouter ${totalTickets} billet${totalTickets > 1 ? 's' : ''} au panier`;
@@ -770,7 +779,7 @@ function addToCart() {
         btn.style.background = '';
         
         // Afficher l'erreur
-        showErrorNotification(error.message || 'Erreur lors de l\'ajout au panier');
+        safeErrorNotification(error.message || 'Erreur lors de l\'ajout au panier');
     });
 }
 
@@ -817,10 +826,17 @@ function showSuccessNotification(message) {
     console.log('Succès:', message);
 }
 
-function showErrorNotification(message) {
-    // Implémentez votre système de notification ici
+function safeErrorNotification(message) {
     console.error('Erreur:', message);
-    alert('Erreur: ' + message);
+    // S-9 : window.notifications insère le message en HTML : on l'échappe avant (le message serveur
+    // peut contenir un nom de type de billet saisi par l'organisateur). Repli : alert() (texte brut).
+    if (window.notifications && typeof window.notifications.error === 'function') {
+        const div = document.createElement('div');
+        div.textContent = String(message ?? '');
+        window.notifications.error(div.innerHTML);
+    } else {
+        alert('Erreur: ' + message);
+    }
 }
 
 // Fermer avec Escape

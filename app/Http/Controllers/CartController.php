@@ -99,6 +99,15 @@ class CartController extends Controller
             $totalAdded += $requestedQuantity;
         }
 
+        // I-a : le TOTAL de billets du panier ne doit pas dépasser le plafond par commande (checkout : même règle)
+        $maxTotal = CheckoutService::maxTicketsPerOrder();
+        if ($this->cartQuantity($cart) > $maxTotal) {
+            return response()->json([
+                'success' => false,
+                'message' => CheckoutService::totalLimitMessage($maxTotal)
+            ], 400);
+        }
+
         // Sauvegarder le panier
         session()->put('cart', $cart);
 
@@ -133,6 +142,12 @@ class CartController extends Controller
         $already = (int) (session()->get('cart', ['ticket_' . $ticketType->id => ['quantity' => 0]])['ticket_' . $ticketType->id]['quantity'] ?? 0);
         if ($already + (int) $request->quantity > $perOrder) {
             return response()->json(['success' => false, 'message' => CheckoutService::perOrderLimitMessage($perOrder)], 400);
+        }
+
+        // I-a : total du panier (tous types et événements) = ce que le checkout acceptera
+        $maxTotal = CheckoutService::maxTicketsPerOrder();
+        if ($this->cartQuantity(session()->get('cart', [])) + (int) $request->quantity > $maxTotal) {
+            return response()->json(['success' => false, 'message' => CheckoutService::totalLimitMessage($maxTotal)], 400);
         }
 
         // Vérifier la disponibilité
@@ -245,6 +260,16 @@ class CartController extends Controller
             ], 400);
         }
 
+        // I-a : le total du panier après modification ne doit pas dépasser le plafond par commande
+        $maxTotal = CheckoutService::maxTicketsPerOrder();
+        $others = $this->cartQuantity($cart) - (int) $cart[$request->cart_key]['quantity'];
+        if ($others + (int) $request->quantity > $maxTotal) {
+            return response()->json([
+                'success' => false,
+                'message' => CheckoutService::totalLimitMessage($maxTotal)
+            ], 400);
+        }
+
         // Mettre à jour
         $cart[$request->cart_key]['quantity'] = $request->quantity;
         $cart[$request->cart_key]['total_price'] = $cart[$request->cart_key]['unit_price'] * $request->quantity;
@@ -301,6 +326,11 @@ class CartController extends Controller
             'cart_count' => 0,
             'cart_total' => 0
         ]);
+    }
+
+    private function cartQuantity(array $cart): int
+    {
+        return (int) array_sum(array_map(fn ($l) => (int) ($l['quantity'] ?? 0), $cart));
     }
 
     /**

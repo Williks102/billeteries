@@ -61,6 +61,10 @@
             </div>
             @endforeach
             
+            <p class="text-muted small mb-2" data-max-total="{{ \App\Services\CheckoutService::maxTicketsPerOrder() }}">
+                <i class="fas fa-info-circle me-1"></i>Maximum {{ \App\Services\CheckoutService::maxTicketsPerOrder() }} billets au total par commande
+            </p>
+
             <!-- Résumé -->
             <div id="bookingSummaryDesktop" class="booking-summary">
                 <div id="summaryContentDesktop"></div>

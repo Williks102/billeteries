@@ -245,10 +245,12 @@ class BookingSystem {
         const maxPerOrder = parseInt(display.data('max')) || 10;
         const available = parseInt(display.data('available')) || 0;
         const maxAllowed = Math.min(maxPerOrder, available);
+        // I-a : plafond sur le TOTAL de billets (même règle que le serveur : panier et checkout)
+        const maxTotal = {{ \App\Services\CheckoutService::maxTicketsPerOrder() }};
         
         console.log(`Quantité actuelle: ${currentQty}, Max: ${maxAllowed}`);
         
-        if (currentQty < maxAllowed) {
+        if (currentQty < maxAllowed && this.getTotalTickets() < maxTotal) {
             const newQty = currentQty + 1;
             this.setQuantity(ticketTypeId, newQty);
         } else {
@@ -522,16 +524,17 @@ class BookingSystem {
         // Supprimer les anciennes alertes
         $('.cart-alert').remove();
         
-        const alertHtml = `
-            <div class="alert ${alertClass} alert-dismissible fade show position-fixed cart-alert" 
-                 style="top: 20px; right: 20px; z-index: 9999; min-width: 320px; max-width: 400px;">
-                <i class="${icon} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-        
-        $('body').append(alertHtml);
+        // S-9 : le message (qui peut contenir un nom de type de billet saisi par l'organisateur) est inséré
+        // comme TEXTE (nœud de texte), jamais interprété comme HTML. Seuls alertClass/icon (valeurs internes) servent de classes.
+        const alertEl = $('<div>', {
+            'class': `alert ${alertClass} alert-dismissible fade show position-fixed cart-alert`,
+            style: 'top: 20px; right: 20px; z-index: 9999; min-width: 320px; max-width: 400px;'
+        });
+        alertEl.append($('<i>', { 'class': `${icon} me-2` }));
+        alertEl.append(document.createTextNode(String(message ?? '')));
+        alertEl.append($('<button>', { type: 'button', 'class': 'btn-close', 'data-bs-dismiss': 'alert' }));
+
+        $('body').append(alertEl);
         
         // Auto-remove après 5 secondes
         setTimeout(() => {

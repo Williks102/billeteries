@@ -180,12 +180,12 @@
                         <ol>
                             <li><strong>Sélectionner</strong> des articles (tickets, sièges et produits connexes)</li>
                             <li><strong>Saisir les coordonnées</strong> du Client : e-mail, numéro de téléphone et informations de facturation éventuellement</li>
-                            <li><strong>Payer</strong> la commande avec l'un des moyens de paiement disponibles</li>
-                            <li>Pour les deux autres procédures, le Client doit posséder un compte préalablement sur la plateforme</li>
-                        </ol>
+                            <li><strong>Choisir un moyen de paiement manuel</strong> (virement bancaire, Mobile Money ou espèces) : la commande est enregistrée « en attente de paiement » et les places sont réservées</li>
+                            <li><strong>Payer</strong> le montant total en suivant les instructions reçues (par e-mail et sur la page de confirmation), puis attendre la confirmation du paiement</li>
+                                                    </ol>
                     </div>
                     
-                    <p>Après validation du paiement, le Client reçoit un email de confirmation de commande. Le Client peut à tout moment au cours du processus de commande consulter le détail de sa commande ainsi que son prix total et corriger d'éventuelles erreurs, avant de confirmer pour exprimer son acceptation.</p>
+                    <p>Après l'enregistrement de la commande, le Client reçoit un e-mail récapitulatif avec les instructions de paiement ; un invité non connecté suit sa commande grâce au lien de confirmation qui lui est fourni. Une fois le paiement confirmé, le Client reçoit un e-mail de confirmation. Le Client peut à tout moment au cours du processus de commande consulter le détail de sa commande ainsi que son prix total et corriger d'éventuelles erreurs, avant de confirmer pour exprimer son acceptation.</p>
                     
                     <p>Toute commande emporte contractuellement l'acceptation sans réserve de l'intégralité des conditions générales applicables au moment de l'achat telles que les conditions générales de vente et la politique de confidentialité disponibles sur la plateforme.</p>
                     
@@ -196,14 +196,18 @@
                     <p><strong>CLICBILLET</strong> s'engage à honorer les commandes reçues sur la plateforme seulement dans la limite des stocks disponibles.</p>
 
                     <h2 class="section-title">8. Modalités de paiement</h2>
-                    <p>Le règlement des achats s'effectue par l'un des moyens suivants, au choix du Client :</p>
+                    <p>Le paiement ne s'effectue <strong>pas en ligne</strong> sur la plateforme. Le règlement des achats s'effectue manuellement, par l'un des moyens suivants, au choix du Client :</p>
                     <ul>
-                        <li><strong>Par Mobile Money</strong></li>
-                        <li><strong>Par carte bancaire</strong></li>
-                        <li><strong>Par code coupon</strong></li>
+                        <li><strong>Par virement bancaire</strong></li>
+                        <li><strong>Par Mobile Money</strong> (transfert manuel vers le numéro indiqué)</li>
+                        <li><strong>En espèces</strong> au point de vente indiqué</li>
                     </ul>
-                    
-                    <p>Dès confirmation de l'achat, <strong>CLICBILLET</strong> se charge d'envoyer les tickets par e-mail au Client. Le délai de traitement de l'envoi de l'email est de <strong>5 minutes</strong> après validation du paiement. Les délais de réception de l'e-mail ne dépendent pas de <strong>CLICBILLET</strong>, mais du serveur de messagerie du Client.</p>
+
+                    <p>Les coordonnées de paiement et le numéro de commande à indiquer en référence sont communiqués au Client après l'enregistrement de sa commande. Des frais de service de <strong>500 FCFA</strong> par commande s'ajoutent au prix des tickets.</p>
+
+                    <p>Dès l'enregistrement de la commande, les places sont <strong>réservées pendant 48 heures</strong> (24 heures pour un Client non connecté). Sans paiement confirmé avant la fin de ce délai, la réservation est libérée automatiquement et la commande expire.</p>
+
+                    <p>Les tickets ne sont émis qu'après <strong>confirmation manuelle du paiement</strong> par <strong>CLICBILLET</strong>. Ils sont alors envoyés par e-mail au Client. Le délai de confirmation dépend du moyen de paiement choisi et du moment où le paiement est effectivement reçu : [À COMPLÉTER PAR L'ORGANISATEUR : délai de confirmation du paiement]. Les délais de réception de l'e-mail ne dépendent pas de <strong>CLICBILLET</strong>, mais du serveur de messagerie du Client.</p>
                     
                     <p><strong>CLICBILLET</strong> s'engage à livrer les commandes passées par le Client dans les délais impartis. En cas de non livraison des articles plus de <strong>deux (2) heures</strong> après la commande, le Client pourra procéder à la résolution de la vente et demander le remboursement, sauf cas de force majeure constaté.</p>
                     
@@ -211,7 +215,7 @@
                     
                     <p>Le Client est tenu de vérifier le bon état des articles livrés au moment de la livraison. Toute anomalie constatée (articles manquants, informations erronées, etc.) devra être signalée à <strong>CLICBILLET</strong>, par tous moyens suivant la livraison, notamment en écrivant à <a href="mailto:contacts@clicbillet.com" class="contact-link">contacts@clicbillet.com</a>.</p>
                     
-                    <p>Avec les mêmes délais de livraison que l'envoi par email, les tickets d'événements réservés sont également disponibles, via la plateforme avec le compte associé à l'email qui a été utilisé lors de la commande.</p>
+                    <p>Une fois le paiement confirmé, les tickets sont également disponibles via la plateforme, avec le compte associé à l'e-mail utilisé lors de la commande, ou via le lien de confirmation de commande pour un Client non connecté.</p>
 
                     <h2 class="section-title">9. Utilisation et validité des tickets</h2>
                     <p>Tout ticket commandé et acheté sur la plateforme est soumis aux conditions suivantes :</p>

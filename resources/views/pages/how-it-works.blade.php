@@ -44,7 +44,7 @@
                     <i class="fas fa-credit-card fa-2x"></i>
                 </div>
                 <h5>3. Payez</h5>
-                <p>Réglez en ligne par carte bancaire ou Mobile Money en toute sécurité</p>
+                <p>Choisissez virement, Mobile Money ou espèces. Vos places sont réservées 48 h (24 h sans compte connecté) : réglez en suivant les instructions reçues</p>
             </div>
         </div>
         
@@ -54,7 +54,7 @@
                     <i class="fas fa-mobile-alt fa-2x"></i>
                 </div>
                 <h5>4. Profitez</h5>
-                <p>Recevez vos billets par email et présentez-les à l'entrée de l'événement</p>
+                <p>Dès que votre paiement est confirmé, recevez vos billets par email et présentez-les à l'entrée</p>
             </div>
         </div>
     </div>
@@ -120,8 +120,8 @@
                     <i class="fas fa-clock fa-2x text-orange"></i>
                 </div>
                 <div>
-                    <h5>Billets instantanés</h5>
-                    <p>Recevez vos billets immédiatement par email après le paiement. Plus besoin d'attendre !</p>
+                    <h5>Billets par email</h5>
+                    <p>Vos billets vous sont envoyés dès que votre paiement est confirmé. Sans paiement dans le délai, la réservation est libérée automatiquement.</p>
                 </div>
             </div>
         </div>

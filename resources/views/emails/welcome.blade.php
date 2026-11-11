@@ -46,7 +46,7 @@
                 <li>🔍 <strong>Découvrir les événements</strong> près de chez vous</li>
                 <li>🛒 <strong>Acheter vos billets</strong> en ligne facilement</li>
                 <li>📱 <strong>Recevoir vos billets PDF</strong> par email</li>
-                <li>💳 <strong>Payer en sécurité</strong> par Orange Money, MTN, etc.</li>
+                <li>💳 <strong>Payer simplement</strong> par virement, Mobile Money ou espèces (billets envoyés après confirmation du paiement)</li>
                 <li>📊 <strong>Gérer vos commandes</strong> dans votre espace</li>
                 <li>⭐ <strong>Suivre vos événements favoris</strong></li>
             </ul>

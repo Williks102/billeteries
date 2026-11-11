@@ -440,8 +440,8 @@
                             <i class="fas fa-mobile-alt"></i>
                         </div>
                         <h5>Mobile Money</h5>
-                        <p class="mb-0">Orange Money, MTN Money, Moov Money</p>
-                        <small class="text-muted">Paiement instantané</small>
+                        <p class="mb-0">Transfert manuel vers le numéro indiqué</p>
+                        <small class="text-muted">Billets émis après confirmation du paiement</small>
                     </div>
                 </div>
                 
@@ -450,9 +450,9 @@
                         <div class="feature-icon mx-auto">
                             <i class="fas fa-credit-card"></i>
                         </div>
-                        <h5>Carte bancaire</h5>
-                        <p class="mb-0">Visa, Mastercard</p>
-                        <small class="text-muted">Paiement sécurisé SSL</small>
+                        <h5>Virement bancaire</h5>
+                        <p class="mb-0">Virement avec le numéro de commande en référence</p>
+                        <small class="text-muted">Billets émis après confirmation du paiement</small>
                     </div>
                 </div>
                 
@@ -461,9 +461,9 @@
                         <div class="feature-icon mx-auto">
                             <i class="fas fa-gift"></i>
                         </div>
-                        <h5>Code coupon</h5>
-                        <p class="mb-0">Bons d'achat et promotions</p>
-                        <small class="text-muted">Pour vos invités VIP</small>
+                        <h5>Espèces</h5>
+                        <p class="mb-0">Règlement au point de vente</p>
+                        <small class="text-muted">Billets émis après confirmation du paiement</small>
                     </div>
                 </div>
             </div>

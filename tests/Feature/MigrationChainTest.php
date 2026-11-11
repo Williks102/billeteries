@@ -109,6 +109,19 @@ class MigrationChainTest extends TestCase
         }
 
         $this->assertTrue(Schema::hasIndex('commissions', 'commissions_promoter_id_status_index'));
+
+        // Aucun nom « promoteur » résiduel (colonne, index, clé étrangère) dans ces 3 tables.
+        // Limite : SQLite ne nomme pas ses clés étrangères ; sur MySQL/TiDB c'est la migration 2026_11_11_120300 qui les renomme.
+        foreach (['events', 'commissions', 'commission_settings'] as $table) {
+            foreach (Schema::getIndexes($table) as $index) {
+                $this->assertStringNotContainsString('promoteur', (string) $index['name'], "$table : index {$index['name']}");
+                $this->assertNotContains('promoteur_id', $index['columns']);
+            }
+            foreach (Schema::getForeignKeys($table) as $fk) {
+                $this->assertStringNotContainsString('promoteur', (string) ($fk['name'] ?? ''), "$table : clé étrangère");
+                $this->assertNotContains('promoteur_id', $fk['columns']);
+            }
+        }
     }
 
     public function test_les_migrations_gardees_sont_idempotentes_si_on_les_rejoue(): void
@@ -124,6 +137,7 @@ class MigrationChainTest extends TestCase
             '2026_11_11_120000_add_missing_columns_to_tickets_table',
             '2026_11_11_120100_create_event_audit_logs_table_if_missing',
             '2026_11_11_120200_add_paid_by_to_commissions_table',
+            '2026_11_11_120300_rename_promoteur_constraints_to_promoter',
         ] as $name) {
             $migration = require base_path(self::MIGRATIONS."/$name.php");
             $migration->up(); // aucune exception : tout est gardé par hasColumn / hasTable / hasIndex

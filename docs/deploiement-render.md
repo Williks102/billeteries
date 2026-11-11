@@ -128,7 +128,7 @@ Le premier déploiement dure quelques minutes (construction de l'image). Dans l'
 
 **Le conteneur s'arrête au démarrage** : lisez la dernière ligne `[entrypoint] ERREUR` dans les Logs. Causes courantes : variable manquante, ADMIN_PASSWORD de moins de 12 caractères, migration en échec.
 
-**Migration qui échoue.** Les 39 migrations exécutables de `database/migrations` n'ont JAMAIS été exécutés de bout en bout sur MySQL ni sur TiDB (aucun serveur MySQL/TiDB n'était disponible pour les essais) : la première exécution sur votre base vierge est donc la première réelle. Ce qui a été fait : audit migration par migration (`docs/agents/reports/devops-audit-migrations.md`), correction d'une erreur certaine (clé étrangère en double sur `commissions`, erreur MySQL 1826) et exécution de toute la chaîne sur SQLite par un test automatique. Ce qui n'a PAS pu être prouvé : le comportement exact de MySQL/TiDB.
+**Migration qui échoue.** Les 40 migrations exécutables de `database/migrations` n'ont JAMAIS été exécutés de bout en bout sur MySQL ni sur TiDB (aucun serveur MySQL/TiDB n'était disponible pour les essais) : la première exécution sur votre base vierge est donc la première réelle. Ce qui a été fait : audit migration par migration (`docs/agents/reports/devops-audit-migrations.md`), correction d'une erreur certaine (clé étrangère en double sur `commissions`, erreur MySQL 1826) et exécution de toute la chaîne sur SQLite par un test automatique. Ce qui n'a PAS pu être prouvé : le comportement exact de MySQL/TiDB.
 
 Points restant à risque sur TiDB (non éprouvés) :
 

@@ -53,3 +53,5 @@ Thumbs.db
 *.tmp
 *.bak
 EOF
+# PHPUnit
+.phpunit.result.cache

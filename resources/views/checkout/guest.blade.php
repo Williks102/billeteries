@@ -193,79 +193,42 @@
                         <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Moyen de paiement</h5>
                     </div>
                     <div class="card-body">
-                        {{-- Options de paiement --}}
+                        {{-- Options de paiement manuel (confirmées par l'administrateur) --}}
+                        @php($manualIcons = ['bank_transfer' => 'fa-university', 'mobile_money' => 'fa-mobile-alt', 'cash' => 'fa-money-bill-wave'])
                         <div class="payment-methods mb-4">
-                            {{-- PaiementPro --}}
-                            <div class="payment-method-option mb-3">
-                                <input type="radio" class="btn-check" name="payment_method" 
-                                       id="paiementpro_guest" value="paiementpro" checked>
-                                
-                            </div>
-
-                            {{-- Virement bancaire --}}
-                            <div class="payment-method-option">
-                                <input type="radio" class="btn-check" name="payment_method" 
-                                       id="bank_transfer_guest" value="bank_transfer">
-                                <label class="btn btn-outline-secondary w-100 p-3 text-start" for="bank_transfer_guest">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-university fs-4 me-3"></i>
-                                        <div>
-                                            <strong>Virement bancaire</strong>
-                                            <small class="d-block text-muted">Validation manuelle sous 24h</small>
+                            @foreach(\App\Services\CheckoutService::manualMethodKeys() as $methodKey)
+                                @php($methodInfo = \App\Services\CheckoutService::manualPaymentInfo($methodKey))
+                                <div class="payment-method-option mb-3">
+                                    <input type="radio" class="btn-check" name="payment_method"
+                                           id="pm_guest_{{ $methodKey }}" value="{{ $methodKey }}"
+                                           {{ old('payment_method', \App\Services\CheckoutService::manualMethodKeys()[0] ?? null) === $methodKey ? 'checked' : '' }}>
+                                    <label class="btn btn-outline-secondary w-100 p-3 text-start" for="pm_guest_{{ $methodKey }}">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas {{ $manualIcons[$methodKey] ?? 'fa-wallet' }} fa-2x me-3"></i>
+                                            <div>
+                                                <strong>{{ $methodInfo['label'] }}</strong>
+                                                <small class="d-block text-muted">Confirmation manuelle par l'organisateur</small>
+                                            </div>
                                         </div>
-                                    </div>
-                                </label>
-                            </div>
+                                    </label>
+                                </div>
+                            @endforeach
                         </div>
 
-                        {{-- Canaux PaiementPro --}}
-                        <div id="paiementpro-channels-guest" class="channels-section">
-                            <h6 class="mb-3">Choisissez votre moyen de paiement :</h6>
-                            <div class="payment-options">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="radio" name="channel" id="channel_card_guest" value="CARD">
-                                    <label class="form-check-label" for="channel_card_guest">
-                                        Carte bancaire
-                                    </label>
-                                </div>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="radio" name="channel" id="channel_momo_guest" value="MOMO">
-                                    <label class="form-check-label" for="channel_momo_guest">
-                                        MTN Momo 
-                                    </label>
-                                </div>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="radio" name="channel" id="channel_omci_guest" value="OMCIV2">
-                                    <label class="form-check-label" for="channel_omci_guest">
-                                        Orange Money
-                                    </label>
-                                </div>
-
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="radio" name="channel" id="channel_wave_guest" value="WAVECI">
-                                    <label class="form-check-label" for="channel_wave_guest">
-                                        Wave ci
-                                    </label>
-                                </div>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="radio" name="channel" id="channel_flooz_guest" value="FLOOZ">
-                                    <label class="form-check-label" for="channel_flooz_guest">
-                                        Moov Money
-                                    </label>
-                                </div>
+                        {{-- Instructions par méthode (affichées selon le choix) --}}
+                        @foreach(\App\Services\CheckoutService::manualMethodKeys() as $methodKey)
+                            @php($methodInfo = \App\Services\CheckoutService::manualPaymentInfo($methodKey))
+                            <div class="alert alert-info manual-method-info" data-method="{{ $methodKey }}" style="display: none;">
+                                <h6><i class="fas fa-info-circle me-2"></i>{{ $methodInfo['label'] }}</h6>
+                                <p class="mb-2">{{ $methodInfo['instructions'] }}</p>
+                                <ol class="mb-0">
+                                    <li>Vous validez votre commande : le stock est réservé pendant {{ (int) round(config('payments.manual_reservation_minutes', 2880) / 60) }} h</li>
+                                    <li>Les instructions détaillées s'affichent et vous sont envoyées par email</li>
+                                    <li>Vous effectuez le paiement avant la date limite</li>
+                                    <li>Vos billets sont envoyés dès que l'organisateur confirme la réception du paiement</li>
+                                </ol>
                             </div>
-                        </div>
-
-                        {{-- Info virement bancaire --}}
-                        <div id="bank-transfer-info-guest" class="alert alert-info" style="display: none;">
-                            <h6><i class="fas fa-info-circle me-2"></i>Instructions de virement</h6>
-                            <p class="mb-2">Votre commande sera réservée. Effectuez le virement vers :</p>
-                            <div class="bank-details">
-                                <strong>Banque :</strong> [Nom de votre banque]<br>
-                                <strong>IBAN :</strong> [Votre IBAN]<br>
-                                <strong>Référence :</strong> <span class="text-primary">COMMANDE-[Généré automatiquement]</span>
-                            </div>
-                        </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
@@ -468,7 +431,7 @@ body {
     margin-left: 0.5rem;
 }
 
-.channels-section {
+.manual-method-info {
     background: #f8f9fa;
     border-radius: 8px;
     padding: 1.5rem;

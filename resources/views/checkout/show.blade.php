@@ -123,106 +123,42 @@
                         <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Moyen de paiement</h5>
                     </div>
                     <div class="card-body">
-                        {{-- Options de paiement --}}
+                        {{-- Options de paiement manuel (confirmées par l'administrateur) --}}
+                        @php($manualIcons = ['bank_transfer' => 'fa-university', 'mobile_money' => 'fa-mobile-alt', 'cash' => 'fa-money-bill-wave'])
                         <div class="payment-methods mb-4">
-                            {{-- PaiementPro --}}
-                            <div class="payment-method-option">
-                                <input type="radio" class="btn-check" name="payment_method" 
-                                       id="paiementpro" value="paiementpro" checked>
-                                <label class="btn btn-outline-primary w-100 mb-3" for="paiementpro">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-credit-card fa-2x me-3 text-primary"></i>
-                                        <div class="text-start">
-                                            <h6 class="mb-1">Paiement en ligne</h6>
-                                            <small class="text-muted">Carte bancaire, Mobile Money, Orange Money, Flooz</small>
+                            @foreach(\App\Services\CheckoutService::manualMethodKeys() as $methodKey)
+                                @php($methodInfo = \App\Services\CheckoutService::manualPaymentInfo($methodKey))
+                                <div class="payment-method-option mb-3">
+                                    <input type="radio" class="btn-check" name="payment_method"
+                                           id="pm_{{ $methodKey }}" value="{{ $methodKey }}"
+                                           {{ old('payment_method', \App\Services\CheckoutService::manualMethodKeys()[0] ?? null) === $methodKey ? 'checked' : '' }}>
+                                    <label class="btn btn-outline-secondary w-100 p-3 text-start" for="pm_{{ $methodKey }}">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas {{ $manualIcons[$methodKey] ?? 'fa-wallet' }} fa-2x me-3"></i>
+                                            <div>
+                                                <strong>{{ $methodInfo['label'] }}</strong>
+                                                <small class="d-block text-muted">Confirmation manuelle par l'organisateur</small>
+                                            </div>
                                         </div>
-                                        <div class="ms-auto">
-                                            <span class="badge bg-success">Recommandé</span>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-
-                            {{-- Virement bancaire (si vous l'avez) --}}
-                            <div class="payment-method-option">
-                                <input type="radio" class="btn-check" name="payment_method" 
-                                       id="bank_transfer" value="bank_transfer">
-                                <label class="btn btn-outline-secondary w-100" for="bank_transfer">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-university fa-2x me-3 text-secondary"></i>
-                                        <div class="text-start">
-                                            <h6 class="mb-1">Virement bancaire</h6>
-                                            <small class="text-muted">Instructions envoyées par email</small>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
+                                    </label>
+                                </div>
+                            @endforeach
                         </div>
 
-                        {{-- Canaux PaiementPro (affiché conditionnellement) --}}
-                        <div id="paiementpro-channels" class="paiementpro-options">
-                            <h6 class="mb-3">Choisissez votre méthode :</h6>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="card" value="CARD" checked>
-                                    <label class="btn btn-outline-info w-100 p-3" for="card">
-                                        <i class="fas fa-credit-card fa-2x mb-2"></i>
-                                        <br><strong>Carte bancaire</strong>
-                                        <br><small>Visa, Mastercard</small>
-                                    </label>
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="momo" value="MOMO">
-                                    <label class="btn btn-outline-warning w-100 p-3" for="momo">
-                                        <i class="fas fa-mobile-alt fa-2x mb-2"></i>
-                                        <br><strong>Mobile Money</strong>
-                                        <br><small>MTN, Moov</small>
-                                    </label>
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="orange" value="OMCIV2">
-                                    <label class="btn btn-outline-warning w-100 p-3" for="orange">
-                                        <i class="fas fa-mobile fa-2x mb-2"></i>
-                                        <br><strong>Orange Money</strong>
-                                        <br><small>Orange CI</small>
-                                    </label>
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="flooz" value="FLOOZ">
-                                    <label class="btn btn-outline-info w-100 p-3" for="flooz">
-                                        <i class="fas fa-wallet fa-2x mb-2"></i>
-                                        <br><strong>Moov Money</strong>
-                                        <br><small>Portefeuille digital</small>
-                                    </label>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <input type="radio" class="btn-check" name="channel" 
-                                           id="wave" value="WAVECI">
-                                    <label class="btn btn-outline-primary w-100 p-3" for="wave">
-                                        <i class="fab fa-wave fa-2x mb-2"></i>
-                                        <br><strong>Wave CI</strong>
-                                        <br><small>Paiement mobile</small>
-                                    </label>
-                            </div>
-                        </div>
-
-                        {{-- Informations virement (affiché conditionnellement) --}}
-                        <div id="bank-transfer-info" class="bank-transfer-options" style="display: none;">
-                            <div class="alert alert-info">
-                                <h6><i class="fas fa-info-circle me-2"></i>Comment ça marche ?</h6>
+                        {{-- Instructions par méthode (affichées selon le choix) --}}
+                        @foreach(\App\Services\CheckoutService::manualMethodKeys() as $methodKey)
+                            @php($methodInfo = \App\Services\CheckoutService::manualPaymentInfo($methodKey))
+                            <div class="alert alert-info manual-method-info" data-method="{{ $methodKey }}" style="display: none;">
+                                <h6><i class="fas fa-info-circle me-2"></i>{{ $methodInfo['label'] }}</h6>
+                                <p class="mb-2">{{ $methodInfo['instructions'] }}</p>
                                 <ol class="mb-0">
-                                    <li>Vous validez votre commande</li>
-                                    <li>Nous vous envoyons les coordonnées bancaires par email</li>
-                                    <li>Vous effectuez le virement</li>
-                                    <li>Vos billets sont envoyés dès réception du paiement</li>
+                                    <li>Vous validez votre commande : le stock est réservé pendant {{ (int) round(config('payments.manual_reservation_minutes', 2880) / 60) }} h</li>
+                                    <li>Les instructions détaillées s'affichent et vous sont envoyées par email</li>
+                                    <li>Vous effectuez le paiement avant la date limite</li>
+                                    <li>Vos billets sont envoyés dès que l'organisateur confirme la réception du paiement</li>
                                 </ol>
                             </div>
-                        </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
@@ -330,7 +266,7 @@
     border-color: var(--bs-primary);
 }
 
-.paiementpro-options, .bank-transfer-options {
+.manual-method-info {
     transition: all 0.3s ease;
 }
 

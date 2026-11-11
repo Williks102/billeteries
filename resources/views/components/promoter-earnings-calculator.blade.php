@@ -1,4 +1,12 @@
 <!-- resources/views/components/promoter-earnings-calculator.blade.php -->
+@php
+    $rate = (float) config('payments.default_commission_rate');
+    $rateLabel = rtrim(rtrim(number_format($rate, 2, ',', ''), '0'), ',');
+    $gross = 5000 * 50;
+    $commission = (int) round($gross * $rate / 100);
+    $net = $gross - $commission;
+    $fmt = fn ($n) => number_format($n, 0, ',', ' ');
+@endphp
 
 <div class="earnings-calculator card border-success">
     <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #FF6B35 0%, #1a1a1a 100%);">
@@ -12,7 +20,7 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <label class="form-label text-muted small">Prix du billet (FCFA)</label>
-                <input type="number" class="form-control" id="ticket-price" value="5000" min="500" step="500">
+                <input type="number" class="form-control" id="ticket-price" data-commission-rate="{{ $rate }}" value="5000" min="500" step="500">
             </div>
             <div class="col-md-6">
                 <label class="form-label text-muted small">Nombre de billets estimé</label>
@@ -31,7 +39,7 @@
                 </div>
                 <div class="col-md-6">
                     <div class="metric-box text-center p-3 mb-3" style="background: #e8f5e8; border-radius: 10px;">
-                        <div class="metric-value h4 mb-1 text-success" id="net-earnings">225 000 FCFA</div>
+                        <div class="metric-value h4 mb-1 text-success" id="net-earnings">{{ $fmt($net) }} FCFA</div>
                         <div class="metric-label text-muted small">Vos gains nets</div>
                     </div>
                 </div>
@@ -44,12 +52,12 @@
                 <!-- Barre de progression visuelle -->
                 <div class="progress mb-3" style="height: 25px; border-radius: 15px;">
                     <div class="progress-bar bg-success" role="progressbar" 
-                         style="width: 90%" id="promoter-bar">
-                        <span class="fw-bold">Vous : <span id="promoter-percentage">90%</span></span>
+                         style="width: {{ 100 - $rate }}%" id="promoter-bar">
+                        <span class="fw-bold">Vous : <span id="promoter-percentage">{{ round(100 - $rate) }}%</span></span>
                     </div>
                     <div class="progress-bar bg-orange" role="progressbar" 
-                         style="width: 10%" id="platform-bar">
-                        <span class="fw-bold text-white">Plateforme : <span id="platform-percentage">10%</span></span>
+                         style="width: {{ $rate }}%" id="platform-bar">
+                        <span class="fw-bold text-white">Plateforme : <span id="platform-percentage">{{ round($rate) }}%</span></span>
                     </div>
                 </div>
                 
@@ -60,13 +68,13 @@
                         <strong id="gross-amount">250 000 FCFA</strong>
                     </div>
                     <div class="d-flex justify-content-between mb-2 text-danger">
-                        <span>📝 Commission plateforme (<span id="commission-rate">10%</span>) :</span>
-                        <strong id="commission-amount">- 25 000 FCFA</strong>
+                        <span>📝 Commission plateforme (<span id="commission-rate">{{ $rateLabel }}%</span>) :</span>
+                        <strong id="commission-amount">- {{ $fmt($commission) }} FCFA</strong>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
                         <span class="fw-bold text-success">💵 Vos gains nets :</span>
-                        <strong class="text-success h5" id="final-earnings">200 000 FCFA</strong>
+                        <strong class="text-success h5" id="final-earnings">{{ $fmt($net) }} FCFA</strong>
                     </div>
                 </div>
                 
@@ -76,11 +84,11 @@
                     <div class="row">
                         <div class="col-6">
                             <small class="text-muted">1 événement/mois :</small>
-                            <div class="fw-bold" id="monthly-1-event">200 000 FCFA</div>
+                            <div class="fw-bold" id="monthly-1-event">{{ $fmt($net) }} FCFA</div>
                         </div>
                         <div class="col-6">
                             <small class="text-muted">2 événements/mois :</small>
-                            <div class="fw-bold text-success" id="monthly-2-events">400 000 FCFA</div>
+                            <div class="fw-bold text-success" id="monthly-2-events">{{ $fmt($net * 2) }} FCFA</div>
                         </div>
                     </div>
                 </div>
@@ -132,43 +140,3 @@
 </style>
 
 <script src="{{ asset('js/components-promoter-earnings-calculator.js') }}" defer></script>
-
-<?php
-// ========== UTILISATION DANS UN FORMULAIRE PROMOTEUR ==========
-
-// Exemple d'utilisation dans un formulaire de création d'événement :
-?>
-
-<!-- Dans resources/views/promoteur/events/create.blade.php -->
-<div class="row">
-    <div class="col-lg-8">
-        <!-- Formulaire de création d'événement -->
-        <form method="POST" action="{{ route('promoteur.events.store') }}">
-            @csrf
-            
-            <div class="card">
-                <div class="card-header">
-                    <h5>📅 Créer un nouvel événement</h5>
-                </div>
-                <div class="card-body">
-                    <!-- Champs du formulaire... -->
-                    <div class="mb-3">
-                        <label class="form-label">Titre de l'événement</label>
-                        <input type="text" class="form-control" name="title" required>
-                    </div>
-                    
-                    <!-- ... autres champs ... -->
-                    
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i>Créer l'événement
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-    
-    <div class="col-lg-4">
-        <!-- Widget calculateur de gains -->
-        @include('components.promoter-earnings-calculator')
-    </div>
-</div>

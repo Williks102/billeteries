@@ -55,3 +55,8 @@ D8 Logs trop bavards (`$request->all()`).
 - Hook optionnel : `composer run setup-hooks` active `.githooks/pre-push` (relance `composer run check` avant chaque push).
 - Étendre `composer run check` quand de nouveaux tests critiques existent (paiement, stock) ; ne jamais le rendre rouge « pour plus tard ».
 - Ne pas ajouter de workflow `.github/workflows/` sans demande explicite de l'utilisateur.
+
+# Relecture (barrière avant PR)
+- Aucune PR n'est proposée sans verdict de l'agent `relecteur` (indépendant : il ne relit jamais ce qu'il a écrit, il est en lecture seule et ne corrige pas).
+- `securite` valide les failles ; `relecteur` valide correction, portée, tests et conventions : les deux sont complémentaires, pas interchangeables.
+- Un verdict REFUSÉ bloque la PR jusqu'à correction puis nouvelle relecture.

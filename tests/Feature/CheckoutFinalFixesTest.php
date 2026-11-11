@@ -30,6 +30,8 @@ class CheckoutFinalFixesTest extends TestCase
     {
         parent::setUp();
         $this->buildOrderSchema();
+        // markAsUsed() écrit used_at (le billet du test de logs est désormais émis, donc réellement scanné)
+        \Illuminate\Support\Facades\Schema::table('tickets', fn ($t) => $t->timestamp('used_at')->nullable());
         Mail::fake();
         config(['payments.max_pending_orders' => 1000, 'payments.max_pending_orders_per_ip' => 1000]);
     }

@@ -79,7 +79,7 @@ class QrAndDemoModeTest extends TestCase
         $yaml = (string) file_get_contents(base_path('render.yaml'));
         $this->assertStringContainsString('les billets deviennent gratuits', $yaml);
         $vars = collect(Yaml::parse($yaml)['services'][0]['envVars'])->keyBy('key');
-        $this->assertTrue($vars['DEMO_AUTO_CONFIRM_PAYMENTS']['sync'] ?? false);
+        $this->assertFalse($vars['DEMO_AUTO_CONFIRM_PAYMENTS']['sync'] ?? null, 'sync: false');
         $this->assertArrayNotHasKey('value', $vars['DEMO_AUTO_CONFIRM_PAYMENTS']);
     }
 

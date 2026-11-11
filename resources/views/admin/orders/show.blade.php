@@ -23,6 +23,11 @@
             </p>
         </div>
         <div class="d-flex gap-2">
+            @if(in_array($order->payment_status, ['pending', 'processing', 'failed'], true))
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirmPaymentModal">
+                    <i class="fas fa-check-circle me-2"></i>Confirmer le paiement
+                </button>
+            @endif
             <a href="{{ route('admin.orders.export', $order) }}" class="btn btn-outline-orange">
                 <i class="fas fa-file-pdf me-2"></i>PDF
             </a>
@@ -311,6 +316,42 @@
             </div>
         </div>
     </div>
+@if(in_array($order->payment_status, ['pending', 'processing', 'failed'], true))
+<!-- Modal confirmation de paiement manuel -->
+<div class="modal fade" id="confirmPaymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer le paiement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('admin.orders.confirm-payment', $order) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p>
+                        Confirmez la réception de <strong>{{ number_format($order->total_amount) }} FCFA</strong>
+                        ({{ \App\Services\CheckoutService::manualPaymentInfo($order->payment_method)['label'] }}).
+                        Les billets seront émis et envoyés à l'acheteur.
+                    </p>
+                    @if($order->payment_status === 'failed')
+                        <div class="alert alert-warning">
+                            Cette commande a expiré et son stock a été libéré : la confirmation échouera si les billets ne sont plus disponibles.
+                        </div>
+                    @endif
+                    <div class="mb-3">
+                        <label class="form-label" for="payment_reference">Référence du paiement (optionnel)</label>
+                        <input type="text" id="payment_reference" name="payment_reference" class="form-control" maxlength="100">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">Confirmer le paiement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 @endsection
 
 @push('styles')

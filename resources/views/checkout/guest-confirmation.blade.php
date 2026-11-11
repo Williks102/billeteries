@@ -8,14 +8,28 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            @if(session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
+
+            @if($order->payment_status === 'paid')
             <!-- Header de confirmation -->
             <div class="text-center mb-4">
                 <div class="success-icon mb-3">
                     <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
                 </div>
-                <h1 class="text-success">Commande confirmée !</h1>
+                <h1 class="text-success">Paiement confirmé !</h1>
                 <p class="lead">Vos billets vous ont été envoyés par email</p>
             </div>
+            @elseif(in_array($order->payment_status, ['pending', 'processing']))
+            <div class="text-center mb-4">
+                <i class="fas fa-receipt text-primary" style="font-size: 3rem;"></i>
+                <h1>Commande enregistrée</h1>
+            </div>
+            @include('checkout.partials.manual-payment')
+            @else
+            <div class="alert alert-danger">Cette commande n'est plus active.</div>
+            @endif
 
             <!-- Détails de la commande -->
             <div class="card mb-4">
@@ -38,9 +52,6 @@
                             <p>{{ $order->event->venue }}</p>
                         </div>
                         <div class="col-md-6">
-                            <h6>Acheteur</h6>
-                            <p>{{ $order->user->first_name }} {{ $order->user->last_name }}</p>
-                            
                             <h6>Email</h6>
                             <p>{{ $order->billing_email }}</p>
                             
@@ -72,25 +83,17 @@
                         <div class="card-body">
                             <i class="fas fa-envelope fa-2x text-primary mb-3"></i>
                             <h6>Vérifiez votre email</h6>
-                            <p class="text-muted small">Vos billets ont été envoyés à {{ $order->billing_email }}</p>
+                            <p class="text-muted small">
+                                @if($order->payment_status === 'paid')
+                                    Vos billets ont été envoyés à {{ $order->billing_email }}
+                                @else
+                                    Les instructions de paiement ont été envoyées à {{ $order->billing_email }}. Vos billets suivront après confirmation du paiement.
+                                @endif
+                            </p>
                         </div>
                     </div>
                 </div>
                 
-                @if($order->user->is_guest)
-                <div class="col-md-6 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <i class="fas fa-user-plus fa-2x text-success mb-3"></i>
-                            <h6>Créer un compte</h6>
-                            <p class="text-muted small">Gérez vos billets facilement</p>
-                            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createAccountModal">
-                                Créer mon compte
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                @endif
             </div>
 
             <!-- Navigation -->
@@ -106,46 +109,4 @@
     </div>
 </div>
 
-@if($order->user->is_guest)
-<!-- Modal création de compte -->
-<div class="modal fade" id="createAccountModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Créer votre compte</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{{ route('checkout.guest.create-account', $order->guest_token) }}">
-                @csrf
-                <div class="modal-body">
-                    <p>Créez un mot de passe pour accéder à vos billets à tout moment :</p>
-                    
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Mot de passe</label>
-                        <input type="password" class="form-control" id="password" name="password" required minlength="6">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="password_confirmation" class="form-label">Confirmer le mot de passe</label>
-                        <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <small>
-                            <strong>Avantages du compte :</strong><br>
-                            • Accès à l'historique de vos commandes<br>
-                            • Réimpression de vos billets<br>
-                            • Support client prioritaire
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Plus tard</button>
-                    <button type="submit" class="btn btn-success">Créer mon compte</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
 @endsection

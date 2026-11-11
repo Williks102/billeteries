@@ -42,6 +42,8 @@ class RegisterController extends Controller
     public function __construct()
     {
         $this->middleware('guest');
+        // N3a : inscription limitée par IP (comptes jetables)
+        $this->middleware('throttle:' . config('payments.register_throttle_per_minute', 5) . ',1,register')->only('register');
     }
 
     /**

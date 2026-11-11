@@ -26,7 +26,7 @@ class RoutingConventionsTest extends TestCase
     /** DETTE CONNUE : noms de route utilisés dans le code mais non déclarés. */
     private const UNKNOWN_NAMES = [
         'admin.events.manage-hybrid', 'checkout.payment-method', 'checkout.resend-code', 'contact',
-        'orders.show', 'pages.show', 'payments.paiementpro.status', 'verification.resend',
+        'orders.show', 'pages.show', 'verification.resend',
     ];
 
     /** Closures tolérées (redirections triviales). */

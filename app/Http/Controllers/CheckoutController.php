@@ -9,9 +9,9 @@ use App\Models\TicketType;
 use App\Models\Ticket;
 use App\Models\Event;
 use App\Models\Commission;
+use App\Exceptions\CheckoutRefusedException;
 use App\Services\EmailService;
 use App\Services\CheckoutService;
-use App\Services\PaiementProService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -55,7 +55,7 @@ class CheckoutController extends Controller
         }
 
         $cartTotal = array_sum(array_column($cart, 'total_price'));
-        $serviceFee = $cartTotal > 0 ? 500 : 0;
+        $serviceFee = $cartTotal > 0 ? CheckoutService::SERVICE_FEE : 0;
         $finalTotal = $cartTotal + $serviceFee;
 
         return view('checkout.show', compact(
@@ -120,7 +120,7 @@ class CheckoutController extends Controller
         session()->put('direct_booking', $selectedTickets);
         session()->put('booking_timer', now()->addMinutes(60)); // 1 heure de réservation
 
-        $serviceFee = 500;
+        $serviceFee = CheckoutService::SERVICE_FEE;
         $finalTotal = $cartTotal + $serviceFee;
 
         return view('checkout.direct', compact('selectedTickets', 'cartTotal', 'serviceFee', 'finalTotal', 'event'));
@@ -132,11 +132,10 @@ class CheckoutController extends Controller
     public function process(Request $request)
     {
         $request->validate([
-            'billing_email' => 'required|email',
+            'billing_email' => 'required|email|max:255',
             'billing_phone' => 'required|string|max:20',
             'terms_accepted' => 'required|accepted',
-            'payment_method' => 'required|in:paiementpro,bank_transfer',
-            'channel' => 'required_if:payment_method,paiementpro|in:CARD,MOMO,OMCIV2,FLOOZ,PAYPAL,WAVECI'
+            'payment_method' => CheckoutService::paymentMethodRule(),
         ]);
 
         try {
@@ -148,19 +147,23 @@ class CheckoutController extends Controller
                 return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
             }
 
-            Log::info('Début checkout avec PaiementPro', [
+            Log::info('Début checkout (paiement manuel)', [
                 'user_id' => auth()->id(),
                 'payment_method' => $request->payment_method,
-                'channel' => $request->channel,
                 'cart_items' => count($cart)
             ]);
 
             $service = app(CheckoutService::class);
 
-            // Prix recalculés côté serveur ; commandes, stock et billets dans UNE transaction
-            $orders = DB::transaction(function () use ($service, $cart, $request) {
+            // Prix recalculés côté serveur ; commandes, stock et billets dans UNE transaction.
+            // Commandes `pending` avec expires_at = now + payments.manual_reservation_minutes.
+            $groups = $service->buildEventGroups($cart);
+            $capByIp = $service->shouldCapByIp(Auth::user());
+            $service->assertWithinOrderLimits((string) $request->billing_email, Auth::id(), $request->ip(), count($groups), $capByIp);
+
+            $orders = DB::transaction(function () use ($service, $groups, $request) {
                 $orders = [];
-                foreach ($service->buildEventGroups($cart) as $eventId => $group) {
+                foreach ($groups as $eventId => $group) {
                     $orders[] = $service->createOrder(Auth::id(), $eventId, $group, [
                         'payment_method' => $request->payment_method,
                         'billing_email' => $request->billing_email,
@@ -170,81 +173,36 @@ class CheckoutController extends Controller
                 return $orders;
             });
 
-            // ===== TRAITEMENT SELON LE MOYEN DE PAIEMENT =====
-            
-            if ($request->payment_method === 'paiementpro') {
-                return $this->processPaiementPro($orders[0], $request->channel, $isDirectBooking);
-            } 
-            elseif ($request->payment_method === 'bank_transfer') {
-                return $this->processBankTransfer($orders, $isDirectBooking);
+            if ($capByIp) {
+                $service->recordGuestOrders($request->ip(), count($orders));
             }
 
-        } catch (\Exception $e) {
-            Log::error('Erreur checkout avec PaiementPro', [
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage(),
-            ]);
+            $service->sendManualInstructions($orders);
 
-            return redirect()->back()
-                ->with('error', 'Erreur lors du traitement : ' . $e->getMessage())
-                ->withInput();
-        }
-    }
-
-    /**
-     * 🆕 NOUVELLE : Traitement PaiementPro
-     */
-    private function processPaiementPro(Order $order, $channel, $isDirectBooking = false)
-    {
-        // Libère le stock et lève une exception si l'init échoue
-        $redirectUrl = app(CheckoutService::class)->initPaiementPro($order, $channel);
-
-        if ($isDirectBooking) {
-            session()->forget(['direct_booking', 'booking_timer']);
-        } else {
-            session()->forget(['cart', 'cart_timer']);
-        }
-
-        return redirect($redirectUrl);
-    }
-
-    /**
-     * 🆕 NOUVELLE : Traitement virement bancaire
-     */
-    private function processBankTransfer(array $orders, $isDirectBooking = false)
-    {
-        try {
-            foreach ($orders as $order) {
-                // Marquer comme en attente de virement
-                $order->update(['payment_status' => 'pending_transfer']);
-                
-                // Envoyer email avec instructions
-                $this->sendBankTransferInstructions($order);
-            }
-
-            // Nettoyer les sessions
             if ($isDirectBooking) {
                 session()->forget(['direct_booking', 'booking_timer']);
             } else {
                 session()->forget(['cart', 'cart_timer']);
             }
 
-            $message = count($orders) > 1 
-                ? 'Commandes créées ! Instructions de virement envoyées par email.'
-                : 'Commande créée ! Instructions de virement envoyées par email.';
+            $message = count($orders) > 1
+                ? 'Commandes enregistrées ! Instructions de paiement envoyées par email.'
+                : 'Commande enregistrée ! Instructions de paiement envoyées par email.';
 
-            return redirect()->route('acheteur.orders.index')
-                           ->with('success', $message);
+            return redirect()->route('checkout.confirmation', $orders[0])
+                ->with('success', $message)
+                ->with('other_order_numbers', collect($orders)->skip(1)->pluck('order_number')->all());
 
-        } catch (\Exception $e) {
-            Log::error('Erreur processBankTransfer', [
-                'orders' => array_column($orders, 'id'),
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
+        } catch (CheckoutRefusedException $e) {
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
+        } catch (\Throwable $e) {
+            app(CheckoutService::class)->logFailure('Erreur checkout', $e, ['user_id' => auth()->id()]);
+
+            return redirect()->back()
+                ->with('error', CheckoutService::GENERIC_ERROR)
+                ->withInput();
         }
     }
-
 
     /**
      * Confirmation de commande
@@ -275,8 +233,7 @@ class CheckoutController extends Controller
             Log::info("Tous les emails envoyés avec succès", [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
-                'client_email' => $order->user->email,
-                'promoteur_email' => $order->event->promoteur->email ?? 'N/A'
+                'promoteur_id' => $order->event->promoter_id
             ]);
             
         } catch (\Exception $e) {
@@ -289,25 +246,6 @@ class CheckoutController extends Controller
             
             // Ne pas faire échouer toute la commande à cause d'un email
             // Mais alerter dans les logs
-        }
-    }
-
-    private function sendBankTransferInstructions($order)
-    {
-        try {
-            $emailService = app(EmailService::class);
-            $emailService->sendBankTransferInstructions($order);
-            
-            Log::info('Instructions virement envoyées', [
-                'order_id' => $order->id,
-                'email' => $order->billing_email
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur envoi instructions virement', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage()
-            ]);
         }
     }
 }

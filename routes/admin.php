@@ -103,6 +103,7 @@ Route::post('orders/bulk-action', [OrderController::class, 'bulkAction'])->name(
 Route::get('orders-export', [OrderController::class, 'export'])->name('orders.export');
 Route::controller(OrderController::class)->prefix('orders/{order}')->name('orders.')->group(function () {
     Route::patch('status', 'updateStatus')->name('update-status');
+    Route::post('confirm-payment', 'confirmPayment')->name('confirm-payment');
     Route::post('refund', 'refund')->name('refund');
     Route::post('resend-email', 'resendEmail')->name('resend-email');
 });

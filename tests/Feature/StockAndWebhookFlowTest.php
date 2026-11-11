@@ -218,4 +218,45 @@ class StockAndWebhookFlowTest extends TestCase
         $this->artisan('orders:release-expired')->assertSuccessful();
         $this->assertSame(2, $type->fresh()->quantity_sold);
     }
+
+    /** C1 : un order_id arbitraire ne révèle ni token ni redirection vers la confirmation. */
+    public function test_return_with_arbitrary_order_id_does_not_leak_guest_token(): void
+    {
+        $order = Order::create([
+            'total_amount' => 1000, 'payment_status' => 'pending',
+            'order_number' => 'ORD-C1', 'guest_token' => 'SECRETTOKEN0123456789abcdefghij',
+        ]);
+
+        $response = $this->get('/payments/paiementpro/return?returnContext=' . urlencode('order_id=' . $order->id));
+
+        $response->assertRedirect(route('home'));
+        $this->assertStringNotContainsString('SECRETTOKEN', (string) $response->headers->get('Location'));
+        $response->assertSessionMissing(['success', 'error', 'warning']);
+
+        // Même chose via referenceNumber
+        $r2 = $this->get('/payments/paiementpro/return?referenceNumber=ORD-C1');
+        $r2->assertRedirect(route('home'));
+
+        // Avec la preuve de session, la redirection vers la confirmation est permise
+        $r3 = $this->withSession(['guest_order_tokens' => [$order->id => $order->guest_token]])
+            ->get('/payments/paiementpro/return?returnContext=' . urlencode('order_id=' . $order->id));
+        $r3->assertRedirect(route('checkout.guest.confirmation', $order->guest_token));
+    }
+
+    public function test_cancel_and_create_account_require_session_proof(): void
+    {
+        $order = Order::create([
+            'total_amount' => 1000, 'payment_status' => 'pending',
+            'order_number' => 'ORD-C1B', 'guest_token' => 'SECRETTOKEN0123456789abcdefghij',
+        ]);
+
+        $this->get('/payments/paiementpro/cancel?order_id=' . $order->id . '&guest_token=' . $order->guest_token)
+            ->assertRedirect(route('home'));
+        $this->assertSame('pending', $order->fresh()->payment_status);
+
+        $this->post(route('checkout.guest.create-account', $order->guest_token), [
+            'password' => 'secret123', 'password_confirmation' => 'secret123',
+        ])->assertStatus(403);
+        $this->assertGuest();
+    }
 }

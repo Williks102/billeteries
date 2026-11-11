@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Payments;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\CheckoutService;
 use App\Services\PaiementProService;
 use App\Services\EmailService;
 use Illuminate\Http\Request;
@@ -154,9 +155,9 @@ class PaiementProController extends Controller
 
             $order = null;
             if (isset($context['order_id'])) {
-                $order = Order::with('user')->find($context['order_id']);
+                $order = Order::find($context['order_id']);
             } elseif ($request->has('referenceNumber')) {
-                $order = Order::with('user')->where('order_number', $request->referenceNumber)->first();
+                $order = Order::where('order_number', $request->referenceNumber)->first();
             }
 
             if (!$order) {
@@ -169,15 +170,18 @@ class PaiementProController extends Controller
                 default => ['warning', 'Paiement en cours de traitement : votre commande sera confirmée dès réception de la confirmation.'],
             };
 
-            if ($order->user && !$order->user->is_guest) {
-                return redirect()->route('acheteur.orders.show', $order)->with($flash, $message);
-            }
+            $service = app(CheckoutService::class);
 
-            if ($order->guest_token) {
+            if ($order->guest_token === null) {
+                if (auth()->check() && $order->user_id === auth()->id()) {
+                    return redirect()->route('acheteur.orders.show', $order)->with($flash, $message);
+                }
+            } elseif ($service->ownsGuestOrder($order)) {
                 return redirect()->route('checkout.guest.confirmation', $order->guest_token)->with($flash, $message);
             }
 
-            return redirect()->route('home')->with($flash, $message);
+            // Pas de preuve de possession : réponse neutre, aucun statut ni token exposé
+            return redirect()->route('home');
 
         } catch (\Exception $e) {
             Log::error('Erreur page retour PaiementPro', ['error' => $e->getMessage()]);
@@ -196,15 +200,15 @@ class PaiementProController extends Controller
         try {
             $order = Order::find($request->query('order_id'));
 
-            if ($order && $this->canCancel($request, $order)) {
+            if ($order && $this->canCancel($order)) {
                 $order->releaseStock();
 
-                if ($order->user && !$order->user->is_guest) {
+                if ($order->guest_token === null) {
                     return redirect()->route('acheteur.orders.show', $order)
                                    ->with('warning', 'Le paiement a été annulé');
                 }
 
-                if ($order->guest_token) {
+                if (app(CheckoutService::class)->ownsGuestOrder($order)) {
                     return redirect()->route('checkout.guest.confirmation', $order->guest_token)
                                    ->with('warning', 'Le paiement a été annulé');
                 }
@@ -221,7 +225,7 @@ class PaiementProController extends Controller
         }
     }
 
-    private function canCancel(Request $request, Order $order): bool
+    private function canCancel(Order $order): bool
     {
         if (!in_array($order->payment_status, ['pending', 'processing'], true)) {
             return false;
@@ -231,9 +235,8 @@ class PaiementProController extends Controller
             return true;
         }
 
-        $token = (string) $request->query('guest_token', '');
-
-        return $order->guest_token !== null && $token !== '' && hash_equals($order->guest_token, $token);
+        // Invité : preuve de possession en session uniquement (jamais un token de la requête)
+        return app(CheckoutService::class)->ownsGuestOrder($order);
     }
 
     /**

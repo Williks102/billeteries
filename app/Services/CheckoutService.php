@@ -172,4 +172,25 @@ class CheckoutService
 
         throw new \RuntimeException('Erreur PaiementPro : ' . ($result['error'] ?? 'inconnue'));
     }
+
+    /**
+     * Preuve de possession d'une commande invité : le guest_token est mémorisé en session
+     * au checkout ; il n'est jamais déduit d'un identifiant fourni dans la requête.
+     */
+    public function rememberGuestOrder(Order $order): void
+    {
+        if ($order->guest_token) {
+            session()->put('guest_order_tokens.' . $order->id, $order->guest_token);
+        }
+    }
+
+    public function ownsGuestOrder(Order $order, ?string $token = null): bool
+    {
+        $known = session('guest_order_tokens.' . $order->id);
+
+        return $order->guest_token !== null
+            && is_string($known)
+            && hash_equals($order->guest_token, $known)
+            && ($token === null || hash_equals($order->guest_token, $token));
+    }
 }

@@ -82,6 +82,11 @@ class GuestCheckoutController extends Controller
                 return [$user, $this->createOrdersFromCart($cart, $user, $request)];
             });
 
+            // Preuve de possession liée à la session (retour/annulation/création de compte)
+            foreach ($orders as $o) {
+                app(CheckoutService::class)->rememberGuestOrder($o);
+            }
+
             // 3. Traitement selon le moyen de paiement
             if ($request->payment_method === 'paiementpro') {
                 return $this->processPaiementPro($orders[0], $request->channel, $user->is_guest);
@@ -312,6 +317,12 @@ class GuestCheckoutController extends Controller
         ]);
 
         $order = Order::where('guest_token', $token)->firstOrFail();
+
+        // Le token seul (URL) ne suffit pas : la session doit avoir créé cette commande
+        if (!app(CheckoutService::class)->ownsGuestOrder($order, (string) $token)) {
+            abort(403);
+        }
+
         $user = $order->user;
 
         if (!$user->is_guest) {

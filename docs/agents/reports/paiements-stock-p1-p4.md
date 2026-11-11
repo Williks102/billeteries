@@ -39,3 +39,11 @@ Branche claude/bloquants-p1-p7. Suit docs/agents/reports/securite-p1-p4.md.
 ## À faire par les autres
 - qa-tests : test HTTP checkout (panier -> commande) avec prix de session falsifié ; init PaiementPro en échec -> stock restauré (non couvert, SOAP).
 - securite : re-valider P1-P4, la route cancel (GET d'état), le fail-closed, l'absence de PII dans les logs.
+
+## C1 (securite-revalidation) : fuite du guest_token via /payments/paiementpro/return — corrigé
+- `return` ne redirige plus jamais avec un guest_token déduit d'un `order_id`/`referenceNumber` GET. Preuve de possession = session `guest_order_tokens[order_id] = token`, posée par `GuestCheckoutController::process` (CheckoutService::rememberGuestOrder) avant l'init de paiement/virement. Sans preuve : redirection `home` neutre (aucun statut ni flash). Commande non invité : redirection vers `acheteur.orders.show` seulement si `auth()->id() === user_id`.
+- `cancel` : le `guest_token` en query est supprimé ; autorisation = propriétaire authentifié ou preuve de session (CheckoutService::ownsGuestOrder), statut pending/processing.
+- `createAccountAfterPurchase` : exige désormais la preuve de session ET le token de l'URL (403 sinon) ; un token seul ne permet plus la prise de contrôle.
+- `confirmation/{token}` : inchangée (le token de 32 caractères aléatoires est lui-même le secret ; lien email conservé).
+- Tests : StockAndWebhookFlowTest (return sans session, cancel, create-account). check : 22 tests verts.
+- À re-valider par securite : C1 ; note : un invité ouvrant le lien de confirmation depuis un autre navigateur ne peut pas créer de compte (comportement voulu). qa-tests : scénario return/cancel/create-account sans session, puis avec session.

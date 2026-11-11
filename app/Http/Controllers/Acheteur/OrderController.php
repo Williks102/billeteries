@@ -77,12 +77,12 @@ public function index(Request $request)
                 ->sum('total_amount')
         ];
 
-        return view('acheteur.orders.index', compact('orders', 'stats'));
+        return view('acheteur.orders', compact('orders', 'stats'));
         
     } catch (\Exception $e) {
         \Log::error('Erreur acheteur orders: ' . $e->getMessage());
         
-        return view('acheteur.orders.index', [
+        return view('acheteur.orders', [
             'orders' => collect()->paginate(10),
             'stats' => [
                 'total_orders' => 0,

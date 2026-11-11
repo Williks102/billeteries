@@ -281,18 +281,18 @@ class PendingCapsTest extends TestCase
 
         $this->assertSame(0, $victim->orders()->visibleInBuyerHistory()->count());
 
-        // La vue acheteur.orders.index n'existe pas dans le dépôt (constat hors périmètre) : stub temporaire
+        // Stub de la vue acheteur.orders (dossier temporaire, prioritaire) : le test vérifie les stats, pas le rendu du layout
         $dir = sys_get_temp_dir() . '/views-' . uniqid();
-        mkdir($dir . '/acheteur/orders', 0777, true);
-        file_put_contents($dir . '/acheteur/orders/index.blade.php', 'stub');
-        view()->getFinder()->addLocation($dir);
+        mkdir($dir . '/acheteur', 0777, true);
+        file_put_contents($dir . '/acheteur/orders.blade.php', 'stub');
+        view()->getFinder()->prependLocation($dir);
 
         $this->actingAs($victim)->get(route('acheteur.orders.index'))
             ->assertOk()
+            ->assertViewIs('acheteur.orders')
             ->assertViewHas('stats', fn ($stats) => $stats['total_orders'] === 0);
 
-        unlink($dir . '/acheteur/orders/index.blade.php');
-        rmdir($dir . '/acheteur/orders');
+        unlink($dir . '/acheteur/orders.blade.php');
         rmdir($dir . '/acheteur');
         rmdir($dir);
     }

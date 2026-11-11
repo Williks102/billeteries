@@ -4,7 +4,7 @@ Légende statut : todo / en cours / fait / bloqué. Voir `.claude/skills/billete
 
 | ID | Agent | Statut | Fichiers touchés | Dépend de | Notes |
 |----|-------|--------|------------------|-----------|-------|
-| P5,P6,P7 | devops-hygiene | todo | .gitignore, bootstrap/providers.php, seeders, .env.example | – | hygiène dépôt |
+| P5,P6,P7 | devops-hygiene | fait | .gitignore, bootstrap/providers.php, config/telescope.php, UserSeeder, DatabaseSeeder, .env.example, suppression backup_migration.php/admin.old/partials.old | – | rapport docs/agents/reports/devops-hygiene-p5-p7.md ; route:list exige PAIEMENTPRO_MERCHANT_ID (service instancié au boot, hors périmètre) |
 | P1,P2,P3 | paiements-stock | todo | VerifyCsrfToken/bootstrap/app.php, PaiementProService, PaiementProController | – | webhook |
 | P4 | paiements-stock | todo | Checkout*, TicketType | P1-P3 | stock + verrou |
 | D5 | securite | todo | Policies, Form Requests (avec architecte) | audit | autorisations |

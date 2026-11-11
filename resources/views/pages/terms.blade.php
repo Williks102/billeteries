@@ -168,9 +168,7 @@
                     <h2 class="section-title">6. Tarifs</h2>
                     <p>Les prix indiqués dans le catalogue et sur la page de sélection des tickets sont les prix mentionnés par l'organisateur de l'événement. <strong>CLICBILLET ne fixe pas le prix des tickets des événements</strong>, chaque organisateur est libre de fixer les prix des tickets et peut les modifier à tout moment.</p>
                     
-                    <p>Des <strong>frais de service</strong> (taxes, frais de paiement...etc.), dont le montant est indiqué sur la page de paiement, peuvent s'ajouter à ces prix. Le montant TTC payé au moment de l'achat est donc le prix des tickets fixé par l'organisateur, majoré éventuellement des frais de service, constituant ainsi le prix TTC tenant compte de la TVA applicable à la date de la commande.</p>
-                    
-                    <p><strong>CLICBILLET</strong> se réserve le droit de modifier à tout moment le montant des frais de service, étant entendu que le montant figurant sur la page de paiement au jour de la commande sera le seul applicable au Client.</p>
+                    <p>Le montant payé par le Client au moment de l'achat est le prix des tickets fixé par l'organisateur : aucun frais supplémentaire n'est facturé au Client. Le montant figurant sur la page de paiement au jour de la commande est le seul applicable.</p>
 
                     <h2 class="section-title">7. Commandes</h2>
                     <p>Afin de passer une commande sur la plateforme, il est recommandé que le Client dispose d'une adresse e-mail valide et suive l'un des processus de commande suivants :</p>
@@ -203,7 +201,7 @@
                         <li><strong>En espèces</strong> au point de vente indiqué</li>
                     </ul>
 
-                    <p>Les coordonnées de paiement et le numéro de commande à indiquer en référence sont communiqués au Client après l'enregistrement de sa commande. Des frais de service de <strong>500 FCFA</strong> par commande s'ajoutent au prix des tickets.</p>
+                    <p>Les coordonnées de paiement et le numéro de commande à indiquer en référence sont communiqués au Client après l'enregistrement de sa commande.</p>
 
                     <p>Dès l'enregistrement de la commande, les places sont <strong>réservées pendant 48 heures</strong> (24 heures pour un Client non connecté). Sans paiement confirmé avant la fin de ce délai, la réservation est libérée automatiquement et la commande expire.</p>
 

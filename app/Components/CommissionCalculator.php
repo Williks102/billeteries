@@ -33,13 +33,13 @@ class CommissionCalculator
 
         if (! $commissionSetting) {
             $commissionRate = 10.0;
-            $platformFee = 500;
         } else {
             $commissionRate = $commissionSetting->commission_rate;
-            $platformFee = $commissionSetting->platform_fee_fixed ?? 500;
         }
 
-        $totalPlatformFees = $platformFee * $quantity;
+        // Frais fixes supprimés : la plateforme ne perçoit que la commission.
+        $platformFee = 0;
+        $totalPlatformFees = 0;
 
         $commissionData = CurrencyHelper::calculateCommission(
             $totalAmount,

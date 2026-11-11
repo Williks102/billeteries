@@ -176,16 +176,10 @@
                                 <span>Sous-total</span>
                                 <span>{{ number_format($cartTotal) }} FCFA</span>
                                 </div>
-                                @if($serviceFee > 0)
-                                <div class="d-flex justify-content-between mb-2">
-        <span>Frais de service</span>
-    <span>{{ number_format($serviceFee) }} FCFA</span>
-</div>
-@endif
 <hr>
 <div class="d-flex justify-content-between mb-3">
     <strong>Total à payer</strong>
-    <strong class="text-orange">{{ number_format($finalTotal) }} FCFA</strong>
+    <strong class="text-orange">{{ number_format($cartTotal) }} FCFA</strong>
 </div>
                         </div>
 

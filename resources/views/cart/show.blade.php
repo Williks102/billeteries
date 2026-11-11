@@ -859,15 +859,9 @@
                         <span>Sous-total</span>
                      <span>{{ number_format($cartTotal) }} FCFA</span>
                     </div>
-                        @if($cartTotal > 0)
-                    <div class="summary-row">
-                    <span>Frais de service</span>
-                        <span>500 FCFA</span>
-                    </div>
-                    @endif
                     <div class="summary-row">
                 <span><strong>Total</strong></span>
-                <span><strong>{{ number_format($cartTotal + ($cartTotal > 0 ? 500 : 0)) }} FCFA</strong></span>
+                <span><strong>{{ number_format($cartTotal) }} FCFA</strong></span>
                         </div>
                     {{-- Boutons de checkout selon le statut --}}
                     <div class="d-grid mt-4">
@@ -1055,15 +1049,9 @@
     <span>Sous-total</span>
     <span id="mobileSubtotal">{{ number_format($cartTotal) }} FCFA</span>
 </div>
-@if($cartTotal > 0)
-<div class="mobile-summary-row">
-    <span>Frais de service</span>
-    <span>500 FCFA</span>
-</div>
-@endif
 <div class="mobile-summary-row">
     <span><strong>Total</strong></span>
-    <span><strong id="mobileTotal">{{ number_format($cartTotal + ($cartTotal > 0 ? 500 : 0)) }} FCFA</strong></span>
+    <span><strong id="mobileTotal">{{ number_format($cartTotal) }} FCFA</strong></span>
 </div>
         </div>
         
@@ -1301,14 +1289,14 @@ async function clearCart() {
 function updateDesktopTotals(data) {
     if (data.cart_total !== undefined) {
         const subtotal = data.cart_total;
-        const total = subtotal + 500;
+        const total = subtotal;
         
         // Mettre à jour les éléments de résumé si ils existent
         document.querySelectorAll('.total-summary .summary-row').forEach((row, index) => {
             const span = row.querySelector('span:last-child');
             if (index === 0 && span) { // Sous-total
                 span.textContent = subtotal.toLocaleString() + ' FCFA';
-            } else if (index === 2 && span) { // Total
+            } else if (index === 1 && span) { // Total (= sous-total, aucun frais)
                 span.textContent = total.toLocaleString() + ' FCFA';
             }
         });
@@ -1325,7 +1313,7 @@ function updateMobileTotals(data) {
     
     if (subtotalElement && data.cart_total !== undefined) {
         const subtotal = data.cart_total;
-        const total = subtotal + 500;
+        const total = subtotal;
         
         subtotalElement.textContent = subtotal.toLocaleString() + ' FCFA';
         totalElement.textContent = total.toLocaleString() + ' FCFA';

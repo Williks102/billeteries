@@ -40,7 +40,7 @@ class ManualCheckoutTest extends TestCase
         ], $override);
     }
 
-    public function test_service_creates_pending_order_expiring_in_48h_with_fee_and_one_commission(): void
+    public function test_service_creates_pending_order_expiring_in_48h_and_one_commission(): void
     {
         $type = $this->ticketType(10);
         $service = app(CheckoutService::class);
@@ -49,7 +49,7 @@ class ManualCheckoutTest extends TestCase
         $order = DB::transaction(fn () => $service->createOrder(1, 1, $groups[1], ['payment_method' => 'mobile_money']));
 
         $this->assertSame('pending', $order->payment_status);
-        $this->assertSame(2000 + CheckoutService::SERVICE_FEE, $order->total_amount);
+        $this->assertSame(2000, $order->total_amount);
         $this->assertEqualsWithDelta(
             now()->addMinutes(2880)->timestamp, $order->expires_at->timestamp, 5
         );
@@ -109,13 +109,13 @@ class ManualCheckoutTest extends TestCase
         $response->assertRedirect(route('checkout.guest.confirmation', $order->guest_token));
         $this->assertSame('pending', $order->payment_status);
         $this->assertSame('mobile_money', $order->payment_method);
-        $this->assertSame(2000 + CheckoutService::SERVICE_FEE, $order->total_amount); // prix serveur, pas ceux de la session
+        $this->assertSame(2000, $order->total_amount); // prix serveur, pas ceux de la session
         $this->assertEqualsWithDelta(now()->addMinutes(1440)->timestamp, $order->expires_at->timestamp, 5); // invité : 24 h (E2)
         $this->assertSame($order->guest_token, session('guest_order_tokens.' . $order->id)); // C1
         $this->assertNull(session('cart'));
         Mail::assertSent(ManualPaymentInstructions::class, 1);
 
-        // Page de confirmation : numéro, montant (frais inclus), instructions, date limite
+        // Page de confirmation : numéro, montant, instructions, date limite
         $page = $this->get(route('checkout.guest.confirmation', $order->guest_token));
         $page->assertOk()
             ->assertSee($order->order_number)

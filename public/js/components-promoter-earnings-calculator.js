@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configuration de base (à adapter selon vos paramètres)
     const COMMISSION_RATE = 10; // 10%
-    const PLATFORM_FEE_PER_TICKET = 500; // 500 FCFA par billet
+    // Aucun frais fixe : la plateforme ne prélève que la commission sur le prix des billets
     
     function updateCalculations() {
         const price = parseInt(priceInput.value) || 0;
@@ -12,21 +12,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Calculs
         const grossAmount = price * quantity;
-        const platformFees = PLATFORM_FEE_PER_TICKET * quantity;
         const commissionAmount = Math.round((grossAmount * COMMISSION_RATE) / 100);
-        const totalDeductions = platformFees + commissionAmount;
-        const netEarnings = grossAmount - totalDeductions;
+        const netEarnings = grossAmount - commissionAmount;
         
         // Pourcentages
         const promoterPercentage = grossAmount > 0 ? Math.round((netEarnings / grossAmount) * 100) : 0;
-        const platformPercentage = grossAmount > 0 ? Math.round((totalDeductions / grossAmount) * 100) : 0;
+        const platformPercentage = grossAmount > 0 ? Math.round((commissionAmount / grossAmount) * 100) : 0;
         
         // Mise à jour des éléments
         document.getElementById('total-revenue').textContent = formatCurrency(grossAmount);
         document.getElementById('net-earnings').textContent = formatCurrency(netEarnings);
         document.getElementById('gross-amount').textContent = formatCurrency(grossAmount);
         document.getElementById('commission-amount').textContent = '- ' + formatCurrency(commissionAmount);
-        document.getElementById('platform-fees').textContent = '- ' + formatCurrency(platformFees);
         document.getElementById('final-earnings').textContent = formatCurrency(netEarnings);
         
         // Barres de progression
@@ -41,7 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Informations
         document.getElementById('commission-rate').textContent = COMMISSION_RATE + '%';
-        document.getElementById('platform-fees-display').textContent = formatCurrency(PLATFORM_FEE_PER_TICKET) + '/billet';
     }
     
     function formatCurrency(amount) {

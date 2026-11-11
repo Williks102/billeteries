@@ -57,7 +57,7 @@ class ManualPaymentJourneyTest extends TestCase
 
         $order = Order::sole();
         $this->assertSame('pending', $order->payment_status);
-        $this->assertSame(2000 + CheckoutService::SERVICE_FEE, $order->total_amount); // item 7
+        $this->assertSame(2000, $order->total_amount); // item 7
         $this->assertEqualsWithDelta(now()->addHours(48)->timestamp, $order->expires_at->timestamp, 10);
         $this->assertSame(2, Ticket::where('status', 'reserved')->count());
         $this->assertSame(2, $type->fresh()->quantity_sold);
@@ -92,7 +92,7 @@ class ManualPaymentJourneyTest extends TestCase
         $order = Order::sole();
         $this->assertNotEmpty($order->guest_token);
         $this->assertSame($order->guest_token, session('guest_order_tokens.' . $order->id));
-        $this->assertSame(1000 + CheckoutService::SERVICE_FEE, $order->total_amount);
+        $this->assertSame(1000, $order->total_amount);
         $this->get(route('checkout.guest.confirmation', $order->guest_token))
             ->assertOk()->assertSee($order->order_number);
 

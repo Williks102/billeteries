@@ -39,7 +39,7 @@
                         </div>
                     @endforeach
                     <div class="d-flex justify-content-between py-3 fw-bold fs-5">
-                        <span>Total (frais de service inclus)</span>
+                        <span>Total</span>
                         <span class="text-primary">{{ number_format($order->total_amount) }} FCFA</span>
                     </div>
                 </div>

@@ -290,28 +290,28 @@
         <h1><i class="fas fa-tags me-3"></i>TARIFS</h1>
         <p>Pour les organisateurs d'événements</p>
         <p><strong>Publier un événement sur ClicBillet CI est GRATUIT.</strong><br>
-        Les frais ne s'appliquent qu'aux tickets payés par les participants.</p>
+        La commission ne s'applique qu'aux tickets payés par les participants.</p>
     </div>
 </div>
 
 <div class="container">
     <!-- Commission principale -->
     <div class="commission-highlight">
-        <div class="commission-rate">8<small style="font-size: 0.6em;">%</small></div>
+        <div class="commission-rate">10<small style="font-size: 0.6em;">%</small></div>
         <div class="commission-subtitle">Et puis c'est tout !</div>
         <p class="mb-0">Vendez les tickets de votre événement sur <strong>ClicBillet CI</strong></p>
     </div>
 
     <!-- Description des avantages -->
     <div class="text-center mb-5">
-        <p class="lead">Avec notre plateforme, les frais ne sont que de <strong>8%</strong> du prix du ticket. Profitez d'une place de marché 24/7 et de milliers de participants potentiels. Vous ne trouverez pas meilleur service pour vendre vos tickets en Côte d'Ivoire.</p>
+        <p class="lead">Avec notre plateforme, la commission est de <strong>10 %</strong> du prix du ticket (taux par défaut), sans aucun frais fixe. Profitez d'une place de marché 24/7 et de milliers de participants potentiels. Vous ne trouverez pas meilleur service pour vendre vos tickets en Côte d'Ivoire.</p>
     </div>
 
     <!-- Calculateur -->
     <div class="calculator-section">
         <div class="container">
-            <h2 class="text-center mb-4">Comprendre nos frais très simplement</h2>
-            <p class="text-center text-muted mb-4">Posez le stylo et le papier et découvrez vos frais avec notre calculateur en ligne. Entrez simplement le prix d'un ticket et laissez-nous faire le reste !</p>
+            <h2 class="text-center mb-4">Comprendre notre commission très simplement</h2>
+            <p class="text-center text-muted mb-4">Posez le stylo et le papier et découvrez votre commission avec notre calculateur en ligne. Entrez simplement le prix d'un ticket et laissez-nous faire le reste !</p>
             
             <div class="calculator-card">
                 <h3 class="text-center mb-4">
@@ -332,10 +332,10 @@
                     <div class="result-box result-participants">
                         <div class="result-amount" id="participantPrice">5 000 F</div>
                         <div>Les participants payeront</div>
-                        <small class="text-muted">Prix ticket + frais techniques</small>
+                        <small class="text-muted">Le prix affiché est le prix payé : aucun frais supplémentaire pour l'acheteur</small>
                     </div>
                     <div class="result-box result-earnings">
-                        <div class="result-amount" id="organizerEarnings">4 100 F</div>
+                        <div class="result-amount" id="organizerEarnings">4 500 F</div>
                         <div>Vous recevrez</div>
                         <small class="text-muted">Vos revenus nets</small>
                     </div>
@@ -344,7 +344,7 @@
                 <div class="text-center mt-3">
                     <small class="text-muted">
                         <i class="fas fa-info-circle me-1"></i>
-                        Commission ClicBillet : 8% + frais techniques 500 FCFA/ticket
+                        Commission ClicBillet : 10 % du prix du ticket (taux par défaut), sans frais fixe
                     </small>
                 </div>
             </div>
@@ -498,7 +498,7 @@
                     </h3>
                     <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#pricingFAQ">
                         <div class="accordion-body">
-                            <p><strong>Non, transparence totale !</strong> Seuls 8% de commission + 500 FCFA de frais techniques par billet sont déduits. Aucun frais caché, aucune surprise.</p>
+                            <p><strong>Non, transparence totale !</strong> Seule la commission (10 % du prix du ticket par défaut) est déduite de vos ventes ; l'acheteur paie uniquement le prix du billet. Aucun frais caché, aucune surprise.</p>
                         </div>
                     </div>
                 </div>
@@ -511,7 +511,7 @@
                     </h3>
                     <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#pricingFAQ">
                         <div class="accordion-body">
-                            <p><strong>Aucun frais !</strong> Si aucun billet n'est vendu, vous ne payez rien. Nos frais ne s'appliquent que sur les ventes effectives.</p>
+                            <p><strong>Aucun frais !</strong> Si aucun billet n'est vendu, vous ne payez rien. Notre commission ne s'applique que sur les ventes effectives.</p>
                         </div>
                     </div>
                 </div>

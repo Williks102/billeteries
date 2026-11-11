@@ -13,5 +13,5 @@ Légende statut : todo / en cours / fait / bloqué. Voir `.claude/skills/billete
 | R1 | paiements-stock / architecte | todo | favoris, categories extras, cart extend-timer/status, intervention-events | D2 | routes pointant vers méthodes inexistantes |
 | R2 | architecte | todo | public/js/admin-users-*.js | D2 | JS appelle /admin/users/{check-email,resend-verification,verify-email} : routes absentes |
 | R3 | architecte | todo | Promoteur/SalesController::{reports,export} | D2 | code mort (doublon de ReportsController) |
-| D7 | qa-tests | en cours | tests/, composer check, .githooks (pas de GitHub Actions) | P1-P4 | caractérisation |
+| D7 | qa-tests | en cours | tests/, composer run check, .githooks (pas de GitHub Actions) | P1-P4 | caractérisation |
 | UI | ui-design | todo | resources/views, public/css | D1-D3 | accessibilité, mobile |

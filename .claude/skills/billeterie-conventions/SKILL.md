@@ -48,8 +48,10 @@ D8 Logs trop bavards (`$request->all()`).
 - Les URLs d'admin sont référencées en dur dans `public/js/admin-*.js` : ne pas les changer sans mettre à jour ces fichiers.
 
 # Vérifications locales (remplacent la CI — pas de GitHub Actions)
-- Avant TOUT commit/push et avant d'annoncer qu'une mission est finie : `composer check` doit être vert. Le coller dans le compte rendu.
+- Toujours écrire `composer run check` (jamais `composer check`) : si le script n'existe pas (clone obsolète), `composer check` est interprété comme `check-platform-reqs` et « réussit » sans rien tester, `composer run check` échoue.
+- Une vérification n'est valide que si la sortie contient `OK (N tests, …)` avec N ≥ 6. Sinon : `git fetch origin && git checkout -B <branche> origin/main`, puis recommencer.
+- Avant TOUT commit/push et avant d'annoncer qu'une mission est finie : `composer run check` doit être vert. Le coller dans le compte rendu.
 - `composer install` d'abord si `vendor/` est absent (cloud : plusieurs minutes, lancer en arrière-plan).
-- Hook optionnel : `composer run setup-hooks` active `.githooks/pre-push` (relance `composer check` avant chaque push).
-- Étendre `composer check` quand de nouveaux tests critiques existent (paiement, stock) ; ne jamais le rendre rouge « pour plus tard ».
+- Hook optionnel : `composer run setup-hooks` active `.githooks/pre-push` (relance `composer run check` avant chaque push).
+- Étendre `composer run check` quand de nouveaux tests critiques existent (paiement, stock) ; ne jamais le rendre rouge « pour plus tard ».
 - Ne pas ajouter de workflow `.github/workflows/` sans demande explicite de l'utilisateur.

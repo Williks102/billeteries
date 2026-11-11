@@ -175,7 +175,7 @@ class GuestCheckoutController extends Controller
 
             // Redirection selon le type d'utilisateur
             if (auth()->check()) {
-                return redirect()->route('acheteur.orders')->with('success', $message);
+                return redirect()->route('acheteur.orders.index')->with('success', $message);
             } else {
                 // Pour les invités
                 $firstOrder = $orders[0];

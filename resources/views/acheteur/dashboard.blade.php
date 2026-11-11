@@ -126,7 +126,7 @@ use Illuminate\Support\Facades\Storage;
                                             {{ $order->event->venue ?? 'Lieu à confirmer' }}
                                         </p>
                                         <div class="mt-2">
-                                            <a href="{{ route('acheteur.order.detail', $order) }}" 
+                                            <a href="{{ route('acheteur.orders.show', $order) }}" 
                                                class="btn btn-sm btn-outline-acheteur">
                                                 Voir mes billets
                                             </a>
@@ -140,7 +140,7 @@ use Illuminate\Support\Facades\Storage;
                     
                     @if($upcomingEvents->count() > 3)
                     <div class="text-center mt-3">
-                        <a href="{{ route('acheteur.tickets') }}" class="btn btn-outline-acheteur">
+                        <a href="{{ route('acheteur.tickets.index') }}" class="btn btn-outline-acheteur">
                             Voir tous mes billets ({{ $upcomingEvents->count() }})
                         </a>
                     </div>
@@ -209,12 +209,12 @@ use Illuminate\Support\Facades\Storage;
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('acheteur.order.detail', $order) }}" 
+                                            <a href="{{ route('acheteur.orders.show', $order) }}" 
                                                class="btn btn-outline-primary" title="Voir les détails">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             @if($order->payment_status === 'paid')
-                                            <a href="{{ route('acheteur.order.download', $order) }}" 
+                                            <a href="{{ route('acheteur.orders.download', $order) }}" 
                                                class="btn btn-outline-success" title="Télécharger les billets">
                                                 <i class="fas fa-download"></i>
                                             </a>
@@ -228,7 +228,7 @@ use Illuminate\Support\Facades\Storage;
                     </div>
                     
                     <div class="text-center mt-3">
-                        <a href="{{ route('acheteur.orders') }}" class="btn btn-outline-acheteur">
+                        <a href="{{ route('acheteur.orders.index') }}" class="btn btn-outline-acheteur">
                             Voir toutes mes commandes
                         </a>
                     </div>

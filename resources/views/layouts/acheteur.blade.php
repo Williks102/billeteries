@@ -788,10 +788,10 @@
                         <span class="sidebar-tooltip">Mes Billets</span>
                     </a>
                     <ul class="sidebar-submenu" id="submenu-tickets">
-                        <li><a href="{{ route('acheteur.tickets') }}" class="{{ request()->routeIs('acheteur.tickets') && !request('status') ? 'active' : '' }}">Tous mes billets</a></li>
-                        <li><a href="{{ route('acheteur.tickets', ['status' => 'active']) }}">Billets actifs</a></li>
-                        <li><a href="{{ route('acheteur.tickets', ['status' => 'used']) }}">Billets utilisés</a></li>
-                        <li><a href="{{ route('acheteur.tickets', ['status' => 'expired']) }}">Billets expirés</a></li>
+                        <li><a href="{{ route('acheteur.tickets.index') }}" class="{{ request()->routeIs('acheteur.tickets.index') && !request('status') ? 'active' : '' }}">Tous mes billets</a></li>
+                        <li><a href="{{ route('acheteur.tickets.index', ['status' => 'active']) }}">Billets actifs</a></li>
+                        <li><a href="{{ route('acheteur.tickets.index', ['status' => 'used']) }}">Billets utilisés</a></li>
+                        <li><a href="{{ route('acheteur.tickets.index', ['status' => 'expired']) }}">Billets expirés</a></li>
                     </ul>
                 </li>
 
@@ -804,9 +804,9 @@
                         <span class="sidebar-tooltip">Mes Commandes</span>
                     </a>
                     <ul class="sidebar-submenu" id="submenu-orders">
-                        <li><a href="{{ route('acheteur.orders') }}" class="{{ request()->routeIs('acheteur.orders') && !request('status') ? 'active' : '' }}">Toutes mes commandes</a></li>
-                        <li><a href="{{ route('acheteur.orders', ['status' => 'paid']) }}">Commandes payées</a></li>
-                        <li><a href="{{ route('acheteur.orders', ['status' => 'pending']) }}">En attente</a></li>
+                        <li><a href="{{ route('acheteur.orders.index') }}" class="{{ request()->routeIs('acheteur.orders.index') && !request('status') ? 'active' : '' }}">Toutes mes commandes</a></li>
+                        <li><a href="{{ route('acheteur.orders.index', ['status' => 'paid']) }}">Commandes payées</a></li>
+                        <li><a href="{{ route('acheteur.orders.index', ['status' => 'pending']) }}">En attente</a></li>
                     </ul>
                 </li>
 
@@ -859,7 +859,7 @@
                         <span class="sidebar-tooltip">Paramètres</span>
                     </a>
                     <ul class="sidebar-submenu" id="submenu-settings">
-                        <li><a href="{{ route('acheteur.profile') }}">Mon Profil</a></li>
+                        <li><a href="{{ route('acheteur.profile.show') }}">Mon Profil</a></li>
                         <li><a href="#" onclick="showPasswordModal()">Changer mot de passe</a></li>
                         <li><a href="#" onclick="showNotificationSettings()">Notifications</a></li>
                     </ul>

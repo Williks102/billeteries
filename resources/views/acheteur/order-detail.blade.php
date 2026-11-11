@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 @section('breadcrumb')
     <li class="breadcrumb-item">
-        <a href="{{ route('acheteur.orders') }}">Mes Commandes</a>
+        <a href="{{ route('acheteur.orders.index') }}">Mes Commandes</a>
     </li>
     <li class="breadcrumb-item active">Commande #{{ $order->order_number ?? $order->id }}</li>
 @endsection
@@ -32,11 +32,11 @@ use Illuminate\Support\Facades\Storage;
         </div>
         <div class="d-flex gap-2">
             @if($order->payment_status === 'paid')
-                <a href="{{ route('acheteur.order.download', $order) }}" class="btn btn-acheteur">
+                <a href="{{ route('acheteur.orders.download', $order) }}" class="btn btn-acheteur">
                     <i class="fas fa-download me-2"></i>Télécharger mes billets
                 </a>
             @endif
-            <a href="{{ route('acheteur.orders') }}" class="btn btn-outline-acheteur">
+            <a href="{{ route('acheteur.orders.index') }}" class="btn btn-outline-acheteur">
                 <i class="fas fa-arrow-left me-2"></i>Retour
             </a>
         </div>
@@ -193,7 +193,7 @@ use Illuminate\Support\Facades\Storage;
                                             @endif
 
                                             <div class="d-flex gap-2">
-                                                <a href="{{ route('acheteur.ticket.show', $ticket) }}" 
+                                                <a href="{{ route('acheteur.tickets.show', $ticket) }}" 
                                                    class="btn btn-sm btn-outline-primary flex-fill">
                                                     <i class="fas fa-eye me-1"></i>Voir
                                                 </a>
@@ -273,13 +273,13 @@ use Illuminate\Support\Facades\Storage;
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         @if($order->payment_status === 'paid')
-                            <a href="{{ route('acheteur.order.download', $order) }}" 
+                            <a href="{{ route('acheteur.orders.download', $order) }}" 
                                class="btn btn-success">
                                 <i class="fas fa-download me-2"></i>Télécharger PDF
                             </a>
                         @endif
                         
-                        <a href="{{ route('acheteur.orders') }}" 
+                        <a href="{{ route('acheteur.orders.index') }}" 
                            class="btn btn-outline-primary">
                             <i class="fas fa-list me-2"></i>Toutes mes commandes
                         </a>

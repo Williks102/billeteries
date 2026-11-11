@@ -304,7 +304,7 @@
                         <i class="fas fa-plus me-2"></i>Créer un événement
                     </a>
                     
-                    <a href="{{ route('promoteur.sales') }}" class="btn btn-outline-secondary">
+                    <a href="{{ route('promoteur.sales.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-chart-line me-2"></i>Voir mes ventes
                     </a>
                     

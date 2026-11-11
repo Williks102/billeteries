@@ -114,7 +114,7 @@ use Illuminate\Support\Facades\Storage;
                         </a>
                     </li>
                     <li class="breadcrumb-item">
-                        <a href="{{ route('admin.events') }}">Événements</a>
+                        <a href="{{ route('admin.events.index') }}">Événements</a>
                     </li>
                     <li class="breadcrumb-item active">{{ $event->title }}</li>
                 </ol>
@@ -132,7 +132,7 @@ use Illuminate\Support\Facades\Storage;
                     <a href="{{ route('admin.events.show', $event) }}" class="btn btn-outline-orange">
                         <i class="fas fa-eye me-2"></i>Voir les détails
                     </a>
-                    <a href="{{ route('admin.events') }}" class="btn btn-outline-secondary">
+                    <a href="{{ route('admin.events.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Retour à la liste
                     </a>
                 </div>

@@ -215,11 +215,11 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{{ route('acheteur.orders') }}" class="btn btn-outline-primary">
+                        <a href="{{ route('acheteur.orders.index') }}" class="btn btn-outline-primary">
                             <i class="fas fa-shopping-bag me-2"></i>Mes commandes
                         </a>
                         
-                        <a href="{{ route('acheteur.tickets') }}" class="btn btn-outline-success">
+                        <a href="{{ route('acheteur.tickets.index') }}" class="btn btn-outline-success">
                             <i class="fas fa-ticket-alt me-2"></i>Mes billets
                         </a>
                         

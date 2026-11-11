@@ -31,7 +31,7 @@
     <!-- Filtres -->
     <div class="content-card mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ route('acheteur.tickets') }}" class="row g-3 align-items-center">
+            <form method="GET" action="{{ route('acheteur.tickets.index') }}" class="row g-3 align-items-center">
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Statut</label>
                     <select name="status" class="form-select" onchange="this.form.submit()">
@@ -51,7 +51,7 @@
                         <i class="fas fa-search me-2"></i>Filtrer
                     </button>
                     @if(request()->hasAny(['status', 'search']))
-                        <a href="{{ route('acheteur.tickets') }}" class="btn btn-outline-secondary ms-2">
+                        <a href="{{ route('acheteur.tickets.index') }}" class="btn btn-outline-secondary ms-2">
                             <i class="fas fa-times me-1"></i>Reset
                         </a>
                     @endif
@@ -181,7 +181,7 @@
                                 </button>
                                 @endif
                                 
-                                <a href="{{ route('acheteur.ticket.show', $ticket) }}" 
+                                <a href="{{ route('acheteur.tickets.show', $ticket) }}" 
                                    class="btn btn-verify btn-sm">
                                     <i class="fas fa-eye me-1"></i>Détails
                                 </a>
@@ -208,13 +208,13 @@
                         </div>
                         <div class="col-md-6 text-end">
                             @if($order->canDownloadTickets())
-                                <a href="{{ route('acheteur.order.download', $order) }}" 
+                                <a href="{{ route('acheteur.orders.download', $order) }}" 
                                    class="btn btn-download btn-sm me-2">
                                     <i class="fas fa-file-pdf me-1"></i>PDF
                                 </a>
                             @endif
                             
-                            <a href="{{ route('acheteur.order.detail', $order) }}" 
+                            <a href="{{ route('acheteur.orders.show', $order) }}" 
                                class="btn btn-outline-primary btn-sm">
                                 <i class="fas fa-info-circle me-1"></i>Détails
                             </a>
@@ -245,7 +245,7 @@
                 </p>
                 <div class="d-flex justify-content-center gap-3">
                     @if(request()->hasAny(['status', 'search']))
-                        <a href="{{ route('acheteur.tickets') }}" class="btn btn-outline-acheteur">
+                        <a href="{{ route('acheteur.tickets.index') }}" class="btn btn-outline-acheteur">
                             <i class="fas fa-times me-2"></i>Effacer les filtres
                         </a>
                     @endif

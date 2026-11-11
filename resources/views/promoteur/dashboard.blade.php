@@ -203,7 +203,7 @@
         </a>
     </div>
     <div class="col-md-3">
-        <a href="{{ route('promoteur.sales') }}" class="quick-action">
+        <a href="{{ route('promoteur.sales.index') }}" class="quick-action">
             <div class="quick-action-icon">
                 <i class="fas fa-chart-line"></i>
             </div>
@@ -212,7 +212,7 @@
         </a>
     </div>
     <div class="col-md-3">
-        <a href="{{ route('promoteur.reports') }}" class="quick-action">
+        <a href="{{ route('promoteur.reports.index') }}" class="quick-action">
             <div class="quick-action-icon">
                 <i class="fas fa-file-alt"></i>
             </div>

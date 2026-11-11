@@ -371,7 +371,7 @@ use Illuminate\Support\Facades\Storage;
                         </a>
                     @endif
                     
-                    <a href="{{ route('promoteur.sales') }}" class="btn btn-outline-dark">
+                    <a href="{{ route('promoteur.sales.index') }}" class="btn btn-outline-dark">
                         <i class="fas fa-chart-bar me-2"></i>Analyser les ventes
                     </a>
                     

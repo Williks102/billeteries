@@ -42,7 +42,7 @@
         <li>❌ <strong>Un seul scan</strong> : Chaque billet ne peut être scanné qu'une seule fois</li>
     </ul>
 
-    <a href="{{ route('acheteur.order.detail', $order) }}" class="btn">
+    <a href="{{ route('acheteur.orders.show', $order) }}" class="btn">
         Gérer mes billets en ligne
     </a>
 

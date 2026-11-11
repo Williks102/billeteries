@@ -5,7 +5,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item">
-        <a href="{{ route('admin.tickets') }}">Billets</a>
+        <a href="{{ route('admin.tickets.index') }}">Billets</a>
     </li>
     <li class="breadcrumb-item active">{{ $ticket->ticket_code }}</li>
 @endsection
@@ -18,7 +18,7 @@
             <p class="text-muted mb-0">Détails complets du billet et historique des actions</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.tickets.pdf', $ticket) }}" class="btn btn-outline-orange">
+            <a href="{{ route('admin.tickets.download', $ticket) }}" class="btn btn-outline-orange">
                 <i class="fas fa-file-pdf me-2"></i>Télécharger PDF
             </a>
             @if($ticket->status === 'sold')
@@ -607,7 +607,7 @@
     
     function markAsUsed() {
         if (confirm('Êtes-vous sûr de vouloir marquer ce billet comme utilisé ?')) {
-            fetch('{{ route("admin.tickets.markUsed", $ticket) }}', {
+            fetch('{{ route("admin.tickets.mark-used", $ticket) }}', {
                 method: 'PATCH',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',

@@ -97,7 +97,7 @@
 
     <!-- Filtres -->
     <div class="filter-card">
-        <form method="GET" action="{{ route('promoteur.sales') }}" class="row g-3">
+        <form method="GET" action="{{ route('promoteur.sales.index') }}" class="row g-3">
             <div class="col-md-4">
                 <label class="form-label">Date de début</label>
                 <input type="date" name="start_date" class="form-control" 

@@ -5,7 +5,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item">
-        <a href="{{ route('admin.orders') }}">Commandes</a>
+        <a href="{{ route('admin.orders.index') }}">Commandes</a>
     </li>
     <li class="breadcrumb-item active">Commande #{{ $order->order_number ?? $order->id }}</li>
 @endsection

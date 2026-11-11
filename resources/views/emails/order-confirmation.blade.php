@@ -53,7 +53,7 @@
             <li>🎉 Profitez de votre événement !</li>
         </ul>
         
-        <a href="{{ route('acheteur.order.detail', $order) }}" class="btn">
+        <a href="{{ route('acheteur.orders.show', $order) }}" class="btn">
             Voir ma commande en ligne
         </a>
     @endif

@@ -88,7 +88,7 @@ use Illuminate\Support\Facades\Storage;
     <!-- Filtres -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ route('acheteur.orders') }}" class="row g-3">
+            <form method="GET" action="{{ route('acheteur.orders.index') }}" class="row g-3">
                 <div class="col-md-3">
                     <label for="status" class="form-label">Statut de paiement</label>
                     <select name="payment_status" id="payment_status" class="form-select">
@@ -121,7 +121,7 @@ use Illuminate\Support\Facades\Storage;
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-search me-2"></i>Filtrer
                     </button>
-                    <a href="{{ route('acheteur.orders') }}" class="btn btn-outline-secondary">
+                    <a href="{{ route('acheteur.orders.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-times me-2"></i>Réinitialiser
                     </a>
                 </div>
@@ -156,7 +156,7 @@ use Illuminate\Support\Facades\Storage;
                                     <div class="row">
                                         <div class="col-12">
                                             <h5 class="mb-1">
-                                                <a href="{{ route('acheteur.order.detail', $order) }}" 
+                                                <a href="{{ route('acheteur.orders.show', $order) }}" 
                                                    class="text-decoration-none text-dark">
                                                     {{ $order->event->title ?? 'Événement supprimé' }}
                                                 </a>
@@ -213,13 +213,13 @@ use Illuminate\Support\Facades\Storage;
                                 <!-- Actions -->
                                 <div class="col-md-2 text-end">
                                     <div class="btn-group-vertical d-grid gap-2">
-                                        <a href="{{ route('acheteur.order.detail', $order) }}" 
+                                        <a href="{{ route('acheteur.orders.show', $order) }}" 
                                            class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-eye me-1"></i>Détails
                                         </a>
                                         
                                         @if($order->payment_status === 'paid')
-                                            <a href="{{ route('acheteur.order.download', $order) }}" 
+                                            <a href="{{ route('acheteur.orders.download', $order) }}" 
                                                class="btn btn-success btn-sm">
                                                 <i class="fas fa-download me-1"></i>PDF
                                             </a>
@@ -295,7 +295,7 @@ use Illuminate\Support\Facades\Storage;
                     <p class="text-muted mb-4">
                         Aucune commande ne correspond à vos critères de recherche.
                     </p>
-                    <a href="{{ route('acheteur.orders') }}" class="btn btn-outline-primary me-2">
+                    <a href="{{ route('acheteur.orders.index') }}" class="btn btn-outline-primary me-2">
                         <i class="fas fa-times me-2"></i>Effacer les filtres
                     </a>
                 @else

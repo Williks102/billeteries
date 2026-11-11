@@ -4,8 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const organizerEarningsEl = document.getElementById('organizerEarnings');
     
     // Configuration ClicBillet CI
-    const COMMISSION_RATE = 8; // 8%
-    const TECHNICAL_FEE = 500; // 500 FCFA par billet
+    const COMMISSION_RATE = 10; // 10 % (taux par défaut de la plateforme)
     
     function updateCalculations() {
         const ticketPrice = parseInt(priceInput.value) || 0;
@@ -16,8 +15,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Ce que paient les participants (prix + frais techniques)
-        const participantPrice = ticketPrice + TECHNICAL_FEE;
+        // Ce que paient les participants : le prix du ticket, sans frais supplémentaire
+        const participantPrice = ticketPrice;
         
         // Commission ClicBillet (sur le prix du ticket seulement)
         const commission = Math.round((ticketPrice * COMMISSION_RATE) / 100);

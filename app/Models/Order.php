@@ -156,28 +156,25 @@ class Order extends Model
     {
         $event = $this->event;
         $commissionSetting = CommissionSetting::getCommissionForEvent($event, $event->promoter_id);
-        
-        if (!$commissionSetting) {
-            // Commission par défaut : 10% + 500 FCFA
-            $commissionRate = 10.00;
-            $platformFee = 500;
-        } else {
-            $commissionRate = $commissionSetting->commission_rate;
-            $platformFee = $commissionSetting->platform_fee_fixed ?? 500;
-        }
-        
-        $commissionCalc = CurrencyHelper::calculateCommission(
-            $this->total_amount, 
-            $commissionRate, 
-            $platformFee
-        );
-        
+
+        // Taux inchangé : réglage promoteur > catégorie > défaut, sinon 10 %.
+        $commissionRate = $commissionSetting ? $commissionSetting->commission_rate : 10.00;
+
+        // Assiette = prix des billets uniquement (somme des lignes). Pour une ancienne commande dont
+        // total_amount incluait 500 FCFA de frais historiques, ces frais ne sont donc pas commissionnés.
+        $subtotal = $this->orderItems()->exists()
+            ? (int) $this->orderItems()->sum('total_price')
+            : (int) $this->total_amount;
+
+        // Plus aucun frais fixe : la plateforme ne se rémunère que par la commission (platform_fee_fixed ignoré).
+        $commissionCalc = CurrencyHelper::calculateCommission($subtotal, $commissionRate, 0);
+
         return [
-            'gross_amount' => $this->total_amount,
+            'gross_amount' => $subtotal,
             'commission_rate' => $commissionRate,
             'commission_amount' => $commissionCalc['commission'],
             'net_amount' => $commissionCalc['net'],
-            'platform_fee' => $platformFee,
+            'platform_fee' => 0,
         ];
     }
 

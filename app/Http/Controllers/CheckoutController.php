@@ -55,11 +55,9 @@ class CheckoutController extends Controller
         }
 
         $cartTotal = array_sum(array_column($cart, 'total_price'));
-        $serviceFee = $cartTotal > 0 ? CheckoutService::SERVICE_FEE : 0;
-        $finalTotal = $cartTotal + $serviceFee;
 
         return view('checkout.show', compact(
-            'cart', 'cartTotal', 'serviceFee', 'finalTotal', 
+            'cart', 'cartTotal',
             'isDirectBooking', 'timeRemaining'
         ));
     }
@@ -120,10 +118,7 @@ class CheckoutController extends Controller
         session()->put('direct_booking', $selectedTickets);
         session()->put('booking_timer', now()->addMinutes(60)); // 1 heure de réservation
 
-        $serviceFee = CheckoutService::SERVICE_FEE;
-        $finalTotal = $cartTotal + $serviceFee;
-
-        return view('checkout.direct', compact('selectedTickets', 'cartTotal', 'serviceFee', 'finalTotal', 'event'));
+        return view('checkout.direct', compact('selectedTickets', 'cartTotal', 'event'));
     }
 
     /**

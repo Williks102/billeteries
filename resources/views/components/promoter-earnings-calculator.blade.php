@@ -63,10 +63,6 @@
                         <span>📝 Commission plateforme (<span id="commission-rate">10%</span>) :</span>
                         <strong id="commission-amount">- 25 000 FCFA</strong>
                     </div>
-                    <div class="d-flex justify-content-between mb-2 text-warning">
-                        <span>⚙️ Frais techniques (<span id="platform-fees-display">500 FCFA/billet</span>) :</span>
-                        <strong id="platform-fees">- 25 000 FCFA</strong>
-                    </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
                         <span class="fw-bold text-success">💵 Vos gains nets :</span>

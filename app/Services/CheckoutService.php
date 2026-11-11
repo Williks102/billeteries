@@ -20,8 +20,6 @@ use Illuminate\Support\Facades\RateLimiter;
  */
 class CheckoutService
 {
-    public const SERVICE_FEE = 500;
-
     /** Message affiché pour toute erreur interne (jamais le message de l'exception). */
     public const GENERIC_ERROR = 'Une erreur est survenue lors de l\'enregistrement de votre commande. Veuillez réessayer.';
 
@@ -306,7 +304,7 @@ class CheckoutService
         $order = Order::create($attributes + [
             'user_id' => $userId,
             'event_id' => $eventId,
-            'total_amount' => $group['subtotal'] + self::SERVICE_FEE,
+            'total_amount' => $group['subtotal'], // prix des billets uniquement : aucun frais pour l'acheteur
             'payment_status' => 'pending',
             'order_number' => Order::generateOrderNumber(),
             'expires_at' => now()->addMinutes($this->reservationMinutes($attributes['payment_method'] ?? null, !empty($attributes['guest_token']))),

@@ -37,8 +37,8 @@
         
         @if($order->commission)
             <div class="order-item">
-                <strong>Votre commission :</strong> {{ number_format($order->commission->net_amount) }} FCFA<br>
-                <small>Commission {{ $order->commission->commission_rate }}% - Frais plateforme déduits</small>
+                <strong>Votre gain net :</strong> {{ number_format($order->commission->net_amount) }} FCFA<br>
+                <small>Après déduction de la commission plateforme ({{ $order->commission->commission_rate }} % du prix des billets)</small>
             </div>
         @endif
     </div>

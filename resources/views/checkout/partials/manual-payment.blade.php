@@ -6,7 +6,7 @@
     </div>
     <div class="card-body">
         <p class="mb-1"><strong>Commande :</strong> #{{ $order->order_number }}</p>
-        <p class="mb-1"><strong>Montant à régler :</strong> {{ number_format($order->total_amount) }} FCFA <small class="text-muted">(frais de service inclus)</small></p>
+        <p class="mb-1"><strong>Montant à régler :</strong> {{ number_format($order->total_amount) }} FCFA</p>
         <p class="mb-3"><strong>Mode de paiement :</strong> {{ $info['label'] }}</p>
 
         <p>{{ $info['instructions'] }}</p>

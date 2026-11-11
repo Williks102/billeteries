@@ -9,7 +9,7 @@
     <p>Nous avons bien enregistré votre commande pour l'événement <strong>{{ $event->title }}</strong>.</p>
 
     <div class="highlight">
-        <p><strong>Montant à régler : {{ $total }}</strong> (frais de service inclus)<br>
+        <p><strong>Montant à régler : {{ $total }}</strong><br>
         Mode de paiement : {{ $info['label'] }}</p>
     </div>
 

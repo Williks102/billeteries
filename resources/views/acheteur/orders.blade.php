@@ -94,7 +94,7 @@ use Illuminate\Support\Facades\Storage;
                     <select name="payment_status" id="payment_status" class="form-select">
                         <option value="">Tous les statuts</option>
                         <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Payées</option>
-                        <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>En attente</option>
+                        <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>En attente de paiement</option>
                         <option value="failed" {{ request('payment_status') == 'failed' ? 'selected' : '' }}>Échouées</option>
                     </select>
                 </div>
@@ -134,7 +134,7 @@ use Illuminate\Support\Facades\Storage;
         <div class="row">
             @foreach($orders as $order)
                 <div class="col-12 mb-4">
-                    <div class="card border-start border-4 {{ $order->payment_status === 'paid' ? 'border-success' : ($order->payment_status === 'pending' ? 'border-warning' : 'border-danger') }}">
+                    <div class="card border-start border-4 {{ $order->payment_status === 'paid' ? 'border-success' : ($order->isAwaitingPayment() ? 'border-warning' : 'border-danger') }}">
                         <div class="card-body">
                             <div class="row align-items-center">
                                 <!-- Image de l'événement -->
@@ -195,9 +195,10 @@ use Illuminate\Support\Facades\Storage;
                                     <small class="text-muted">FCFA</small>
                                     
                                     <div class="mt-2">
-                                        <span class="badge {{ $order->payment_status === 'paid' ? 'bg-success' : ($order->payment_status === 'pending' ? 'bg-warning' : 'bg-danger') }}">
-                                            {{ $order->payment_status === 'paid' ? 'Payée' : ($order->payment_status === 'pending' ? 'En attente' : 'Échouée') }}
-                                        </span>
+                                        <x-order-status-badge :order="$order" class="text-wrap" />
+                                        @if($order->paymentDeadline())
+                                            <div class="small text-muted mt-1">À régler avant le {{ $order->paymentDeadline()->format('d/m/Y H:i') }}</div>
+                                        @endif
                                     </div>
                                     
                                     @if($order->tickets->count() > 0)

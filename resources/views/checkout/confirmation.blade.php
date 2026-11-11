@@ -4,7 +4,7 @@
 @section('title', 'Confirmation de commande')
 
 @section('content')
-<div class="container py-5">
+<div class="container py-4 py-md-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             @if(session('success'))
@@ -15,7 +15,15 @@
                 <div class="text-center mb-4">
                     <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
                     <h1 class="text-success">Paiement confirmé</h1>
-                    <p class="lead">Vos billets sont disponibles dans votre espace.</p>
+                    <p class="lead">Vos billets et leurs QR codes sont disponibles dans votre espace.</p>
+                    @if(!empty($demoSimulatedPayment))
+                        <p class="badge bg-dark fs-6 text-wrap">MODE DÉMO : paiement simulé</p>
+                    @endif
+                </div>
+                <div class="d-grid mb-4">
+                    <a href="{{ route('acheteur.orders.show', $order) }}" class="btn btn-success btn-lg" style="min-height: 48px;">
+                        <i class="fas fa-qrcode me-2" aria-hidden="true"></i>Voir mes billets
+                    </a>
                 </div>
             @elseif(in_array($order->payment_status, ['pending', 'processing']))
                 <div class="text-center mb-4">
@@ -45,8 +53,8 @@
                 </div>
             </div>
 
-            <div class="text-center">
-                <a href="{{ route('acheteur.orders.index') }}" class="btn btn-primary">
+            <div class="d-grid d-sm-block text-sm-center">
+                <a href="{{ route('acheteur.orders.index') }}" class="btn btn-primary" style="min-height: 44px;">
                     <i class="fas fa-list me-2"></i>Mes commandes
                 </a>
             </div>

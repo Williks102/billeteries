@@ -52,9 +52,6 @@
                             <p>{{ $order->event->venue }}</p>
                         </div>
                         <div class="col-md-6">
-                            <h6>Acheteur</h6>
-                            <p>{{ $order->user->first_name }} {{ $order->user->last_name }}</p>
-                            
                             <h6>Email</h6>
                             <p>{{ $order->billing_email }}</p>
                             
@@ -97,7 +94,7 @@
                     </div>
                 </div>
                 
-                @if($order->user->is_guest)
+                @if($order->guest_token)
                 <div class="col-md-6 mb-3">
                     <div class="card text-center">
                         <div class="card-body">
@@ -126,7 +123,7 @@
     </div>
 </div>
 
-@if($order->user->is_guest)
+@if($order->guest_token)
 <!-- Modal création de compte -->
 <div class="modal fade" id="createAccountModal" tabindex="-1">
     <div class="modal-dialog">

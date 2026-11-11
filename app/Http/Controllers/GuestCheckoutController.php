@@ -9,6 +9,7 @@ use App\Models\TicketType;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Commission;
+use App\Exceptions\CheckoutRefusedException;
 use App\Services\CheckoutService;
 use App\Services\EmailService;
 use Illuminate\Support\Facades\Hash;
@@ -39,107 +40,98 @@ class GuestCheckoutController extends Controller
     }
 
     /**
-     * Traitement du checkout invité (paiement manuel confirmé par l'admin)
+     * Traitement du checkout invité (paiement manuel confirmé par l'admin).
+     *
+     * Aucune création/conversion de compte ici (E1) : le checkout invité ne crée qu'un compte invité
+     * pour un email inconnu et ne touche JAMAIS à un compte existant. La réponse est identique que
+     * l'email soit connu ou non. Le compte se crée après achat (createAccountAfterPurchase).
      */
     public function process(Request $request)
     {
+        $service = app(CheckoutService::class);
+
         Log::info('Début checkout invité (paiement manuel)', [
-            'create_account' => $request->boolean('create_account'),
             'payment_method' => $request->payment_method,
         ]);
 
         try {
-            // Validation conditionnelle
-            $rules = [
-                'email' => 'required|email',
+            $request->validate([
+                'email' => 'required|email|max:255',
                 'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255', 
-                'phone' => 'required|string|min:10',
-                'terms_accepted' => 'required',
+                'last_name' => 'required|string|max:255',
+                'phone' => 'required|string|min:10|max:20',
+                'terms_accepted' => 'required|accepted',
                 'payment_method' => CheckoutService::paymentMethodRule(),
-            ];
-            
-            // Mot de passe requis seulement si création de compte
-            if ($request->boolean('create_account')) {
-                $rules['password'] = 'required|min:6|confirmed';
-            }
-            
-            $validated = $request->validate($rules);
-            
+            ]);
+
             // Vérification du panier
             $cart = session()->get('cart', []);
             if (empty($cart)) {
                 return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
             }
 
-            // Utilisateur + commandes + stock + billets dans UNE transaction (prix recalculés côté serveur)
-            [$user, $orders] = DB::transaction(function () use ($request, $cart) {
-                $user = $this->handleUser($request);
+            $groups = $service->buildEventGroups($cart);
+            $service->assertWithinOrderLimits((string) $request->email, null, $request->ip(), count($groups), true);
 
-                return [$user, $this->createOrdersFromCart($cart, $user, $request)];
+            // Utilisateur + commandes + stock + billets dans UNE transaction (prix recalculés côté serveur)
+            [$user, $orders] = DB::transaction(function () use ($request, $groups, $service) {
+                $user = $this->findOrCreateGuest($request);
+
+                return [$user, $this->createOrdersFromGroups($service, $groups, $user, $request)];
             });
+
+            $service->recordGuestOrders($request->ip(), count($orders));
 
             // Preuve de possession liée à la session (retour/annulation/création de compte)
             foreach ($orders as $o) {
-                app(CheckoutService::class)->rememberGuestOrder($o);
+                $service->rememberGuestOrder($o);
             }
 
             // Instructions de paiement par email, puis page de confirmation
-            app(CheckoutService::class)->sendManualInstructions($orders);
+            $service->sendManualInstructions($orders);
             session()->forget(['cart', 'cart_timer']);
 
             return $this->redirectToConfirmation($orders);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
-        } catch (\Exception $e) {
-            Log::error('Erreur checkout invité', [
-                'error' => $e->getMessage(),
-            ]);
-            
-            return back()->with('error', 'Erreur: ' . $e->getMessage())->withInput();
+        } catch (CheckoutRefusedException $e) {
+            return back()->with('error', $e->getMessage())->withInput();
+        } catch (\Throwable $e) {
+            $service->logFailure('Erreur checkout invité', $e);
+
+            return back()->with('error', CheckoutService::GENERIC_ERROR)->withInput();
         }
     }
 
     /**
-     * Redirection vers la page de confirmation : par token pour un invité, par commande
-     * pour un utilisateur connecté (compte créé pendant le checkout).
+     * Redirection vers la page de confirmation par token (même réponse que l'email soit connu ou non).
      */
     private function redirectToConfirmation(array $orders)
     {
-        $first = $orders[0];
         $message = count($orders) > 1
             ? 'Commandes enregistrées ! Instructions de paiement envoyées par email.'
             : 'Commande enregistrée ! Instructions de paiement envoyées par email.';
         $others = collect($orders)->skip(1)->pluck('order_number')->all();
 
-        if ($first->guest_token) {
-            return redirect()->route('checkout.guest.confirmation', $first->guest_token)
-                ->with('success', $message)->with('other_order_numbers', $others);
-        }
-
-        if (auth()->check() && $first->user_id === auth()->id()) {
-            return redirect()->route('checkout.confirmation', $first)
-                ->with('success', $message)->with('other_order_numbers', $others);
-        }
-
-        return redirect()->route('home')->with('success', $message);
+        return redirect()->route('checkout.guest.confirmation', $orders[0]->guest_token)
+            ->with('success', $message)->with('other_order_numbers', $others);
     }
 
     /**
-     * Créer les commandes depuis le panier (ADAPTÉE À VOTRE LOGIQUE)
+     * Crée les commandes. Toujours un guest_token (même pour un email déjà connu) afin que la
+     * réponse soit identique ; le token seul ne donne aucun droit sur le compte (cf. createAccountAfterPurchase).
      */
-    private function createOrdersFromCart($cart, $user, $request)
+    private function createOrdersFromGroups(CheckoutService $service, array $groups, User $user, Request $request): array
     {
-        $service = app(CheckoutService::class);
         $orders = [];
 
-        foreach ($service->buildEventGroups($cart) as $eventId => $group) {
+        foreach ($groups as $eventId => $group) {
             $orders[] = $service->createOrder($user->id, $eventId, $group, [
                 'payment_method' => $request->payment_method,
                 'billing_email' => $request->email,
                 'billing_phone' => $request->phone,
-                'guest_token' => $user->is_guest ? Str::random(32) : null,
+                'guest_token' => Str::random(32),
             ]);
         }
 
@@ -147,105 +139,24 @@ class GuestCheckoutController extends Controller
     }
 
     /**
-     * Enregistre l'utilisateur avec forceFill : is_guest, first_name et last_name ne sont pas dans
-     * User::$fillable, donc create()/update() les ignoraient silencieusement (aucun guest_token,
-     * donc aucune page de confirmation invité). Valeurs issues du serveur/validées uniquement.
+     * Récupère le compte portant cet email SANS le modifier (ni nom, ni téléphone, ni statut),
+     * sans connexion automatique ; crée un compte invité si l'email est inconnu.
      */
-    private function saveUser(User $user, array $attributes): User
+    private function findOrCreateGuest(Request $request): User
     {
-        $user->forceFill($attributes)->save();
+        $existing = User::where('email', $request->email)->first();
+        if ($existing) {
+            return $existing;
+        }
 
-        return $user;
-    }
-
-    // ===== VOS MÉTHODES EXISTANTES (inchangées) =====
-
-    /**
-     * Gérer la création/récupération de l'utilisateur (VOTRE LOGIQUE)
-     */
-    private function handleUser(Request $request)
-    {
-        Log::info('Début handle user invité', [
+        return User::create([
+            'name' => trim($request->first_name . ' ' . $request->last_name),
             'email' => $request->email,
-            'create_account' => $request->boolean('create_account')
+            'phone' => $request->phone,
+            'password' => Hash::make(Str::random(32)),
+            'role' => 'acheteur',
+            'is_guest' => true,
         ]);
-        
-        $email = $request->email;
-        $existingUser = User::where('email', $email)->first();
-        $createAccount = $request->boolean('create_account');
-        
-        // Si utilisateur existe
-        if ($existingUser) {
-            Log::info('Utilisateur existant trouvé', [
-                'user_id' => $existingUser->id,
-                'is_guest' => $existingUser->is_guest
-            ]);
-            
-            // Si demande création de compte mais utilisateur normal existe
-            if ($createAccount && !$existingUser->is_guest) {
-                throw new \Exception('Un compte existe déjà avec cet email. Veuillez vous connecter.');
-            }
-            
-            // Si utilisateur normal, l'utiliser
-            if (!$existingUser->is_guest) {
-                return $existingUser;
-            }
-            
-            // Si création de compte sur un invité existant
-            if ($createAccount && $existingUser->is_guest) {
-                Log::info('Conversion invité vers compte');
-                $this->saveUser($existingUser, [
-                    'name' => $request->first_name . ' ' . $request->last_name,
-                    'first_name' => $request->first_name,
-                    'last_name' => $request->last_name,
-                    'phone' => $request->phone,
-                    'password' => Hash::make($request->password),
-                    'is_guest' => false,
-                    'guest_converted_at' => now()
-                ]);
-                auth()->login($existingUser);
-                return $existingUser;
-            }
-            
-            // Mise à jour invité existant
-            Log::info('Mise à jour invité existant');
-            $this->saveUser($existingUser, [
-                'name' => $request->first_name . ' ' . $request->last_name,
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'phone' => $request->phone,
-            ]);
-            return $existingUser;
-        }
-        
-        // Utilisateur n'existe pas - créer selon le mode
-        if ($createAccount) {
-            Log::info('Création nouveau compte');
-            $user = $this->saveUser(new User(), [
-                'name' => $request->first_name . ' ' . $request->last_name,
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email' => $email,
-                'phone' => $request->phone,
-                'password' => Hash::make($request->password),
-                'role' => 'acheteur',
-                'email_verified_at' => now()
-            ]);
-            auth()->login($user);
-            return $user;
-        } else {
-            Log::info('Création nouvel invité');
-            return $this->saveUser(new User(), [
-                'name' => $request->first_name . ' ' . $request->last_name,
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email' => $email,
-                'phone' => $request->phone,
-                'password' => Hash::make(Str::random(16)),
-                'role' => 'acheteur',
-                'is_guest' => true
-            ]);
-        }
     }
 
     /**
@@ -261,52 +172,63 @@ class GuestCheckoutController extends Controller
     }
 
     /**
-     * Permettre à un invité de créer un compte après achat (méthode existante)
+     * Permettre à un invité de créer un compte après achat.
+     * Preuve exigée : token de commande + session qui a créé la commande (C1) ET commande à l'origine
+     * du compte invité (la plus ancienne de ce compte) : un tiers ayant passé commande avec l'email
+     * d'un invité existant ne peut donc jamais le convertir.
      */
     public function createAccountAfterPurchase(Request $request, $token)
     {
-        // Votre méthode existante reste identique
         $request->validate([
-            'password' => 'required|min:6|confirmed'
+            'password' => 'required|min:6|confirmed',
         ]);
 
         $order = Order::where('guest_token', $token)->firstOrFail();
 
         // Le token seul (URL) ne suffit pas : la session doit avoir créé cette commande
-        if (!app(CheckoutService::class)->ownsGuestOrder($order, (string) $token)) {
+        $service = app(CheckoutService::class);
+        if (!$service->ownsGuestOrder($order, (string) $token)) {
             abort(403);
         }
 
-        $user = $order->user;
-
-        if (!$user->is_guest) {
-            return redirect()->route('home')->with('error', 'Action non autorisée.');
-        }
+        $refused = back()->withErrors([
+            'error' => 'Impossible de créer un compte depuis cette commande. Si vous avez déjà un compte, connectez-vous.',
+        ]);
 
         try {
-            DB::beginTransaction();
+            $user = DB::transaction(function () use ($order, $request) {
+                $user = User::whereKey($order->user_id)->lockForUpdate()->first();
 
-            // Convertir l'invité en utilisateur normal
-            $user->update([
-                'name' => $user->first_name . ' ' . $user->last_name,
-                'password' => Hash::make($request->password),
-                'is_guest' => false,
-                'guest_converted_at' => now()
-            ]);
+                if (!$user || !$user->is_guest || (int) $user->orders()->min('id') !== (int) $order->id) {
+                    return null;
+                }
 
-            // Supprimer les tokens invité
-            Order::where('user_id', $user->id)->update(['guest_token' => null]);
+                $user->forceFill([
+                    'password' => Hash::make($request->password),
+                    'is_guest' => false,
+                    'guest_converted_at' => now(),
+                    'email_verified_at' => null, // la possession de l'email n'est pas prouvée
+                ])->save();
 
-            // Connecter l'utilisateur
+                // Supprimer les tokens invité
+                Order::where('user_id', $user->id)->update(['guest_token' => null]);
+
+                return $user;
+            });
+
+            if (!$user) {
+                return $refused;
+            }
+
             auth()->login($user);
+            $request->session()->regenerate();
 
-            DB::commit();
-
-            return redirect()->route('acheteur.dashboard')->with('success', 
+            return redirect()->route('acheteur.dashboard')->with('success',
                 'Votre compte a été créé ! Vous pouvez maintenant gérer toutes vos commandes.');
 
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
+            $service->logFailure('Erreur création de compte après achat', $e);
+
             return back()->withErrors(['error' => 'Erreur lors de la création du compte.']);
         }
     }

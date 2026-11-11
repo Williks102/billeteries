@@ -25,7 +25,6 @@ class EmailService
 
             Log::info("Email confirmation commande envoyé", [
                 'order_id' => $order->id,
-                'email' => $order->user->email
             ]);
 
             return true;
@@ -52,7 +51,6 @@ class EmailService
 
         Log::info("Email confirmation paiement avec PDF envoyé", [
             'order_id' => $order->id,
-            'email' => $order->user->email,
             'is_guest' => $order->user->is_guest,
             'pdf_attached' => true
         ]);
@@ -117,7 +115,7 @@ class EmailService
 
             Log::info("Email promoteur nouvelle vente envoyé", [
                 'order_id' => $order->id,
-                'promoteur_email' => $promoteur->email
+                'promoteur_id' => $promoteur->id,
             ]);
 
             return true;
@@ -168,7 +166,6 @@ class EmailService
         'order_id' => $order->id,
         'payment_status' => $order->payment_status,
         'is_guest' => $order->user->is_guest ?? false,
-        'email' => $order->user->email
     ]);
 
     // 1. Email confirmation au client
@@ -211,7 +208,7 @@ class EmailService
                         ->subject('Test Email - ClicBillet CI');
             });
 
-            Log::info("Email de test envoyé", ['email' => $email]);
+            Log::info("Email de test envoyé", ['email_hash' => substr(sha1(strtolower((string) $email)), 0, 10)]);
             return true;
         } catch (\Exception $e) {
             Log::error("Erreur email de test", ['error' => $e->getMessage()]);
@@ -290,7 +287,6 @@ public function sendWelcomeEmail(User $user)
 
         Log::info("Email bienvenue envoyé", [
             'user_id' => $user->id,
-            'email' => $user->email,
             'role' => $user->role
         ]);
 

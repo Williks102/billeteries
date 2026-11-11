@@ -57,7 +57,7 @@ class GuestCheckoutSecurityTest extends TestCase
 
         $response = $this->guestPost($type, $this->payload([
             'email' => 'victime@example.test', 'first_name' => 'Pirate', 'last_name' => 'X', 'phone' => '0999999999',
-            'create_account' => '1', 'password' => 'pirate123', 'password_confirmation' => 'pirate123',
+            'password' => 'pirate123', 'password_confirmation' => 'pirate123',
         ]));
 
         $response->assertRedirect();
@@ -78,7 +78,7 @@ class GuestCheckoutSecurityTest extends TestCase
         $type = $this->ticketType(10);
         $this->insertUser(41, 'normal@example.test', false);
 
-        $this->guestPost($type, $this->payload(['email' => 'normal@example.test', 'create_account' => '1', 'password' => 'x12345', 'password_confirmation' => 'x12345']))
+        $this->guestPost($type, $this->payload(['email' => 'normal@example.test', 'password' => 'x12345', 'password_confirmation' => 'x12345']))
             ->assertRedirect();
 
         $this->assertGuest();
@@ -114,65 +114,62 @@ class GuestCheckoutSecurityTest extends TestCase
         $this->assertSame(2, Order::whereNotNull('guest_token')->count());
     }
 
-    public function test_account_creation_after_purchase_converts_with_unverified_email(): void
+    /** N1/I2 : plus aucun chemin ne convertit un invité en compte (pas de vérification d'email disponible). */
+    public function test_account_creation_after_purchase_route_no_longer_exists(): void
     {
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('checkout.guest.create-account'));
         $type = $this->ticketType(10);
         $this->guestPost($type, $this->payload())->assertRedirect();
         $order = Order::sole();
+
+        foreach (['POST', 'PUT', 'PATCH'] as $verb) {
+            $status = $this->call($verb, '/checkout/guest/create-account/' . $order->guest_token, [
+                'password' => 'pirate123', 'password_confirmation' => 'pirate123',
+            ])->getStatusCode();
+            $this->assertContains($status, [404, 405], "$verb create-account a répondu $status");
+        }
+        $this->assertGuest();
+
         $user = User::where('email', 'invite@example.test')->first();
         $this->assertTrue((bool) $user->is_guest);
-        $user->forceFill(['email_verified_at' => now()])->save(); // même si un état « vérifié » existait, il est remis à null
+        $this->assertNull($user->guest_converted_at);
+        $this->assertNotNull($order->fresh()->guest_token);
 
-        $this->post(route('checkout.guest.create-account', $order->guest_token), [
-            'password' => 'secret123', 'password_confirmation' => 'secret123',
-        ])->assertRedirect(route('acheteur.dashboard'));
-
-        $user->refresh();
-        $this->assertFalse((bool) $user->is_guest);
-        $this->assertNotNull($user->guest_converted_at);
-        $this->assertNull($user->email_verified_at);
-        $this->assertTrue(Hash::check('secret123', $user->password));
-        $this->assertAuthenticatedAs($user);
-        $this->assertNull($order->fresh()->guest_token);
+        // La page de confirmation ne propose plus de créer un compte
+        $this->get(route('checkout.guest.confirmation', $order->guest_token))
+            ->assertOk()->assertDontSee('createAccountModal')->assertDontSee('Créer mon compte');
     }
 
-    public function test_attacker_with_own_session_proof_cannot_convert_victim_guest_account(): void
+    /** N1 : même scénario d'attaque (pre-hijacking) : l'attaquant ne peut ni définir un mot de passe ni se connecter. */
+    public function test_pre_hijacking_scenario_is_impossible(): void
     {
         $type = $this->ticketType(10);
-        // Victime : compte invité issu de SA commande (la plus ancienne du compte)
         $this->guestPost($type, $this->payload(['email' => 'victime@example.test']))->assertRedirect();
-        $this->flushSession();
+        $order = Order::sole();
         $victim = User::where('email', 'victime@example.test')->first();
         $passwordBefore = $victim->password;
 
-        // Attaquant : nouvelle session, commande avec l'email de la victime => preuve de session valide sur SA commande
-        $this->guestPost($type, $this->payload(['email' => 'victime@example.test', 'first_name' => 'Pirate']))->assertRedirect();
-        $attackerOrder = Order::orderByDesc('id')->first();
-        $this->assertSame($attackerOrder->guest_token, session('guest_order_tokens.' . $attackerOrder->id));
-
-        $this->post(route('checkout.guest.create-account', $attackerOrder->guest_token), [
+        $this->post('/checkout/guest/create-account/' . $order->guest_token, [
             'password' => 'pirate123', 'password_confirmation' => 'pirate123',
-        ])->assertSessionHasErrors('error');
+        ]);
 
         $this->assertGuest();
         $victim->refresh();
         $this->assertTrue((bool) $victim->is_guest);
         $this->assertSame($passwordBefore, $victim->password);
+        $this->assertFalse(Hash::check('pirate123', $victim->password));
     }
 
-    public function test_account_creation_is_refused_for_an_existing_normal_account(): void
+    /** N5 : le compte invité créé a un mot de passe inutilisable (aucun mot de passe connu de personne). */
+    public function test_new_guest_account_password_is_unusable(): void
     {
         $type = $this->ticketType(10);
-        $this->insertUser(43, 'normal@example.test', false);
-        $this->guestPost($type, $this->payload(['email' => 'normal@example.test']))->assertRedirect();
-        $order = Order::sole();
+        $this->guestPost($type, $this->payload(['password' => 'pirate123', 'password_confirmation' => 'pirate123']))->assertRedirect();
 
-        $this->post(route('checkout.guest.create-account', $order->guest_token), [
-            'password' => 'pirate123', 'password_confirmation' => 'pirate123',
-        ])->assertSessionHasErrors('error');
-
-        $this->assertGuest();
-        $this->assertTrue(Hash::check('mot-de-passe-victime', User::find(43)->password));
+        $user = User::where('email', 'invite@example.test')->first();
+        $this->assertTrue((bool) $user->is_guest);
+        $this->assertFalse(Hash::check('pirate123', $user->password));
+        $this->assertNotEmpty($user->password);
     }
 
     public function test_guest_checkout_logs_do_not_contain_the_email(): void

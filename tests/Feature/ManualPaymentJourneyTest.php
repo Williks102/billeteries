@@ -109,11 +109,6 @@ class ManualPaymentJourneyTest extends TestCase
         $this->actingAs($this->makeUser(30, 'acheteur'))
             ->get(route('checkout.confirmation', $order))->assertForbidden();
 
-        // Création de compte sur la commande : refusée sans preuve de session
-        $this->post(route('checkout.guest.create-account', $order->guest_token), [
-            'password' => 'secret123', 'password_confirmation' => 'secret123',
-        ])->assertForbidden();
-
         // Aucune route publique d'annulation de commande n'existe (l'annulation n'est pas exposée aux invités)
         foreach (['POST', 'PATCH', 'DELETE'] as $verb) {
             foreach (['/checkout/cancel/' . $order->id, '/orders/' . $order->id . '/cancel', '/checkout/guest/cancel/' . $order->guest_token] as $url) {

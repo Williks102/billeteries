@@ -83,7 +83,7 @@
                     </div>
                 </div>
 
-                {{-- Le compte se crée APRÈS l'achat (page de confirmation), jamais pendant la commande invité. --}}
+                {{-- Aucune création de compte depuis le checkout invité (N1) : suivi par le lien de confirmation. --}}
 
                 {{-- ===== INFORMATIONS PERSONNELLES ===== --}}
                 <div class="card mb-4">

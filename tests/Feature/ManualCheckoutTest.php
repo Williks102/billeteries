@@ -123,11 +123,6 @@ class ManualCheckoutTest extends TestCase
             ->assertSee('Mobile Money')
             ->assertSee($order->expires_at->format('d/m/Y à H:i'));
 
-        // Un autre navigateur (sans preuve de session) ne peut pas créer de compte avec le seul token
-        $this->flushSession();
-        $this->post(route('checkout.guest.create-account', $order->guest_token), [
-            'password' => 'secret123', 'password_confirmation' => 'secret123',
-        ])->assertStatus(403);
     }
 
     public function test_authenticated_checkout_redirects_to_confirmation(): void

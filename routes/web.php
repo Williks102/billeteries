@@ -107,7 +107,6 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
             ->middleware('throttle:' . config('payments.checkout_throttle_per_minute', 10) . ',1,checkout')
             ->name('process');
         Route::get('/confirmation/{token}', [GuestCheckoutController::class, 'confirmation'])->name('confirmation');
-        Route::post('/create-account/{token}', [GuestCheckoutController::class, 'createAccountAfterPurchase'])->name('create-account');
     });
 
     // Redirection intelligente depuis le panier

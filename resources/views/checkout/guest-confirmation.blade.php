@@ -94,20 +94,6 @@
                     </div>
                 </div>
                 
-                @if($order->guest_token)
-                <div class="col-md-6 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <i class="fas fa-user-plus fa-2x text-success mb-3"></i>
-                            <h6>Créer un compte</h6>
-                            <p class="text-muted small">Gérez vos billets facilement</p>
-                            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createAccountModal">
-                                Créer mon compte
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                @endif
             </div>
 
             <!-- Navigation -->
@@ -123,46 +109,4 @@
     </div>
 </div>
 
-@if($order->guest_token)
-<!-- Modal création de compte -->
-<div class="modal fade" id="createAccountModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Créer votre compte</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{{ route('checkout.guest.create-account', $order->guest_token) }}">
-                @csrf
-                <div class="modal-body">
-                    <p>Créez un mot de passe pour accéder à vos billets à tout moment :</p>
-                    
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Mot de passe</label>
-                        <input type="password" class="form-control" id="password" name="password" required minlength="6">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="password_confirmation" class="form-label">Confirmer le mot de passe</label>
-                        <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <small>
-                            <strong>Avantages du compte :</strong><br>
-                            • Accès à l'historique de vos commandes<br>
-                            • Réimpression de vos billets<br>
-                            • Support client prioritaire
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Plus tard</button>
-                    <button type="submit" class="btn btn-success">Créer mon compte</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
 @endsection

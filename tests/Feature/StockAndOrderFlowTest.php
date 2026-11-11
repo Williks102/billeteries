@@ -60,20 +60,6 @@ class StockAndOrderFlowTest extends TestCase
         $this->assertSame(2, $type->fresh()->quantity_sold);
     }
 
-    /** C1 : le lien de confirmation par token reste accessible, mais create-account exige la preuve de session. */
-    public function test_create_account_requires_session_proof(): void
-    {
-        $order = Order::create([
-            'total_amount' => 1000, 'payment_status' => 'pending',
-            'order_number' => 'ORD-C1B', 'guest_token' => 'SECRETTOKEN0123456789abcdefghij',
-        ]);
-
-        $this->post(route('checkout.guest.create-account', $order->guest_token), [
-            'password' => 'secret123', 'password_confirmation' => 'secret123',
-        ])->assertStatus(403);
-        $this->assertGuest();
-    }
-
     /** Plus aucune route de paiement en ligne (fournisseur retiré) : paiement manuel uniquement. */
     public function test_no_online_payment_provider_routes_remain(): void
     {

@@ -160,8 +160,8 @@ class Order extends Model
         // Taux inchangé : réglage promoteur > catégorie > défaut, sinon 10 %.
         $commissionRate = $commissionSetting ? $commissionSetting->commission_rate : 10.00;
 
-        // Assiette = prix des billets uniquement (somme des lignes). Les anciennes commandes dont
-        // total_amount incluait 500 FCFA de frais historiques ne doivent pas voir ces frais commissionnés.
+        // Assiette = prix des billets uniquement (somme des lignes). Pour une ancienne commande dont
+        // total_amount incluait 500 FCFA de frais historiques, ces frais ne sont donc pas commissionnés.
         $subtotal = $this->orderItems()->exists()
             ? (int) $this->orderItems()->sum('total_price')
             : (int) $this->total_amount;

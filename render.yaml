@@ -1,0 +1,139 @@
+# Blueprint Render : déploiement PROVISOIRE DE DÉMO (offre gratuite, base TiDB Cloud Starter).
+# Guide pas à pas : docs/deploiement-render.md
+# Règle : les valeurs secrètes ne sont JAMAIS dans ce fichier. Les variables `sync: false` sont saisies
+# dans le tableau de bord Render (Environment) au premier déploiement.
+services:
+  - type: web
+    name: billetterie-demo
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /up
+    autoDeploy: true
+    envVars:
+      # --- Application (valeurs sûres, en clair) ---
+      - key: APP_NAME
+        value: Billetterie
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_LOCALE
+        value: fr
+      - key: APP_FALLBACK_LOCALE
+        value: fr
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: info
+
+      # --- Secrets à saisir dans Render (aucune valeur ici) ---
+      - key: APP_KEY # forme attendue : base64:<32 octets en base64> (voir le guide)
+        sync: false
+      - key: APP_URL # ex. https://<nom-du-service>.onrender.com, sans « / » final
+        sync: false
+
+      # --- Proxy Render ---
+      # '*' est acceptable ICI et seulement ici : le conteneur n'est joignable que par le proxy de Render, qui
+      # réécrit X-Forwarded-For ; personne ne peut donc falsifier cet en-tête en s'adressant directement à
+      # l'application. Sans cette valeur, toutes les IP seraient celles du proxy et les limitations par IP
+      # (throttles, plafonds invités) deviendraient globales pour tout le site. Ne PAS reprendre '*' par défaut
+      # sur un autre hébergement : y indiquer les IP/CIDR réels du proxy (voir .env.example).
+      - key: TRUSTED_PROXIES
+        value: "*"
+
+      # --- Base de données TiDB Cloud Starter (MySQL, TLS obligatoire, port 4000) ---
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_PORT
+        value: "4000"
+      - key: DB_SSL_CA # certificats racine du conteneur (Debian) ; TiDB utilise Let's Encrypt
+        value: /etc/ssl/certs/ca-certificates.crt
+      - key: DB_SSL_VERIFY
+        value: "true"
+      - key: DB_HOST
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      # --- Sessions, cache, files : pas de worker ni de Redis sur l'offre gratuite ---
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_LIFETIME
+        value: "120"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: FILESYSTEM_DISK
+        value: local
+
+      # --- Email : journalisé, jamais envoyé (démo) ---
+      - key: MAIL_MAILER
+        value: log
+      - key: MAIL_FROM_ADDRESS
+        value: noreply@example.com
+      - key: MAIL_FROM_NAME
+        value: Billetterie
+
+      # --- Démo : compte admin créé au premier démarrage si la base est vide ---
+      - key: DEMO_SEED
+        value: "true"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD # 12 caractères minimum, sinon l'admin n'est pas créé et le conteneur s'arrête
+        sync: false
+
+      # --- Telescope désactivé ---
+      - key: TELESCOPE_ENABLED
+        value: "false"
+
+      # --- Règles métier et plafonds anti-abus ---
+      - key: DEFAULT_COMMISSION_RATE
+        value: "6"
+      - key: MANUAL_RESERVATION_MINUTES
+        value: "2880"
+      - key: GUEST_MANUAL_RESERVATION_MINUTES
+        value: "1440"
+      - key: MAX_PENDING_ORDERS
+        value: "3"
+      - key: MAX_PENDING_ORDERS_PER_IP
+        value: "10"
+      - key: PENDING_RATIO
+        value: "0.3"
+      - key: PENDING_MIN
+        value: "10"
+      - key: MAX_PENDING_TICKETS_PER_EVENT
+        value: "200"
+      - key: MAX_PENDING_TICKETS_PER_BUYER
+        value: "10"
+      - key: MAX_PENDING_TICKETS_PER_IP
+        value: "20"
+      - key: REGISTER_THROTTLE_PER_MINUTE
+        value: "5"
+      - key: CHECKOUT_THROTTLE_PER_MINUTE
+        value: "10"
+      - key: VERIFY_TICKET_THROTTLE_PER_MINUTE
+        value: "60"
+
+      # --- Coordonnées de paiement manuel affichées aux acheteurs (à saisir dans Render) ---
+      - key: MANUAL_BANK_NAME
+        sync: false
+      - key: MANUAL_BANK_ACCOUNT_HOLDER
+        sync: false
+      - key: MANUAL_BANK_IBAN
+        sync: false
+      - key: MANUAL_MOBILE_MONEY_NUMBER
+        sync: false
+      - key: MANUAL_MOBILE_MONEY_HOLDER
+        sync: false
+      - key: MANUAL_CASH_LOCATION
+        sync: false

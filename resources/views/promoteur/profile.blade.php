@@ -163,32 +163,32 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Nom complet</label>
-                            <input type="text" name="name" class="form-control" 
+                            <label class="form-label" for="name">Nom complet</label>
+                            <input id="name" type="text" name="name" class="form-control" 
                                    value="{{ $user->name }}" readonly id="nameInput">
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" 
+                            <label class="form-label" for="email">Email</label>
+                            <input id="email" type="email" name="email" class="form-control" 
                                    value="{{ $user->email }}" readonly id="emailInput">
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Téléphone</label>
-                            <input type="tel" name="phone" class="form-control" 
+                            <label class="form-label" for="phone">Téléphone</label>
+                            <input id="phone" type="tel" name="phone" class="form-control" 
                                    value="{{ $user->phone }}" readonly id="phoneInput"
                                    placeholder="Ex: +225 07 08 09 10 11">
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Date d'inscription</label>
-                            <input type="text" class="form-control" 
+                            <label class="form-label" for="created_at_display">Date d'inscription</label>
+                            <input type="text" id="created_at_display" class="form-control" 
                                    value="{{ $user->created_at->format('d/m/Y') }}" readonly>
                         </div>
                         
                         <div class="col-12 mb-3">
-                            <label class="form-label">Biographie / Présentation</label>
+                            <label class="form-label" for="bioInput">Biographie / Présentation</label>
                             <textarea name="bio" class="form-control" rows="4" readonly id="bioInput"
                                       placeholder="Présentez-vous et décrivez votre activité d'organisateur d'événements...">{{ $user->bio ?? '' }}</textarea>
                         </div>
@@ -344,16 +344,16 @@
                 @method('PATCH')
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Mot de passe actuel</label>
-                        <input type="password" name="current_password" class="form-control" required>
+                        <label class="form-label" for="current_password">Mot de passe actuel</label>
+                        <input id="current_password" type="password" name="current_password" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nouveau mot de passe</label>
-                        <input type="password" name="password" class="form-control" required minlength="8">
+                        <label class="form-label" for="password">Nouveau mot de passe</label>
+                        <input id="password" type="password" name="password" class="form-control" required minlength="8">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Confirmer le nouveau mot de passe</label>
-                        <input type="password" name="password_confirmation" class="form-control" required>
+                        <label class="form-label" for="password_confirmation">Confirmer le nouveau mot de passe</label>
+                        <input id="password_confirmation" type="password" name="password_confirmation" class="form-control" required>
                     </div>
                 </div>
                 <div class="modal-footer">

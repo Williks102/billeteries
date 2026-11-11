@@ -84,6 +84,6 @@ class PromoteurPagesTest extends TestCase
     public function test_reports_show_paid_sales_of_own_events_only(): void
     {
         $this->actingAs(User::find(2))->get(route('promoteur.reports.index'))
-            ->assertOk()->assertSee('1 000 FCFA')->assertSee('Ventes (commandes payées)')->assertDontSee('Festival Beta');
+            ->assertOk()->assertSee("1\u{00A0}000\u{00A0}FCFA")->assertSee('Ventes (commandes payées)')->assertDontSee('Festival Beta');
     }
 }

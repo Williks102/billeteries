@@ -75,7 +75,7 @@
                                     <span class="badge bg-primary">{{ $item['quantity'] }}</span>
                                 </div>
                                 <div class="col-md-2 text-end">
-                                    <strong>{{ number_format($item['total_price']) }} FCFA</strong>
+                                    <strong>{{ \App\Helpers\CurrencyHelper::formatFCFA($item['total_price']) }}</strong>
                                 </div>
                             </div>
                         </div>
@@ -185,12 +185,12 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Sous-total</span>
-                                <span>{{ number_format($cartTotal) }} FCFA</span>
+                                <span>{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</span>
                             </div>
                             <hr>
                             <div class="d-flex justify-content-between mb-3">
                                 <strong>Total à payer</strong>
-                                <strong class="text-primary">{{ number_format($cartTotal) }} FCFA</strong>
+                                <strong class="text-primary">{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</strong>
                             </div>
 
                             {{-- Avantages commande express --}}

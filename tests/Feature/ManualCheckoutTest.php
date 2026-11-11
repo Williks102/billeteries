@@ -119,7 +119,7 @@ class ManualCheckoutTest extends TestCase
         $page = $this->get(route('checkout.guest.confirmation', $order->guest_token));
         $page->assertOk()
             ->assertSee($order->order_number)
-            ->assertSee(number_format($order->total_amount))
+            ->assertSee(\App\Helpers\CurrencyHelper::formatNumber($order->total_amount))
             ->assertSee('Mobile Money')
             ->assertSee($order->expires_at->format('d/m/Y à H:i'));
 

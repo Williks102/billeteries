@@ -96,7 +96,7 @@ class AdminConfirmPaymentTest extends TestCase
         $this->actingAs(User::find(1))->get(route('checkout.confirmation', $order))
             ->assertOk()
             ->assertSee($order->order_number)
-            ->assertSee(number_format($order->total_amount))
+            ->assertSee(\App\Helpers\CurrencyHelper::formatNumber($order->total_amount))
             ->assertSee('Virement bancaire')
             ->assertSee($order->expires_at->format('d/m/Y à H:i'));
 

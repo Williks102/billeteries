@@ -146,6 +146,6 @@ class AdminPagesTest extends TestCase
     {
         $res = $this->actingAs($this->admin)->get(route('admin.reports.financial'));
         $this->assertCleanPage($res);
-        $res->assertSee('2 000 FCFA')->assertSee('120 FCFA')->assertSee('1 880 FCFA');
+        $res->assertSee("2\u{00A0}000\u{00A0}FCFA")->assertSee("120\u{00A0}FCFA")->assertSee("1\u{00A0}880\u{00A0}FCFA");
     }
 }

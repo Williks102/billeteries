@@ -812,7 +812,7 @@
                                 </div>
 
                                 <div class="col-md-2 text-center">
-                                    <div class="price-info">{{ number_format($item['unit_price']) }} FCFA</div>
+                                    <div class="price-info">{{ \App\Helpers\CurrencyHelper::formatFCFA($item['unit_price']) }}</div>
                                 </div>
 
                                 <div class="col-md-2 text-center">
@@ -828,7 +828,7 @@
                                 </div>
 
                                 <div class="col-md-2 text-center">
-                                    <div class="price-info mb-2">{{ number_format($item['total_price']) }} FCFA</div>
+                                    <div class="price-info mb-2">{{ \App\Helpers\CurrencyHelper::formatFCFA($item['total_price']) }}</div>
                                     <button class="btn btn-outline-danger btn-sm" onclick="removeFromCart('{{ $key }}')">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
@@ -858,11 +858,11 @@
 
                     <div class="summary-row">
                         <span>Sous-total</span>
-                     <span>{{ number_format($cartTotal) }} FCFA</span>
+                     <span>{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</span>
                     </div>
                     <div class="summary-row">
                 <span><strong>Total</strong></span>
-                <span><strong>{{ number_format($cartTotal) }} FCFA</strong></span>
+                <span><strong>{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</strong></span>
                         </div>
                     {{-- Boutons de checkout selon le statut --}}
                     <div class="d-grid mt-4">
@@ -936,7 +936,7 @@
 <button class="mobile-cart-button d-lg-none" onclick="openMobileCartModal()">
     <i class="fas fa-shopping-cart me-2"></i>
     Mon Panier ({{ $cartCount }})
-    <span class="ms-2">{{ number_format($cartTotal) }} FCFA</span>
+    <span class="ms-2">{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</span>
 </button>
 @endif
 
@@ -1018,7 +1018,7 @@
                         </div>
                         
                         <div class="mobile-item-actions">
-                            <div class="mobile-price">{{ number_format($item['total_price']) }} FCFA</div>
+                            <div class="mobile-price">{{ \App\Helpers\CurrencyHelper::formatFCFA($item['total_price']) }}</div>
                             <button class="btn btn-link text-danger p-0 ms-2" 
                                     onclick="removeFromCart('{{ $key }}')"
                                     title="Supprimer">
@@ -1048,11 +1048,11 @@
         <div class="mobile-summary">
             <div class="mobile-summary-row">
     <span>Sous-total</span>
-    <span id="mobileSubtotal">{{ number_format($cartTotal) }} FCFA</span>
+    <span id="mobileSubtotal">{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</span>
 </div>
 <div class="mobile-summary-row">
     <span><strong>Total</strong></span>
-    <span><strong id="mobileTotal">{{ number_format($cartTotal) }} FCFA</strong></span>
+    <span><strong id="mobileTotal">{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</strong></span>
 </div>
         </div>
         

@@ -9,6 +9,9 @@ return [
     // Durée de réservation d'une commande non payée (minutes) avant libération du stock
     'reservation_minutes' => (int) env('ORDER_RESERVATION_MINUTES', 30),
 
+    // Seuil d'affichage « bientôt complet » : à partir de ce nombre de places restantes ou moins (affichage seulement, aucune logique de stock)
+    'low_stock_threshold' => (int) env('LOW_STOCK_THRESHOLD', 10),
+
     // Durée de réservation d'une commande en paiement manuel (minutes) : 48 h par défaut
     'manual_reservation_minutes' => (int) env('MANUAL_RESERVATION_MINUTES', 2880),
 

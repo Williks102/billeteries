@@ -190,7 +190,7 @@ use Illuminate\Support\Facades\Storage;
                                         <small class="text-muted">{{ $order->created_at->format('H:i') }}</small>
                                     </td>
                                     <td>
-                                        <span class="fw-semibold">{{ number_format($order->total_amount) }} FCFA</span>
+                                        <span class="fw-semibold">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</span>
                                     </td>
                                     <td>
                                         @if($order->payment_status === 'paid')

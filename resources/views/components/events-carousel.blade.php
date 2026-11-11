@@ -100,7 +100,7 @@
                                             $minPrice = $event->ticketTypes->min('price');
                                         @endphp
                                         <div class="event-price">
-                                            À partir de {{ number_format($minPrice, 0, ',', ' ') }} FCFA
+                                            À partir de {{ \App\Helpers\CurrencyHelper::formatFCFA($minPrice) }}
                                         </div>
                                     @endif
                                     

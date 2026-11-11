@@ -124,7 +124,7 @@ var(--brand);">
                                             <td>
                                                 <span class="fw-bold" style="color: 
 var(--brand);">
-                                                    {{ number_format($ticketType->price) }} FCFA
+                                                    {{ \App\Helpers\CurrencyHelper::formatFCFA($ticketType->price) }}
                                                 </span>
                                             </td>
 
@@ -134,6 +134,7 @@ var(--brand);">
                                                     <div class="me-2">
                                                         <div class="fw-semibold">{{ $ticketType->remainingTickets() }} / {{ $ticketType->quantity_available }}</div>
                                                         <small class="text-muted">{{ $ticketType->quantity_sold }} vendus</small>
+                                                        <div class="mt-1"><x-ticket-availability-badge :remaining="$ticketType->remainingTickets()" /></div>
                                                     </div>
                                                     <div style="width: 60px;">
                                                         <div class="progress" style="height: 6px;">
@@ -269,7 +270,7 @@ var(--brand);">
                         <div class="card border-0 text-white" style="background-color: 
 var(--brand);">
                             <div class="card-body text-center">
-                                <h3 class="mb-1">{{ number_format($ticketTypes->sum(function($t) { return $t->quantity_sold * $t->price; })) }} F</h3>
+                                <h3 class="mb-1">{{ \App\Helpers\CurrencyHelper::formatFCFA($ticketTypes->sum(function($t) { return $t->quantity_sold * $t->price; })) }}</h3>
                                 <p class="mb-0 small">Revenus générés</p>
                             </div>
                         </div>

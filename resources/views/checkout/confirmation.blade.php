@@ -43,12 +43,12 @@
                     @foreach($order->orderItems as $item)
                         <div class="d-flex justify-content-between py-2 border-bottom">
                             <span>{{ $item->ticketType->name }} × {{ $item->quantity }}</span>
-                            <span>{{ number_format($item->total_price) }} FCFA</span>
+                            <span>{{ \App\Helpers\CurrencyHelper::formatFCFA($item->total_price) }}</span>
                         </div>
                     @endforeach
                     <div class="d-flex justify-content-between py-3 fw-bold fs-5">
                         <span>Total</span>
-                        <span class="text-primary">{{ number_format($order->total_amount) }} FCFA</span>
+                        <span class="text-primary">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</span>
                     </div>
                 </div>
             </div>

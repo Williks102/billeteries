@@ -45,6 +45,22 @@
     --state-info: #0e7490;
     --state-info-soft: #cffafe;
 
+    /* Bleu repère (liens, informations). --link : texte sur blanc ; --link-ink : texte sur --link-soft */
+    --link: #2563EB;
+    --link-hover: #1D4ED8;
+    --link-soft: #DBEAFE;
+    --link-ink: #1D4ED8;
+
+    /* États billetterie : texte (AA sur blanc ET sur le fond doux associé) + fond doux */
+    --state-available: #15803d;
+    --state-available-soft: #dcfce7;
+    --state-low: #92400e;
+    --state-low-soft: #fef3c7;
+    --state-soldout: #b91c1c;
+    --state-soldout-soft: #fee2e2;
+    --state-refunded: #475569;
+    --state-refunded-soft: #e2e8f0;
+
     /* Typographie */
     --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
@@ -280,6 +296,17 @@ img, video, svg { max-width: 100%; }
 .badge-state--failed  { color: var(--state-failed);  background: var(--state-failed-soft); }
 .badge-state--info    { color: var(--state-info);    background: var(--state-info-soft); }
 .badge-state--neutral { color: var(--ink-muted);     background: var(--canvas); }
+/* États billetterie (toujours accompagnés d'une icône et d'un libellé dans le markup) */
+.badge-state--available { color: var(--state-available); background: var(--state-available-soft); }
+.badge-state--low       { color: var(--state-low);       background: var(--state-low-soft); }
+.badge-state--soldout   { color: var(--state-soldout);   background: var(--state-soldout-soft); }
+.badge-state--pending   { color: var(--state-pending);   background: var(--state-pending-soft); }
+.badge-state--paid      { color: var(--state-success);   background: var(--state-success-soft); }
+.badge-state--failed    { color: var(--state-failed);    background: var(--state-failed-soft); }
+.badge-state--refunded  { color: var(--state-refunded);  background: var(--state-refunded-soft); }
+.link-repere { color: var(--link); }
+.link-repere:hover { color: var(--link-hover); }
+.badge-state--info-link { color: var(--link-ink); background: var(--link-soft); }
 
 /* ===== Mouvement : court, coupé si l'utilisateur le demande ===== */
 a, .btn, .form-control, .form-select { transition-duration: var(--motion); }

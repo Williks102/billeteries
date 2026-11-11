@@ -98,7 +98,7 @@
                     <div class="input-group search-input-group">
                         <input type="text" 
                                class="form-control search-input" 
-                               name="q" 
+                               name="q" aria-label="Rechercher un événement" 
                                placeholder="Rechercher un événement..."
                                value="{{ request('q') }}"
                                autocomplete="off">
@@ -252,7 +252,7 @@
                     <div class="input-group mb-3">
                         <input type="text" 
                                class="form-control form-control-lg" 
-                               name="q" 
+                               name="q" aria-label="Rechercher un événement" 
                                placeholder="Tapez le nom d'un événement..."
                                autocomplete="off"
                                autofocus>

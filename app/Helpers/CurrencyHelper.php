@@ -4,19 +4,22 @@ namespace App\Helpers;
 
 class CurrencyHelper
 {
+    /** Espace insécable (U+00A0) : « 10 000 FCFA » ne se coupe jamais en fin de ligne. */
+    public const NBSP = "\u{00A0}";
+
     /**
      * Formate un montant en FCFA
      * 
      * @param int $amount Montant en centimes FCFA
-     * @return string Montant formaté (ex: "25 000 FCFA")
+     * @return string Montant formaté avec espaces insécables (ex: "25 000 FCFA")
      */
     public static function formatFCFA($amount)
     {
         if (is_null($amount)) {
-            return '0 FCFA';
+            return '0' . self::NBSP . 'FCFA';
         }
         
-        return number_format($amount, 0, ',', ' ') . ' FCFA';
+        return self::formatNumber($amount) . self::NBSP . 'FCFA';
     }
 
     /**
@@ -27,7 +30,7 @@ class CurrencyHelper
      */
     public static function parseFCFA($formatted)
     {
-        return (int) str_replace([' ', 'FCFA', ','], '', $formatted);
+        return (int) str_replace([' ', self::NBSP, "\u{202F}", 'FCFA', ','], '', $formatted);
     }
 
     /**
@@ -42,7 +45,7 @@ class CurrencyHelper
             return '0';
         }
         
-        return number_format($amount, 0, ',', ' ');
+        return number_format((float) $amount, 0, ',', self::NBSP);
     }
 
     /**

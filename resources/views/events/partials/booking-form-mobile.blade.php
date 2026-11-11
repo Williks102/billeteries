@@ -9,7 +9,7 @@
         </h3>
         @if($event->ticketTypes->count() > 0)
             <div class="booking-preview">
-                <span>À partir de {{ number_format($event->ticketTypes->min('price')) }} FCFA</span>
+                <span>À partir de {{ \App\Helpers\CurrencyHelper::formatFCFA($event->ticketTypes->min('price')) }}</span>
             </div>
         @endif
     </div>
@@ -109,19 +109,14 @@
                                 @endif
                             </div>
                             <div class="ticket-price">
-                                {{ number_format($ticketType->price) }} FCFA
+                                {{ \App\Helpers\CurrencyHelper::formatFCFA($ticketType->price) }}
                             </div>
                         </div>
                         
                         @if($isAvailable)
                             <div class="ticket-controls">
-                                <div class="stock-info {{ $available <= 10 ? 'limited' : '' }}">
-                                    <i class="fas fa-{{ $available > 10 ? 'check-circle' : 'exclamation-triangle' }} me-1"></i>
-                                    @if($available <= 10)
-                                        Plus que {{ $available }} places
-                                    @else
-                                        Disponible
-                                    @endif
+                                <div class="stock-info">
+                                    <x-ticket-availability-badge :remaining="$available" />
                                 </div>
                                 <div class="quantity-controls">
                                     <button class="qty-btn" onclick="updateQuantity('{{ $ticketType->id }}', -1)">
@@ -135,12 +130,11 @@
                             </div>
                         @else
                             <div class="ticket-controls">
-                                <div class="stock-info sold-out">
-                                    <i class="fas fa-times-circle me-1"></i>
+                                <div class="stock-info">
                                     @if($available <= 0)
-                                        Épuisé
+                                        <x-ticket-availability-badge :remaining="0" />
                                     @else
-                                        Vente fermée
+                                        <span class="badge-state badge-state--neutral"><i class="fas fa-lock" aria-hidden="true"></i>Vente fermée</span>
                                     @endif
                                 </div>
                             </div>

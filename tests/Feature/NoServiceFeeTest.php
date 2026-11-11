@@ -166,7 +166,7 @@ class NoServiceFeeTest extends TestCase
 
         foreach ([route('checkout.guest.show')] as $url) {
             $this->withSession(['cart' => $cart])->get($url)->assertOk()
-                ->assertDontSee('Frais de service')->assertDontSee('8 500')->assertSee('8,000');
+                ->assertDontSee('Frais de service')->assertDontSee('8 500')->assertSee(\App\Helpers\CurrencyHelper::formatFCFA(8000));
         }
     }
 }

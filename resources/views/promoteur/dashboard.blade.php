@@ -157,7 +157,7 @@
             <div class="mb-2">
                 <i class="fas fa-euro-sign fa-2x" style="color: var(--brand);"></i>
             </div>
-            <h4>{{ number_format($stats['total_revenue'] ?? 0) }} F</h4>
+            <h4>{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['total_revenue'] ?? 0) }}</h4>
             <p class="text-muted mb-0">Revenus générés</p>
             <small class="text-success">
                 <i class="fas fa-arrow-up"></i> +{{ $stats['revenue_growth'] ?? 0 }}%
@@ -170,7 +170,7 @@
             <div class="mb-2">
                 <i class="fas fa-chart-line fa-2x" style="color: var(--brand);"></i>
             </div>
-            <h4>{{ number_format($stats['monthly_revenue'] ?? 0) }} F</h4>
+            <h4>{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['monthly_revenue'] ?? 0) }}</h4>
             <p class="text-muted mb-0">Revenus ce mois</p>
             <small class="text-info">
                 <i class="fas fa-calendar me-1"></i>{{ date('F Y') }}
@@ -301,7 +301,7 @@
             </div>
             <div class="card-body">
                 <div class="text-center">
-                    <h4 style="color: #28a745;">{{ number_format($stats['monthly_revenue'] ?? 0) }} FCFA</h4>
+                    <h4 style="color: #28a745;">{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['monthly_revenue'] ?? 0) }}</h4>
                     <p class="text-muted mb-2">Revenus de {{ date('F Y') }}</p>
                     <small class="text-success">
                         <i class="fas fa-arrow-up"></i> +{{ $stats['monthly_growth'] ?? 0 }}% vs mois dernier

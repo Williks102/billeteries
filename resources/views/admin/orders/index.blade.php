@@ -94,8 +94,8 @@
             <form method="GET" action="{{ route('admin.orders.index') }}">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
-                        <label class="form-label small">Recherche</label>
-                        <input type="text" 
+                        <label class="form-label small" for="search">Recherche</label>
+                        <input id="search" type="text" 
                                name="search" 
                                class="form-control" 
                                placeholder="N° commande, client, email..." 
@@ -103,8 +103,8 @@
                     </div>
                     
                     <div class="col-md-2">
-                        <label class="form-label small">Statut</label>
-                        <select name="payment_status" class="form-select">
+                        <label class="form-label small" for="payment_status">Statut</label>
+                        <select id="payment_status" name="payment_status" class="form-select">
                             <option value="">Tous les statuts</option>
                             <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Payé</option>
                             <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>En attente</option>
@@ -114,8 +114,8 @@
                     </div>
                     
                     <div class="col-md-2">
-                        <label class="form-label small">Événement</label>
-                        <select name="event" class="form-select">
+                        <label class="form-label small" for="event">Événement</label>
+                        <select id="event" name="event" class="form-select">
                             <option value="">Tous les événements</option>
                             @foreach($events ?? [] as $event)
                                 <option value="{{ $event->id }}" {{ request('event') == $event->id ? 'selected' : '' }}>
@@ -126,16 +126,16 @@
                     </div>
                     
                     <div class="col-md-2">
-                        <label class="form-label small">Date début</label>
-                        <input type="date" 
+                        <label class="form-label small" for="date_from">Date début</label>
+                        <input id="date_from" type="date" 
                                name="date_from" 
                                class="form-control" 
                                value="{{ request('date_from') }}">
                     </div>
                     
                     <div class="col-md-2">
-                        <label class="form-label small">Date fin</label>
-                        <input type="date" 
+                        <label class="form-label small" for="date_to">Date fin</label>
+                        <input id="date_to" type="date" 
                                name="date_to" 
                                class="form-control" 
                                value="{{ request('date_to') }}">
@@ -168,7 +168,7 @@
                         <thead class="bg-light">
                             <tr>
                                 <th width="40">
-                                    <input type="checkbox" class="form-check-input" id="select-all">
+                                    <input type="checkbox" class="form-check-input" id="select-all" aria-label="Tout sélectionner">
                                 </th>
                                 <th>N° Commande</th>
                                 <th>Client</th>
@@ -184,7 +184,7 @@
                                 <tr>
                                     <td>
                                         <input type="checkbox" 
-                                               class="form-check-input order-checkbox" 
+                                               class="form-check-input order-checkbox" aria-label="Sélectionner la commande {{ $order->order_number }}" 
                                                value="{{ $order->id }}">
                                     </td>
                                     <td>

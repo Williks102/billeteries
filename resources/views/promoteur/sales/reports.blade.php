@@ -125,13 +125,13 @@
     <div class="filter-card">
         <form method="GET" action="{{ route('promoteur.reports.index') }}" class="row g-3">
             <div class="col-md-4">
-                <label class="form-label">Date de début</label>
-                <input type="date" name="start_date" class="form-control" 
+                <label class="form-label" for="start_date">Date de début</label>
+                <input id="start_date" type="date" name="start_date" class="form-control" 
                        value="{{ $startDate ?? now()->startOfMonth()->format('Y-m-d') }}">
             </div>
             <div class="col-md-4">
-                <label class="form-label">Date de fin</label>
-                <input type="date" name="end_date" class="form-control" 
+                <label class="form-label" for="end_date">Date de fin</label>
+                <input id="end_date" type="date" name="end_date" class="form-control" 
                        value="{{ $endDate ?? now()->endOfMonth()->format('Y-m-d') }}">
             </div>
             <div class="col-md-4">

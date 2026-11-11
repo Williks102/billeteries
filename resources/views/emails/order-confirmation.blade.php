@@ -35,8 +35,8 @@
         @foreach($order->orderItems as $item)
             <div class="order-item">
                 <strong>{{ $item->ticketType->name ?? 'Billet' }}</strong><br>
-                Quantité : {{ $item->quantity }} × {{ number_format($item->unit_price) }} FCFA<br>
-                <strong>Sous-total : {{ number_format($item->total_price) }} FCFA</strong>
+                Quantité : {{ $item->quantity }} × {{ \App\Helpers\CurrencyHelper::formatFCFA($item->unit_price) }}<br>
+                <strong>Sous-total : {{ \App\Helpers\CurrencyHelper::formatFCFA($item->total_price) }}</strong>
             </div>
         @endforeach
         

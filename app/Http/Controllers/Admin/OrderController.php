@@ -96,8 +96,7 @@ class OrderController extends Controller
             return view('admin.orders.index', compact('orders', 'stats', 'events', 'users'));
 
         } catch (\Exception $e) {
-            Log::error('Erreur admin orders index: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            $this->logFailure('Erreur admin orders index', $e);
             
             // Valeurs par défaut en cas d'erreur
             $orders = Order::paginate(20);
@@ -169,7 +168,7 @@ class OrderController extends Controller
             return view('admin.orders.show', compact('order', 'stats', 'history'));
 
         } catch (\Exception $e) {
-            Log::error('Erreur affichage commande: ' . $e->getMessage());
+            $this->logFailure('Erreur affichage commande', $e, $order);
             return redirect()->route('admin.orders.index')->with('error', 'Erreur lors du chargement');
         }
     }
@@ -201,20 +200,13 @@ class OrderController extends Controller
         try {
             $oldStatus = $order->payment_status;
 
-            if ($request->payment_status === 'paid' && $oldStatus !== 'paid') {
-                // Passage à payé : toujours via OrderPaymentService (verrou, idempotence, stock, commission)
-                app(OrderPaymentService::class)->confirmPayment($order, null, auth()->user());
-            } else {
-                $order->update([
-                    'payment_status' => $request->payment_status,
-                    'admin_notes' => $request->admin_notes,
-                ]);
-            }
-
-            // Si passage à "refunded" ou "failed", annuler les tickets
-            if (in_array($request->payment_status, ['refunded', 'failed'])) {
-                $order->tickets()->update(['status' => 'cancelled']);
-            }
+            // Toutes les transitions passent par le service (table de transitions, verrou, stock, commission)
+            app(OrderPaymentService::class)->changeStatus(
+                $order,
+                $request->payment_status,
+                $request->input('admin_notes'),
+                auth()->user()
+            );
 
             Log::info('Commande modifiée par admin', [
                 'admin_id' => auth()->id(),
@@ -228,9 +220,9 @@ class OrderController extends Controller
 
         } catch (OrderPaymentException $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
-        } catch (\Exception $e) {
-            Log::error('Erreur mise à jour commande: ' . $e->getMessage());
-            
+        } catch (\Throwable $e) {
+            $this->logFailure('Erreur mise à jour commande', $e, $order);
+
             return redirect()->back()
                 ->with('error', 'Erreur lors de la mise à jour de la commande')
                 ->withInput();
@@ -247,16 +239,7 @@ class OrderController extends Controller
         ]);
 
         try {
-            if ($request->payment_status === 'paid') {
-                // Passage à payé : verrou + idempotence + stock + commission unique (OrderPaymentService)
-                app(OrderPaymentService::class)->confirmPayment($order, null, auth()->user());
-            } else {
-                $order->update(['payment_status' => $request->payment_status]);
-
-                if (in_array($request->payment_status, ['failed', 'refunded'], true)) {
-                    $order->tickets()->update(['status' => 'cancelled']);
-                }
-            }
+            app(OrderPaymentService::class)->changeStatus($order, $request->payment_status, null, auth()->user());
 
             return response()->json([
                 'success' => true,
@@ -265,9 +248,9 @@ class OrderController extends Controller
 
         } catch (OrderPaymentException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
-            Log::error('Erreur update status: ' . $e->getMessage());
-            
+        } catch (\Throwable $e) {
+            $this->logFailure('Erreur update status', $e, $order);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la mise à jour'
@@ -309,11 +292,8 @@ class OrderController extends Controller
 
             return redirect()->route('admin.orders.show', $order)->with('error', $e->getMessage());
 
-        } catch (\Exception $e) {
-            Log::error('Erreur confirmation paiement admin', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage(),
-            ]);
+        } catch (\Throwable $e) {
+            $this->logFailure('Erreur confirmation paiement admin', $e, $order);
 
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => 'Erreur lors de la confirmation'], 500);
@@ -328,22 +308,22 @@ class OrderController extends Controller
      */
     public function refund(Request $request, Order $order)
     {
+        $request->validate(['reason' => 'nullable|string|max:1000']);
+
         if ($order->payment_status !== 'paid') {
             return redirect()->back()->with('error', 'Seules les commandes payées peuvent être remboursées');
         }
 
         try {
-            // Marquer comme remboursée
-            $order->update([
-                'payment_status' => 'refunded',
-                'admin_notes' => $request->reason ?? 'Remboursement manuel par administrateur'
-            ]);
-
-            // Annuler tous les tickets
-            $order->tickets()->update(['status' => 'cancelled']);
+            app(OrderPaymentService::class)->changeStatus(
+                $order,
+                'refunded',
+                $request->input('reason') ?: 'Remboursement manuel par administrateur',
+                auth()->user()
+            );
 
             // TODO: Intégrer avec le système de paiement pour remboursement réel
-            
+
             Log::info('Commande remboursée par admin', [
                 'admin_id' => auth()->id(),
                 'order_id' => $order->id,
@@ -353,9 +333,11 @@ class OrderController extends Controller
             return redirect()->route('admin.orders.show', $order)
                 ->with('success', 'Commande remboursée avec succès !');
 
-        } catch (\Exception $e) {
-            Log::error('Erreur remboursement commande: ' . $e->getMessage());
-            
+        } catch (OrderPaymentException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            $this->logFailure('Erreur remboursement commande', $e, $order);
+
             return redirect()->back()
                 ->with('error', 'Erreur lors du remboursement');
         }
@@ -381,7 +363,6 @@ class OrderController extends Controller
                 Log::info('Email renvoyé par admin', [
                     'admin_id' => auth()->id(),
                     'order_id' => $order->id,
-                    'user_email' => $order->user->email
                 ]);
 
                 return redirect()->back()
@@ -391,8 +372,8 @@ class OrderController extends Controller
                     ->with('error', 'Erreur lors de l\'envoi de l\'email. Vérifiez les logs.');
             }
 
-        } catch (\Exception $e) {
-            Log::error('Erreur renvoi email commande: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            $this->logFailure('Erreur renvoi email commande', $e, $order);
             
             return redirect()->back()
                 ->with('error', 'Erreur lors du renvoi de l\'email');
@@ -413,33 +394,29 @@ class OrderController extends Controller
         try {
             $orders = Order::whereIn('id', $request->orders)->get();
             $count = 0;
+            $failures = [];
             $emailService = app(\App\Services\EmailService::class);
+            $service = app(OrderPaymentService::class);
 
             foreach ($orders as $order) {
                 switch ($request->action) {
                     case 'mark_paid':
-                        if (in_array($order->payment_status, ['pending', 'processing'], true)) {
-                            try {
-                                // Verrou, idempotence, commission unique et email après commit
-                                app(OrderPaymentService::class)->confirmPayment($order, null, auth()->user());
-                                $count++;
-                            } catch (OrderPaymentException $e) {
-                                Log::warning('Confirmation en lot refusée', ['order_id' => $order->id]);
-                            }
-                        }
-                        break;
-                        
                     case 'mark_failed':
-                        if ($order->payment_status === 'pending') {
-                            $order->update(['payment_status' => 'failed']);
-                            $order->tickets()->update(['status' => 'cancelled']);
+                        if (!in_array($order->payment_status, ['pending', 'processing'], true)) {
+                            break;
+                        }
+                        try {
+                            // Table de transitions, verrou, stock, commission et email après commit
+                            $service->changeStatus($order, $request->action === 'mark_paid' ? 'paid' : 'failed', null, auth()->user());
                             $count++;
+                        } catch (OrderPaymentException $e) {
+                            Log::warning('Action en lot refusée', ['order_id' => $order->id, 'action' => $request->action]);
+                            $failures[] = $order->order_number . ' (' . $e->getMessage() . ')';
                         }
                         break;
-                        
+
                     case 'resend_emails':
                         if ($order->payment_status === 'paid') {
-                            // ✅ Utiliser le service email existant
                             $emailService->sendPaymentConfirmation($order);
                             $count++;
                         }
@@ -450,15 +427,20 @@ class OrderController extends Controller
             Log::info('Action en lot sur commandes par admin', [
                 'admin_id' => auth()->id(),
                 'action' => $request->action,
-                'orders_affected' => $count
+                'orders_affected' => $count,
+                'orders_failed' => count($failures),
             ]);
 
-            return redirect()->back()
-                ->with('success', "{$count} commande(s) traitée(s) avec succès !");
+            $redirect = redirect()->back();
+            if ($failures !== []) {
+                $redirect = $redirect->with('error', 'Échec pour : ' . implode(' ; ', $failures));
+            }
 
-        } catch (\Exception $e) {
-            Log::error('Erreur action en lot commandes: ' . $e->getMessage());
-            
+            return $redirect->with('success', "{$count} commande(s) traitée(s) avec succès !");
+
+        } catch (\Throwable $e) {
+            $this->logFailure('Erreur action en lot commandes', $e);
+
             return redirect()->back()
                 ->with('error', 'Erreur lors du traitement des commandes');
         }
@@ -566,16 +548,25 @@ class OrderController extends Controller
             Log::info('Export commandes par admin', [
                 'admin_id' => auth()->id(),
                 'total_orders' => $orders->count(),
-                'filters' => $request->all()
+                'filters' => $request->only(['payment_status', 'event', 'date_from', 'date_to'])
             ]);
 
             return response()->stream($callback, 200, $headers);
 
         } catch (\Exception $e) {
-            Log::error('Erreur export commandes: ' . $e->getMessage());
+            $this->logFailure('Erreur export commandes', $e);
             
             return redirect()->back()
                 ->with('error', 'Erreur lors de l\'export des commandes');
         }
+    }
+
+    /** Journalise une erreur interne sans message brut ni PII (les messages SQL contiennent des valeurs). */
+    private function logFailure(string $context, \Throwable $e, ?Order $order = null): void
+    {
+        app(\App\Services\CheckoutService::class)->logFailure($context, $e, [
+            'order_id' => $order?->id,
+            'admin_id' => auth()->id(),
+        ]);
     }
 }

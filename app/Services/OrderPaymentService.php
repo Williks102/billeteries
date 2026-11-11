@@ -3,7 +3,10 @@
 namespace App\Services;
 
 use App\Exceptions\OrderPaymentException;
+use App\Models\Commission;
 use App\Models\Order;
+use App\Models\Ticket;
+use App\Models\TicketType;
 use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -115,5 +118,91 @@ class OrderPaymentService
         $order->refresh();
 
         return $order;
+    }
+
+    /**
+     * Changement de statut demandé par l'admin : seul point d'entrée des voies admin (M1/M2).
+     * Applique la table Order::STATUS_TRANSITIONS ; le stock reste cohérent dans tous les cas.
+     *
+     * @throws OrderPaymentException transition interdite ou état modifié entre-temps
+     */
+    public function changeStatus(Order $order, string $to, ?string $notes = null, ?User $by = null): Order
+    {
+        $order->refresh();
+        $from = $order->payment_status;
+
+        if ($from !== $to) {
+            if (!Order::canTransition($from, $to)) {
+                throw new OrderPaymentException(sprintf(
+                    'Transition de statut interdite : « %s » vers « %s ».',
+                    $from,
+                    $to
+                ));
+            }
+
+            match ($to) {
+                'paid' => $this->confirmPayment($order, null, $by),
+                'failed' => $this->fail($order),
+                'refunded' => $this->refund($order),
+            };
+
+            Log::info('Statut de commande modifié par admin', [
+                'order_id' => $order->id,
+                'from' => $from,
+                'to' => $to,
+                'admin_id' => $by?->id,
+            ]);
+        }
+
+        if ($notes !== null) {
+            $order->update(['admin_notes' => $notes]);
+        }
+
+        return $order->refresh();
+    }
+
+    /**
+     * pending/processing -> failed : libère le stock (releaseStock : verrou, quantity_sold, billets annulés)
+     * et annule la commission.
+     */
+    public function fail(Order $order): Order
+    {
+        DB::transaction(function () use ($order) {
+            if (!$order->releaseStock()) {
+                throw new OrderPaymentException('Le statut de la commande a changé entre-temps : opération annulée.');
+            }
+
+            Commission::where('order_id', $order->id)->where('status', 'pending')->update(['status' => 'cancelled']);
+        });
+
+        return $order->refresh();
+    }
+
+    /**
+     * paid -> refunded : verrou sur la commande puis les types de billets, billets annulés,
+     * stock libéré (les places redeviennent vendables), commission suspendue.
+     */
+    public function refund(Order $order): Order
+    {
+        DB::transaction(function () use ($order) {
+            $locked = Order::whereKey($order->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->payment_status !== 'paid') {
+                throw new OrderPaymentException('Seules les commandes payées peuvent être remboursées.');
+            }
+
+            foreach ($locked->orderItems()->orderBy('ticket_type_id')->get() as $item) {
+                TicketType::whereKey($item->ticket_type_id)->lockForUpdate()->first()?->releaseTickets($item->quantity);
+            }
+
+            $ticketIds = DB::table('order_tickets')->where('order_id', $locked->id)->pluck('ticket_id');
+            Ticket::whereIn('id', $ticketIds)->update(['status' => 'cancelled']);
+
+            Commission::where('order_id', $locked->id)->whereIn('status', ['pending'])->update(['status' => 'held']);
+
+            $locked->update(['payment_status' => 'refunded']);
+        });
+
+        return $order->refresh();
     }
 }

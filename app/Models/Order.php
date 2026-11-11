@@ -25,6 +25,7 @@ class Order extends Model
         'billing_phone',
         'guest_token',
         'expires_at',
+        'admin_notes',
     ];
 
     protected $casts = [
@@ -293,20 +294,36 @@ class Order extends Model
     }
 
     /**
-     * Rembourser la commande
+     * Table centralisée des transitions de statut de paiement autorisées (M2).
+     * Tout changement de statut (admin ou service) doit la respecter ; `paid` n'est atteint que
+     * via OrderPaymentService::confirmPayment, `failed` via releaseStock, `refunded` via refund.
+     * Interdits notamment : refunded -> *, paid -> pending|failed, failed -> pending.
+     */
+    public const STATUS_TRANSITIONS = [
+        'pending' => ['paid', 'failed'],
+        'processing' => ['paid', 'failed'],
+        'failed' => ['paid'], // paiement tardif : reclaimStock sous verrou
+        'paid' => ['refunded'],
+        'refunded' => [],
+    ];
+
+    public static function canTransition(?string $from, string $to): bool
+    {
+        return in_array($to, self::STATUS_TRANSITIONS[$from] ?? [], true);
+    }
+
+    public function canTransitionTo(string $to): bool
+    {
+        return self::canTransition($this->payment_status, $to);
+    }
+
+    /**
+     * Rembourser la commande (paid -> refunded) : verrou, billets annulés, stock libéré,
+     * commission suspendue. Délégué à OrderPaymentService.
      */
     public function refund()
     {
-        $this->payment_status = 'refunded';
-        $this->save();
-        
-        // Annuler les billets
-        $this->tickets()->update(['status' => 'cancelled']);
-        
-        // Mettre à jour la commission
-        if ($this->commission) {
-            $this->commission->update(['status' => 'held']);
-        }
+        return app(\App\Services\OrderPaymentService::class)->refund($this);
     }
 
     /**

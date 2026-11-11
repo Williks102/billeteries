@@ -427,4 +427,15 @@ class Order extends Model
             default => null
         };
     }
+
+    /**
+     * N4 : une commande créée en invité (guest_token) et rattachée à un compte par email n'apparaît
+     * dans l'historique de l'acheteur qu'une fois payée (un tiers ne peut pas polluer l'historique d'autrui).
+     */
+    public function scopeVisibleInBuyerHistory($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('guest_token')->orWhere('payment_status', 'paid');
+        });
+    }
 }

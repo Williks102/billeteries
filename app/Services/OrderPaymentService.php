@@ -53,6 +53,10 @@ class OrderPaymentService
                         'Stock indisponible : la commande avait expiré et les billets ne sont plus disponibles. Remboursement ou relance manuelle de l\'acheteur nécessaire.'
                     );
                 }
+
+                // I1 : fail() avait annulé la commission ; la vente est reconfirmée, la même commission
+                // (une seule par commande) redevient pending. Aucune nouvelle commission n'est créée.
+                Commission::where('order_id', $locked->id)->where('status', 'cancelled')->update(['status' => 'pending']);
             } elseif (!in_array($locked->payment_status, ['pending', 'processing'], true)) {
                 throw new OrderPaymentException(
                     'Cette commande ne peut pas être confirmée (statut : ' . $locked->payment_status . ').'

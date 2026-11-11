@@ -21,9 +21,7 @@ trait BuildsOrderSchema
         Schema::create('users', function ($t) {
             $t->id();
             $t->string('name')->nullable();
-            $t->string('first_name')->nullable();
-            $t->string('last_name')->nullable();
-            $t->string('email')->nullable();
+            $t->string('email')->nullable()->unique(); // comme la migration users (unique)
             $t->string('phone')->nullable();
             $t->string('password')->nullable();
             $t->string('role')->default('acheteur');

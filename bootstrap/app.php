@@ -25,6 +25,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SetLayoutMiddleware::class);
         
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
+        // N2 : proxys de confiance pilotés par l'environnement. DÉFAUT = aucun (comportement inchangé).
+        // Avec `php artisan config:cache`, .env n'est plus lu à l'exécution : définir ces variables
+        // dans l'environnement réel du serveur.
+        $middleware->trustProxies(
+            at: \App\Support\TrustedProxyConfig::proxies(env('TRUSTED_PROXIES')),
+            headers: \App\Support\TrustedProxyConfig::headers(env('TRUSTED_PROXY_HEADERS')),
+        );
         
     })
     ->withExceptions(function (Exceptions $exceptions) {

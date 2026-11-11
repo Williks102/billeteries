@@ -158,7 +158,8 @@ class CheckoutController extends Controller
             // Prix recalculés côté serveur ; commandes, stock et billets dans UNE transaction.
             // Commandes `pending` avec expires_at = now + payments.manual_reservation_minutes.
             $groups = $service->buildEventGroups($cart);
-            $service->assertWithinOrderLimits((string) $request->billing_email, Auth::id(), $request->ip(), count($groups));
+            $capByIp = $service->shouldCapByIp(Auth::user());
+            $service->assertWithinOrderLimits((string) $request->billing_email, Auth::id(), $request->ip(), count($groups), $capByIp);
 
             $orders = DB::transaction(function () use ($service, $groups, $request) {
                 $orders = [];
@@ -171,6 +172,10 @@ class CheckoutController extends Controller
                 }
                 return $orders;
             });
+
+            if ($capByIp) {
+                $service->recordGuestOrders($request->ip(), count($orders));
+            }
 
             $service->sendManualInstructions($orders);
 

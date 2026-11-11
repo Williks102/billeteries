@@ -190,5 +190,7 @@ class AdminOrderStatusPathsTest extends TestCase
         $this->assertSame('paid', $order->fresh()->payment_status);
         $this->assertSame(2, Ticket::where('status', 'sold')->count());
         $this->assertSame(2, $type->fresh()->quantity_sold, 'quantity_sold doit refléter 2 billets, pas 4');
+        // I1 : le promoteur est rémunéré pour la vente reconfirmée (une seule commission, repassée pending)
+        $this->assertSame(['pending'], Commission::where('order_id', $order->id)->pluck('status')->all());
     }
 }

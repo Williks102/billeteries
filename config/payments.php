@@ -21,7 +21,13 @@ return [
     // Plafond de commandes invité par IP sur la fenêtre de réservation invité (CGNAT : valeur plus large)
     'max_pending_orders_per_ip' => (int) env('MAX_PENDING_ORDERS_PER_IP', 10),
 
-    // Throttle des POST de checkout : tentatives par fenêtre d'une minute et par IP
+    // Plafond de BILLETS en attente (pending/processing) par événement, compté sous verrou (anti-accaparement)
+    'max_pending_tickets_per_event' => (int) env('MAX_PENDING_TICKETS_PER_EVENT', 50),
+
+    // Throttle de l'inscription (POST register) : tentatives par minute et par IP
+    'register_throttle_per_minute' => (int) env('REGISTER_THROTTLE_PER_MINUTE', 5),
+
+    // Throttle des POST de checkout : tentatives par fenêtre d'une minute (clé = IP, ou id utilisateur pour un connecté)
     'checkout_throttle_per_minute' => (int) env('CHECKOUT_THROTTLE_PER_MINUTE', 10),
 
     // Méthodes de paiement manuelles autorisées (clé = valeur du champ payment_method).

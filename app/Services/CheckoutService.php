@@ -87,7 +87,7 @@ class CheckoutService
      *
      * @throws CheckoutRefusedException
      */
-    public function assertWithinOrderLimits(string $email, ?int $userId, ?string $ip, int $newOrders, bool $guest = false): void
+    public function assertWithinOrderLimits(string $email, ?int $userId, ?string $ip, int $newOrders, bool $capByIp = false): void
     {
         $max = max(1, (int) config('payments.max_pending_orders', 3));
 
@@ -104,7 +104,7 @@ class CheckoutService
             throw new CheckoutRefusedException(self::LIMIT_ERROR);
         }
 
-        if ($guest && $ip !== null) {
+        if ($capByIp && $ip !== null) {
             $maxIp = max(1, (int) config('payments.max_pending_orders_per_ip', 10));
             if (RateLimiter::attempts($this->ipKey($ip)) + $newOrders > $maxIp) {
                 Log::warning('Plafond de commandes par IP atteint', ['scope' => 'ip']);
@@ -113,7 +113,15 @@ class CheckoutService
         }
     }
 
-    /** Compte les commandes invité créées par cette IP (fenêtre = réservation invité). */
+    /**
+     * Le plafond par IP s'applique aux invités et aux comptes de moins de 24 h (N3c : comptes jetables).
+     */
+    public function shouldCapByIp(?\App\Models\User $user): bool
+    {
+        return $user === null || ($user->created_at !== null && $user->created_at->gt(now()->subDay()));
+    }
+
+    /** Compte les commandes créées par cette IP (invités et comptes récents) (fenêtre = réservation invité). */
     public function recordGuestOrders(?string $ip, int $count): void
     {
         if ($ip === null) {
@@ -148,6 +156,8 @@ class CheckoutService
      */
     public function createOrder(int $userId, int $eventId, array $group, array $attributes): Order
     {
+        $this->assertEventPendingTicketsWithinCap($eventId, (int) collect($group['items'])->sum('quantity'));
+
         $order = Order::create($attributes + [
             'user_id' => $userId,
             'event_id' => $eventId,
@@ -166,6 +176,33 @@ class CheckoutService
         $this->createCommission($order);
 
         return $order;
+    }
+
+    /**
+     * Plafond de billets pending/processing par ÉVÉNEMENT (N3b), vérifié SOUS VERROU : la ligne de
+     * l'événement est verrouillée (lockForUpdate) puis les billets en attente sont comptés dans la même
+     * transaction que la réservation, ce qui sérialise les checkouts concurrents d'un même événement
+     * (10 requêtes parallèles ne passent pas toutes). À appeler DANS une DB::transaction.
+     * Note : SQLite ignore lockForUpdate ; la preuve de concurrence reste à faire sur MySQL.
+     *
+     * @throws CheckoutRefusedException
+     */
+    private function assertEventPendingTicketsWithinCap(int $eventId, int $newTickets): void
+    {
+        $cap = max(1, (int) config('payments.max_pending_tickets_per_event', 50));
+
+        DB::table('events')->where('id', $eventId)->lockForUpdate()->first();
+
+        $pending = (int) DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.event_id', $eventId)
+            ->whereIn('orders.payment_status', ['pending', 'processing'])
+            ->sum('order_items.quantity');
+
+        if ($pending + $newTickets > $cap) {
+            Log::warning('Plafond de billets en attente par événement atteint', ['scope' => 'event', 'event_id' => $eventId]);
+            throw new CheckoutRefusedException(self::LIMIT_ERROR);
+        }
     }
 
     /**

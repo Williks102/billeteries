@@ -44,7 +44,7 @@
     },
     "scripts": {
         "test:routes": "@php vendor/bin/phpunit tests/Feature/RoutingConventionsTest.php",
-        "test:payments": "@php vendor/bin/phpunit tests/Feature/StockAndOrderFlowTest.php tests/Feature/OrderPaymentServiceTest.php tests/Feature/ManualCheckoutTest.php tests/Feature/AdminConfirmPaymentTest.php tests/Feature/ManualPaymentJourneyTest.php tests/Feature/OrderExpiryTest.php tests/Feature/ConfirmPaymentAuthorizationTest.php tests/Feature/AdminOrderStatusPathsTest.php tests/Feature/CheckoutValidationTest.php tests/Feature/GuestCheckoutSecurityTest.php tests/Feature/OrderStatusTransitionsTest.php",
+        "test:payments": "@php vendor/bin/phpunit tests/Feature/StockAndOrderFlowTest.php tests/Feature/OrderPaymentServiceTest.php tests/Feature/ManualCheckoutTest.php tests/Feature/AdminConfirmPaymentTest.php tests/Feature/ManualPaymentJourneyTest.php tests/Feature/OrderExpiryTest.php tests/Feature/ConfirmPaymentAuthorizationTest.php tests/Feature/AdminOrderStatusPathsTest.php tests/Feature/CheckoutValidationTest.php tests/Feature/GuestCheckoutSecurityTest.php tests/Feature/OrderStatusTransitionsTest.php tests/Feature/CheckoutAbuseLimitsTest.php",
         "check": [
             "@test:routes",
             "@test:payments"

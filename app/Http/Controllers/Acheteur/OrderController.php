@@ -33,7 +33,8 @@ public function index(Request $request)
     try {
         // Construction de la requête
         $query = $user->orders()
-            ->with(['event.category', 'orderItems.ticketType', 'tickets.ticketType']);
+            ->with(['event.category', 'orderItems.ticketType', 'tickets.ticketType'])
+            ->visibleInBuyerHistory();
 
         // Filtres
         if ($request->filled('payment_status')) {

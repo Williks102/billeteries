@@ -41,7 +41,7 @@ class GuestCheckoutSecurityTest extends TestCase
     private function insertUser(int $id, string $email, bool $guest): void
     {
         DB::table('users')->insert([
-            'id' => $id, 'name' => 'Nom Secret', 'first_name' => 'Nom', 'last_name' => 'Secret', 'email' => $email,
+            'id' => $id, 'name' => 'Nom Secret', 'email' => $email,
             'phone' => '0707070707', 'role' => 'acheteur', 'is_guest' => $guest,
             'password' => Hash::make('mot-de-passe-victime'),
         ]);
@@ -66,7 +66,6 @@ class GuestCheckoutSecurityTest extends TestCase
         $this->assertTrue((bool) $victim->is_guest);
         $this->assertNull($victim->guest_converted_at);
         $this->assertSame('Nom Secret', $victim->name);
-        $this->assertSame('Nom', $victim->first_name);
         $this->assertSame('0707070707', $victim->phone);
         $this->assertSame($passwordBefore, $victim->password);
         $this->assertTrue(Hash::check('mot-de-passe-victime', $victim->password));

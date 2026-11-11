@@ -81,7 +81,6 @@ class PaiementProController extends Controller
         } catch (\Exception $e) {
             Log::error('Erreur initiation paiement PaiementPro', [
                 'error' => $e->getMessage(),
-                'request' => $request->all()
             ]);
 
             return response()->json([
@@ -96,136 +95,92 @@ class PaiementProController extends Controller
      */
     public function notification(Request $request)
     {
-        Log::info('🔔 Réception notification PaiementPro', $request->all());
+        // Pas de log du corps complet (hashcode, PII)
+        Log::info('Réception notification PaiementPro', [
+            'referenceNumber' => $request->input('referenceNumber'),
+            'responsecode' => $request->input('responsecode'),
+        ]);
 
-        // Valider les paramètres selon la documentation PaiementPro
         $validator = Validator::make($request->all(), [
             'merchantId' => 'required',
             'referenceNumber' => 'required',
             'amount' => 'required|numeric',
             'responsecode' => 'required',
             'transactiondt' => 'required',
-            
+            'hashcode' => 'required',
         ]);
 
         if ($validator->fails()) {
-            Log::warning('❌ Notification PaiementPro invalide', [
-                'errors' => $validator->errors(),
-                'data' => $request->all()
+            Log::warning('Notification PaiementPro invalide', [
+                'fields' => array_keys($validator->errors()->toArray()),
             ]);
-            
+
             return response('Invalid parameters', 400);
         }
 
         try {
-            // Traiter la notification selon la documentation
             $result = $this->paiementProService->handleNotification($request->all());
 
             if ($result['success']) {
-                Log::info('✅ Notification PaiementPro traitée avec succès');
-                
-                // ENVOI DES EMAILS après paiement réussi
-                if (isset($result['order']) && $result['payment_successful']) {
+                // Emails une seule fois : uniquement au passage effectif à paid (pas sur rejeu)
+                if (!empty($result['payment_successful']) && isset($result['order'])) {
                     $this->sendConfirmationEmails($result['order']);
                 }
-                
+
                 return response('OK', 200);
             }
 
-            Log::error('❌ Échec traitement notification', $result);
+            Log::error('Échec traitement notification PaiementPro', ['error' => $result['error'] ?? 'unknown']);
             return response('Error: ' . ($result['error'] ?? 'Unknown error'), 400);
 
         } catch (\Exception $e) {
-            Log::error('💥 Exception notification PaiementPro', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
-            ]);
+            Log::error('Exception notification PaiementPro', ['error' => $e->getMessage()]);
 
             return response('Internal error', 500);
         }
     }
 
     /**
-     * Page de retour après paiement
+     * Page de retour après paiement. Ne modifie rien : le message est basé sur le statut
+     * réel de la commande (mis à jour par le webhook signé), jamais sur les paramètres GET.
      */
-     public function return(Request $request)
+    public function return(Request $request)
     {
-        Log::info('🔙 Retour utilisateur PaiementPro', $request->all());
-
         try {
-            // Décoder le returnContext selon la documentation
             $context = [];
             if ($request->has('returnContext')) {
-                parse_str($request->returnContext, $context);
+                parse_str((string) $request->returnContext, $context);
             }
 
-            // Récupérer la commande
             $order = null;
             if (isset($context['order_id'])) {
-                $order = Order::with(['user', 'event', 'tickets', 'orderItems.ticketType'])
-                             ->find($context['order_id']);
+                $order = Order::with('user')->find($context['order_id']);
             } elseif ($request->has('referenceNumber')) {
-                $order = Order::with(['user', 'event', 'tickets', 'orderItems.ticketType'])
-                             ->where('order_number', $request->referenceNumber)
-                             ->first();
+                $order = Order::with('user')->where('order_number', $request->referenceNumber)->first();
             }
 
-            // Déterminer le statut basé sur responsecode (selon doc PaiementPro)
-            $paymentStatus = 'pending';
-            $statusMessage = 'Paiement en cours de traitement';
-            
-            if ($request->has('responsecode')) {
-                switch ($request->responsecode) {
-                    case '0':
-                        $paymentStatus = 'success';
-                        $statusMessage = 'Paiement réussi !';
-                        break;
-                    case '-1':
-                        $paymentStatus = 'failed';
-                        $statusMessage = 'Paiement échoué';
-                        break;
-                    default:
-                        $paymentStatus = 'pending';
-                        $statusMessage = 'Statut de paiement en attente';
-                }
+            if (!$order) {
+                return redirect()->route('home');
             }
 
-            // Redirection intelligente selon le type d'utilisateur
-            if ($order) {
-                if ($order->user && !$order->user->is_guest) {
-                    // Utilisateur connecté -> dashboard
-                    if ($paymentStatus === 'success') {
-                        return redirect()->route('acheteur.orders.show', $order)
-                                       ->with('success', $statusMessage);
-                    } else {
-                        return redirect()->route('acheteur.orders.show', $order)
-                                       ->with('error', $statusMessage);
-                    }
-                } else {
-                    // Invité -> page de confirmation publique
-                    $token = $order->guest_token;
-                    if ($token) {
-                        if ($paymentStatus === 'success') {
-                            return redirect()->route('checkout.guest.confirmation', $token)
-                                           ->with('success', $statusMessage);
-                        } else {
-                            return redirect()->route('checkout.guest.confirmation', $token)
-                                           ->with('error', $statusMessage);
-                        }
-                    }
-                }
+            [$flash, $message] = match ($order->payment_status) {
+                'paid' => ['success', 'Paiement réussi !'],
+                'failed', 'cancelled' => ['error', 'Paiement échoué ou annulé'],
+                default => ['warning', 'Paiement en cours de traitement : votre commande sera confirmée dès réception de la confirmation.'],
+            };
+
+            if ($order->user && !$order->user->is_guest) {
+                return redirect()->route('acheteur.orders.show', $order)->with($flash, $message);
             }
 
-            // Fallback vers la page d'accueil
-            return redirect()->route('home')
-                           ->with($paymentStatus === 'success' ? 'success' : 'error', $statusMessage);
+            if ($order->guest_token) {
+                return redirect()->route('checkout.guest.confirmation', $order->guest_token)->with($flash, $message);
+            }
+
+            return redirect()->route('home')->with($flash, $message);
 
         } catch (\Exception $e) {
-            Log::error('💥 Erreur page retour PaiementPro', [
-                'error' => $e->getMessage(),
-                'request' => $request->all()
-            ]);
+            Log::error('Erreur page retour PaiementPro', ['error' => $e->getMessage()]);
 
             return redirect()->route('home')
                            ->with('error', 'Une erreur est survenue lors du retour de paiement');
@@ -233,33 +188,25 @@ class PaiementProController extends Controller
     }
 
     /**
-     * Annuler un paiement
+     * Annuler un paiement : uniquement une commande pending/processing, par son propriétaire
+     * (authentifié) ou via son guest_token. Libère le stock.
      */
     public function cancel(Request $request)
     {
-        Log::info('❌ Annulation paiement PaiementPro', $request->all());
-
         try {
-            $order_id = $request->query('order_id');
-            
-            if ($order_id) {
-                $order = Order::find($order_id);
-                
-                if ($order) {
-                    // Marquer comme annulé
-                    $order->update(['payment_status' => 'cancelled']);
-                    
-                    // Redirection selon le type d'utilisateur
-                    if ($order->user && !$order->user->is_guest) {
-                        return redirect()->route('acheteur.orders.show', $order)
-                                       ->with('warning', 'Le paiement a été annulé');
-                    } else {
-                        // Invité
-                        if ($order->guest_token) {
-                            return redirect()->route('checkout.guest.confirmation', $order->guest_token)
-                                           ->with('warning', 'Le paiement a été annulé');
-                        }
-                    }
+            $order = Order::find($request->query('order_id'));
+
+            if ($order && $this->canCancel($request, $order)) {
+                $order->releaseStock();
+
+                if ($order->user && !$order->user->is_guest) {
+                    return redirect()->route('acheteur.orders.show', $order)
+                                   ->with('warning', 'Le paiement a été annulé');
+                }
+
+                if ($order->guest_token) {
+                    return redirect()->route('checkout.guest.confirmation', $order->guest_token)
+                                   ->with('warning', 'Le paiement a été annulé');
                 }
             }
 
@@ -267,14 +214,26 @@ class PaiementProController extends Controller
                            ->with('warning', 'Le paiement a été annulé');
 
         } catch (\Exception $e) {
-            Log::error('💥 Erreur annulation paiement', [
-                'error' => $e->getMessage(),
-                'request' => $request->all()
-            ]);
+            Log::error('Erreur annulation paiement', ['error' => $e->getMessage()]);
 
             return redirect()->route('home')
                            ->with('error', 'Une erreur est survenue');
         }
+    }
+
+    private function canCancel(Request $request, Order $order): bool
+    {
+        if (!in_array($order->payment_status, ['pending', 'processing'], true)) {
+            return false;
+        }
+
+        if (auth()->check() && $order->user_id === auth()->id()) {
+            return true;
+        }
+
+        $token = (string) $request->query('guest_token', '');
+
+        return $order->guest_token !== null && $token !== '' && hash_equals($order->guest_token, $token);
     }
 
     /**
@@ -349,7 +308,6 @@ class PaiementProController extends Controller
         } catch (\Exception $e) {
             Log::error('Erreur vérification statut', [
                 'error' => $e->getMessage(),
-                'request' => $request->all()
             ]);
 
             return response()->json([
@@ -359,25 +317,6 @@ class PaiementProController extends Controller
         }
     }
 
-    public function testNotification(Request $request)
-    {
-        if (!app()->environment('local')) {
-            abort(404);
-        }
-
-        $testData = [
-            'merchantId' => config('services.paiementpro.merchant_id'),
-            'referenceNumber' => $request->reference ?? 'TEST-ORDER-123',
-            'amount' => $request->amount ?? 1000,
-            'responsecode' => $request->status ?? '0', // 0 = succès, -1 = échec
-            'transactiondt' => now()->format('Y-m-d H:i:s'),
-            'customerId' => '1',
-            'returnContext' => 'order_id=1&test=true',
-            'hashcode' => 'test_hash'
-        ];
-
-        return $this->notification(new Request($testData));
-    }
     private function sendConfirmationEmails(Order $order)
     {
         try {

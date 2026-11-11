@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Payment;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use SoapClient;
 use Exception;
@@ -26,11 +27,17 @@ class PaiementProService
         // ✅ URL EXACTE selon la documentation
         $this->wsdlUrl = 'https://www.paiementpro.net/webservice/OnlineServicePayment_v2.php?wsdl';
         $this->processingUrl = 'https://www.paiementpro.net/webservice/onlinepayment/processing_v2.php';
-        
-        // Vérifications
-        if (empty($this->merchantId)) {
-            throw new \Exception('PAIEMENTPRO_MERCHANT_ID manquant dans .env');
-        }
+        // Aucune exception ici : la configuration est validée paresseusement
+        // (initTransaction / handleNotification) pour que route:list et route:cache
+        // fonctionnent sans variables d'environnement.
+    }
+
+    /**
+     * Configuration minimale présente (merchant_id + secret_key)
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->merchantId) && !empty($this->secretKey);
     }
 
     /**
@@ -38,6 +45,15 @@ class PaiementProService
      */
     public function initTransaction(Order $order, array $options = []): array
     {
+        if (!$this->isConfigured()) {
+            Log::critical('PaiementPro non configuré (PAIEMENTPRO_MERCHANT_ID / PAIEMENTPRO_SECRET_KEY)');
+            return [
+                'success' => false,
+                'error' => 'Le paiement en ligne est momentanément indisponible.',
+                'code' => -1
+            ];
+        }
+
         try {
             // Préparer les paramètres selon la documentation
             $params = $this->prepareInitParams($order, $options);
@@ -45,7 +61,11 @@ class PaiementProService
             // ✅ NOUVEAU : Générer le hashcode obligatoire
             $params['hashcode'] = $this->generateHashCode($params);
 
-            Log::info('PaiementPro - Paramètres envoyés', $params);
+            Log::info('PaiementPro - initialisation', [
+                'order_id' => $order->id,
+                'referenceNumber' => $params['referenceNumber'],
+                'amount' => $params['amount'],
+            ]);
 
             // Créer le client SOAP avec les bonnes options
             $client = new SoapClient($this->wsdlUrl, [
@@ -59,7 +79,7 @@ class PaiementProService
 
             Log::info('PaiementPro initTransaction response', [
                 'order_id' => $order->id,
-                'response' => $response
+                'code' => $response->Code ?? null,
             ]);
 
             return $this->handleInitResponse($order, $response);
@@ -111,10 +131,8 @@ class PaiementProService
      */
     private function generateHashCode(array $params): string
     {
-        // Si pas de secret key, retourner une valeur par défaut (mode test)
         if (empty($this->secretKey)) {
-            Log::warning('Secret key manquante - hashcode par défaut utilisé');
-            return hash('sha256', $params['merchantId'] . $params['referenceNumber'] . $params['amount']);
+            throw new Exception('PAIEMENTPRO_SECRET_KEY manquant : hashcode impossible');
         }
 
         // Générer le hashcode selon la méthode PaiementPro
@@ -166,89 +184,139 @@ class PaiementProService
     }
 
     /**
-     * ✅ NOUVEAU : Traitement des notifications selon la documentation
+     * Traitement idempotent des notifications (webhook).
+     *
+     * Retour : success, [duplicate], [order], [payment_successful], [error]
      */
     public function handleNotification(array $data): array
     {
         try {
-            // Vérifier le hashcode pour la sécurité
+            // Signature obligatoire (fail closed)
             if (!$this->verifyNotificationHashCode($data)) {
-                Log::error('Hashcode invalide dans notification PaiementPro', $data);
+                Log::error('Hashcode invalide dans notification PaiementPro', [
+                    'referenceNumber' => $data['referenceNumber'] ?? null,
+                ]);
                 return ['success' => false, 'error' => 'Hashcode invalide'];
             }
 
-            // Trouver la commande
-            $order = Order::where('order_number', $data['referenceNumber'])->first();
-            if (!$order) {
-                Log::error('Commande non trouvée pour notification PaiementPro', $data);
-                return ['success' => false, 'error' => 'Commande non trouvée'];
-            }
+            $success = ((string) ($data['responsecode'] ?? '')) === '0';
 
-            // Traiter selon le code de réponse
-            $success = ($data['responsecode'] == '0');
-            
-            if ($success) {
-                $this->processSuccessfulPayment($order, $data);
-            } else {
-                $this->processFailedPayment($order, $data);
-            }
+            return DB::transaction(function () use ($data, $success) {
+                $order = Order::where('order_number', $data['referenceNumber'])
+                    ->lockForUpdate()
+                    ->first();
 
-            return ['success' => true];
+                if (!$order) {
+                    Log::error('Commande non trouvée pour notification PaiementPro', [
+                        'referenceNumber' => $data['referenceNumber'],
+                    ]);
+                    return ['success' => false, 'error' => 'Commande non trouvée'];
+                }
+
+                // Idempotence : déjà payée => rien à refaire, jamais écrasée
+                if ($order->payment_status === 'paid') {
+                    return ['success' => true, 'duplicate' => true, 'order' => $order, 'payment_successful' => false];
+                }
+
+                // Le montant notifié doit être celui de la commande
+                if ((int) $data['amount'] !== (int) $order->total_amount) {
+                    Log::critical('Montant PaiementPro différent de la commande', [
+                        'order_id' => $order->id,
+                        'notified' => $data['amount'],
+                        'expected' => (int) $order->total_amount,
+                    ]);
+                    return ['success' => false, 'error' => 'Montant invalide'];
+                }
+
+                if ($success) {
+                    return $this->processSuccessfulPayment($order, $data);
+                }
+
+                return $this->processFailedPayment($order, $data);
+            });
 
         } catch (Exception $e) {
             Log::error('Erreur traitement notification PaiementPro', [
                 'error' => $e->getMessage(),
-                'data' => $data
+                'referenceNumber' => $data['referenceNumber'] ?? null,
             ]);
-            
-            return ['success' => false, 'error' => $e->getMessage()];
+
+            return ['success' => false, 'error' => 'Erreur de traitement'];
         }
     }
 
     /**
-     * Vérifier le hashcode de notification
+     * Vérifier le hashcode de notification (fail closed).
+     * Formule inchangée : sha256(merchantId . referenceNumber . amount . secret)
      */
     private function verifyNotificationHashCode(array $data): bool
     {
-        if (empty($this->secretKey)) {
-            Log::warning('Vérification hashcode ignorée - secret key manquante');
-            return true; // En mode test
+        if (empty($this->secretKey) || empty($this->merchantId)) {
+            Log::critical('Notification PaiementPro refusée : secret ou merchant_id non configuré');
+            return false;
         }
 
-        $expectedHash = hash('sha256', 
-            $data['merchantId'] . 
-            $data['referenceNumber'] . 
-            $data['amount'] . 
+        $hashcode = (string) ($data['hashcode'] ?? '');
+        if ($hashcode === '' || !isset($data['merchantId'], $data['referenceNumber'], $data['amount'])) {
+            return false;
+        }
+
+        if (!hash_equals((string) $this->merchantId, (string) $data['merchantId'])) {
+            return false;
+        }
+
+        $expectedHash = hash('sha256',
+            $this->merchantId .
+            $data['referenceNumber'] .
+            $data['amount'] .
             $this->secretKey
         );
 
-        return hash_equals($expectedHash, $data['hashcode'] ?? '');
+        return hash_equals($expectedHash, $hashcode);
     }
 
     /**
-     * Traiter un paiement réussi
+     * Traiter un paiement réussi (appelé sous verrou, dans la transaction)
      */
-    private function processSuccessfulPayment(Order $order, array $data): void
+    private function processSuccessfulPayment(Order $order, array $data): array
     {
-        // Mettre à jour la commande
+        // Commande libérée (expirée/échouée) : ne la réactiver que si le stock est encore disponible
+        if ($order->payment_status === 'failed') {
+            if (!$order->reclaimStock()) {
+                Log::critical('Paiement reçu sur commande libérée, stock indisponible : remboursement manuel requis', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                ]);
+                return ['success' => true, 'duplicate' => false, 'order' => $order, 'payment_successful' => false];
+            }
+        } elseif (!in_array($order->payment_status, ['pending', 'processing'], true)) {
+            Log::warning('Notification success ignorée : statut de commande inattendu', [
+                'order_id' => $order->id,
+                'status' => $order->payment_status,
+            ]);
+            return ['success' => true, 'duplicate' => true, 'order' => $order, 'payment_successful' => false];
+        }
+
         $order->update([
             'payment_status' => 'paid',
-            'payment_date' => now(),
+            'paid_at' => now(),
+            'expires_at' => null,
         ]);
 
-        // Mettre à jour le paiement
         $payment = Payment::where('order_id', $order->id)
                          ->where('payment_method', 'paiementpro')
+                         ->latest('id')
                          ->first();
-        
+
         if ($payment) {
             $payment->update([
                 'status' => 'completed',
-                'provider_response' => json_encode($data)
+                'completed_at' => now(),
+                'provider_response' => $this->safeProviderData($data),
             ]);
         }
 
-        // Marquer les tickets comme vendus
+        // Billets émis (vendus) uniquement après paiement confirmé
         foreach ($order->tickets as $ticket) {
             $ticket->markAsSold();
         }
@@ -258,30 +326,49 @@ class PaiementProService
             'order_number' => $order->order_number,
             'amount' => $data['amount']
         ]);
+
+        return ['success' => true, 'duplicate' => false, 'order' => $order, 'payment_successful' => true];
     }
 
     /**
-     * Traiter un paiement échoué
+     * Traiter un paiement échoué : uniquement depuis pending/processing, libère le stock
      */
-    private function processFailedPayment(Order $order, array $data): void
+    private function processFailedPayment(Order $order, array $data): array
     {
-        $order->update(['payment_status' => 'failed']);
+        if (!in_array($order->payment_status, ['pending', 'processing'], true)) {
+            return ['success' => true, 'duplicate' => true, 'order' => $order, 'payment_successful' => false];
+        }
+
+        $order->releaseStock();
 
         $payment = Payment::where('order_id', $order->id)
                          ->where('payment_method', 'paiementpro')
+                         ->latest('id')
                          ->first();
-        
-        if ($payment) {
+
+        if ($payment && $payment->status !== 'completed') {
             $payment->update([
                 'status' => 'failed',
-                'provider_response' => json_encode($data)
+                'provider_response' => $this->safeProviderData($data),
             ]);
         }
 
         Log::info('Paiement PaiementPro échoué', [
             'order_id' => $order->id,
-            'responsecode' => $data['responsecode']
+            'responsecode' => $data['responsecode'] ?? null
         ]);
+
+        return ['success' => true, 'duplicate' => false, 'order' => $order, 'payment_successful' => false];
+    }
+
+    /**
+     * Données fournisseur sans hashcode ni PII
+     */
+    private function safeProviderData(array $data): array
+    {
+        return array_intersect_key($data, array_flip([
+            'merchantId', 'referenceNumber', 'amount', 'responsecode', 'transactiondt', 'channel',
+        ]));
     }
 
     /**

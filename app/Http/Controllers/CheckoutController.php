@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use App\Models\Event;
 use App\Models\Commission;
 use App\Services\EmailService;
+use App\Services\CheckoutService;
 use App\Services\PaiementProService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -154,42 +155,20 @@ class CheckoutController extends Controller
                 'cart_items' => count($cart)
             ]);
 
-            DB::beginTransaction();
+            $service = app(CheckoutService::class);
 
-            // ===== CRÉER LES COMMANDES (VOTRE LOGIQUE EXISTANTE) =====
-            $eventGroups = [];
-            foreach ($cart as $item) {
-                $eventGroups[$item['event_id']][] = $item;
-            }
-
-            $orders = [];
-            foreach ($eventGroups as $eventId => $items) {
-                $eventTotal = array_sum(array_column($items, 'total_price'));
-                
-                // Créer la commande EN PENDING (changement pour PaiementPro)
-                $order = Order::create([
-                    'user_id' => Auth::id(),
-                    'event_id' => $eventId,
-                    'total_amount' => $eventTotal,
-                    'payment_status' => 'pending', // ⚠️ CHANGEMENT: pending au lieu de paid
-                    'payment_method' => $request->payment_method,
-                    'order_number' => Order::generateOrderNumber(),
-                    'billing_email' => $request->billing_email,
-                    'billing_phone' => $request->billing_phone,
-                ]);
-
-                // ===== CRÉER ITEMS ET BILLETS (VOTRE MÉTHODE EXISTANTE) =====
-                foreach ($items as $item) {
-                    $this->createOrderItemWithTickets($order, $item);
+            // Prix recalculés côté serveur ; commandes, stock et billets dans UNE transaction
+            $orders = DB::transaction(function () use ($service, $cart, $request) {
+                $orders = [];
+                foreach ($service->buildEventGroups($cart) as $eventId => $group) {
+                    $orders[] = $service->createOrder(Auth::id(), $eventId, $group, [
+                        'payment_method' => $request->payment_method,
+                        'billing_email' => $request->billing_email,
+                        'billing_phone' => $request->billing_phone,
+                    ]);
                 }
-
-                // ===== CRÉER LA COMMISSION =====
-                $this->createCommissionForOrder($order);
-                
-                $orders[] = $order;
-            }
-
-            DB::commit();
+                return $orders;
+            });
 
             // ===== TRAITEMENT SELON LE MOYEN DE PAIEMENT =====
             
@@ -201,16 +180,11 @@ class CheckoutController extends Controller
             }
 
         } catch (\Exception $e) {
-            if (DB::transactionLevel() > 0) {
-                DB::rollback();
-            }
-            
             Log::error('Erreur checkout avec PaiementPro', [
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
-            
+
             return redirect()->back()
                 ->with('error', 'Erreur lors du traitement : ' . $e->getMessage())
                 ->withInput();
@@ -222,47 +196,16 @@ class CheckoutController extends Controller
      */
     private function processPaiementPro(Order $order, $channel, $isDirectBooking = false)
     {
-        try {
-            $paiementProService = app(\App\Services\PaiementProService::class);
-            
-            // Marquer en traitement
-            $order->update(['payment_status' => 'processing']);
+        // Libère le stock et lève une exception si l'init échoue
+        $redirectUrl = app(CheckoutService::class)->initPaiementPro($order, $channel);
 
-            // Initialiser PaiementPro
-            $result = $paiementProService->initTransaction($order, [
-                'channel' => $channel
-            ]);
-
-            if ($result['success']) {
-                // Nettoyer les sessions après succès
-                if ($isDirectBooking) {
-                    session()->forget(['direct_booking', 'booking_timer']);
-                } else {
-                    session()->forget(['cart', 'cart_timer']);
-                }
-
-                Log::info('Redirection PaiementPro réussie', [
-                    'order_id' => $order->id,
-                    'session_id' => $result['sessionId']
-                ]);
-
-                // Redirection vers PaiementPro
-                return redirect($result['redirectUrl']);
-            } else {
-                // Remettre en pending en cas d'erreur
-                $order->update(['payment_status' => 'pending']);
-                throw new \Exception('Erreur PaiementPro : ' . $result['error']);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Erreur processPaiementPro', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage()
-            ]);
-
-            $order->update(['payment_status' => 'pending']);
-            throw $e;
+        if ($isDirectBooking) {
+            session()->forget(['direct_booking', 'booking_timer']);
+        } else {
+            session()->forget(['cart', 'cart_timer']);
         }
+
+        return redirect($redirectUrl);
     }
 
     /**
@@ -319,72 +262,6 @@ class CheckoutController extends Controller
     }
 
     /**
-     * 🔥 NOUVELLE MÉTHODE : Créer un item de commande avec ses billets
-     */
-    private function createOrderItemWithTickets($order, $item)
-    {
-        $ticketType = TicketType::findOrFail($item['ticket_type_id']);
-        
-        // Vérification finale de disponibilité
-        if (!$ticketType->canPurchaseQuantity($item['quantity'])) {
-            throw new \Exception("Le billet '{$item['ticket_name']}' n'est plus disponible.");
-        }
-
-        // Réserver le stock
-        if (!$ticketType->reserveTickets($item['quantity'])) {
-            throw new \Exception("Impossible de réserver {$item['quantity']} billets pour '{$item['ticket_name']}'.");
-        }
-
-        // Créer l'item de commande
-        $orderItem = OrderItem::create([
-            'order_id' => $order->id,
-            'ticket_type_id' => $ticketType->id,
-            'quantity' => $item['quantity'],
-            'unit_price' => $item['unit_price'],
-            'total_price' => $item['total_price'],
-        ]);
-
-        // ✅ GÉNÉRER LES BILLETS (VOTRE LOGIQUE EXACTE)
-        $tickets = [];
-        for ($i = 0; $i < $item['quantity']; $i++) {
-            $ticket = Ticket::create([
-                'ticket_type_id' => $ticketType->id,
-                'ticket_code' => Ticket::generateTicketCode(),
-                'status' => 'reserved', // ⚠️ CHANGEMENT: reserved jusqu'au paiement
-            ]);
-
-            // Générer QR Code si la méthode existe
-            if (method_exists($ticket, 'generateQRCode')) {
-                $ticket->generateQRCode();
-            }
-
-            $tickets[] = $ticket;
-
-            // ✅ VOTRE LOGIQUE PIVOT (inchangée)
-            DB::table('order_tickets')->insert([
-                'order_id' => $order->id,
-                'ticket_id' => $ticket->id,
-                'order_item_id' => $orderItem->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        // Mettre à jour le stock vendu
-        $ticketType->increment('quantity_sold', $item['quantity']);
-
-        Log::info('Billets créés pour commande', [
-            'order_id' => $order->id,
-            'ticket_type' => $ticketType->name,
-            'quantity' => $item['quantity'],
-            'tickets_created' => count($tickets)
-        ]);
-
-        return $orderItem;
-    }
-
-
-    /**
      * 🔥 NOUVELLE MÉTHODE CRUCIALE : Envoyer tous les emails
      */
     private function sendOrderEmails($order)
@@ -415,36 +292,6 @@ class CheckoutController extends Controller
         }
     }
 
-    /**
-     * Créer une commission pour une commande
-     */
-    private function createCommissionForOrder($order)
-    {
-        $event = $order->event;
-
-        // Calculer la commission
-        $commissionData = $order->calculateCommission();
-
-        // Créer l'enregistrement de commission
-        Commission::create([
-            'order_id' => $order->id,
-            'promoter_id' => $event->promoter_id,
-            'gross_amount' => $commissionData['gross_amount'],
-            'commission_rate' => $commissionData['commission_rate'],
-            'commission_amount' => $commissionData['commission_amount'],
-            'net_amount' => $commissionData['net_amount'],
-            'platform_fee' => $commissionData['platform_fee'] ?? 0,
-            'status' => 'pending'
-        ]);
-
-        Log::info('Commission créée', [
-            'order_id' => $order->id,
-            'commission_amount' => $commissionData['commission_amount']
-        ]);
-
-        return true;
-    }
-
     private function sendBankTransferInstructions($order)
     {
         try {
@@ -461,28 +308,6 @@ class CheckoutController extends Controller
                 'order_id' => $order->id,
                 'error' => $e->getMessage()
             ]);
-        }
-    }
-
-
-    /**
-     * 🔥 MÉTHODE MANQUANTE : Libérer le stock en cas d'erreur
-     */
-    private function releaseCartStock($cart)
-    {
-        foreach ($cart as $item) {
-            try {
-                $ticketType = TicketType::find($item['ticket_type_id']);
-                if ($ticketType && method_exists($ticketType, 'releaseTickets')) {
-                    $ticketType->releaseTickets($item['quantity']);
-                }
-            } catch (\Exception $e) {
-                Log::error('Erreur libération stock', [
-                    'ticket_type_id' => $item['ticket_type_id'],
-                    'quantity' => $item['quantity'],
-                    'error' => $e->getMessage()
-                ]);
-            }
         }
     }
 }

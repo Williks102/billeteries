@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use App\Helpers\CurrencyHelper;
 
 class Order extends Model
@@ -20,12 +23,15 @@ class Order extends Model
         'payment_reference',
         'order_number',
         'billing_email',
-        'billing_phone'
+        'billing_phone',
+        'guest_token',
+        'expires_at',
     ];
 
     protected $casts = [
         'total_amount' => 'integer', // Montant en FCFA
         'paid_at' => 'datetime',
+        'expires_at' => 'datetime',
     ];
 
     /**
@@ -225,20 +231,80 @@ class Order extends Model
     }
 
     /**
-     * Annuler la commande
+     * Annuler la commande (libère le stock, idempotent)
      */
-    public function cancel()
+    public function cancel(): bool
     {
-        $this->payment_status = 'failed';
-        $this->save();
-        
-        // Remettre les billets disponibles
-        $this->tickets()->update(['status' => 'available']);
-        
-        // Libérer le stock
-        foreach ($this->orderItems as $item) {
-            $item->ticketType->releaseTickets($item->quantity);
+        return $this->releaseStock();
+    }
+
+    /**
+     * Libère le stock d'une commande pending/processing. Idempotent :
+     * sans effet (false) si la commande est déjà payée, échouée ou remboursée.
+     * Transaction + verrou sur la commande puis sur les types de billets (id croissant).
+     */
+    public function releaseStock(): bool
+    {
+        return DB::transaction(function () {
+            $order = static::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (!$order || !in_array($order->payment_status, ['pending', 'processing'], true)) {
+                return false;
+            }
+
+            $items = $order->orderItems()->orderBy('ticket_type_id')->get();
+            foreach ($items as $item) {
+                $ticketType = TicketType::whereKey($item->ticket_type_id)->lockForUpdate()->first();
+                $ticketType?->releaseTickets($item->quantity);
+            }
+
+            $ticketIds = DB::table('order_tickets')->where('order_id', $order->id)->pluck('ticket_id');
+            Ticket::whereIn('id', $ticketIds)->where('status', 'reserved')->update(['status' => 'cancelled']);
+
+            $order->update(['payment_status' => 'failed']);
+            $this->payment_status = 'failed';
+
+            return true;
+        });
+    }
+
+    /**
+     * Paiement tardif sur une commande libérée : re-réserve le stock si possible.
+     * Doit être appelé sous verrou de la commande. Tout ou rien.
+     */
+    public function reclaimStock(): bool
+    {
+        if ($this->payment_status !== 'failed') {
+            return false;
         }
+
+        try {
+            return DB::transaction(function () {
+                foreach ($this->orderItems()->orderBy('ticket_type_id')->get() as $item) {
+                    $ticketType = TicketType::findOrFail($item->ticket_type_id);
+                    if (!$ticketType->reserveTickets($item->quantity)) {
+                        throw new \RuntimeException('stock indisponible');
+                    }
+                }
+
+                $ticketIds = DB::table('order_tickets')->where('order_id', $this->id)->pluck('ticket_id');
+                Ticket::whereIn('id', $ticketIds)->where('status', 'cancelled')->update(['status' => 'reserved']);
+
+                return true;
+            });
+        } catch (\RuntimeException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Commandes pending/processing dont la réservation a expiré
+     */
+    public function scopeExpiredReservations($query)
+    {
+        return $query->whereIn('payment_status', ['pending', 'processing'])
+                     ->whereNotNull('expires_at')
+                     ->where('expires_at', '<', now());
     }
 
     /**
@@ -310,9 +376,7 @@ class Order extends Model
      */
     public function markPaymentAsFailed(): void
     {
-        $this->update([
-            'payment_status' => 'failed'
-        ]);
+        $this->releaseStock();
     }
 
     /**

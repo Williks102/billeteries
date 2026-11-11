@@ -122,8 +122,17 @@ public function index(Request $request)
 
     public function download(Order $order)
 {
-    // Vérifications existantes...
-    
+    // Autorisation : le PDF contient les billets et leurs QR codes. Réservé au propriétaire de la commande
+    // (ou à un admin) ; jamais de PDF de billets avant la confirmation du paiement.
+    if ($order->user_id !== Auth::id() && !Auth::user()->isAdmin()) {
+        abort(403);
+    }
+
+    if (!$order->isPaid()) {
+        return redirect()->route('acheteur.orders.show', $order)
+            ->with('error', 'Vos billets seront disponibles au téléchargement après la confirmation du paiement.');
+    }
+
     // Charger les relations nécessaires
     $order->load(['event.category', 'tickets.ticketType', 'orderItems.ticketType', 'user']);
     

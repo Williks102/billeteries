@@ -17,3 +17,4 @@ Légende statut : todo / en cours / fait / bloqué. Voir `.claude/skills/billete
 | D7 | qa-tests | en cours | tests/, composer run check, .githooks (pas de GitHub Actions) | P1-P4 | caractérisation |
 | UI | ui-design | todo | resources/views, public/css | D1-D3 | accessibilité, mobile |
 | SEC-P1-P4 | securite | fait | docs/agents/reports/securite-p1-p4.md | – | audit P1-P4 : 4 Critiques confirmés ; + cancel public (IDOR), double incrément quantity_sold ; à implémenter par paiements-stock |
+| RETRAIT-PP | paiements-stock | fait | PaiementProService/Controller supprimés, OrderPaymentService, CheckoutService, EmailService, checkout/*, admin/orders, config/payments, routes web+admin, bootstrap/app, tests | P1-P4, C1 | rapport docs/agents/reports/paiements-stock-retrait-paiementpro.md ; branche claude/retirer-paiementpro ; securite à re-valider ; qa-tests : voir rapport ; User::$fillable (is_guest) à corriger par le propriétaire |

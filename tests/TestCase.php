@@ -4,19 +4,20 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Http;
-use Tests\Fakes\FakeQRCodeService;
+use Illuminate\Support\Facades\Storage;
 
 abstract class TestCase extends BaseTestCase
 {
     /**
-     * I2 : aucun test ne doit toucher le réseau. QRCodeService (API HTTP externes, 8 s de timeout par billet)
-     * est remplacé par un faux, et toute requête HTTP réelle lève une exception.
+     * Aucun test ne doit toucher le réseau : toute requête HTTP réelle lève une exception. Le vrai QRCodeService est
+     * utilisé (S-6 : génération 100 % locale, quelques ms, aucun réseau) ; tests/Fakes/FakeQRCodeService reste
+     * disponible pour les tests qui observent les appels (niveau de transaction).
      */
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->app->singleton(\App\Services\QRCodeService::class, fn () => new FakeQRCodeService());
         Http::preventStrayRequests();
+        Storage::fake(); // le vrai QRCodeService écrit des PNG : jamais dans storage/app du développeur
     }
 }

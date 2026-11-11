@@ -84,7 +84,7 @@ class Ticket extends Model
             return null;
             
         } catch (\Exception $e) {
-            Log::error("Erreur QR URL pour ticket {$this->ticket_code}: " . $e->getMessage());
+            Log::error("Erreur QR URL pour le billet #{$this->id} (" . get_class($e) . ").");
             return null;
         }
     }
@@ -105,7 +105,7 @@ class Ticket extends Model
             return null;
             
         } catch (\Exception $e) {
-            Log::error("Erreur QR base64 pour ticket {$this->ticket_code}: " . $e->getMessage());
+            Log::error("Erreur QR base64 pour le billet #{$this->id} (" . get_class($e) . ").");
             return null;
         }
     }
@@ -136,7 +136,7 @@ class Ticket extends Model
             </div>';
             
         } catch (\Exception $e) {
-            Log::error("Erreur QR SVG pour ticket {$this->ticket_code}: " . $e->getMessage());
+            Log::error("Erreur QR SVG pour le billet #{$this->id} (" . get_class($e) . ").");
             
             // QR code d'erreur minimal
             return '
@@ -171,7 +171,7 @@ class Ticket extends Model
             return $this->qr_code;
             
         } catch (\Exception $e) {
-            Log::error("Erreur generateQrCode pour ticket {$this->ticket_code}: " . $e->getMessage());
+            Log::error("Erreur generateQrCode pour le billet #{$this->id} (" . get_class($e) . ").");
             return null;
         }
     }
@@ -188,16 +188,15 @@ public function getReliableQrCode($size = 150)
         $qrBase64 = $qrService->generateTicketQRBase64($this, $size);
         
         if ($qrBase64 && strlen($qrBase64) > 100) {
-            \Log::info("QR fiable généré pour PDF - Ticket: {$this->ticket_code}");
             return $qrBase64;
         }
         
         // Si échec, créer un placeholder informatif
-        \Log::warning("QR failed, creating placeholder for ticket: {$this->ticket_code}");
+        \Log::warning("QR failed, creating placeholder for ticket #{$this->id}");
         return $this->createQRPlaceholder($size);
         
     } catch (\Exception $e) {
-        \Log::error("Erreur QR fiable pour ticket {$this->ticket_code}: " . $e->getMessage());
+        \Log::error("Erreur QR fiable pour le billet #{$this->id} (" . get_class($e) . ").");
         return $this->createQRPlaceholder($size);
     }
 }
@@ -251,7 +250,7 @@ private function createQRPlaceholder($size = 150)
             return 'data:image/png;base64,' . base64_encode($imageData);
             
         } catch (\Exception $e) {
-            \Log::error("Erreur création placeholder: " . $e->getMessage());
+            \Log::error("Erreur création placeholder (" . get_class($e) . ").");
         }
     }
     
@@ -274,12 +273,12 @@ private function createQRPlaceholder($size = 150)
 public function markAsUsed($scannedBy = null)
 {
     if ($this->status === 'used') {
-        \Log::warning("Tentative scan ticket déjà utilisé : {$this->ticket_code}");
+        \Log::warning("Tentative scan ticket déjà utilisé : #{$this->id}");
         return false;
     }
 
     if (!$this->isValidForUse()) {
-        \Log::warning("Tentative scan ticket invalide : {$this->ticket_code}");
+        \Log::warning("Tentative scan ticket invalide : #{$this->id}");
         return false;
     }
 
@@ -295,7 +294,7 @@ public function markAsUsed($scannedBy = null)
 
     $this->update($updateData);
 
-    \Log::info("Ticket scanné avec succès : {$this->ticket_code}", [
+    \Log::info("Ticket scanné avec succès : #{$this->id}", [
         'scanned_by' => $scannedBy,
         'used_at' => $updateData['used_at'] ?? now()
     ]);

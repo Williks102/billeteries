@@ -70,8 +70,11 @@ Route::prefix('cart')->name('cart.')->group(function () {
 });
 
 // ==================== VÉRIFICATION TICKETS (PUBLIQUE) ====================
-Route::get('/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verify'])->name('tickets.verify');
-Route::get('/api/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verifyApi'])->name('api.tickets.verify');
+// S-6/S-7 : le code du billet est le secret porteur ; throttle par IP (clé commune aux deux routes) contre l'énumération.
+Route::middleware('throttle:' . config('payments.verify_ticket_throttle_per_minute', 60) . ',1,verify-ticket')->group(function () {
+    Route::get('/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verify'])->name('tickets.verify');
+    Route::get('/api/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verifyApi'])->name('api.tickets.verify');
+});
 // Route::post('/api/scan-ticket', [TicketVerificationController::class, 'scan'])->name('api.tickets.scan');
 
 // ==================== ROUTES AUTHENTIFIÉES ====================

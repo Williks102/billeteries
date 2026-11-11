@@ -151,7 +151,7 @@ class CheckoutCycleFixesTest extends TestCase
 
     public function test_the_test_suite_has_no_network_access(): void
     {
-        $this->assertInstanceOf(FakeQRCodeService::class, app(QRCodeService::class));
+        $this->assertSame(QRCodeService::class, get_class(app(QRCodeService::class)), 'le vrai service local est utilisé');
         $this->expectException(\RuntimeException::class);
         Http::get('https://chart.googleapis.com/chart?cht=qr&chs=1x1&chl=x');
     }

@@ -6,9 +6,8 @@ use App\Models\Ticket;
 use App\Services\QRCodeService;
 
 /**
- * QRCodeService de test (I2) : aucun réseau, aucun disque. Le vrai service appelle des API HTTP
- * externes (Google Charts, QR Server, timeout 8 s) une fois par billet, ce qui rendait la suite
- * 25 fois plus lente (2 min 27 s contre 5 s) et dépendante du réseau.
+ * QRCodeService espion (I2) : enregistre les billets demandés et le niveau de transaction DB, sans disque.
+ * Depuis S-6 le vrai service est local (aucun réseau) : ce faux ne sert plus qu'à observer les appels.
  */
 class FakeQRCodeService extends QRCodeService
 {

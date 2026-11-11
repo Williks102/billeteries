@@ -42,6 +42,9 @@ return [
     // Throttle des POST de checkout : tentatives par fenêtre d'une minute (clé = IP, ou id utilisateur pour un connecté)
     'checkout_throttle_per_minute' => (int) env('CHECKOUT_THROTTLE_PER_MINUTE', 10),
 
+    // Throttle des routes publiques verify-ticket (page et API) : requêtes par minute et par IP
+    'verify_ticket_throttle_per_minute' => (int) env('VERIFY_TICKET_THROTTLE_PER_MINUTE', 60),
+
     // Méthodes de paiement manuelles autorisées (clé = valeur du champ payment_method).
     // Les coordonnées viennent de l'environnement : aucun numéro de compte réel dans le dépôt.
     'manual_methods' => [

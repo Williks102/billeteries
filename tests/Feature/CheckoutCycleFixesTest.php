@@ -120,9 +120,9 @@ class CheckoutCycleFixesTest extends TestCase
         $this->assertSame(10, session('cart.ticket_' . $type->id . '.max_per_order'));
     }
 
-    // ===== I2 : QR hors transaction, jamais de réseau =====
+    // ===== I2 : QR émis APRÈS confirmation du paiement, hors transaction, jamais de réseau =====
 
-    public function test_qr_codes_are_generated_after_commit_never_inside_the_transaction(): void
+    public function test_no_qr_is_generated_at_reservation_while_the_order_is_pending(): void
     {
         $fake = new FakeQRCodeService();
         $this->app->instance(QRCodeService::class, $fake);
@@ -130,23 +130,49 @@ class CheckoutCycleFixesTest extends TestCase
 
         $this->assertTrue($this->accepted($this->guestPost($type, 'qr@example.test', 3)));
 
-        $this->assertCount(3, $fake->requested, 'un QR par billet de la commande');
-        $this->assertSame([0, 0, 0], $fake->transactionLevels, 'aucune génération QR sous transaction/verrous');
+        $this->assertSame([], $fake->requested, 'aucune génération de QR à la réservation');
+        $this->assertSame(3, DB::table('tickets')->where('status', 'reserved')->count());
+        $this->assertSame(0, DB::table('tickets')->whereNotNull('qr_code')->count(), 'commande en attente : aucun QR');
+        $this->assertSame([], \Illuminate\Support\Facades\Storage::allFiles(), 'aucun fichier écrit');
+        foreach (\App\Models\Ticket::all() as $ticket) {
+            $this->assertNull($ticket->qrDataUri(), 'qrDataUri() est null tant que le paiement n\'est pas confirmé');
+            $this->assertNull($ticket->qr_code_url);
+        }
+        $this->assertSame([], $fake->requested, 'même à la demande : pas de QR avant paiement');
     }
 
-    public function test_a_qr_failure_never_breaks_the_order(): void
+    public function test_qr_codes_are_generated_after_payment_confirmation_never_inside_the_transaction(): void
+    {
+        $fake = new FakeQRCodeService();
+        $this->app->instance(QRCodeService::class, $fake);
+        $type = $this->ticketType(100);
+        $this->assertTrue($this->accepted($this->guestPost($type, 'qr2@example.test', 3)));
+        $this->assertSame([], $fake->requested);
+
+        app(\App\Services\OrderPaymentService::class)->confirmPayment(\App\Models\Order::firstOrFail(), 'REF-1');
+
+        $this->assertCount(3, $fake->requested, 'un QR par billet de la commande');
+        $this->assertSame([0, 0, 0], $fake->transactionLevels, 'aucune génération QR sous transaction/verrous');
+        $this->assertSame(3, DB::table('tickets')->where('status', 'sold')->whereNotNull('qr_code')->count());
+        $this->assertSame([], \Illuminate\Support\Facades\Storage::allFiles(), 'aucun fichier écrit');
+    }
+
+    public function test_a_qr_failure_never_breaks_the_confirmation(): void
     {
         $this->app->instance(QRCodeService::class, new class extends FakeQRCodeService {
-            public function generateAndSaveTicketQR(\App\Models\Ticket $ticket, $size = 200)
+            public function generateTicketQRBase64(\App\Models\Ticket $ticket, $size = 200)
             {
                 throw new \RuntimeException('réseau indisponible pour qr-secret@example.test');
             }
         });
         $type = $this->ticketType(100);
-
         $this->assertTrue($this->accepted($this->guestPost($type, 'qrfail@example.test', 2)));
-        $this->assertSame(2, DB::table('tickets')->where('status', 'reserved')->count());
-        $this->assertSame(2, DB::table('order_tickets')->count());
+
+        $order = app(\App\Services\OrderPaymentService::class)->confirmPayment(\App\Models\Order::firstOrFail(), 'REF-2');
+
+        $this->assertSame('paid', $order->payment_status, 'la confirmation n\'est jamais annulée par un échec QR');
+        $this->assertSame(2, DB::table('tickets')->where('status', 'sold')->count());
+        $this->assertSame(0, DB::table('tickets')->whereNotNull('qr_code')->count());
     }
 
     public function test_the_test_suite_has_no_network_access(): void

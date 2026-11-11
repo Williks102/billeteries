@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 class Ticket extends Model
@@ -61,119 +60,98 @@ class Ticket extends Model
         return $code;
     }
 
+    /** Préfixe d'une data-URI PNG valide (seul format accepté dans tickets.qr_code). */
+    private const QR_DATA_URI_PREFIX = 'data:image/png;base64,';
+
     /**
-     * Obtenir l'URL du QR code via le service
+     * Le billet est-il ÉMIS ? Statut vendu/utilisé ET commande payée. Un billet réservé (commande en
+     * attente), annulé ou dont la commande n'est pas payée n'a pas de QR visible.
      */
+    public function isIssued(): bool
+    {
+        if (!in_array($this->status, ['sold', 'used'], true)) {
+            return false;
+        }
+
+        try {
+            $order = ($this->order_item_id && $this->orderItem) ? $this->orderItem->order : null;
+            $order ??= $this->orders()->first();
+
+            return $order !== null && $order->payment_status === 'paid';
+        } catch (\Throwable $e) {
+            Log::warning("Billet #{$this->id} : état d'émission indéterminé (" . get_class($e) . ').');
+
+            return false;
+        }
+    }
+
+    /**
+     * QR du billet en data-URI PNG, ou null si le billet n'est pas émis (décision : pas de QR avant paiement).
+     * Idempotent : renvoie qr_code s'il contient déjà une data-URI, sinon le génère (local, sans réseau,
+     * sans fichier), le persiste dans tickets.qr_code (text) et le retourne. Ne lève jamais d'exception.
+     */
+    public function qrDataUri(int $size = 300): ?string
+    {
+        try {
+            if (!$this->isIssued()) {
+                return null;
+            }
+
+            if (is_string($this->qr_code) && str_starts_with($this->qr_code, self::QR_DATA_URI_PREFIX)) {
+                return $this->qr_code;
+            }
+
+            $uri = app(\App\Services\QRCodeService::class)->generateTicketQRBase64($this, $size);
+            if (!is_string($uri) || !str_starts_with($uri, self::QR_DATA_URI_PREFIX)) {
+                return null;
+            }
+
+            // Persistance : un échec d'écriture n'empêche pas l'affichage du QR généré.
+            try {
+                $this->qr_code = $uri;
+                $this->saveQuietly();
+            } catch (\Throwable $e) {
+                Log::warning("QR : persistance impossible pour le billet #{$this->id} (" . get_class($e) . ').');
+            }
+
+            return $uri;
+        } catch (\Throwable $e) {
+            Log::error("Erreur QR pour le billet #{$this->id} (" . get_class($e) . ').');
+
+            return null;
+        }
+    }
+
+    /** Compatibilité des vues existantes : data-URI (jamais d'URL de fichier), null avant paiement. */
     public function getQrCodeUrlAttribute()
     {
-        try {
-            $qrService = app(\App\Services\QRCodeService::class);
-            
-            // Essayer de récupérer depuis le cache d'abord
-            $cachedQR = $qrService->getTicketQRFromCache($this);
-            if ($cachedQR) {
-                return $cachedQR;
-            }
-            
-            // Sinon générer et sauvegarder
-            $qrUrl = $qrService->generateAndSaveTicketQR($this);
-            if ($qrUrl) {
-                return $qrUrl;
-            }
-            
-            return null;
-            
-        } catch (\Exception $e) {
-            Log::error("Erreur QR URL pour le billet #{$this->id} (" . get_class($e) . ").");
-            return null;
-        }
+        return $this->qrDataUri();
     }
 
-    /**
-     * Obtenir le QR code en base64 pour affichage direct
-     */
+    /** QR en base64 pour affichage direct/PDF : null tant que le billet n'est pas émis. */
     public function getQrCodeBase64()
     {
-        try {
-            $qrService = app(\App\Services\QRCodeService::class);
-            $qrBase64 = $qrService->getOrGenerateTicketQR($this, 'base64');
-            
-            if ($qrBase64) {
-                return $qrBase64;
-            }
-            
-            return null;
-            
-        } catch (\Exception $e) {
-            Log::error("Erreur QR base64 pour le billet #{$this->id} (" . get_class($e) . ").");
-            return null;
-        }
+        return $this->qrDataUri();
     }
 
-    /**
-     * Obtenir le QR code en SVG/HTML pour affichage web
-     */
+    /** QR en HTML pour affichage web : vide tant que le billet n'est pas émis. */
     public function getQrCodeSvg()
     {
-        try {
-            // Essayer de générer un QR PNG et le convertir
-            $qrService = app(\App\Services\QRCodeService::class);
-            $qrBase64 = $qrService->getOrGenerateTicketQR($this, 'base64');
-            
-            if ($qrBase64) {
-                // Retourner une image HTML
-                return '<img src="' . $qrBase64 . '" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd; border-radius: 5px;">';
-            }
-            
-            // Fallback : placeholder
-            return '
-            <div style="width: 200px; height: 200px; border: 2px dashed #FF6B35; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 8px;">
-                <div style="text-align: center; color: #FF6B35; font-weight: bold; font-size: 12px;">
-                    <div>⚠️ QR CODE</div>
-                    <div style="margin: 10px 0; font-family: monospace; font-size: 10px;">' . $this->ticket_code . '</div>
-                    <div style="font-size: 8px;">Code manuel requis</div>
-                </div>
-            </div>';
-            
-        } catch (\Exception $e) {
-            Log::error("Erreur QR SVG pour le billet #{$this->id} (" . get_class($e) . ").");
-            
-            // QR code d'erreur minimal
-            return '
-            <div style="width: 200px; height: 200px; border: 2px solid #dc3545; display: flex; align-items: center; justify-content: center; background: #fff5f5; border-radius: 8px;">
-                <div style="text-align: center; color: #dc3545; font-weight: bold; font-size: 12px;">
-                    <div>❌ ERREUR QR</div>
-                    <div style="margin: 10px 0; font-family: monospace; font-size: 10px;">' . $this->ticket_code . '</div>
-                    <div style="font-size: 8px;">Utilisez le code</div>
-                </div>
-            </div>';
+        $qr = $this->qrDataUri();
+
+        if ($qr === null) {
+            return $this->isIssued()
+                ? '<div style="width: 200px; height: 200px; border: 2px dashed #FF6B35; display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 10px;">' . e($this->ticket_code) . '</div>'
+                : '';
         }
+
+        return '<img src="' . $qr . '" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd; border-radius: 5px;">';
     }
 
-    /**
-     * Générer le QR code (méthode principale)
-     */
+    /** Génère/persiste le QR (billet émis uniquement) ; compatibilité des commandes Artisan existantes. */
     public function generateQrCode()
     {
-        try {
-            $qrService = app(\App\Services\QRCodeService::class);
-            $qrUrl = $qrService->generateAndSaveTicketQR($this);
-            
-            if ($qrUrl) {
-                return $qrUrl;
-            }
-            
-            // Fallback : stocker l'URL simple
-            $verificationUrl = url("/verify-ticket/{$this->ticket_code}");
-            $this->qr_code = $verificationUrl;
-            $this->save();
-            
-            return $this->qr_code;
-            
-        } catch (\Exception $e) {
-            Log::error("Erreur generateQrCode pour le billet #{$this->id} (" . get_class($e) . ").");
-            return null;
-        }
+        return $this->qrDataUri();
     }
 
     /**

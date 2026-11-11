@@ -101,6 +101,15 @@ services:
       - key: TELESCOPE_ENABLED
         value: "false"
 
+      # --- Mode démo : démo uniquement, les billets deviennent gratuits ---
+      # Aucune valeur ici (défaut applicatif = désactivé). Ne la saisir à « true » dans le tableau de bord
+      # Render que pour une démonstration ; la supprimer ou la remettre à « false » ensuite.
+      - key: DEMO_AUTO_CONFIRM_PAYMENTS
+        sync: false
+      # Double confirmation : en production, le mode démo n'agit que si celle-ci est aussi « true ».
+      - key: DEMO_MODE_ACKNOWLEDGED
+        sync: false
+
       # --- Règles métier et plafonds anti-abus ---
       - key: DEFAULT_COMMISSION_RATE
         value: "6"

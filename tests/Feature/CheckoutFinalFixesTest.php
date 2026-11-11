@@ -30,6 +30,8 @@ class CheckoutFinalFixesTest extends TestCase
     {
         parent::setUp();
         $this->buildOrderSchema();
+        // markAsUsed() écrit used_at (le billet du test de logs est désormais émis, donc réellement scanné)
+        \Illuminate\Support\Facades\Schema::table('tickets', fn ($t) => $t->timestamp('used_at')->nullable());
         Mail::fake();
         config(['payments.max_pending_orders' => 1000, 'payments.max_pending_orders_per_ip' => 1000]);
     }
@@ -48,6 +50,17 @@ class CheckoutFinalFixesTest extends TestCase
         $id = DB::table('tickets')->insertGetId(['ticket_type_id' => $type->id, 'ticket_code' => $code, 'status' => 'reserved']);
 
         return Ticket::find($id);
+    }
+
+    /** Billet ÉMIS : vendu, rattaché (pivot) à une commande payée. */
+    private function makeIssuedTicket(string $code = 'TKT-ABCD1234'): Ticket
+    {
+        $ticket = $this->makeTicket($code);
+        $ticket->update(['status' => 'sold']);
+        $orderId = DB::table('orders')->insertGetId(['order_number' => 'ORD-' . $code, 'total_amount' => 1000, 'payment_status' => 'paid']);
+        DB::table('order_tickets')->insert(['order_id' => $orderId, 'ticket_id' => $ticket->id]);
+
+        return $ticket->fresh();
     }
 
     // ===== S-6 / S-7 : QR 100 % local =====
@@ -120,10 +133,9 @@ class CheckoutFinalFixesTest extends TestCase
         }
         try {
             $qr = $this->realQr();
-            $ticket = $this->makeTicket();
+            $ticket = $this->makeIssuedTicket();
             Storage::fake();
             $qr->generateTicketQRBase64($ticket);
-            $qr->generateAndSaveTicketQR($ticket);
             $qr->getOrGenerateTicketQR($ticket, 'url');
             $qr->generateStyledQR($ticket, ['size' => 150, 'color' => 'ff0000']);
             $qr->generateTestQR('x');
@@ -132,6 +144,7 @@ class CheckoutFinalFixesTest extends TestCase
             $ticket->getReliableQrCode();
             $ticket->getQrCodeBase64();
             $ticket->generateQrCode();
+            $this->assertStringStartsWith('data:image/png;base64,', (string) $ticket->qrDataUri());
         } finally {
             foreach (['http', 'https'] as $scheme) {
                 stream_wrapper_restore($scheme);
@@ -165,7 +178,11 @@ class CheckoutFinalFixesTest extends TestCase
             ])->assertRedirect();
         $this->assertLessThan(3.0, microtime(true) - $start, 'QR local : rapide');
 
-        $this->assertSame(3, DB::table('tickets')->whereNotNull('qr_code_path')->count(), 'un QR enregistré par billet');
+        // Décision : pas de QR avant paiement (commande en attente) ; QR émis à la confirmation, sans réseau ni fichier.
+        $this->assertSame(0, DB::table('tickets')->whereNotNull('qr_code')->count(), 'aucun QR tant que la commande est en attente');
+        app(\App\Services\OrderPaymentService::class)->confirmPayment(\App\Models\Order::firstOrFail(), 'REF-X');
+        $this->assertSame(3, DB::table('tickets')->where('qr_code', 'like', 'data:image/png;base64,%')->count(), 'un QR (data-URI) par billet payé');
+        $this->assertSame([], Storage::allFiles(), 'aucun fichier écrit');
         Http::assertNothingSent();
     }
 
@@ -177,18 +194,14 @@ class CheckoutFinalFixesTest extends TestCase
         Log::swap(Log::build(['driver' => 'single', 'path' => $tmp, 'level' => 'debug']));
         Storage::fake();
 
-        $ticket = $this->makeTicket('TKT-SECRET99');
+        $ticket = $this->makeIssuedTicket('TKT-SECRET99');
         $this->realQr();
         $ticket->generateQrCode();
+        $ticket->update(['qr_code' => null]); // force la régénération avec le service qui échoue ci-dessous
         $ticket->getReliableQrCode();
         $ticket->getQrCodeBase64();
 
         $this->app->instance(QRCodeService::class, new class extends QRCodeService {
-            public function generateAndSaveTicketQR(Ticket $ticket, $size = 200)
-            {
-                throw new \RuntimeException('echec https://x/verify-ticket/' . $ticket->ticket_code);
-            }
-
             public function generateTicketQRBase64(Ticket $ticket, $size = 200)
             {
                 throw new \RuntimeException('echec https://x/verify-ticket/' . $ticket->ticket_code);
@@ -198,12 +211,9 @@ class CheckoutFinalFixesTest extends TestCase
             {
                 throw new \RuntimeException('echec https://x/verify-ticket/' . $ticket->ticket_code);
             }
-
-            public function getTicketQRFromCache(Ticket $ticket)
-            {
-                throw new \RuntimeException('echec https://x/verify-ticket/' . $ticket->ticket_code);
-            }
         });
+        $ticket->update(['qr_code' => null]); // sinon qrDataUri() renverrait la valeur en base sans passer par le service qui échoue
+        $ticket->qrDataUri();
         $ticket->generateQrCode();
         $ticket->getReliableQrCode();
         $ticket->getQrCodeBase64();

@@ -114,6 +114,18 @@ class Order extends Model
         return $this->payment_status === 'paid';
     }
 
+    /** Commande en attente de paiement (le QR des billets n'est pas encore visible). */
+    public function isAwaitingPayment(): bool
+    {
+        return in_array($this->payment_status, ['pending', 'processing'], true);
+    }
+
+    /** Date limite de paiement (au-delà, la réservation est libérée) ; null si aucune. */
+    public function paymentDeadline(): ?\Illuminate\Support\Carbon
+    {
+        return $this->isAwaitingPayment() ? $this->expires_at : null;
+    }
+
     public function isPending()
     {
         return $this->payment_status === 'pending';

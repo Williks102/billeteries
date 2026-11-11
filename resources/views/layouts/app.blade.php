@@ -354,6 +354,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
         <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
         
 <body class="@yield('body-class')">
+    @include('partials.demo-banner')
     <!-- Header unifié -->
     @include('partials.header')
     

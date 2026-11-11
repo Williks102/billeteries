@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 
 @section('content')
     <!-- Header avec actions -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
             <h2 class="fw-bold mb-1">
                 <i class="fas fa-shopping-bag text-primary me-2"></i>
@@ -25,14 +25,12 @@ use Illuminate\Support\Facades\Storage;
             <p class="text-muted mb-0">
                 Passée le {{ $order->created_at->format('d/m/Y à H:i') }}
                 <!-- Statut de paiement -->
-                <span class="badge ms-2 {{ $order->payment_status === 'paid' ? 'bg-success' : ($order->payment_status === 'pending' ? 'bg-warning' : 'bg-danger') }}">
-                    {{ $order->payment_status === 'paid' ? 'Payée' : ($order->payment_status === 'pending' ? 'En attente' : 'Annulée') }}
-                </span>
+                <x-order-status-badge :order="$order" class="ms-2" />
             </p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-grid d-md-flex gap-2">
             @if($order->payment_status === 'paid')
-                <a href="{{ route('acheteur.orders.download', $order) }}" class="btn btn-acheteur">
+                <a href="{{ route('acheteur.orders.download', $order) }}" class="btn btn-acheteur" style="min-height: 44px;">
                     <i class="fas fa-download me-2"></i>Télécharger mes billets
                 </a>
             @endif
@@ -41,6 +39,12 @@ use Illuminate\Support\Facades\Storage;
             </a>
         </div>
     </div>
+
+    @if($awaitingPayment)
+        <x-payment-instructions :info="$paymentInfo" :deadline="$paymentDeadline" :reference="$order->order_number" :amount="$order->total_amount" />
+    @elseif($order->payment_status === 'paid' && !empty($demoSimulatedPayment))
+        <div class="alert alert-dark" role="status">MODE DÉMO : paiement simulé</div>
+    @endif
 
     <!-- Informations de l'événement -->
     <div class="card mb-4 border-primary">
@@ -170,13 +174,13 @@ use Illuminate\Support\Facades\Storage;
                     <div class="card-body">
                         <div class="row g-3">
                             @foreach($order->tickets as $ticket)
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="card border-success">
                                         <div class="card-body p-3">
                                             <div class="d-flex justify-content-between align-items-start mb-2">
                                                 <h6 class="mb-0">{{ $ticket->ticketType->name ?? 'Billet Standard' }}</h6>
-                                                <span class="badge {{ $ticket->status === 'sold' ? 'bg-success' : 'bg-warning' }}">
-                                                    {{ ucfirst($ticket->status) }}
+                                                <span class="badge {{ $ticket->status === 'sold' ? 'bg-success' : 'bg-warning text-dark' }}">
+                                                    {{ ['sold' => 'Valide', 'used' => 'Utilisé'][$ticket->status] ?? ucfirst($ticket->status) }}
                                                 </span>
                                             </div>
                                             
@@ -192,18 +196,19 @@ use Illuminate\Support\Facades\Storage;
                                                 </p>
                                             @endif
 
-                                            <div class="d-flex gap-2">
-                                                <a href="{{ route('acheteur.tickets.show', $ticket) }}" 
-                                                   class="btn btn-sm btn-outline-primary flex-fill">
-                                                    <i class="fas fa-eye me-1"></i>Voir
-                                                </a>
-                                                @if($ticket->qr_code)
-                                                    <button class="btn btn-sm btn-success" 
-                                                            onclick="showQRCode('{{ $ticket->ticket_code }}', '{{ $ticket->qr_code }}')">
-                                                        <i class="fas fa-qrcode me-1"></i>QR
-                                                    </button>
-                                                @endif
-                                            </div>
+                                            @php($qrDataUri = $ticket->qrDataUri())
+                                            @if($qrDataUri)
+                                                <div class="text-center mb-3">
+                                                    <div class="d-inline-block bg-white p-2 border rounded">
+                                                        <img src="{{ $qrDataUri }}" alt="QR code du billet {{ $ticket->ticket_code }}"
+                                                             width="220" height="220" style="width: min(220px, 70vw); height: auto; display: block;">
+                                                    </div>
+                                                </div>
+                                            @endif
+                                            <a href="{{ route('acheteur.tickets.show', $ticket) }}"
+                                               class="btn btn-outline-primary w-100" style="min-height: 44px;">
+                                                <i class="fas fa-eye me-1" aria-hidden="true"></i>Voir le billet
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -246,14 +251,12 @@ use Illuminate\Support\Facades\Storage;
                         <tr>
                             <td class="fw-bold">Paiement :</td>
                             <td>
-                                <span class="badge {{ $order->payment_status === 'paid' ? 'bg-success' : 'bg-warning' }}">
-                                    {{ $order->payment_status === 'paid' ? 'Payé' : 'En attente' }}
-                                </span>
+                                <x-order-status-badge :order="$order" />
                             </td>
                         </tr>
                         <tr>
                             <td class="fw-bold">Méthode :</td>
-                            <td>{{ $order->payment_method ?? 'Non définie' }}</td>
+                            <td>{{ $order->payment_method ? $paymentInfo['label'] : 'Non définie' }}</td>
                         </tr>
                         <tr class="table-active">
                             <td class="fw-bold">Total :</td>
@@ -301,28 +304,4 @@ use Illuminate\Support\Facades\Storage;
         </div>
     </div>
 
-    <!-- Modal QR Code -->
-    <div class="modal fade" id="qrModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">QR Code du billet</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <div id="qr-content">
-                        <!-- QR Code sera inséré ici -->
-                    </div>
-                    <p class="text-muted mt-3">
-                        <small>Code billet : <code id="ticket-code-display"></code></small>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
 @endsection
-
-@push('scripts')
-<script src="{{ asset('js/acheteur-order-detail.js') }}" defer></script>
-@endpush

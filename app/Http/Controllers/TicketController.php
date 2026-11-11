@@ -75,7 +75,7 @@ class TicketController extends Controller
      */
     public function generateMissingQrCodes()
     {
-        $tickets = Ticket::whereNull('qr_code_path')->get();
+        $tickets = Ticket::whereNull('qr_code')->get();
         $count = 0;
         
         foreach ($tickets as $ticket) {

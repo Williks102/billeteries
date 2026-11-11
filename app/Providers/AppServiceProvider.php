@@ -27,6 +27,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Mode démo (paiements simulés, désactivé par défaut) : `$demoMode` disponible dans toutes les vues
+        // pour le bandeau des layouts.
+        if (config('payments.demo_blocked_in_production')) {
+            \Illuminate\Support\Facades\Log::critical('DEMO_AUTO_CONFIRM_PAYMENTS=true ignoré en production : ajoutez DEMO_MODE_ACKNOWLEDGED=true pour une démo volontaire.');
+        }
+        View::share('demoMode', (bool) config('payments.demo_auto_confirm', false));
+
         // Résoudre le problème de longueur d'index MySQL
         Schema::defaultStringLength(191);
         

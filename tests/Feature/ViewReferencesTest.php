@@ -16,7 +16,6 @@ use Tests\TestCase;
 class ViewReferencesTest extends TestCase
 {
     private const KNOWN_MISSING = [
-        'acheteur.ticket-detail',
         'admin.categories.create',
         'admin.categories.edit',
         'admin.categories.index',

@@ -5,7 +5,7 @@
 @section('title', 'Commande confirmée')
 
 @section('content')
-<div class="container py-5">
+<div class="container py-4 py-md-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             @if(session('success'))
@@ -20,6 +20,9 @@
                 </div>
                 <h1 class="text-success">Paiement confirmé !</h1>
                 <p class="lead">Vos billets vous ont été envoyés par email</p>
+                @if(!empty($demoSimulatedPayment))
+                    <p class="badge bg-dark fs-6 text-wrap">MODE DÉMO : paiement simulé</p>
+                @endif
             </div>
             @elseif(in_array($order->payment_status, ['pending', 'processing']))
             <div class="text-center mb-4">
@@ -97,11 +100,11 @@
             </div>
 
             <!-- Navigation -->
-            <div class="text-center mt-4">
-                <a href="{{ route('home') }}" class="btn btn-outline-primary">
+            <div class="d-grid gap-2 d-sm-block text-sm-center mt-4">
+                <a href="{{ route('home') }}" class="btn btn-outline-primary" style="min-height: 44px;">
                     <i class="fas fa-home me-2"></i>Retour à l'accueil
                 </a>
-                <a href="{{ route('events.all') }}" class="btn btn-primary ms-2">
+                <a href="{{ route('events.all') }}" class="btn btn-primary ms-sm-2" style="min-height: 44px;">
                     <i class="fas fa-calendar-alt me-2"></i>Voir d'autres événements
                 </a>
             </div>

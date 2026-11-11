@@ -6,7 +6,7 @@ use App\Models\Ticket;
 use App\Services\QRCodeService;
 
 /**
- * QRCodeService espion (I2) : enregistre les billets demandés et le niveau de transaction DB, sans disque.
+ * QRCodeService espion : enregistre les billets pour lesquels un QR est généré et le niveau de transaction DB (sans disque).
  * Depuis S-6 le vrai service est local (aucun réseau) : ce faux ne sert plus qu'à observer les appels.
  */
 class FakeQRCodeService extends QRCodeService
@@ -26,24 +26,6 @@ class FakeQRCodeService extends QRCodeService
         $this->transactionLevels[] = \Illuminate\Support\Facades\DB::transactionLevel();
 
         return self::PNG;
-    }
-
-    public function generateAndSaveTicketQR(Ticket $ticket, $size = 200)
-    {
-        $this->requested[] = (string) $ticket->ticket_code;
-        $this->transactionLevels[] = \Illuminate\Support\Facades\DB::transactionLevel();
-
-        return '/fake-qr/' . $ticket->ticket_code . '.png';
-    }
-
-    public function getTicketQRFromCache(Ticket $ticket)
-    {
-        return null;
-    }
-
-    public function getOrGenerateTicketQR(Ticket $ticket, $format = 'base64')
-    {
-        return $this->generateTicketQRBase64($ticket);
     }
 
     public function generateStyledQR(Ticket $ticket, $options = [])

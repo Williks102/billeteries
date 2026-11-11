@@ -325,21 +325,14 @@ class TicketController extends Controller
     public function download(Ticket $ticket)
     {
         try {
-            if (empty($ticket->qr_code)) {
-                // Générer le QR code si inexistant
-                $qrService = app(QRCodeService::class);
-                $qrBase64 = $qrService->generateTicketQRBase64($ticket);
-                
-                if ($qrBase64) {
-                    $ticket->update(['qr_code' => $qrBase64]);
-                } else {
-                    return redirect()->back()->with('error', 'Impossible de générer le QR code');
-                }
+            // Billet non émis (paiement non confirmé) => pas de QR ; sinon QR généré/persisté par le modèle.
+            $qrUri = $ticket->qrDataUri();
+            if (!$qrUri) {
+                return redirect()->back()->with('error', "QR indisponible : le paiement de la commande n'est pas confirmé ou la génération a échoué.");
             }
 
-            // Décoder le base64 et créer le fichier
-            $qrData = base64_decode(str_replace('data:image/png;base64,', '', $ticket->qr_code));
-            
+            $qrData = base64_decode(str_replace('data:image/png;base64,', '', $qrUri));
+
             return response($qrData)
                 ->header('Content-Type', 'image/png')
                 ->header('Content-Disposition', 'attachment; filename="ticket-' . $ticket->ticket_code . '.png"');

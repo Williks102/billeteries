@@ -442,11 +442,12 @@ class CheckoutService
         for ($i = 0; $i < $item['quantity']; $i++) {
             $ticket = Ticket::create([
                 'ticket_type_id' => $ticketType->id,
+                'order_item_id' => $orderItem->id,
                 'ticket_code' => Ticket::generateTicketCode(),
                 'status' => 'reserved', // vendu seulement après paiement confirmé
             ]);
 
-            // I2 : AUCUN QR ici (appels HTTP externes sous verrous) : voir generateQrCodes(), appelé après le commit.
+            // Aucun QR à la réservation : le QR n'est émis qu'après confirmation du paiement (OrderPaymentService).
 
             DB::table('order_tickets')->insert([
                 'order_id' => $order->id,
@@ -466,31 +467,62 @@ class CheckoutService
         return $orderItem;
     }
 
+    /** Référence de paiement des commandes confirmées automatiquement par le mode démo. */
+    public const DEMO_REFERENCE = 'DEMO-AUTO';
+
+    /** Le mode démo (confirmation automatique des paiements) est-il actif ? Désactivé par défaut. */
+    public static function demoAutoConfirm(): bool
+    {
+        return (bool) config('payments.demo_auto_confirm', false);
+    }
+
     /**
-     * I2 : génère les QR des billets des commandes APRÈS le commit (jamais dans la transaction ni sous verrou :
-     * QRCodeService appelle des API HTTP externes, timeout 8 s par tentative). Chaque échec est journalisé
-     * sans PII et n'affecte pas la commande ; un billet sans QR est régénéré à la demande (Ticket::getReliableQrCode,
-     * PDF/page billet) ou par les commandes Artisan existantes.
+     * MODE DÉMO : confirme chaque commande créée via OrderPaymentService::confirmPayment (mêmes verrous,
+     * idempotence, commission unique, billets `sold`, QR, email). Appelé APRÈS le commit et APRÈS la
+     * validation et les plafonds du checkout : le flag ne contourne rien. Sans effet si le mode est inactif.
+     * Un échec de confirmation est journalisé sans PII et laisse la commande `pending` (jamais d'exception).
      *
      * @param  array<int, Order>  $orders
+     * @return array<int, Order>
      */
-    public function generateQrCodes(array $orders): void
+    public function autoConfirmDemo(array $orders): array
     {
-        foreach ($orders as $order) {
-            try {
-                $tickets = Ticket::whereIn('id', DB::table('order_tickets')->where('order_id', $order->id)->pluck('ticket_id'))->get();
-            } catch (\Throwable $e) {
-                $this->logFailure('Lecture des billets pour QR impossible', $e, ['order_id' => $order->id]);
-                continue;
-            }
-            foreach ($tickets as $ticket) {
-                try {
-                    $ticket->generateQrCode();
-                } catch (\Throwable $e) {
-                    $this->logFailure('Échec génération QR après commit', $e, ['order_id' => $order->id, 'ticket_id' => $ticket->id]);
-                }
-            }
+        if (!self::demoAutoConfirm()) {
+            return $orders;
         }
+
+        static $warnedFor = null;
+        $request = request();
+        if ($warnedFor !== $request) {
+            $warnedFor = $request;
+            Log::warning('MODE DÉMO actif : les paiements sont confirmés automatiquement (DEMO_AUTO_CONFIRM_PAYMENTS).');
+        }
+
+        $payments = app(OrderPaymentService::class);
+
+        return array_map(function (Order $order) use ($payments) {
+            try {
+                return $payments->confirmPayment($order, self::DEMO_REFERENCE, null);
+            } catch (\Throwable $e) {
+                $this->logFailure('Échec confirmation automatique (mode démo)', $e, ['order_id' => $order->id]);
+
+                return $order;
+            }
+        }, $orders);
+    }
+
+    /** Message de succès du checkout selon le mode (démo : paiement simulé). */
+    public static function successMessage(int $orderCount): string
+    {
+        if (self::demoAutoConfirm()) {
+            return $orderCount > 1
+                ? 'MODE DÉMO : paiement simulé. Vos commandes sont confirmées automatiquement.'
+                : 'MODE DÉMO : paiement simulé. Votre commande est confirmée automatiquement.';
+        }
+
+        return $orderCount > 1
+            ? 'Commandes enregistrées ! Instructions de paiement envoyées par email.'
+            : 'Commande enregistrée ! Instructions de paiement envoyées par email.';
     }
 
     private function createCommission(Order $order): void
@@ -557,6 +589,9 @@ class CheckoutService
     public function sendManualInstructions(array $orders): void
     {
         foreach ($orders as $order) {
+            if (!$order->isAwaitingPayment()) {
+                continue; // déjà payée (mode démo) : l'email de confirmation de paiement a été envoyé
+            }
             try {
                 app(EmailService::class)->sendManualPaymentInstructions($order);
             } catch (\Throwable $e) {

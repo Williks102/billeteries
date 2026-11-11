@@ -27,22 +27,33 @@ class EventPendingCapConcurrencyTest extends TestCase
         if ($name === '') {
             $this->markTestSkipped('MySQL requis : voir docs/testing-mysql.md (TEST_MYSQL_DATABASE=... composer run test:mysql).');
         }
-        $refusal = MySqlTestGuard::refusal(
-            $name,
-            getenv('DB_HOST') ?: (string) config('database.connections.mysql.host'),
-            getenv('APP_ENV') ?: (string) config('app.env'),
-            getenv('TEST_MYSQL_ALLOWED_HOSTS') ?: ''
-        );
-        if ($refusal !== null) {
-            $this->markTestSkipped('Garde S-4 : ' . $refusal);
-        }
         if (!function_exists('proc_open')) {
             $this->markTestSkipped('proc_open indisponible.');
         }
 
-        $this->database = $name;
-        config(['database.default' => 'mysql', 'database.connections.mysql.database' => $name]);
+        $allowedHosts = getenv('TEST_MYSQL_ALLOWED_HOSTS') ?: '';
+
+        // S-8 : 1) refus si une URL de connexion est dans l'environnement ; 2) url=null FORCÉ sur la connexion de test
+        // (config/database.php : DB_URL surcharge host et base) ; 3) la garde est rejouée sur la connexion RÉELLEMENT
+        // utilisée par migrate:fresh (config effective après surcharge, APP_ENV lu depuis la config chargée).
+        $refusal = MySqlTestGuard::refusal($name, getenv('DB_HOST') ?: '127.0.0.1', (string) getenv('APP_ENV'), $allowedHosts, MySqlTestGuard::envUrls());
+        if ($refusal !== null) {
+            $this->markTestSkipped('Garde S-4/S-8 : ' . $refusal);
+        }
+
+        config(['database.default' => 'mysql', 'database.connections.mysql.url' => null, 'database.connections.mysql.database' => $name]);
         DB::purge('mysql');
+
+        $conn = DB::connection('mysql');
+        $effectiveHost = $conn->getConfig('host');
+        $refusal = is_string($effectiveHost)
+            ? MySqlTestGuard::refusal((string) $conn->getDatabaseName(), $effectiveHost, (string) config('app.env'), $allowedHosts, [$conn->getConfig('url')])
+            : 'hôte de connexion non scalaire (read/write) : refus.';
+        if ($refusal !== null) {
+            $this->markTestSkipped('Garde S-8 (connexion effective) : ' . $refusal);
+        }
+
+        $this->database = $name;
 
         // VRAIES migrations sur un schéma MySQL réel
         $this->artisan('migrate:fresh', ['--force' => true])->assertExitCode(0);
@@ -79,7 +90,8 @@ class EventPendingCapConcurrencyTest extends TestCase
     {
         $barrier = sys_get_temp_dir() . '/mysql-barrier-' . uniqid();
         mkdir($barrier);
-        $env = array_merge(getenv(), [
+        // S-8 : les workers n'héritent d'aucune URL de connexion (elle surchargerait hôte et base)
+        $env = array_merge(array_diff_key(getenv(), array_flip(MySqlTestGuard::URL_ENV_VARS)), [
             'APP_ENV' => 'testing', 'DB_CONNECTION' => 'mysql', 'DB_DATABASE' => $this->database,
             'APP_KEY' => getenv('APP_KEY') ?: 'base64:' . base64_encode(str_repeat('k', 32)),
             'CACHE_STORE' => 'array', 'SESSION_DRIVER' => 'array', 'QUEUE_CONNECTION' => 'sync', 'MAIL_MAILER' => 'array',

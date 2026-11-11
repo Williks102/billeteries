@@ -87,7 +87,7 @@ class CheckoutValidationTest extends TestCase
 
     public function test_authenticated_checkout_rejects_terms_explicitly_refused(): void
     {
-        // Côté invité, '0'/'false' passent (règle `required` seule) : voir tests/Known/KnownBugsTest.php
+        // Côté invité aussi : voir GuestCheckoutSecurityTest::test_guest_checkout_must_refuse_terms_explicitly_declined
         $type = $this->ticketType(10);
         $this->postAuth($this->tamperedCart($type, 1), $this->buyer(['terms_accepted' => '0']))->assertSessionHasErrors('terms_accepted');
         $this->assertNothingCreated($type);

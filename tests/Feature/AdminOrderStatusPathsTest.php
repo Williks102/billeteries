@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Tests\Concerns\BuildsOrderSchema;
 use Tests\TestCase;
 
-/** Chemins admin updateStatus / update / bulkAction : « paid » passe par le service ; failed/refunded = dette connue. */
+/** Chemins admin updateStatus / update / bulkAction / refund : tous passent par OrderPaymentService::changeStatus. */
 class AdminOrderStatusPathsTest extends TestCase
 {
     use BuildsOrderSchema;
@@ -98,42 +98,97 @@ class AdminOrderStatusPathsTest extends TestCase
         $this->assertSame(0, Payment::count());
     }
 
-    /**
-     * DETTE CONNUE (documente le comportement ACTUEL, pas le comportement souhaité) :
-     * passer une commande pending à failed/refunded via updateStatus annule les billets mais ne
-     * libère PAS le stock (quantity_sold reste compté). Seul Order::releaseStock() libère.
-     * Quand l'admin sera corrigé (agent paiements-stock), inverser les assertions marquées DETTE.
-     */
-    public function test_known_debt_update_status_failed_or_refunded_cancels_tickets_but_keeps_stock(): void
+    /** M1 : failed/refunded depuis l'admin libèrent le stock (jamais de quantity_sold incohérent). */
+    public function test_update_status_failed_releases_stock_and_cancels_tickets(): void
     {
         $type = $this->ticketType(5);
         $admin = $this->makeUser(10, 'admin');
+        $order = $this->realOrder($type, 2);
+        $this->assertSame(2, $type->fresh()->quantity_sold);
 
-        foreach (['failed', 'refunded'] as $status) {
-            $order = $this->realOrder($type, 2);
-            $before = $type->fresh()->quantity_sold;
+        $this->actingAs($admin)->patchJson(route('admin.orders.update-status', $order), ['payment_status' => 'failed'])->assertOk();
 
-            $this->actingAs($admin)->patchJson(route('admin.orders.update-status', $order), ['payment_status' => $status])->assertOk();
-
-            $this->assertSame($status, $order->fresh()->payment_status);
-            $this->assertSame(2, $order->tickets()->where('status', 'cancelled')->count());
-            $this->assertSame($before, $type->fresh()->quantity_sold, 'DETTE : stock non libéré (' . $status . ')');
-        }
+        $this->assertSame('failed', $order->fresh()->payment_status);
+        $this->assertSame(2, $order->tickets()->where('status', 'cancelled')->count());
+        $this->assertSame(0, $type->fresh()->quantity_sold);
+        $this->assertSame('cancelled', $order->commission()->first()->status);
     }
 
-    /** DETTE CONNUE : idem pour update() (formulaire d'édition) et bulkAction mark_failed. */
-    public function test_known_debt_update_and_bulk_failed_keep_stock_reserved(): void
+    public function test_refund_of_paid_order_releases_stock_once(): void
+    {
+        $type = $this->ticketType(5);
+        $admin = $this->makeUser(10, 'admin');
+        $order = $this->realOrder($type, 2);
+        app(\App\Services\OrderPaymentService::class)->confirmPayment($order);
+        $this->assertSame(2, $type->fresh()->quantity_sold);
+
+        $this->actingAs($admin)->post(route('admin.orders.refund', $order), ['reason' => 'Doublon'])->assertRedirect(route('admin.orders.show', $order));
+        $this->assertSame('refunded', $order->fresh()->payment_status);
+        $this->assertSame('Doublon', $order->fresh()->admin_notes);
+        $this->assertSame(0, $type->fresh()->quantity_sold);
+        $this->assertSame(2, $order->tickets()->where('status', 'cancelled')->count());
+        $this->assertSame('held', $order->commission()->first()->status);
+
+        // Un second remboursement est refusé et ne libère rien de plus
+        $this->actingAs($admin)->post(route('admin.orders.refund', $order))->assertSessionHas('error');
+        $this->assertSame(0, $type->fresh()->quantity_sold);
+    }
+
+    /** M1 : update() (formulaire) et bulkAction mark_failed libèrent aussi le stock ; admin_notes est enregistré (F3). */
+    public function test_update_and_bulk_failed_release_stock_and_update_keeps_notes(): void
     {
         $type = $this->ticketType(5);
         $admin = $this->makeUser(10, 'admin');
         $viaUpdate = $this->realOrder($type);
         $viaBulk = $this->realOrder($type);
 
-        $this->actingAs($admin)->put(route('admin.orders.update', $viaUpdate), ['payment_status' => 'failed'])->assertRedirect();
+        $this->actingAs($admin)->put(route('admin.orders.update', $viaUpdate), ['payment_status' => 'failed', 'admin_notes' => 'Client injoignable'])->assertRedirect();
         $this->actingAs($admin)->post(route('admin.orders.bulk-action'), ['action' => 'mark_failed', 'orders' => [$viaBulk->id]])->assertRedirect();
 
         $this->assertSame('failed', $viaUpdate->fresh()->payment_status);
+        $this->assertSame('Client injoignable', $viaUpdate->fresh()->admin_notes);
         $this->assertSame('failed', $viaBulk->fresh()->payment_status);
-        $this->assertSame(2, $type->fresh()->quantity_sold, 'DETTE : stock non libéré');
+        $this->assertSame(0, $type->fresh()->quantity_sold);
+    }
+
+    public function test_update_paid_keeps_admin_notes(): void
+    {
+        $order = $this->realOrder($this->ticketType(5));
+
+        $this->actingAs($this->makeUser(10, 'admin'))
+            ->put(route('admin.orders.update', $order), ['payment_status' => 'paid', 'admin_notes' => 'Reçu en espèces'])->assertRedirect();
+
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertSame('Reçu en espèces', $order->fresh()->admin_notes);
+    }
+
+    /** F3 : le mark_paid en lot remonte l'échec par commande au lieu de l'avaler. */
+    public function test_bulk_mark_paid_reports_failure_per_order(): void
+    {
+        $order = $this->realOrder($this->ticketType(5));
+        $this->mock(\App\Services\OrderPaymentService::class)
+            ->shouldReceive('changeStatus')->once()
+            ->andThrow(new \App\Exceptions\OrderPaymentException('Stock indisponible'));
+
+        $this->actingAs($this->makeUser(10, 'admin'))
+            ->post(route('admin.orders.bulk-action'), ['action' => 'mark_paid', 'orders' => [$order->id]])
+            ->assertSessionHas('error', fn ($m) => str_contains($m, $order->order_number) && str_contains($m, 'Stock indisponible'))
+            ->assertSessionHas('success', fn ($m) => str_starts_with($m, '0 commande'));
+    }
+
+    /** Ex-test connu rouge (KnownBugsTest) : failed par l'admin puis paid ne double plus le stock (M1). */
+    public function test_failed_by_admin_then_paid_must_not_double_count_stock(): void
+    {
+        $type = $this->ticketType(10);
+        $order = $this->realOrder($type, 2);
+        $admin = $this->makeUser(10, 'admin');
+
+        $this->actingAs($admin)->patchJson(route('admin.orders.update-status', $order), ['payment_status' => 'failed'])->assertOk();
+        $this->assertSame(0, $type->fresh()->quantity_sold);
+        $this->actingAs($admin)->patchJson(route('admin.orders.update-status', $order), ['payment_status' => 'paid'])->assertOk();
+
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertSame(2, Ticket::where('status', 'sold')->count());
+        $this->assertSame(2, $type->fresh()->quantity_sold, 'quantity_sold doit refléter 2 billets, pas 4');
     }
 }

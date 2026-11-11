@@ -118,6 +118,7 @@ trait BuildsOrderSchema
             $t->string('guest_token')->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('expires_at')->nullable();
+            $t->text('admin_notes')->nullable();
             $t->timestamps();
         });
         Schema::create('order_items', function ($t) {

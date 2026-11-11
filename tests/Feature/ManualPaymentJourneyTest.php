@@ -134,37 +134,6 @@ class ManualPaymentJourneyTest extends TestCase
         $this->assertSame([], $cancelRoutes, 'Une route d\'annulation hors admin/promoteur est apparue : tester son autorisation.');
     }
 
-    public function test_guest_with_existing_account_email_does_not_get_account_data(): void
-    {
-        $type = $this->ticketType(10);
-        DB::table('users')->insert([
-            'id' => 40, 'name' => 'Victime Secrete', 'first_name' => 'Victime', 'last_name' => 'Secrete',
-            'email' => 'victime@example.test', 'phone' => '0707070707', 'role' => 'acheteur', 'is_guest' => false,
-        ]);
-
-        $response = $this->withSession(['cart' => $this->tamperedCart($type, 1)])
-            ->post(route('checkout.guest.process'), $this->guestPayload([
-                'email' => 'victime@example.test', 'first_name' => 'Pirate', 'last_name' => 'X',
-            ]));
-
-        // Pas de page de confirmation par token, pas de preuve de session, redirection générique
-        $response->assertRedirect(route('home'));
-        $order = Order::sole();
-        $this->assertNull($order->guest_token);
-        $this->assertNull(session('guest_order_tokens.' . $order->id));
-        $this->assertNull(session('guest_order_tokens'));
-
-        // Le compte existant n'est pas modifié ni connecté
-        $this->assertGuest();
-        $victim = User::find(40);
-        $this->assertSame('Victime', $victim->first_name);
-        $this->assertSame('0707070707', $victim->phone);
-        $this->assertFalse((bool) $victim->is_guest);
-
-        // La page de confirmation par token n'existe pas pour cette commande
-        $this->get(route('checkout.confirmation', $order))->assertRedirect(); // exige l'authentification
-    }
-
     public function test_two_successive_confirmations_with_stale_instances_yield_one_payment(): void
     {
         $type = $this->ticketType(10);

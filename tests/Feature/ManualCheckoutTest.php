@@ -110,7 +110,7 @@ class ManualCheckoutTest extends TestCase
         $this->assertSame('pending', $order->payment_status);
         $this->assertSame('mobile_money', $order->payment_method);
         $this->assertSame(2000 + CheckoutService::SERVICE_FEE, $order->total_amount); // prix serveur, pas ceux de la session
-        $this->assertEqualsWithDelta(now()->addMinutes(2880)->timestamp, $order->expires_at->timestamp, 5);
+        $this->assertEqualsWithDelta(now()->addMinutes(1440)->timestamp, $order->expires_at->timestamp, 5); // invité : 24 h (E2)
         $this->assertSame($order->guest_token, session('guest_order_tokens.' . $order->id)); // C1
         $this->assertNull(session('cart'));
         Mail::assertSent(ManualPaymentInstructions::class, 1);

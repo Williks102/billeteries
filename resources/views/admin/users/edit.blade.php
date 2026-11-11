@@ -243,14 +243,14 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="d-flex justify-content-end gap-2">
-                                    <a href="{{ route('admin.users.show', $user) }}" 
-                                       class="btn btn-outline-secondary">
-                                        <i class="fas fa-times me-2"></i>Annuler
-                                    </a>
+                                <div class="action-bar mt-0">
                                     <button type="submit" class="btn btn-orange">
                                         <i class="fas fa-save me-2"></i>Enregistrer les modifications
                                     </button>
+                                    <a href="{{ route('admin.users.show', $user) }}" 
+                                       class="btn btn-outline-secondary action-bar__cancel">
+                                        <i class="fas fa-times me-2"></i>Annuler
+                                    </a>
                                 </div>
                             </div>
                         </div>

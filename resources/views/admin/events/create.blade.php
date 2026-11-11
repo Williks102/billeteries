@@ -194,18 +194,16 @@
                         </div>
 
                         <!-- Boutons d'action -->
-                        <div class="d-flex justify-content-between">
-                            <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                        <div class="action-bar action-bar--split">
+                            <button type="submit" name="action" value="publish" class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>Créer et publier
+                            </button>
+                            <button type="submit" name="action" value="draft" class="btn btn-outline-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer en brouillon
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary action-bar__cancel" onclick="history.back()">
                                 <i class="fas fa-times me-2"></i>Annuler
                             </button>
-                            <div>
-                                <button type="submit" name="action" value="draft" class="btn btn-outline-primary me-2">
-                                    <i class="fas fa-save me-2"></i>Enregistrer en brouillon
-                                </button>
-                                <button type="submit" name="action" value="publish" class="btn btn-success">
-                                    <i class="fas fa-check me-2"></i>Créer et publier
-                                </button>
-                            </div>
                         </div>
                     </form>
                 </div>

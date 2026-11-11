@@ -62,7 +62,9 @@
             @error('message')<div id="support-message-error" class="invalid-feedback" role="alert">{{ $message }}</div>@enderror
         </div>
 
-        <button type="submit" class="btn btn-primary w-100" style="min-height:48px;">Envoyer ma demande</button>
+        <div class="action-bar mt-0">
+            <button type="submit" class="btn btn-primary">Envoyer ma demande</button>
+        </div>
     </form>
 </div>
 @endsection

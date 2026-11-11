@@ -178,11 +178,11 @@
                             </div>
                         </div>
                         
-                        <div class="d-flex gap-2 mt-4">
+                        <div class="action-bar">
                             <button type="submit" class="btn btn-orange">
                                 <i class="fas fa-save me-2"></i>Enregistrer les modifications
                             </button>
-                            <button type="reset" class="btn btn-outline-secondary">
+                            <button type="reset" class="btn btn-outline-secondary action-bar__cancel">
                                 <i class="fas fa-undo me-2"></i>Annuler
                             </button>
                         </div>

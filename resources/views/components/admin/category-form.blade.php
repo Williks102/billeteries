@@ -45,8 +45,8 @@
         @error('description') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
 
-    <div class="d-flex flex-column flex-sm-row gap-2">
+    <div class="action-bar">
         <button type="submit" class="btn btn-primary">{{ $category ? 'Enregistrer' : 'Créer la catégorie' }}</button>
-        <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">Annuler</a>
+        <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary action-bar__cancel">Annuler</a>
     </div>
 </form>

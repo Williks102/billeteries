@@ -239,6 +239,23 @@ class TicketTypeController extends Controller
     }
 
     /**
+     * Activer / désactiver la vente d'un type de billet
+     */
+    public function toggle(Event $event, TicketType $ticketType)
+    {
+        if ($event->promoter_id !== Auth::id() || $ticketType->event_id !== $event->id) {
+            abort(403);
+        }
+
+        $ticketType->update(['is_active' => !$ticketType->is_active]);
+
+        return redirect()->back()->with(
+            'success',
+            $ticketType->is_active ? 'Type de billet activé.' : 'Type de billet désactivé.'
+        );
+    }
+
+    /**
      * Supprimer un type de billet
      */
     public function destroy(Event $event, TicketType $ticketType)

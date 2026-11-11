@@ -12,11 +12,11 @@ P1 Webhook `/payments/paiementpro/notification` soumis au CSRF (419) ; `except` 
 P2 `verifyNotificationHashCode` retourne true si secret vide ; mode test par défaut.
 P3 Webhook sans idempotence : pas de contrôle montant / statut déjà payé / verrou.
 P4 Stock `quantity_sold` incrémenté sans `lockForUpdate` ni revérification ; pas de libération des réservations expirées.
-P5 `bootstrap/providers.php` référence `App\Providers\TelescopeServiceProvider` inexistant ; Telescope en require-dev.
+P5 `bootstrap/providers.php` référence `App\Providers\TelescopeServiceProvider`, classe inexistante (Laravel 12 l'ignore, l'app démarre — vérifié) ; Telescope en require-dev, `TELESCOPE_ENABLED=true` par défaut : à nettoyer, non bloquant.
 P6 Seeders avec mots de passe faibles affichés en console.
 P7 `.gitignore` corrompu (1re ligne `cat > .gitignore << 'EOF'`) ; versionnés : database.sqlite, backup_migration.php, *.backup, admin.old/, partials.old/.
 D1 Contrôleurs géants (AdminController 1084 l., Admin/EventController 908…).
-D2 ~15 closures d'analytics dans routes/web.php ; routes de test/diagnostic ; routes dupliquées.
+D2 [CORRIGÉ] routes réorganisées (web/acheteur/promoteur/admin.php), closures extraites, ressources/singletons, `route:cache` OK, garde-fou `tests/Feature/RoutingConventionsTest.php`. Reste en dette : routes vers méthodes inexistantes (favoris, extras catégories, cart extend-timer/status, intervention-events) listées dans ce test.
 D3 CheckoutController et GuestCheckoutController dupliqués ; pas de CheckoutService.
 D4 Rôles maison + Spatie en doublon ; mélange promoteur/promoter.
 D5 Pas de Form Requests ni Policies ; TicketController::download laisse passer les rôles autres qu'acheteur/promoteur.
@@ -38,3 +38,11 @@ D8 Logs trop bavards (`$request->all()`).
 - Rapport détaillé dans `docs/agents/reports/<agent>-<sujet>.md` (audit : constats classés Critique/Élevé/Moyen/Faible, avec preuve et correctif proposé).
 - Fin de mission : répondre au chef d'orchestre en ≤ 15 lignes : fait / non fait / bloquants / prochaine étape recommandée.
 - Ordre de dépendance : devops-hygiene → securite & architecte (audit) → paiements-stock → qa-tests → ui-design → revue finale.
+
+# Convention de routage (obligatoire)
+- Un fichier par espace : `routes/{web,acheteur,promoteur,admin}.php` ; pas de closure métier (extraire en contrôleur).
+- CRUD = `Route::resource` / `Route::singleton` (profil) ; noms `<espace>.<ressource>.<action>` (ex. `acheteur.orders.show`).
+- Routes « fixes » (bulk-action, reorder, export, redirections) déclarées AVANT leur resource.
+- Ressource imbriquée : `Route::resource('events.tickets', …)->parameters(['tickets' => 'ticketType'])` — le nom du paramètre DOIT égaler le nom de l'argument du contrôleur (sinon pas de route-model binding).
+- Après toute modif de routes : `php artisan test tests/Feature/RoutingConventionsTest.php` (shadowing, noms uniques, actions existantes, noms utilisés dans les vues, route:cache).
+- Les URLs d'admin sont référencées en dur dans `public/js/admin-*.js` : ne pas les changer sans mettre à jour ces fichiers.

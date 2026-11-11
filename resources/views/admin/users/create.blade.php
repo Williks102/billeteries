@@ -11,13 +11,13 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('admin.users') }}">Utilisateurs</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.users.index') }}">Utilisateurs</a></li>
                     <li class="breadcrumb-item active">Créer</li>
                 </ol>
             </nav>
         </div>
         <div>
-            <a href="{{ route('admin.users') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-2"></i>Retour
             </a>
         </div>

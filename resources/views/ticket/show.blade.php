@@ -126,7 +126,7 @@
             
             <!-- Actions -->
             <div class="ticket-actions text-center mt-4">
-                <a href="{{ route('acheteur.tickets') }}" class="btn btn-outline-primary me-2">
+                <a href="{{ route('acheteur.tickets.index') }}" class="btn btn-outline-primary me-2">
                     <i class="fas fa-arrow-left me-2"></i>Retour à mes billets
                 </a>
                 

@@ -290,7 +290,7 @@ class CheckoutController extends Controller
                 ? 'Commandes créées ! Instructions de virement envoyées par email.'
                 : 'Commande créée ! Instructions de virement envoyées par email.';
 
-            return redirect()->route('acheteur.orders')
+            return redirect()->route('acheteur.orders.index')
                            ->with('success', $message);
 
         } catch (\Exception $e) {

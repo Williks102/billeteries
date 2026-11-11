@@ -514,7 +514,7 @@
                                                 </li>
                                                 @if($ticket->qr_code)
                                                     <li>
-                                                        <a class="dropdown-item" href="{{ route('verify.ticket', $ticket->ticket_code) }}" target="_blank">
+                                                        <a class="dropdown-item" href="{{ route('tickets.verify', $ticket->ticket_code) }}" target="_blank">
                                                             <i class="fas fa-qrcode me-2"></i>Vérifier
                                                         </a>
                                                     </li>

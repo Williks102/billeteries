@@ -198,7 +198,7 @@ function scanTicket() {
     }
 
     // Envoyer la requête de scan
-    fetch('{{ route("api.authenticated-scan") }}', {
+    fetch('{{ route("promoteur.api.authenticated-scan") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

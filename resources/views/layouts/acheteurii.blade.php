@@ -179,7 +179,7 @@
                         <ul class="dropdown-menu">
                             @auth
                                 <li>
-                                    <a class="dropdown-item" href="{{ route('acheteur.profile') }}">
+                                    <a class="dropdown-item" href="{{ route('acheteur.profile.show') }}">
                                         <i class="fas fa-user me-2"></i>Mon profil
                                     </a>
                                 </li>

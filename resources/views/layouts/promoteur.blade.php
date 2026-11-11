@@ -616,10 +616,10 @@
                         <span class="sidebar-tooltip">Ventes</span>
                     </a>
                     <ul class="sidebar-submenu {{ request()->routeIs('promoteur.sales*') ? 'open' : '' }}" id="submenu-sales">
-                        <li><a href="{{ route('promoteur.sales') }}" class="{{ request()->routeIs('promoteur.sales') ? 'active' : '' }}">Toutes mes ventes</a></li>
-                        <li><a href="{{ route('promoteur.sales', ['period' => 'today']) }}">Aujourd'hui</a></li>
-                        <li><a href="{{ route('promoteur.sales', ['period' => 'week']) }}">Cette semaine</a></li>
-                        <li><a href="{{ route('promoteur.sales', ['period' => 'month']) }}">Ce mois</a></li>
+                        <li><a href="{{ route('promoteur.sales.index') }}" class="{{ request()->routeIs('promoteur.sales.index') ? 'active' : '' }}">Toutes mes ventes</a></li>
+                        <li><a href="{{ route('promoteur.sales.index', ['period' => 'today']) }}">Aujourd'hui</a></li>
+                        <li><a href="{{ route('promoteur.sales.index', ['period' => 'week']) }}">Cette semaine</a></li>
+                        <li><a href="{{ route('promoteur.sales.index', ['period' => 'month']) }}">Ce mois</a></li>
                     </ul>
                 </li>
 
@@ -632,15 +632,15 @@
                         <span class="sidebar-tooltip">Rapports</span>
                     </a>
                     <ul class="sidebar-submenu {{ request()->routeIs('promoteur.reports*') ? 'open' : '' }}" id="submenu-reports">
-                        <li><a href="{{ route('promoteur.reports') }}" class="{{ request()->routeIs('promoteur.reports') ? 'active' : '' }}">Vue d'ensemble</a></li>
-                        <li><a href="{{ route('promoteur.reports', ['type' => 'events']) }}">Par événement</a></li>
-                        <li><a href="{{ route('promoteur.reports', ['type' => 'financial']) }}">Financier</a></li>
+                        <li><a href="{{ route('promoteur.reports.index') }}" class="{{ request()->routeIs('promoteur.reports.index') ? 'active' : '' }}">Vue d'ensemble</a></li>
+                        <li><a href="{{ route('promoteur.reports.index', ['type' => 'events']) }}">Par événement</a></li>
+                        <li><a href="{{ route('promoteur.reports.index', ['type' => 'financial']) }}">Financier</a></li>
                     </ul>
                 </li>
 
                 <!-- Profil -->
                 <li>
-                    <a href="{{ route('promoteur.profile') }}" class="{{ request()->routeIs('promoteur.profile*') ? 'active' : '' }}">
+                    <a href="{{ route('promoteur.profile.show') }}" class="{{ request()->routeIs('promoteur.profile*') ? 'active' : '' }}">
                         <i class="fas fa-user-circle"></i>
                         <span class="sidebar-menu-text">Mon Profil</span>
                         <span class="sidebar-tooltip">Mon Profil</span>

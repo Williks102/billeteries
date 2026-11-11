@@ -57,9 +57,17 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            // TLS pilotée par l'environnement (TiDB Cloud exige TLS) : DB_SSL_CA = fichier des certificats racine
+            // (MYSQL_ATTR_SSL_CA reste accepté), DB_SSL_VERIFY = true/false pour vérifier le certificat du serveur.
+            // Valeurs vides par défaut : aucune option, connexions locales inchangées.
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+                PDO::MYSQL_ATTR_SSL_CA => env('DB_SSL_CA') ?: env('MYSQL_ATTR_SSL_CA'),
+                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => match (true) {
+                    in_array(env('DB_SSL_VERIFY'), [true, 1, '1'], true) => true,
+                    in_array(env('DB_SSL_VERIFY'), [false, 0, '0'], true) => false,
+                    default => null,
+                },
+            ], fn ($value) => $value !== null && $value !== '') : [],
         ],
 
         'mariadb' => [

@@ -113,7 +113,7 @@ Ne prouve pas : tout ce qui est propre à MySQL/TiDB (liste en tête de ce rappo
 
 ## Autres constats
 
-- `Admin\SettingsController::backup` (l.234-246) construit une commande `mysqldump` avec le mot de passe de la base en argument et l'exécute par `exec` ; `mysqldump` n'est pas dans l'image. Hors périmètre ; c'est pourquoi `exec` n'est PAS dans `disable_functions` (docker/apache-render.conf). À traiter par `securite` / `paiements-stock`.
+- `Admin\SettingsController::backup` (l.234-246) construit une commande `mysqldump` avec le mot de passe de la base en argument et l'exécute par `exec` ; `mysqldump` n'est pas dans l'image. Hors périmètre ; c'est pourquoi `exec` n'est PAS dans `disable_functions` (docker/php.ini). À traiter par `securite` / `paiements-stock`.
 - `Admin\SettingsController` ~l.341 : `OPTIMIZE TABLE` (MySQL) ; TiDB ne le supporte pas : erreur à l'usage de cette fonction admin, pas au démarrage.
 
 ## Risques résiduels sur MySQL/TiDB (non prouvables ici)

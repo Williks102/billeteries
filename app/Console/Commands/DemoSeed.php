@@ -64,7 +64,7 @@ class DemoSeed extends Command
             $admin->forceFill(['email_verified_at' => now()])->save();
         });
 
-        $this->info("demo:seed : catégories, commissions et compte admin ({$email}) créés.");
+        $this->info('demo:seed : catégories, commissions et compte administrateur créés.');
 
         return self::SUCCESS;
     }

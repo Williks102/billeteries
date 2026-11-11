@@ -289,9 +289,14 @@ class RenderDeploymentTest extends TestCase
         $this->assertStringContainsString('php_admin_flag engine off', $conf);
         $this->assertStringContainsString('X-Content-Type-Options', $conf);
         $this->assertStringContainsString('Strict-Transport-Security', $conf);
-        $this->assertMatchesRegularExpression('/disable_functions "[^"]*shell_exec/', $conf);
-        // proc_open reste utilisable par le CLI (schedule:work) : seule la config Apache l'interdit
-        $this->assertDoesNotMatchRegularExpression('/disable_functions/', $this->read('docker/php.ini'));
+        // disable_functions est PHP_INI_SYSTEM : inopérante dans la config Apache, elle vit dans php.ini
+        $this->assertDoesNotMatchRegularExpression('/^\s*php_admin_value\s+disable_functions/m', $conf);
+        $ini = $this->read('docker/php.ini');
+        $this->assertMatchesRegularExpression('/^disable_functions=[^\n]*shell_exec/m', $ini);
+        // exec (backup admin) et proc_open (schedule:work, Symfony Process) restent utilisables
+        preg_match('/^disable_functions=(.*)$/m', $ini, $m);
+        $this->assertNotContains('exec', explode(',', $m[1]));
+        $this->assertNotContains('proc_open', explode(',', $m[1]));
     }
 
     public function test_no_provider_references_dev_only_packages_unconditionally(): void

@@ -22,5 +22,13 @@ Branche `claude/deploiement-render` (depuis origin/main 4bc4ffd). Guide utilisat
 - Dockerfile : base `php:8.3-apache-bookworm`, multi-stage (Composer/git/unzip hors image finale), `install-php-extensions` ; plus de `libfreetype6-dev`.
 - I2 : `php artisan app:normalize-key` appelée par l'entrypoint (préfixe `base64:` ajouté, 32 caractères bruts acceptés, valeur jamais affichée).
 - I1, I3, M1, M2, F4 : guide réécrit (fusion avant Blueprint, APP_KEY, DEMO_SEED=false dès le premier démarrage, mails en clair dans les journaux, TLS, migrations jamais éprouvées sur MySQL/TiDB). `DEMO_SEED` reste `true` dans render.yaml (création simple de l'admin), justification dans le fichier.
-- F2/F3 : en-têtes nosniff/HSTS sur statiques, pas de PHP dans public/storage, `disable_functions` côté Apache seulement (`exec` conservé : `SettingsController::backup`).
+- F2/F3 : en-têtes nosniff/HSTS sur statiques, pas de PHP dans public/storage, `disable_functions` dans docker/php.ini (PHP_INI_SYSTEM, inopérant dans Apache) sans `exec` ni `proc_open`.
 - Non vérifié : docker build, Render, TiDB, MySQL réel, syntaxe Apache (aucun apache2 local).
+
+## Dernier correctif avant PR (relecture finale, M3)
+
+- 120300 SE DÉCLENCHE sur base vierge (le relecteur avait raison). Réécrite pour n'être jamais sans clé étrangère : index explicite `<table>_promoter_id_index` si nécessaire, ajout de la nouvelle FK, puis (seulement si OK) suppression de l'ancienne FK, puis (seulement si OK) de l'ancien index ; chaque étape en try/catch avec `Log::warning` (table + nom de contrainte), jamais de relance.
+- Test `RenamePromoteurConstraintsMigrationTest` : SQL compilé avec la vraie grammaire MySQL (ordre, noms, échec simulé à chaque étape).
+- `disable_functions` déplacée dans docker/php.ini (liste : shell_exec, passthru, system, popen, pcntl_exec, show_source, dl).
+- demo:seed n'écrit plus l'adresse de l'administrateur dans les journaux.
+- Non vérifié : DDL réel sur MySQL/TiDB, php.ini effectif dans l'image.

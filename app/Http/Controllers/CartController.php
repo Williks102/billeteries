@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\TicketType;
 use App\Models\Event;
+use App\Services\CheckoutService;
 
 class CartController extends Controller
 {
@@ -57,10 +58,17 @@ class CartController extends Controller
             $currentCartQuantity = isset($cart[$cartKey]) ? $cart[$cartKey]['quantity'] : 0;
             $totalQuantity = $currentCartQuantity + $requestedQuantity;
 
+            $perOrder = CheckoutService::maxTicketsPerOrder($ticketType->max_per_order !== null ? (int) $ticketType->max_per_order : null);
+            if ($totalQuantity > $perOrder) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "'{$ticketType->name}' : " . CheckoutService::perOrderLimitMessage($perOrder)
+                ], 400);
+            }
             if (!$ticketType->canPurchaseQuantity($totalQuantity)) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Quantité non disponible pour '{$ticketType->name}'. Maximum: " . ($ticketType->max_per_order ?? 10)
+                    'message' => "Quantité non disponible pour '{$ticketType->name}'. Maximum: " . $perOrder
                 ], 400);
             }
 
@@ -80,7 +88,7 @@ class CartController extends Controller
                     'unit_price' => $ticketType->price,
                     'quantity' => $requestedQuantity,
                     'total_price' => $ticketType->price * $requestedQuantity,
-                    'max_per_order' => $ticketType->max_per_order
+                    'max_per_order' => CheckoutService::maxTicketsPerOrder($ticketType->max_per_order)
                 ];
             }
 
@@ -120,7 +128,13 @@ class CartController extends Controller
         ]);
 
         $ticketType = TicketType::with('event')->findOrFail($request->ticket_type_id);
-        
+
+        $perOrder = CheckoutService::maxTicketsPerOrder($ticketType->max_per_order !== null ? (int) $ticketType->max_per_order : null);
+        $already = (int) (session()->get('cart', ['ticket_' . $ticketType->id => ['quantity' => 0]])['ticket_' . $ticketType->id]['quantity'] ?? 0);
+        if ($already + (int) $request->quantity > $perOrder) {
+            return response()->json(['success' => false, 'message' => CheckoutService::perOrderLimitMessage($perOrder)], 400);
+        }
+
         // Vérifier la disponibilité
         if (!$ticketType->canPurchaseQuantity($request->quantity)) {
             return response()->json([
@@ -158,7 +172,7 @@ class CartController extends Controller
                 'unit_price' => $ticketType->price,
                 'quantity' => $request->quantity,
                 'total_price' => $ticketType->price * $request->quantity,
-                'max_per_order' => $ticketType->max_per_order
+                'max_per_order' => CheckoutService::maxTicketsPerOrder($ticketType->max_per_order)
             ];
         }
         

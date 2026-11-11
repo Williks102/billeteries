@@ -106,7 +106,7 @@ class CheckoutController extends Controller
                 'unit_price' => $ticketType->price,
                 'quantity' => $quantity,
                 'total_price' => $ticketType->price * $quantity,
-                'max_per_order' => $ticketType->max_per_order
+                'max_per_order' => CheckoutService::maxTicketsPerOrder($ticketType->max_per_order)
             ];
 
             $cartTotal += $ticketType->price * $quantity;
@@ -173,6 +173,8 @@ class CheckoutController extends Controller
                 }
                 return $orders;
             });
+
+            $service->generateQrCodes($orders); // I2 : hors transaction
 
             if ($capByIp) {
                 $service->recordGuestOrders($request->ip(), count($orders), $tickets);

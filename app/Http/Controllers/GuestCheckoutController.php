@@ -85,6 +85,8 @@ class GuestCheckoutController extends Controller
                 return [$user, $this->createOrdersFromGroups($service, $groups, $user, $request)];
             });
 
+            $service->generateQrCodes($orders); // I2 : hors transaction
+
             $service->recordGuestOrders($request->ip(), count($orders), $tickets);
 
             // Preuve de possession liée à la session (retour/annulation)

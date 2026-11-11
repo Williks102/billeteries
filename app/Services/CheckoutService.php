@@ -28,6 +28,23 @@ class CheckoutService
     /** Limite PERSONNELLE (email, compte ou connexion) : ne dit pas quel critère a joué. */
     public const LIMIT_ERROR = 'Limite personnelle atteinte : vous avez trop de réservations en attente pour le moment. Réglez ou annulez vos commandes en cours, ou réessayez plus tard.';
 
+    /** Une demande dépasse À ELLE SEULE le plafond par commande (I1) : le vrai plafond est indiqué. */
+    public static function perOrderLimitMessage(int $max): string
+    {
+        return "Maximum {$max} billet" . ($max > 1 ? 's' : '') . ' par commande. Réduisez la quantité demandée.';
+    }
+
+    /**
+     * Plafond effectif de billets par commande (I1) = min(max_per_order du type, quota de billets par acheteur).
+     * Sans max_per_order (null/0) : le quota par acheteur. Affichage et validation s'appuient sur cette valeur.
+     */
+    public static function maxTicketsPerOrder(?int $typeMax = null): int
+    {
+        $quota = max(1, (int) config('payments.max_pending_tickets_per_buyer', 10));
+
+        return ($typeMax !== null && $typeMax > 0) ? min($typeMax, $quota) : $quota;
+    }
+
     /** Limite de l'ÉVÉNEMENT : ne suggère rien à l'acheteur (il n'a peut-être aucune commande). */
     public const EVENT_LIMIT_ERROR = 'Cet événement a momentanément trop de réservations en attente. Réessayez dans quelques heures.';
 
@@ -70,6 +87,12 @@ class CheckoutService
                 throw new \InvalidArgumentException('Panier incohérent.');
             }
 
+            // I1 : plafond effectif par commande = min(max_per_order du type, quota par acheteur)
+            $perOrder = self::maxTicketsPerOrder($ticketType->max_per_order !== null ? (int) $ticketType->max_per_order : null);
+            if ($quantity > $perOrder) {
+                throw new CheckoutRefusedException(self::perOrderLimitMessage($perOrder));
+            }
+
             $unit = (int) $ticketType->price;
             $line = [
                 'ticket_type_id' => $ticketType->id,
@@ -96,8 +119,9 @@ class CheckoutService
     }
 
     /**
-     * Email normalisé pour les plafonds : minuscules, trim, alias « +tag » retiré de la partie locale.
-     * Les points Gmail ne sont volontairement pas normalisés (non comparables en SQL sans balayer le domaine).
+     * Email normalisé pour les plafonds : minuscules, trim, alias « +tag » retiré de la partie locale ;
+     * Gmail (S-1) : points de la partie locale supprimés et googlemail.com traité comme gmail.com.
+     * Normalisation à la volée (aucune colonne) ; la vérification d'email reste à faire avant production.
      */
     public static function normalizeEmail(string $email): string
     {
@@ -107,12 +131,17 @@ class CheckoutService
             return $email;
         }
         $local = substr($email, 0, $at);
+        $domain = substr($email, $at + 1);
         $plus = strpos($local, '+');
         if ($plus !== false && $plus > 0) {
             $local = substr($local, 0, $plus);
         }
+        if (in_array($domain, ['gmail.com', 'googlemail.com'], true)) {
+            $local = str_replace('.', '', $local);
+            $domain = 'gmail.com';
+        }
 
-        return $local . substr($email, $at);
+        return $local . '@' . $domain;
     }
 
     /**
@@ -138,6 +167,14 @@ class CheckoutService
         $domain = $at === false ? '' : substr($norm, $at);
 
         $rows = $q->where(function ($w) use ($norm, $esc, $local, $domain) {
+            if ($domain === '@gmail.com') {
+                // Points et googlemail.com non comparables en SQL : on balaye le domaine (lignes pending/processing
+                // seulement), le filtre exact est fait en PHP ci-dessous.
+                $w->whereRaw("lower(orders.billing_email) like '%@gmail.com'")
+                    ->orWhereRaw("lower(orders.billing_email) like '%@googlemail.com'");
+
+                return;
+            }
             $w->whereRaw('lower(orders.billing_email) = ?', [$norm])
                 ->orWhereRaw("lower(orders.billing_email) like ? escape '!'", [$esc($local) . '+%' . $esc($domain)]);
         })->get();
@@ -147,7 +184,8 @@ class CheckoutService
 
     /**
      * Plafonds anti-accaparement (E2) : commandes pending/processing par email et par compte,
-     * et commandes créées par IP sur la fenêtre de réservation (invités). Message neutre.
+     * et commandes créées par IP sur la fenêtre de réservation (invités). Messages génériques (LIMIT_ERROR) sauf
+     * dépassement du plafond par commande à lui seul (message exact, I1). Quotas lus HORS transaction (S-2, avant production).
      *
      * @throws CheckoutRefusedException
      */
@@ -163,6 +201,10 @@ class CheckoutService
 
         // N-B : quota de BILLETS par acteur (email normalisé / compte), quelle que soit la taille de l'événement
         $maxTickets = max(1, (int) config('payments.max_pending_tickets_per_buyer', 10));
+        if ($newTickets > $maxTickets) {
+            // I1 : la demande dépasse à elle seule le plafond : message exact, pas « trop de réservations en attente »
+            throw new CheckoutRefusedException(self::perOrderLimitMessage($maxTickets));
+        }
         if ($newTickets > 0 && (int) $rows->sum('quantity') + $newTickets > $maxTickets) {
             Log::warning('Quota de billets en attente par acheteur atteint', ['scope' => 'buyer_tickets', 'user_id' => $userId]);
             throw new CheckoutRefusedException(self::LIMIT_ERROR);
@@ -212,12 +254,28 @@ class CheckoutService
 
     private function ipTicketsKey(string $ip): string
     {
-        return 'guest-tickets:' . sha1($ip);
+        return 'guest-tickets:' . sha1(self::normalizeIp($ip));
     }
 
     private function ipKey(string $ip): string
     {
-        return 'guest-orders:' . sha1($ip);
+        return 'guest-orders:' . sha1(self::normalizeIp($ip));
+    }
+
+    /**
+     * S-1 : IPv6 ramenée à son préfixe /64 (un abonné contrôle tout le /64) ; IPv4 (et IPv4 mappée) inchangée.
+     */
+    public static function normalizeIp(string $ip): string
+    {
+        $bin = @inet_pton($ip);
+        if ($bin === false || strlen($bin) !== 16) {
+            return $ip;
+        }
+        if (str_starts_with($bin, str_repeat("\0", 10) . "\xff\xff")) {
+            return implode('.', array_map('ord', str_split(substr($bin, 12))));
+        }
+
+        return bin2hex(substr($bin, 0, 8)) . '/64';
     }
 
     /**
@@ -315,32 +373,41 @@ class CheckoutService
     }
 
     /**
-     * Alerte email aux admins, au plus 1 fois par heure et par événement (Cache::add atomique).
-     * Envoyée APRÈS la réponse (terminating) : jamais d'envoi sous verrou ni dans la transaction ;
-     * un échec d'envoi est journalisé sans PII. Aucune donnée personnelle dans le message.
+     * Alerte email aux admins, au plus 1 fois par heure et par événement.
+     * B1 : le créneau (Cache::add atomique) est pris DANS le callback `terminating`, donc APRÈS le rollback de la
+     * transaction de commande et hors verrous. Pris dans la transaction, avec CACHE_STORE=database, le refus
+     * annulait le marqueur (même connexion PDO) et chaque refus envoyait un email. Un échec d'envoi libère le
+     * créneau (nouvel essai possible) et est journalisé sans PII. Aucune donnée personnelle dans le message.
      */
     private function alertAdminsEventCapReached(int $eventId, int $pending, int $cap): void
     {
-        if (!Cache::add('event-pending-cap-alert:' . $eventId, 1, 3600)) {
-            return;
-        }
-
         $done = false; // terminate() peut rejouer les callbacks (tests, workers longs) : envoi unique
         app()->terminating(function () use ($eventId, $pending, $cap, &$done) {
             if ($done) {
                 return;
             }
             $done = true;
+            $key = 'event-pending-cap-alert:' . $eventId;
             try {
-                $admins = \App\Models\User::where('role', 'admin')->pluck('email')->filter()->all();
-                if ($admins === []) {
+                if (!Cache::add($key, 1, 3600)) {
                     return;
                 }
-                Mail::raw(
-                    "Plafond de réservations en attente atteint pour l'événement #{$eventId} ({$pending} billets, plafond {$cap}). "
-                    . 'Vérifiez les commandes en attente (possible accaparement) et annulez les commandes abusives.',
-                    fn ($m) => $m->to($admins)->subject("Alerte : événement #{$eventId} saturé de réservations en attente")
-                );
+                $admins = \App\Models\User::where('role', 'admin')->pluck('email')->filter()->all();
+                if ($admins === []) {
+                    Cache::forget($key);
+
+                    return;
+                }
+                try {
+                    Mail::raw(
+                        "Plafond de réservations en attente atteint pour l'événement #{$eventId} ({$pending} billets, plafond {$cap}). "
+                        . 'Vérifiez les commandes en attente (possible accaparement) et annulez les commandes abusives.',
+                        fn ($m) => $m->to($admins)->subject("Alerte : événement #{$eventId} saturé de réservations en attente")
+                    );
+                } catch (\Throwable $e) {
+                    Cache::forget($key);
+                    throw $e;
+                }
             } catch (\Throwable $e) {
                 Log::error('Échec envoi alerte plafond événement', ['event_id' => $eventId, 'exception' => get_class($e)]);
             }
@@ -374,9 +441,7 @@ class CheckoutService
                 'status' => 'reserved', // vendu seulement après paiement confirmé
             ]);
 
-            if (method_exists($ticket, 'generateQRCode')) {
-                $ticket->generateQRCode();
-            }
+            // I2 : AUCUN QR ici (appels HTTP externes sous verrous) : voir generateQrCodes(), appelé après le commit.
 
             DB::table('order_tickets')->insert([
                 'order_id' => $order->id,
@@ -394,6 +459,33 @@ class CheckoutService
         ]);
 
         return $orderItem;
+    }
+
+    /**
+     * I2 : génère les QR des billets des commandes APRÈS le commit (jamais dans la transaction ni sous verrou :
+     * QRCodeService appelle des API HTTP externes, timeout 8 s par tentative). Chaque échec est journalisé
+     * sans PII et n'affecte pas la commande ; un billet sans QR est régénéré à la demande (Ticket::getReliableQrCode,
+     * PDF/page billet) ou par les commandes Artisan existantes.
+     *
+     * @param  array<int, Order>  $orders
+     */
+    public function generateQrCodes(array $orders): void
+    {
+        foreach ($orders as $order) {
+            try {
+                $tickets = Ticket::whereIn('id', DB::table('order_tickets')->where('order_id', $order->id)->pluck('ticket_id'))->get();
+            } catch (\Throwable $e) {
+                $this->logFailure('Lecture des billets pour QR impossible', $e, ['order_id' => $order->id]);
+                continue;
+            }
+            foreach ($tickets as $ticket) {
+                try {
+                    $ticket->generateQrCode();
+                } catch (\Throwable $e) {
+                    $this->logFailure('Échec génération QR après commit', $e, ['order_id' => $order->id, 'ticket_id' => $ticket->id]);
+                }
+            }
+        }
     }
 
     private function createCommission(Order $order): void

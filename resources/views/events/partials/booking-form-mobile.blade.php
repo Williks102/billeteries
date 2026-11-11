@@ -98,7 +98,7 @@
                     <div class="ticket-type {{ $isAvailable ? '' : 'unavailable' }}" 
                          data-ticket-id="{{ $ticketType->id }}"
                          data-price="{{ $ticketType->price }}"
-                         data-max="{{ $ticketType->max_per_order ?? 10 }}"
+                         data-max="{{ \App\Services\CheckoutService::maxTicketsPerOrder($ticketType->max_per_order) }}"
                          data-available="{{ $available }}">
                         
                         <div class="ticket-header">
@@ -609,7 +609,7 @@ let ticketAvailable = {};
         @endphp
         @if($isAvailable)
             ticketPrices['{{ $ticketType->id }}'] = {{ $ticketType->price }};
-            ticketMaxes['{{ $ticketType->id }}'] = {{ $ticketType->max_per_order ?? 10 }};
+            ticketMaxes['{{ $ticketType->id }}'] = {{ \App\Services\CheckoutService::maxTicketsPerOrder($ticketType->max_per_order) }};
             ticketAvailable['{{ $ticketType->id }}'] = {{ $available }};
             ticketQuantities['{{ $ticketType->id }}'] = 0;
         @endif

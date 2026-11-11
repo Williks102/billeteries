@@ -10,7 +10,8 @@ use Tests\TestCase;
  *
  * EXCLU de `composer run check` (SQLite). Lancé par `composer run test:mysql` ; voir docs/testing-mysql.md.
  * SKIPPÉ si MySQL n'est pas configuré. ATTENTION : exécute `migrate:fresh` sur la base indiquée ;
- * le nom de la base doit contenir « test ».
+ * garde S-4 (MySqlTestGuard) : nom `^[a-z0-9_]*_test$`, hôte local ou listé dans TEST_MYSQL_ALLOWED_HOSTS,
+ * jamais avec APP_ENV=production.
  *
  * Non exécuté dans l'environnement de développement (pas de MySQL) : écrit pour être lancé par le propriétaire.
  */
@@ -26,8 +27,14 @@ class EventPendingCapConcurrencyTest extends TestCase
         if ($name === '') {
             $this->markTestSkipped('MySQL requis : voir docs/testing-mysql.md (TEST_MYSQL_DATABASE=... composer run test:mysql).');
         }
-        if (!str_contains($name, 'test')) {
-            $this->markTestSkipped('Refus de lancer migrate:fresh sur une base dont le nom ne contient pas « test » : ' . $name);
+        $refusal = MySqlTestGuard::refusal(
+            $name,
+            getenv('DB_HOST') ?: (string) config('database.connections.mysql.host'),
+            getenv('APP_ENV') ?: (string) config('app.env'),
+            getenv('TEST_MYSQL_ALLOWED_HOSTS') ?: ''
+        );
+        if ($refusal !== null) {
+            $this->markTestSkipped('Garde S-4 : ' . $refusal);
         }
         if (!function_exists('proc_open')) {
             $this->markTestSkipped('proc_open indisponible.');

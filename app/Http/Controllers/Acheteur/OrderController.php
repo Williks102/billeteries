@@ -63,7 +63,7 @@ public function index(Request $request)
         
         // Statistiques
         $stats = [
-            'total_orders' => $user->orders()->count(),
+            'total_orders' => $user->orders()->visibleInBuyerHistory()->count(),
             'paid_orders' => $user->orders()->where('payment_status', 'paid')->count(),
             'total_tickets' => $user->orders()
                 ->where('payment_status', 'paid')

@@ -125,7 +125,7 @@
                     <div class="row text-center">
                         <div class="col-6 mb-3">
                             <div class="stat-item">
-                                <h4 class="text-primary mb-1">{{ $user->orders()->count() }}</h4>
+                                <h4 class="text-primary mb-1">{{ $user->orders()->visibleInBuyerHistory()->count() }}</h4>
                                 <small class="text-muted">Commandes</small>
                             </div>
                         </div>

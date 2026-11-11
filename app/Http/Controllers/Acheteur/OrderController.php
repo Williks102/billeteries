@@ -161,12 +161,11 @@ public function qrCodes(Order $order)
                 $qrService = app(\App\Services\QRCodeService::class);
                 $qrBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
                 
-                \Log::info("QR généré pour ticket {$ticket->ticket_code}: " . 
+                \Log::info("QR généré pour le billet #{$ticket->id}: " . 
                     ($qrBase64 ? 'SUCCESS' : 'FAILED'));
                     
             } catch (\Exception $e) {
-                \Log::error("Erreur génération QR pour {$ticket->ticket_code}: " . 
-                    $e->getMessage());
+                \Log::error("Erreur génération QR pour le billet #{$ticket->id} (" . get_class($e) . ")");
             }
             
             $tickets[] = [

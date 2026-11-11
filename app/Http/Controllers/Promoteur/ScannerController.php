@@ -56,7 +56,6 @@ class ScannerController extends Controller
     public function verify(Request $request)
     {
         Log::info('Scanner verify request', [
-            'ticket_code' => $request->ticket_code,
             'promoter_id' => Auth::id(),
             'ip' => $request->ip()
         ]);
@@ -73,7 +72,7 @@ class ScannerController extends Controller
                 ->first();
 
             if (!$ticket) {
-                Log::warning('Ticket not found', ['ticket_code' => $ticketCode]);
+                Log::warning('Ticket not found', ['promoter_id' => Auth::id()]);
                 
                 return response()->json([
                     'success' => false, 
@@ -85,7 +84,7 @@ class ScannerController extends Controller
             // Vérifier que le promoteur est autorisé à scanner ce billet
             if ($ticket->ticketType->event->promoter_id !== Auth::id()) {
                 Log::warning('Unauthorized scan attempt', [
-                    'ticket_code' => $ticketCode,
+                    'ticket_id' => $ticket->id,
                     'promoter_id' => Auth::id(),
                     'event_promoter_id' => $ticket->ticketType->event->promoter_id
                 ]);
@@ -125,7 +124,7 @@ class ScannerController extends Controller
             // updated_at se met à jour automatiquement
 
             Log::info("Scan successful", [
-                'ticket_code' => $ticketCode,
+                'ticket_id' => $ticket->id,
                 'scanned_by' => Auth::user()->name,
                 'event_id' => $ticket->ticketType->event->id
             ]);
@@ -146,9 +145,7 @@ class ScannerController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Scanner verification error', [
-                'ticket_code' => $request->ticket_code,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => get_class($e)
             ]);
             
             return response()->json([

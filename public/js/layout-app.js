@@ -42,14 +42,34 @@
       toast.style.display = 'none';
       const icon = this.getIcon(type);
 
-      toast.innerHTML = `
-        <div class="toast-header-custom">
-          <div class="toast-icon ${type}"><i class="${icon}"></i></div>
-          <h6 class="toast-title">${config.title}</h6>
-          ${config.showClose ? '<button type="button" class="toast-close" aria-label="Fermer"><i class="fas fa-times"></i></button>' : ''}
-        </div>
-        <div class="toast-body-custom">${message}</div>
-      `;
+      // F-3 : title et message sont insérés en TEXTE (textContent), jamais en HTML.
+      const header = document.createElement('div');
+      header.className = 'toast-header-custom';
+      const iconWrap = document.createElement('div');
+      iconWrap.className = `toast-icon ${type}`;
+      const iconEl = document.createElement('i');
+      iconEl.className = icon;
+      iconWrap.appendChild(iconEl);
+      const titleEl = document.createElement('h6');
+      titleEl.className = 'toast-title';
+      titleEl.textContent = config.title;
+      header.appendChild(iconWrap);
+      header.appendChild(titleEl);
+      if (config.showClose) {
+        const closeEl = document.createElement('button');
+        closeEl.type = 'button';
+        closeEl.className = 'toast-close';
+        closeEl.setAttribute('aria-label', 'Fermer');
+        const closeIcon = document.createElement('i');
+        closeIcon.className = 'fas fa-times';
+        closeEl.appendChild(closeIcon);
+        header.appendChild(closeEl);
+      }
+      const body = document.createElement('div');
+      body.className = 'toast-body-custom';
+      body.textContent = message;
+      toast.appendChild(header);
+      toast.appendChild(body);
 
       if (config.showClose) {
         const closeBtn = toast.querySelector('.toast-close');
@@ -83,7 +103,23 @@
     const alertContainer = document.createElement('div');
     alertContainer.className = 'container mt-3';
     const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle';
-    alertContainer.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert"><i class="fas fa-${icon} me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    // F-3 : message inséré en TEXTE (textContent), jamais en HTML.
+    const safeType = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
+    const alertEl = document.createElement('div');
+    alertEl.className = `alert alert-${safeType} alert-dismissible fade show`;
+    alertEl.setAttribute('role', 'alert');
+    const iconEl = document.createElement('i');
+    iconEl.className = `fas fa-${icon} me-2`;
+    const textEl = document.createElement('span');
+    textEl.textContent = message;
+    const closeEl = document.createElement('button');
+    closeEl.type = 'button';
+    closeEl.className = 'btn-close';
+    closeEl.setAttribute('data-bs-dismiss', 'alert');
+    alertEl.appendChild(iconEl);
+    alertEl.appendChild(textEl);
+    alertEl.appendChild(closeEl);
+    alertContainer.appendChild(alertEl);
     document.body.insertBefore(alertContainer, document.querySelector('main'));
     setTimeout(() => {
       const alert = alertContainer.querySelector('.alert');

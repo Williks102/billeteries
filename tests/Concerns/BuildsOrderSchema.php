@@ -169,6 +169,25 @@ trait BuildsOrderSchema
         ]);
     }
 
+    /** Panier de session avec prix FALSIFIÉS (1 FCFA) : le serveur doit les ignorer. */
+    protected function tamperedCart(TicketType $type, int $qty, int $eventId = 1): array
+    {
+        return ['k' => [
+            'ticket_type_id' => $type->id, 'event_id' => $eventId, 'quantity' => $qty,
+            'ticket_name' => 'Std', 'unit_price' => 1, 'total_price' => 1,
+        ]];
+    }
+
+    /** Utilisateur créé avec un rôle (id explicite). */
+    protected function makeUser(int $id, string $role): \App\Models\User
+    {
+        DB::table('users')->insert([
+            'id' => $id, 'name' => ucfirst($role), 'email' => $role . $id . '@example.test', 'role' => $role,
+        ]);
+
+        return \App\Models\User::find($id);
+    }
+
     /** Commande de $qty billets réservés (stock déjà décompté), sans commission. */
     protected function reservedOrder(TicketType $type, int $qty, string $status = 'pending', $expiresAt = null): Order
     {

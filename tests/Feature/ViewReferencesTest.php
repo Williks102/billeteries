@@ -16,23 +16,9 @@ use Tests\TestCase;
 class ViewReferencesTest extends TestCase
 {
     private const KNOWN_MISSING = [
-        'admin.categories.create',
-        'admin.categories.edit',
-        'admin.categories.index',
-        'admin.categories.show',
-        'admin.emails.dashboard',
-        'admin.emails.templates',
         'admin.events.audit-history',
-        'admin.events.intervention-dashboard',
         'admin.events.manage-hybrid',
         'admin.events.manage-tickets',
-        'admin.orders.edit',
-        'admin.reports.events',
-        'admin.reports.financial',
-        'admin.reports.index',
-        'admin.reports.sales',
-        'admin.revenues',
-        'admin.settings.index',
         'admin.tickets.edit',
         'events.category',
         'events.location',

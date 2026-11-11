@@ -9,6 +9,7 @@ use App\Models\TicketType;
 use App\Models\Ticket;
 use App\Models\Event;
 use App\Models\Commission;
+use App\Exceptions\CheckoutRefusedException;
 use App\Services\EmailService;
 use App\Services\CheckoutService;
 use Illuminate\Support\Facades\DB;
@@ -131,7 +132,7 @@ class CheckoutController extends Controller
     public function process(Request $request)
     {
         $request->validate([
-            'billing_email' => 'required|email',
+            'billing_email' => 'required|email|max:255',
             'billing_phone' => 'required|string|max:20',
             'terms_accepted' => 'required|accepted',
             'payment_method' => CheckoutService::paymentMethodRule(),
@@ -156,9 +157,12 @@ class CheckoutController extends Controller
 
             // Prix recalculés côté serveur ; commandes, stock et billets dans UNE transaction.
             // Commandes `pending` avec expires_at = now + payments.manual_reservation_minutes.
-            $orders = DB::transaction(function () use ($service, $cart, $request) {
+            $groups = $service->buildEventGroups($cart);
+            $service->assertWithinOrderLimits((string) $request->billing_email, Auth::id(), $request->ip(), count($groups));
+
+            $orders = DB::transaction(function () use ($service, $groups, $request) {
                 $orders = [];
-                foreach ($service->buildEventGroups($cart) as $eventId => $group) {
+                foreach ($groups as $eventId => $group) {
                     $orders[] = $service->createOrder(Auth::id(), $eventId, $group, [
                         'payment_method' => $request->payment_method,
                         'billing_email' => $request->billing_email,
@@ -184,14 +188,13 @@ class CheckoutController extends Controller
                 ->with('success', $message)
                 ->with('other_order_numbers', collect($orders)->skip(1)->pluck('order_number')->all());
 
-        } catch (\Exception $e) {
-            Log::error('Erreur checkout', [
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage(),
-            ]);
+        } catch (CheckoutRefusedException $e) {
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
+        } catch (\Throwable $e) {
+            app(CheckoutService::class)->logFailure('Erreur checkout', $e, ['user_id' => auth()->id()]);
 
             return redirect()->back()
-                ->with('error', 'Erreur lors du traitement : ' . $e->getMessage())
+                ->with('error', CheckoutService::GENERIC_ERROR)
                 ->withInput();
         }
     }
@@ -225,8 +228,7 @@ class CheckoutController extends Controller
             Log::info("Tous les emails envoyés avec succès", [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
-                'client_email' => $order->user->email,
-                'promoteur_email' => $order->event->promoteur->email ?? 'N/A'
+                'promoteur_id' => $order->event->promoter_id
             ]);
             
         } catch (\Exception $e) {

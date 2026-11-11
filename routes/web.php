@@ -93,7 +93,9 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     // Checkout classique (nécessite auth)
     Route::middleware(['auth'])->group(function () {
         Route::get('/', [CheckoutController::class, 'show'])->name('show');
-        Route::post('/process', [CheckoutController::class, 'process'])->name('process');
+        Route::post('/process', [CheckoutController::class, 'process'])
+            ->middleware('throttle:' . config('payments.checkout_throttle_per_minute', 10) . ',1,checkout')
+            ->name('process');
         Route::post('/direct', [CheckoutController::class, 'direct'])->name('direct');
         Route::get('/confirmation/{order}', [CheckoutController::class, 'confirmation'])->name('confirmation');
     });
@@ -101,7 +103,9 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     // Checkout invité (sans auth)
     Route::prefix('guest')->name('guest.')->group(function () {
         Route::get('/', [GuestCheckoutController::class, 'show'])->name('show');
-        Route::post('/process', [GuestCheckoutController::class, 'process'])->name('process'); // 🆕 Ici aussi
+        Route::post('/process', [GuestCheckoutController::class, 'process'])
+            ->middleware('throttle:' . config('payments.checkout_throttle_per_minute', 10) . ',1,checkout')
+            ->name('process');
         Route::get('/confirmation/{token}', [GuestCheckoutController::class, 'confirmation'])->name('confirmation');
         Route::post('/create-account/{token}', [GuestCheckoutController::class, 'createAccountAfterPurchase'])->name('create-account');
     });

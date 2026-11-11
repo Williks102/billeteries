@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\CheckoutRefusedException;
 use App\Models\Commission;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -9,6 +10,7 @@ use App\Models\Ticket;
 use App\Models\TicketType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Logique de commande partagée entre CheckoutController et GuestCheckoutController
@@ -18,12 +20,23 @@ class CheckoutService
 {
     public const SERVICE_FEE = 500;
 
+    /** Message affiché pour toute erreur interne (jamais le message de l'exception). */
+    public const GENERIC_ERROR = 'Une erreur est survenue lors de l\'enregistrement de votre commande. Veuillez réessayer.';
+
+    /** Message du plafond de commandes (volontairement neutre : ne dit pas quel critère a joué). */
+    public const LIMIT_ERROR = 'Impossible d\'enregistrer une nouvelle commande pour le moment. Réglez vos commandes en attente ou réessayez plus tard.';
+
     /**
      * Durée de réservation : longue (48 h par défaut) pour un paiement manuel, courte sinon.
      */
-    private function reservationMinutes(?string $method): int
+    private function reservationMinutes(?string $method, bool $guest = false): int
     {
         if ($method !== null && in_array($method, self::manualMethodKeys(), true)) {
+            // Invité non vérifié : réservation plus courte (anti-accaparement de stock)
+            if ($guest) {
+                return (int) config('payments.guest_manual_reservation_minutes', 1440);
+            }
+
             return (int) config('payments.manual_reservation_minutes', 2880);
         }
 
@@ -69,6 +82,67 @@ class CheckoutService
     }
 
     /**
+     * Plafonds anti-accaparement (E2) : commandes pending/processing par email et par compte,
+     * et commandes créées par IP sur la fenêtre de réservation (invités). Message neutre.
+     *
+     * @throws CheckoutRefusedException
+     */
+    public function assertWithinOrderLimits(string $email, ?int $userId, ?string $ip, int $newOrders, bool $guest = false): void
+    {
+        $max = max(1, (int) config('payments.max_pending_orders', 3));
+
+        $pending = Order::whereIn('payment_status', ['pending', 'processing'])
+            ->where(function ($q) use ($email, $userId) {
+                $q->whereRaw('lower(billing_email) = ?', [mb_strtolower(trim($email))]);
+                if ($userId !== null) {
+                    $q->orWhere('user_id', $userId);
+                }
+            })->count();
+
+        if ($pending + $newOrders > $max) {
+            Log::warning('Plafond de commandes en attente atteint', ['scope' => 'email_or_user', 'user_id' => $userId]);
+            throw new CheckoutRefusedException(self::LIMIT_ERROR);
+        }
+
+        if ($guest && $ip !== null) {
+            $maxIp = max(1, (int) config('payments.max_pending_orders_per_ip', 10));
+            if (RateLimiter::attempts($this->ipKey($ip)) + $newOrders > $maxIp) {
+                Log::warning('Plafond de commandes par IP atteint', ['scope' => 'ip']);
+                throw new CheckoutRefusedException(self::LIMIT_ERROR);
+            }
+        }
+    }
+
+    /** Compte les commandes invité créées par cette IP (fenêtre = réservation invité). */
+    public function recordGuestOrders(?string $ip, int $count): void
+    {
+        if ($ip === null) {
+            return;
+        }
+
+        $decay = max(60, (int) config('payments.guest_manual_reservation_minutes', 1440) * 60);
+        for ($i = 0; $i < $count; $i++) {
+            RateLimiter::hit($this->ipKey($ip), $decay);
+        }
+    }
+
+    private function ipKey(string $ip): string
+    {
+        return 'guest-orders:' . sha1($ip);
+    }
+
+    /**
+     * Journalise une erreur interne SANS PII ni message brut (les messages SQL contiennent des valeurs).
+     */
+    public function logFailure(string $context, \Throwable $e, array $extra = []): void
+    {
+        Log::error($context, $extra + [
+            'exception' => get_class($e),
+            'where' => basename($e->getFile()) . ':' . $e->getLine(),
+        ]);
+    }
+
+    /**
      * Crée la commande (pending, avec expiration) + items + billets réservés + commission.
      * À appeler DANS une DB::transaction.
      */
@@ -80,7 +154,7 @@ class CheckoutService
             'total_amount' => $group['subtotal'] + self::SERVICE_FEE,
             'payment_status' => 'pending',
             'order_number' => Order::generateOrderNumber(),
-            'expires_at' => now()->addMinutes($this->reservationMinutes($attributes['payment_method'] ?? null)),
+            'expires_at' => now()->addMinutes($this->reservationMinutes($attributes['payment_method'] ?? null, !empty($attributes['guest_token']))),
         ]);
 
         // Ordre d'id croissant des types de billets : évite les deadlocks entre commandes concurrentes
@@ -103,7 +177,7 @@ class CheckoutService
         $ticketType = TicketType::findOrFail($item['ticket_type_id']);
 
         if (!$ticketType->reserveTickets($item['quantity'])) {
-            throw new \RuntimeException("Le billet '{$item['ticket_name']}' n'est plus disponible en quantité demandée.");
+            throw new CheckoutRefusedException("Le billet '{$item['ticket_name']}' n'est plus disponible en quantité demandée.");
         }
 
         $orderItem = OrderItem::create([

@@ -63,7 +63,7 @@ public function index(Request $request)
         
         // Statistiques
         $stats = [
-            'total_orders' => $user->orders()->count(),
+            'total_orders' => $user->orders()->visibleInBuyerHistory()->count(),
             'paid_orders' => $user->orders()->where('payment_status', 'paid')->count(),
             'total_tickets' => $user->orders()
                 ->where('payment_status', 'paid')
@@ -77,12 +77,12 @@ public function index(Request $request)
                 ->sum('total_amount')
         ];
 
-        return view('acheteur.orders.index', compact('orders', 'stats'));
+        return view('acheteur.orders', compact('orders', 'stats'));
         
     } catch (\Exception $e) {
         \Log::error('Erreur acheteur orders: ' . $e->getMessage());
         
-        return view('acheteur.orders.index', [
+        return view('acheteur.orders', [
             'orders' => collect()->paginate(10),
             'stats' => [
                 'total_orders' => 0,
@@ -161,12 +161,11 @@ public function qrCodes(Order $order)
                 $qrService = app(\App\Services\QRCodeService::class);
                 $qrBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
                 
-                \Log::info("QR généré pour ticket {$ticket->ticket_code}: " . 
+                \Log::info("QR généré pour le billet #{$ticket->id}: " . 
                     ($qrBase64 ? 'SUCCESS' : 'FAILED'));
                     
             } catch (\Exception $e) {
-                \Log::error("Erreur génération QR pour {$ticket->ticket_code}: " . 
-                    $e->getMessage());
+                \Log::error("Erreur génération QR pour le billet #{$ticket->id} (" . get_class($e) . ")");
             }
             
             $tickets[] = [

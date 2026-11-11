@@ -1374,17 +1374,20 @@ function closeMobileCartModal() {
  */
 function showToast(message, type = 'info', duration = 3000) {
     if (window.notifications) {
-        window.notifications[type](message, { duration });
+        // S-9 : window.notifications insère le message en HTML : échappement préalable (texte pur)
+        const escaper = document.createElement('div');
+        escaper.textContent = String(message ?? '');
+        window.notifications[type](escaper.innerHTML, { duration });
     } else {
         // Fallback simple
         const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
         const toast = document.createElement('div');
         toast.className = `alert ${alertClass} position-fixed`;
         toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 250px; border-radius: 10px;';
-        toast.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
-            ${message}
-        `;
+        const toastIcon = document.createElement('i');
+        toastIcon.className = `fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2`;
+        toast.appendChild(toastIcon);
+        toast.appendChild(document.createTextNode(String(message ?? '')));
         document.body.appendChild(toast);
         
         setTimeout(() => toast.remove(), duration);

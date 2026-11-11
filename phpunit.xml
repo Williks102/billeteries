@@ -3,6 +3,7 @@
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
+         defaultTestSuite="Unit,Feature"
 >
     <testsuites>
         <testsuite name="Unit">
@@ -10,6 +11,11 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+        </testsuite>
+        <!-- Concurrence MySQL : HORS de la suite par défaut (defaultTestSuite="Unit,Feature") : `vendor/bin/phpunit` sans argument ne le lance pas ; seulement `composer run test:mysql`.
+             CACHE_STORE=array est forcé ci-dessous : un test qui dépend du store `database` doit le configurer lui-même (voir CheckoutCycleFixesTest, B1). -->
+        <testsuite name="MySql">
+            <directory>tests/MySql</directory>
         </testsuite>
     </testsuites>
     <source>

@@ -29,7 +29,7 @@ public function dashboard()
     $user = Auth::user();
     
     // Statistiques corrigées
-    $totalOrders = $user->orders()->count();
+    $totalOrders = $user->orders()->visibleInBuyerHistory()->count();
     $paidOrders = $user->orders()->where('payment_status', 'paid');
     
     // Calculer le nombre total de billets
@@ -51,6 +51,7 @@ public function dashboard()
 
     // Commandes récentes
     $recentOrders = $user->orders()
+        ->visibleInBuyerHistory()
         ->with(['event.category', 'orderItems.ticketType'])
         ->orderBy('created_at', 'desc')
         ->limit(5)

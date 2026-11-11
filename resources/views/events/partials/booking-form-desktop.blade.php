@@ -39,7 +39,7 @@
                              id="qty_{{ $ticketType->id }}_desktop"
                              data-name="{{ $ticketType->name }}"
                              data-price="{{ $ticketType->price }}"
-                             data-max="{{ $ticketType->max_per_order ?? 10 }}"
+                             data-max="{{ \App\Services\CheckoutService::maxTicketsPerOrder($ticketType->max_per_order) }}"
                              data-available="{{ $ticketType->quantity_available - $ticketType->quantity_sold }}">0</div>
                         
                         <button type="button" class="qty-btn" 
@@ -55,12 +55,16 @@
                         <i class="fas fa-users me-1"></i>
                         {{ $ticketType->quantity_available - $ticketType->quantity_sold }} restant(s)
                         <i class="fas fa-shopping-cart ms-2 me-1"></i>
-                        Max {{ $ticketType->max_per_order ?? 10 }}/commande
+                        Max {{ \App\Services\CheckoutService::maxTicketsPerOrder($ticketType->max_per_order) }}/commande
                     </small>
                 </div>
             </div>
             @endforeach
             
+            <p class="text-muted small mb-2" data-max-total="{{ \App\Services\CheckoutService::maxTicketsPerOrder() }}">
+                <i class="fas fa-info-circle me-1"></i>Maximum {{ \App\Services\CheckoutService::maxTicketsPerOrder() }} billets au total dans votre panier
+            </p>
+
             <!-- Résumé -->
             <div id="bookingSummaryDesktop" class="booking-summary">
                 <div id="summaryContentDesktop"></div>

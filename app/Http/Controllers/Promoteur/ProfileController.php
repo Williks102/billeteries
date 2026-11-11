@@ -50,12 +50,12 @@ class ProfileController extends Controller
         ];
         
         // ✅ PASSER LES DEUX VARIABLES
-        return view('promoteur.profile.show', compact('user', 'promoteur', 'stats'));
+        return view('promoteur.profile', compact('user', 'promoteur', 'stats'));
         
     } catch (\Exception $e) {
         \Log::error('Erreur lors du chargement du profil promoteur: ' . $e->getMessage());
         
-        return view('promoteur.profile.show', [
+        return view('promoteur.profile', [
             'user' => $user, // ✅ AJOUTER
             'promoteur' => $user, // ✅ AJOUTER
             'stats' => [

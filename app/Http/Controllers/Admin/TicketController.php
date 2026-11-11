@@ -198,7 +198,6 @@ class TicketController extends Controller
             \Log::info('Ticket modifié par admin', [
                 'admin_id' => auth()->id(),
                 'ticket_id' => $ticket->id,
-                'ticket_code' => $ticket->ticket_code,
                 'old_status' => $oldStatus,
                 'new_status' => $ticket->status
             ]);
@@ -236,8 +235,7 @@ class TicketController extends Controller
 
             \Log::info('Ticket marqué utilisé par admin', [
                 'admin_id' => auth()->id(),
-                'ticket_id' => $ticket->id,
-                'ticket_code' => $ticket->ticket_code
+                'ticket_id' => $ticket->id
             ]);
 
             return response()->json([
@@ -274,8 +272,7 @@ class TicketController extends Controller
 
             \Log::info('Ticket annulé par admin', [
                 'admin_id' => auth()->id(),
-                'ticket_id' => $ticket->id,
-                'ticket_code' => $ticket->ticket_code
+                'ticket_id' => $ticket->id
             ]);
 
             return redirect()->back()
@@ -308,8 +305,7 @@ class TicketController extends Controller
 
             \Log::info('Ticket réactivé par admin', [
                 'admin_id' => auth()->id(),
-                'ticket_id' => $ticket->id,
-                'ticket_code' => $ticket->ticket_code
+                'ticket_id' => $ticket->id
             ]);
 
             return redirect()->back()

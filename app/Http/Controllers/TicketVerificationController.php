@@ -21,16 +21,14 @@ class TicketVerificationController extends Controller
      */
     public function verify($ticketCode)
     {
-        Log::info("Vérification publique ticket : {$ticketCode}");
-        
         try {
             $ticket = Ticket::where('ticket_code', strtoupper(trim($ticketCode)))
-                ->with(['ticketType.event.category', 'orderItem.order.user'])
+                ->with(['ticketType.event.category'])
                 ->first();
 
             if (!$ticket) {
-                Log::warning("Ticket non trouvé : {$ticketCode}");
-                
+                Log::warning('Vérification publique : billet non trouvé');
+
                 return view('tickets.verify', [
                     'ticket' => null,
                     'error' => 'Billet non trouvé',
@@ -40,7 +38,8 @@ class TicketVerificationController extends Controller
 
             $verificationInfo = $this->getTicketVerificationInfo($ticket);
             
-            Log::info("Ticket trouvé : {$ticketCode}", [
+            Log::info('Vérification publique : billet trouvé', [
+                'ticket_id' => $ticket->id,
                 'status' => $ticket->status,
                 'is_valid' => $verificationInfo['is_valid']
             ]);
@@ -52,10 +51,7 @@ class TicketVerificationController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            Log::error("Erreur vérification ticket {$ticketCode}", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            Log::error('Erreur vérification publique (' . get_class($e) . ')');
             
             return view('tickets.verify', [
                 'ticket' => null,
@@ -71,11 +67,9 @@ class TicketVerificationController extends Controller
      */
     public function verifyApi($ticketCode)
     {
-        Log::info("Vérification API ticket : {$ticketCode}");
-        
         try {
             $ticket = Ticket::where('ticket_code', strtoupper(trim($ticketCode)))
-                ->with(['ticketType.event', 'orderItem.order.user'])
+                ->with(['ticketType.event.category'])
                 ->first();
 
             if (!$ticket) {
@@ -97,9 +91,7 @@ class TicketVerificationController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            Log::error("Erreur vérification API ticket {$ticketCode}", [
-                'error' => $e->getMessage()
-            ]);
+            Log::error('Erreur vérification API (' . get_class($e) . ')');
             
             return response()->json([
                 'success' => false,
@@ -115,11 +107,11 @@ class TicketVerificationController extends Controller
      */
     public function publicVerify($ticketCode)
     {
-        Log::info("Vérification publique ticket : {$ticketCode}", [
+        Log::info('Vérification publique (vue limitée)', [
             'ip' => request()->ip(),
             'user_agent' => request()->userAgent()
         ]);
-        
+
         try {
             $ticket = Ticket::where('ticket_code', strtoupper(trim($ticketCode)))
                 ->with(['ticketType.event'])
@@ -158,9 +150,7 @@ class TicketVerificationController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            Log::error("Erreur vérification publique : {$ticketCode}", [
-                'error' => $e->getMessage()
-            ]);
+            Log::error('Erreur vérification publique limitée (' . get_class($e) . ')');
             
             return view('tickets.public-verify', [
                 'ticket' => null,
@@ -180,7 +170,7 @@ class TicketVerificationController extends Controller
     {
         $user = auth()->user();
         
-        Log::info("Vérification authentifiée ticket : {$ticketCode}", [
+        Log::info('Vérification authentifiée', [
             'user_id' => $user->id,
             'user_role' => $user->role,
             'ip' => request()->ip()
@@ -246,7 +236,7 @@ class TicketVerificationController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            Log::error("Erreur vérification authentifiée : {$ticketCode}", [
+            Log::error('Erreur vérification authentifiée', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage()
             ]);
@@ -357,7 +347,7 @@ class TicketVerificationController extends Controller
                 
                 \DB::commit();
 
-                Log::info("Ticket scanné avec succès : {$ticketCode}", [
+                Log::info('Ticket scanné avec succès', [
                     'scanned_by_user_id' => $user->id,
                     'ticket_id' => $ticket->id
                 ]);
@@ -383,7 +373,7 @@ class TicketVerificationController extends Controller
             } catch (\Exception $dbError) {
                 \DB::rollback();
                 
-                Log::error("Échec scan authentifié : {$ticketCode}", [
+                Log::error('Échec scan authentifié', [
                     'user_id' => $user->id,
                     'error' => $dbError->getMessage()
                 ]);
@@ -429,14 +419,14 @@ class TicketVerificationController extends Controller
 
             $ticketCode = strtoupper(trim($validated['ticket_code']));
             
-            Log::info("Tentative scan public : {$ticketCode}");
+            Log::info('Tentative scan public');
 
             $ticket = Ticket::where('ticket_code', $ticketCode)
                 ->with(['ticketType.event', 'orderItem.order.user'])
                 ->first();
 
             if (!$ticket) {
-                Log::warning("Ticket non trouvé pour scan : {$ticketCode}");
+                Log::warning('Ticket non trouvé pour scan');
                 
                 return response()->json([
                     'success' => false,
@@ -446,7 +436,7 @@ class TicketVerificationController extends Controller
             }
 
             if ($ticket->status === 'used') {
-                Log::info("Tentative scan ticket déjà utilisé : {$ticketCode}");
+                Log::info("Tentative scan ticket déjà utilisé : #{$ticket->id}");
                 
                 return response()->json([
                     'success' => false,
@@ -461,7 +451,7 @@ class TicketVerificationController extends Controller
             }
 
             if ($ticket->status !== 'sold') {
-                Log::warning("Tentative scan ticket non valide : {$ticketCode}, statut: {$ticket->status}");
+                Log::warning("Tentative scan ticket non valide : #{$ticket->id}, statut: {$ticket->status}");
                 
                 return response()->json([
                     'success' => false,
@@ -476,7 +466,7 @@ class TicketVerificationController extends Controller
 
             $event = $ticket->ticketType->event;
             if ($event->status !== 'published') {
-                Log::warning("Tentative scan pour événement non publié : {$ticketCode}");
+                Log::warning("Tentative scan pour événement non publié : billet #{$ticket->id}");
                 
                 return response()->json([
                     'success' => false,
@@ -496,7 +486,7 @@ class TicketVerificationController extends Controller
                 
                 \DB::commit();
 
-                Log::info("Scan public réussi : {$ticketCode}", [
+                Log::info('Scan public réussi', [
                     'ticket_id' => $ticket->id,
                     'scanned_by' => $scannedBy
                 ]);
@@ -517,7 +507,7 @@ class TicketVerificationController extends Controller
             } catch (\Exception $saveError) {
                 \DB::rollback();
                 
-                Log::error("Erreur sauvegarde scan : {$ticketCode}", [
+                Log::error('Erreur sauvegarde scan', [
                     'error' => $saveError->getMessage()
                 ]);
                 
@@ -571,15 +561,12 @@ class TicketVerificationController extends Controller
     }
 
     /**
-     * Obtenir les informations de vérification d'un ticket
-     * Version CORRIGÉE avec toutes les données requises par la vue
+     * Informations de vérification PUBLIQUES d'un ticket (sans titulaire ni commande).
+     * Utilisée par verify() et verifyApi() uniquement.
      */
     private function getTicketVerificationInfo($ticket)
     {
         $event = $ticket->ticketType->event;
-        $order = $ticket->orderItem->order ?? null;
-        $user = $order->user ?? null;
-
         $usedAt = null;
         if ($ticket->status === 'used') {
             if ($ticket->used_at) {
@@ -609,14 +596,8 @@ class TicketVerificationController extends Controller
                 'category' => $event->category->name ?? null, // AJOUT : category
                 'status' => $event->status
             ],
-            'holder' => [
-                'name' => $user->name ?? 'N/A',
-                'email' => $user->email ?? 'N/A'
-            ],
-            'order' => $order ? [
-                'number' => $order->order_number,
-                'date' => $order->created_at->format('d/m/Y H:i')
-            ] : null,
+            // M-1 : JAMAIS de titulaire ni de numéro de commande ici (réponse PUBLIQUE).
+            // Les données du titulaire ne sont servies que par authenticatedVerify (promoteur propriétaire / admin).
             'used_at' => $usedAt
         ];
     }

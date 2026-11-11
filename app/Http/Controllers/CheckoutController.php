@@ -106,7 +106,7 @@ class CheckoutController extends Controller
                 'unit_price' => $ticketType->price,
                 'quantity' => $quantity,
                 'total_price' => $ticketType->price * $quantity,
-                'max_per_order' => $ticketType->max_per_order
+                'max_per_order' => CheckoutService::maxTicketsPerOrder($ticketType->max_per_order)
             ];
 
             $cartTotal += $ticketType->price * $quantity;
@@ -159,7 +159,8 @@ class CheckoutController extends Controller
             // Commandes `pending` avec expires_at = now + payments.manual_reservation_minutes.
             $groups = $service->buildEventGroups($cart);
             $capByIp = $service->shouldCapByIp(Auth::user());
-            $service->assertWithinOrderLimits((string) $request->billing_email, Auth::id(), $request->ip(), count($groups), $capByIp);
+            $tickets = $service->countTickets($groups);
+            $service->assertWithinOrderLimits((string) $request->billing_email, Auth::id(), $request->ip(), count($groups), $capByIp, $tickets);
 
             $orders = DB::transaction(function () use ($service, $groups, $request) {
                 $orders = [];
@@ -173,8 +174,10 @@ class CheckoutController extends Controller
                 return $orders;
             });
 
+            $service->generateQrCodes($orders); // I2 : hors transaction
+
             if ($capByIp) {
-                $service->recordGuestOrders($request->ip(), count($orders));
+                $service->recordGuestOrders($request->ip(), count($orders), $tickets);
             }
 
             $service->sendManualInstructions($orders);

@@ -55,6 +55,7 @@ class CheckoutAbuseLimitsTest extends TestCase
 
     public function test_pending_tickets_per_event_are_capped_with_a_generic_message(): void
     {
+        // Plafond dur à 5 (le plafond relatif, 30 % de 100 = 30, est plus haut : le clamp max l'emporte)
         config(['payments.max_pending_tickets_per_event' => 5, 'payments.max_pending_orders' => 100, 'payments.max_pending_orders_per_ip' => 100]);
         $type = $this->ticketType(100);
 
@@ -66,7 +67,7 @@ class CheckoutAbuseLimitsTest extends TestCase
             if (str_contains((string) $r->headers->get('Location'), 'confirmation')) {
                 $accepted++;
             } else {
-                $r->assertSessionHas('error', CheckoutService::LIMIT_ERROR);
+                $r->assertSessionHas('error', CheckoutService::EVENT_LIMIT_ERROR);
             }
         }
 

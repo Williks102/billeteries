@@ -7,13 +7,15 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "ext-gd": "*",
+        "bacon/bacon-qr-code": "^2.0",
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "laravel/ui": "^4.6",
         "maatwebsite/excel": "*",
-        "spatie/laravel-permission": "^6.20",
-        "simplesoftwareio/simple-qrcode": "4.2"
+        "simplesoftwareio/simple-qrcode": "4.2",
+        "spatie/laravel-permission": "^6.20"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.15",
@@ -43,8 +45,9 @@
         }
     },
     "scripts": {
-        "test:routes": "@php vendor/bin/phpunit tests/Feature/RoutingConventionsTest.php",
-        "test:payments": "@php vendor/bin/phpunit tests/Feature/StockAndOrderFlowTest.php tests/Feature/OrderPaymentServiceTest.php tests/Feature/ManualCheckoutTest.php tests/Feature/AdminConfirmPaymentTest.php tests/Feature/ManualPaymentJourneyTest.php tests/Feature/OrderExpiryTest.php tests/Feature/ConfirmPaymentAuthorizationTest.php tests/Feature/AdminOrderStatusPathsTest.php tests/Feature/CheckoutValidationTest.php tests/Feature/GuestCheckoutSecurityTest.php tests/Feature/OrderStatusTransitionsTest.php tests/Feature/CheckoutAbuseLimitsTest.php",
+        "test:routes": "@php vendor/bin/phpunit tests/Feature/RoutingConventionsTest.php tests/Feature/ViewReferencesTest.php",
+        "test:payments": "@php vendor/bin/phpunit tests/Feature/StockAndOrderFlowTest.php tests/Feature/OrderPaymentServiceTest.php tests/Feature/ManualCheckoutTest.php tests/Feature/AdminConfirmPaymentTest.php tests/Feature/ManualPaymentJourneyTest.php tests/Feature/OrderExpiryTest.php tests/Feature/ConfirmPaymentAuthorizationTest.php tests/Feature/AdminOrderStatusPathsTest.php tests/Feature/CheckoutValidationTest.php tests/Feature/GuestCheckoutSecurityTest.php tests/Feature/OrderStatusTransitionsTest.php tests/Feature/CheckoutAbuseLimitsTest.php tests/Feature/PendingCapsTest.php tests/Feature/CheckoutCycleFixesTest.php tests/Feature/CheckoutFinalFixesTest.php tests/Feature/TicketVerificationPrivacyTest.php tests/Unit/MySqlTestGuardTest.php",
+        "test:mysql": "@php vendor/bin/phpunit --testsuite MySql",
         "check": [
             "@test:routes",
             "@test:payments"

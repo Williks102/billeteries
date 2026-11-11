@@ -71,16 +71,23 @@ class GuestCheckoutController extends Controller
             }
 
             $groups = $service->buildEventGroups($cart);
-            $service->assertWithinOrderLimits((string) $request->email, null, $request->ip(), count($groups), true);
+            $tickets = $service->countTickets($groups);
+            $service->assertWithinOrderLimits((string) $request->email, null, $request->ip(), count($groups), true, $tickets);
+
+            // N-A : lecture (non verrouillante) du compte AVANT la transaction, pour qu'aucune lecture ne
+            // fixe l'instantané MySQL avant les verrous de réservation.
+            $existing = User::where('email', $request->email)->first();
 
             // Utilisateur + commandes + stock + billets dans UNE transaction (prix recalculés côté serveur)
-            [$user, $orders] = DB::transaction(function () use ($request, $groups, $service) {
-                $user = $this->findOrCreateGuest($request);
+            [$user, $orders] = DB::transaction(function () use ($request, $groups, $service, $existing) {
+                $user = $existing ?? $this->createGuest($request);
 
                 return [$user, $this->createOrdersFromGroups($service, $groups, $user, $request)];
             });
 
-            $service->recordGuestOrders($request->ip(), count($orders));
+            $service->generateQrCodes($orders); // I2 : hors transaction
+
+            $service->recordGuestOrders($request->ip(), count($orders), $tickets);
 
             // Preuve de possession liée à la session (retour/annulation)
             foreach ($orders as $o) {
@@ -139,16 +146,11 @@ class GuestCheckoutController extends Controller
     }
 
     /**
-     * Récupère le compte portant cet email SANS le modifier (ni nom, ni téléphone, ni statut),
-     * sans connexion automatique ; crée un compte invité si l'email est inconnu.
+     * Crée un compte invité (email inconnu). Un compte existant est lu AVANT la transaction (N-A) et
+     * n'est jamais modifié (ni nom, ni téléphone, ni statut), sans connexion automatique.
      */
-    private function findOrCreateGuest(Request $request): User
+    private function createGuest(Request $request): User
     {
-        $existing = User::where('email', $request->email)->first();
-        if ($existing) {
-            return $existing;
-        }
-
         return User::create([
             'name' => trim($request->first_name . ' ' . $request->last_name),
             'email' => $request->email,

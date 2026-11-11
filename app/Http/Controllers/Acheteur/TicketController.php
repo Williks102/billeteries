@@ -49,7 +49,7 @@ class TicketController extends Controller
 
         $orders = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        return view('acheteur.tickets.index', compact('orders'));
+        return view('acheteur.tickets', compact('orders'));
     }
 
     /**

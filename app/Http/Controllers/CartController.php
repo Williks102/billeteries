@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\TicketType;
 use App\Models\Event;
+use App\Services\CheckoutService;
 
 class CartController extends Controller
 {
@@ -57,10 +58,17 @@ class CartController extends Controller
             $currentCartQuantity = isset($cart[$cartKey]) ? $cart[$cartKey]['quantity'] : 0;
             $totalQuantity = $currentCartQuantity + $requestedQuantity;
 
+            $perOrder = CheckoutService::maxTicketsPerOrder($ticketType->max_per_order !== null ? (int) $ticketType->max_per_order : null);
+            if ($totalQuantity > $perOrder) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "'{$ticketType->name}' : " . CheckoutService::perOrderLimitMessage($perOrder)
+                ], 400);
+            }
             if (!$ticketType->canPurchaseQuantity($totalQuantity)) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Quantité non disponible pour '{$ticketType->name}'. Maximum: " . ($ticketType->max_per_order ?? 10)
+                    'message' => "Quantité non disponible pour '{$ticketType->name}'. Maximum: " . $perOrder
                 ], 400);
             }
 
@@ -80,7 +88,7 @@ class CartController extends Controller
                     'unit_price' => $ticketType->price,
                     'quantity' => $requestedQuantity,
                     'total_price' => $ticketType->price * $requestedQuantity,
-                    'max_per_order' => $ticketType->max_per_order
+                    'max_per_order' => CheckoutService::maxTicketsPerOrder($ticketType->max_per_order)
                 ];
             }
 
@@ -89,6 +97,15 @@ class CartController extends Controller
                 'quantity' => $requestedQuantity
             ];
             $totalAdded += $requestedQuantity;
+        }
+
+        // I-a : le TOTAL de billets du panier ne doit pas dépasser le plafond par commande (checkout : même règle)
+        $maxTotal = CheckoutService::maxTicketsPerOrder();
+        if ($this->cartQuantity($cart) > $maxTotal) {
+            return response()->json([
+                'success' => false,
+                'message' => CheckoutService::totalLimitMessage($maxTotal)
+            ], 400);
         }
 
         // Sauvegarder le panier
@@ -120,7 +137,19 @@ class CartController extends Controller
         ]);
 
         $ticketType = TicketType::with('event')->findOrFail($request->ticket_type_id);
-        
+
+        $perOrder = CheckoutService::maxTicketsPerOrder($ticketType->max_per_order !== null ? (int) $ticketType->max_per_order : null);
+        $already = (int) (session()->get('cart', ['ticket_' . $ticketType->id => ['quantity' => 0]])['ticket_' . $ticketType->id]['quantity'] ?? 0);
+        if ($already + (int) $request->quantity > $perOrder) {
+            return response()->json(['success' => false, 'message' => CheckoutService::perOrderLimitMessage($perOrder)], 400);
+        }
+
+        // I-a : total du panier (tous types et événements) = ce que le checkout acceptera
+        $maxTotal = CheckoutService::maxTicketsPerOrder();
+        if ($this->cartQuantity(session()->get('cart', [])) + (int) $request->quantity > $maxTotal) {
+            return response()->json(['success' => false, 'message' => CheckoutService::totalLimitMessage($maxTotal)], 400);
+        }
+
         // Vérifier la disponibilité
         if (!$ticketType->canPurchaseQuantity($request->quantity)) {
             return response()->json([
@@ -158,7 +187,7 @@ class CartController extends Controller
                 'unit_price' => $ticketType->price,
                 'quantity' => $request->quantity,
                 'total_price' => $ticketType->price * $request->quantity,
-                'max_per_order' => $ticketType->max_per_order
+                'max_per_order' => CheckoutService::maxTicketsPerOrder($ticketType->max_per_order)
             ];
         }
         
@@ -231,6 +260,16 @@ class CartController extends Controller
             ], 400);
         }
 
+        // I-a : le total du panier après modification ne doit pas dépasser le plafond par commande
+        $maxTotal = CheckoutService::maxTicketsPerOrder();
+        $others = $this->cartQuantity($cart) - (int) $cart[$request->cart_key]['quantity'];
+        if ($others + (int) $request->quantity > $maxTotal) {
+            return response()->json([
+                'success' => false,
+                'message' => CheckoutService::totalLimitMessage($maxTotal)
+            ], 400);
+        }
+
         // Mettre à jour
         $cart[$request->cart_key]['quantity'] = $request->quantity;
         $cart[$request->cart_key]['total_price'] = $cart[$request->cart_key]['unit_price'] * $request->quantity;
@@ -287,6 +326,11 @@ class CartController extends Controller
             'cart_count' => 0,
             'cart_total' => 0
         ]);
+    }
+
+    private function cartQuantity(array $cart): int
+    {
+        return (int) array_sum(array_map(fn ($l) => (int) ($l['quantity'] ?? 0), $cart));
     }
 
     /**

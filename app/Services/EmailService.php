@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\User;
 use App\Mail\OrderConfirmation;
+use App\Mail\ManualPaymentInstructions;
 use App\Mail\PaymentConfirmation;
 use App\Mail\PromoteurNewSale;
 use App\Mail\AdminNewOrder;
@@ -70,6 +71,38 @@ class EmailService
 }
 
 
+
+    /**
+     * Envoyer les instructions de paiement manuel (virement, Mobile Money, espèces)
+     */
+    public function sendManualPaymentInstructions(Order $order)
+    {
+        try {
+            Mail::to($order->billing_email ?: $order->user->email)
+                ->send(new ManualPaymentInstructions($order));
+
+            Log::info('Instructions de paiement manuel envoyées', [
+                'order_id' => $order->id,
+                'payment_method' => $order->payment_method,
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Erreur envoi instructions de paiement manuel', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Alias historique (ancien nom lié au seul virement bancaire)
+     */
+    public function sendBankTransferInstructions(Order $order)
+    {
+        return $this->sendManualPaymentInstructions($order);
+    }
 
     /**
      * Notifier le promoteur d'une nouvelle vente

@@ -12,11 +12,23 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Logique de commande partagée entre CheckoutController et GuestCheckoutController
- * (prix serveur, réservation de stock, billets réservés, init paiement avec libération en cas d'échec).
+ * (prix serveur, réservation de stock, billets réservés, instructions de paiement manuel).
  */
 class CheckoutService
 {
     public const SERVICE_FEE = 500;
+
+    /**
+     * Durée de réservation : longue (48 h par défaut) pour un paiement manuel, courte sinon.
+     */
+    private function reservationMinutes(?string $method): int
+    {
+        if ($method !== null && in_array($method, self::manualMethodKeys(), true)) {
+            return (int) config('payments.manual_reservation_minutes', 2880);
+        }
+
+        return (int) config('payments.reservation_minutes', 30);
+    }
 
     /**
      * Regroupe le panier par événement et RECALCULE prix/total depuis TicketType
@@ -68,7 +80,7 @@ class CheckoutService
             'total_amount' => $group['subtotal'] + self::SERVICE_FEE,
             'payment_status' => 'pending',
             'order_number' => Order::generateOrderNumber(),
-            'expires_at' => now()->addMinutes((int) config('payments.reservation_minutes', 30)),
+            'expires_at' => now()->addMinutes($this->reservationMinutes($attributes['payment_method'] ?? null)),
         ]);
 
         // Ordre d'id croissant des types de billets : évite les deadlocks entre commandes concurrentes
@@ -148,29 +160,62 @@ class CheckoutService
     }
 
     /**
-     * Initialise le paiement PaiementPro. En cas d'échec, libère le stock de la commande
-     * (statut failed) et lève une exception.
+     * Clés des méthodes de paiement manuelles autorisées (config payments.manual_methods).
      *
-     * @return string URL de redirection PaiementPro
+     * @return array<int, string>
      */
-    public function initPaiementPro(Order $order, ?string $channel): string
+    public static function manualMethodKeys(): array
     {
-        $order->update(['payment_status' => 'processing']);
+        return array_keys((array) config('payments.manual_methods', []));
+    }
 
-        try {
-            $result = app(PaiementProService::class)->initTransaction($order, ['channel' => $channel]);
-        } catch (\Throwable $e) {
-            $result = ['success' => false, 'error' => $e->getMessage()];
+    /**
+     * Règle de validation de `payment_method` (partagée par les deux checkouts).
+     */
+    public static function paymentMethodRule(): string
+    {
+        return 'required|in:' . implode(',', self::manualMethodKeys());
+    }
+
+    /**
+     * Libellé, consigne et coordonnées d'une méthode manuelle (valeurs issues de la config / de l'env).
+     *
+     * @return array{label:string, instructions:string, details:array<string,string>}
+     */
+    public static function manualPaymentInfo(?string $method): array
+    {
+        $conf = (array) config('payments.manual_methods.' . $method, []);
+
+        $details = [];
+        foreach ((array) ($conf['details'] ?? []) as $label => $value) {
+            $details[$label] = filled($value) ? (string) $value : 'communiqué par l\'organisateur';
         }
 
-        if (!empty($result['success'])) {
-            return $result['redirectUrl'];
+        return [
+            'label' => (string) ($conf['label'] ?? 'Paiement manuel'),
+            'instructions' => (string) ($conf['instructions'] ?? 'Contactez l\'organisateur pour régler votre commande.'),
+            'details' => $details,
+        ];
+    }
+
+    /**
+     * Après création des commandes en paiement manuel : envoie les instructions par email
+     * (un échec d'envoi ne casse jamais la commande, il est seulement journalisé).
+     *
+     * @param  array<int, Order>  $orders
+     */
+    public function sendManualInstructions(array $orders): void
+    {
+        foreach ($orders as $order) {
+            try {
+                app(EmailService::class)->sendManualPaymentInstructions($order);
+            } catch (\Throwable $e) {
+                Log::error('Erreur envoi instructions de paiement manuel', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
-
-        Log::error('Échec init PaiementPro : stock libéré', ['order_id' => $order->id]);
-        $order->releaseStock();
-
-        throw new \RuntimeException('Erreur PaiementPro : ' . ($result['error'] ?? 'inconnue'));
     }
 
     /**

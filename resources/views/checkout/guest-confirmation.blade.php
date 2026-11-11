@@ -8,14 +8,28 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            @if(session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
+
+            @if($order->payment_status === 'paid')
             <!-- Header de confirmation -->
             <div class="text-center mb-4">
                 <div class="success-icon mb-3">
                     <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
                 </div>
-                <h1 class="text-success">Commande confirmée !</h1>
+                <h1 class="text-success">Paiement confirmé !</h1>
                 <p class="lead">Vos billets vous ont été envoyés par email</p>
             </div>
+            @elseif(in_array($order->payment_status, ['pending', 'processing']))
+            <div class="text-center mb-4">
+                <i class="fas fa-receipt text-primary" style="font-size: 3rem;"></i>
+                <h1>Commande enregistrée</h1>
+            </div>
+            @include('checkout.partials.manual-payment')
+            @else
+            <div class="alert alert-danger">Cette commande n'est plus active.</div>
+            @endif
 
             <!-- Détails de la commande -->
             <div class="card mb-4">
@@ -72,7 +86,13 @@
                         <div class="card-body">
                             <i class="fas fa-envelope fa-2x text-primary mb-3"></i>
                             <h6>Vérifiez votre email</h6>
-                            <p class="text-muted small">Vos billets ont été envoyés à {{ $order->billing_email }}</p>
+                            <p class="text-muted small">
+                                @if($order->payment_status === 'paid')
+                                    Vos billets ont été envoyés à {{ $order->billing_email }}
+                                @else
+                                    Les instructions de paiement ont été envoyées à {{ $order->billing_email }}. Vos billets suivront après confirmation du paiement.
+                                @endif
+                            </p>
                         </div>
                     </div>
                 </div>

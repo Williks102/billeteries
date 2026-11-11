@@ -69,21 +69,6 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('/status', [CartController::class, 'getStatus'])->name('status');
 });
 
-Route::prefix('payments/paiementpro')->name('payments.paiementpro.')->group(function () {
-
-    // 🚨 CRITIQUE : Webhook PaiementPro (appelé par leur serveur)
-    Route::post('/notification', [App\Http\Controllers\Payments\PaiementProController::class, 'notification'])
-        ->name('notification');
-
-    // 🚨 OBLIGATOIRE : Retour utilisateur après paiement
-    Route::get('/return', [App\Http\Controllers\Payments\PaiementProController::class, 'return'])
-        ->name('return');
-
-    // ⚠️ RECOMMANDÉE : Page d'annulation
-    Route::get('/cancel', [App\Http\Controllers\Payments\PaiementProController::class, 'cancel'])
-        ->name('cancel');
-});
-
 // ==================== VÉRIFICATION TICKETS (PUBLIQUE) ====================
 Route::get('/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verify'])->name('tickets.verify');
 Route::get('/api/verify-ticket/{ticketCode}', [TicketVerificationController::class, 'verifyApi'])->name('api.tickets.verify');

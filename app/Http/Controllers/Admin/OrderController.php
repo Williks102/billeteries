@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Event;
 use App\Models\User;
+use App\Exceptions\OrderPaymentException;
+use App\Services\OrderPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -198,15 +200,15 @@ class OrderController extends Controller
 
         try {
             $oldStatus = $order->payment_status;
-            
-            $order->update([
-                'payment_status' => $request->payment_status,
-                'admin_notes' => $request->admin_notes,
-            ]);
 
-            // Si passage à "paid", mettre à jour les tickets
-            if ($oldStatus !== 'paid' && $request->payment_status === 'paid') {
-                $order->tickets()->update(['status' => 'sold']);
+            if ($request->payment_status === 'paid' && $oldStatus !== 'paid') {
+                // Passage à payé : toujours via OrderPaymentService (verrou, idempotence, stock, commission)
+                app(OrderPaymentService::class)->confirmPayment($order, null, auth()->user());
+            } else {
+                $order->update([
+                    'payment_status' => $request->payment_status,
+                    'admin_notes' => $request->admin_notes,
+                ]);
             }
 
             // Si passage à "refunded" ou "failed", annuler les tickets
@@ -224,6 +226,8 @@ class OrderController extends Controller
             return redirect()->route('admin.orders.show', $order)
                 ->with('success', 'Commande mise à jour avec succès !');
 
+        } catch (OrderPaymentException $e) {
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
         } catch (\Exception $e) {
             Log::error('Erreur mise à jour commande: ' . $e->getMessage());
             
@@ -243,21 +247,15 @@ class OrderController extends Controller
         ]);
 
         try {
-            $oldStatus = $order->payment_status;
-            $order->update(['payment_status' => $request->payment_status]);
+            if ($request->payment_status === 'paid') {
+                // Passage à payé : verrou + idempotence + stock + commission unique (OrderPaymentService)
+                app(OrderPaymentService::class)->confirmPayment($order, null, auth()->user());
+            } else {
+                $order->update(['payment_status' => $request->payment_status]);
 
-            // Actions selon le nouveau statut
-            switch ($request->payment_status) {
-                case 'paid':
-                    if ($oldStatus !== 'paid') {
-                        $order->tickets()->update(['status' => 'sold']);
-                    }
-                    break;
-                    
-                case 'failed':
-                case 'refunded':
+                if (in_array($request->payment_status, ['failed', 'refunded'], true)) {
                     $order->tickets()->update(['status' => 'cancelled']);
-                    break;
+                }
             }
 
             return response()->json([
@@ -265,6 +263,8 @@ class OrderController extends Controller
                 'message' => 'Statut mis à jour avec succès'
             ]);
 
+        } catch (OrderPaymentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
             Log::error('Erreur update status: ' . $e->getMessage());
             
@@ -272,6 +272,54 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => 'Erreur lors de la mise à jour'
             ], 500);
+        }
+    }
+
+    /**
+     * Confirmer manuellement la réception du paiement (paiement manuel : virement, Mobile Money, espèces).
+     * Idempotent ; une commande expirée (failed) n'est confirmée que si le stock peut être re-réservé.
+     */
+    public function confirmPayment(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'payment_reference' => 'nullable|string|max:100',
+        ]);
+
+        try {
+            $alreadyPaid = $order->payment_status === 'paid';
+
+            app(OrderPaymentService::class)->confirmPayment(
+                $order,
+                $validated['payment_reference'] ?? null,
+                auth()->user()
+            );
+
+            $message = $alreadyPaid ? 'Cette commande est déjà payée.' : 'Paiement confirmé, billets émis.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'message' => $message]);
+            }
+
+            return redirect()->route('admin.orders.show', $order)->with('success', $message);
+
+        } catch (OrderPaymentException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+
+            return redirect()->route('admin.orders.show', $order)->with('error', $e->getMessage());
+
+        } catch (\Exception $e) {
+            Log::error('Erreur confirmation paiement admin', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Erreur lors de la confirmation'], 500);
+            }
+
+            return redirect()->back()->with('error', 'Erreur lors de la confirmation du paiement');
         }
     }
 
@@ -370,14 +418,14 @@ class OrderController extends Controller
             foreach ($orders as $order) {
                 switch ($request->action) {
                     case 'mark_paid':
-                        if ($order->payment_status === 'pending') {
-                            $order->update(['payment_status' => 'paid']);
-                            $order->tickets()->update(['status' => 'sold']);
-                            
-                            // ✅ Envoyer l'email de confirmation de paiement
-                            $emailService->sendPaymentConfirmation($order);
-                            
-                            $count++;
+                        if (in_array($order->payment_status, ['pending', 'processing'], true)) {
+                            try {
+                                // Verrou, idempotence, commission unique et email après commit
+                                app(OrderPaymentService::class)->confirmPayment($order, null, auth()->user());
+                                $count++;
+                            } catch (OrderPaymentException $e) {
+                                Log::warning('Confirmation en lot refusée', ['order_id' => $order->id]);
+                            }
                         }
                         break;
                         

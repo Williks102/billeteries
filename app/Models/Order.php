@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\CurrencyHelper;
@@ -207,27 +206,13 @@ class Order extends Model
     }
 
     /**
-     * Marquer comme payé
+     * Marquer comme payé : délégué à OrderPaymentService (verrou, idempotence, billets,
+     * commission unique, email après commit). Aucun autre chemin ne doit passer la commande à `paid`.
      */
     public function markAsPaid($paymentReference = null)
     {
-        $this->payment_status = 'paid';
-        if ($paymentReference) {
-            $this->payment_reference = $paymentReference;
-        }
-        $this->save();
-        
-        // Marquer les billets comme vendus
-        $this->tickets()->update(['status' => 'sold']);
-        
-        // Créer la commission
-        $this->createCommission();
-
-        // Déclencher l'email de confirmation paiement
-        $emailService = app(\App\Services\EmailService::class);
-        $emailService->sendPaymentConfirmation($this);
-        
-        return $this;
+        return app(\App\Services\OrderPaymentService::class)
+            ->confirmPayment($this, $paymentReference !== null ? (string) $paymentReference : null);
     }
 
     /**
@@ -349,27 +334,12 @@ class Order extends Model
     }
 
     /**
-     * NOUVELLE RELATION : Dernier paiement PaiementPro
-     */
-    public function latestPaiementProPayment(): BelongsTo
-    {
-        return $this->belongsTo(Payment::class, 'id', 'order_id')
-                    ->where('payment_method', 'paiementpro')
-                    ->latest();
-    }
-
-    /**
      * NOUVEAU : Vérifier si la commande peut être payée
      */
     public function canBePaid(): bool
     {
         return in_array($this->payment_status, ['pending', 'failed']);
     }
-
-    /**
-     * NOUVEAU : Marquer comme payée (appelé par PaiementPro webhook)
-     */
-
 
     /**
      * NOUVEAU : Marquer paiement comme échoué

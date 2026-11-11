@@ -56,19 +56,20 @@ class ConfirmPaymentAuthorizationTest extends TestCase
         $this->assertSame('paid', $order->fresh()->payment_status);
     }
 
-    public function test_request_without_csrf_token_is_rejected_419(): void
+    public function test_request_without_csrf_token_is_rejected(): void
     {
         $order = $this->reservedOrder($this->ticketType(5), 1);
         $this->activateCsrf();
 
         $this->actingAs($this->makeUser(4, 'admin'))
             ->post(route('admin.orders.confirm-payment', $order))
-            ->assertStatus(419);
+            // 419 converti en redirection avec message clair (bootstrap/app.php) : la requête reste REFUSÉE.
+            ->assertRedirect()->assertSessionHasErrors('session');
 
         $this->assertSame('pending', $order->fresh()->payment_status);
     }
 
-    public function test_request_with_wrong_csrf_token_is_rejected_419(): void
+    public function test_request_with_wrong_csrf_token_is_rejected(): void
     {
         $order = $this->reservedOrder($this->ticketType(5), 1);
         $this->activateCsrf();
@@ -76,7 +77,7 @@ class ConfirmPaymentAuthorizationTest extends TestCase
         $this->actingAs($this->makeUser(4, 'admin'))
             ->withSession(['_token' => 'bon-jeton'])
             ->post(route('admin.orders.confirm-payment', $order), ['_token' => 'mauvais-jeton'])
-            ->assertStatus(419);
+            ->assertRedirect()->assertSessionHasErrors('session');
 
         $this->assertSame('pending', $order->fresh()->payment_status);
     }

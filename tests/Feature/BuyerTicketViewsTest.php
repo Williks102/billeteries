@@ -111,6 +111,14 @@ class BuyerTicketViewsTest extends TestCase
         $this->assertStringNotContainsString('data:image', $res->getContent());
     }
 
+    public function test_paid_order_with_a_non_issued_ticket_shows_no_qr(): void
+    {
+        [$order, $ticket] = $this->order(true);
+        $ticket->update(['status' => 'reserved']); // billet pas (encore) émis, QR résiduel en base
+        $res = $this->actingAs(User::find(1))->get(route('acheteur.orders.show', $order))->assertOk();
+        $this->assertStringNotContainsString('data:image', $res->getContent());
+    }
+
     public function test_demo_paid_order_mentions_simulated_payment(): void
     {
         [$order] = $this->order(true);

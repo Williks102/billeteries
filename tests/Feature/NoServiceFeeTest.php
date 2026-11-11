@@ -129,7 +129,7 @@ class NoServiceFeeTest extends TestCase
         $this->assertSame(0, $calc['platform_fee']);
     }
 
-    public function test_default_rate_without_any_setting_is_ten_percent_on_subtotal(): void
+    public function test_default_rate_without_any_setting_is_the_configured_default_on_subtotal(): void
     {
         CommissionSetting::query()->delete();
         $type = $this->ticketType(10);
@@ -139,7 +139,7 @@ class NoServiceFeeTest extends TestCase
 
         $calc = $order->fresh()->calculateCommission();
 
-        $this->assertSame([20000, 2000, 18000, 0], [$calc['gross_amount'], $calc['commission_amount'], $calc['net_amount'], $calc['platform_fee']]);
+        $this->assertSame([20000, 1200, 18800, 0], [$calc['gross_amount'], $calc['commission_amount'], $calc['net_amount'], $calc['platform_fee']]);
     }
 
     public function test_no_blade_view_mentions_service_fees(): void

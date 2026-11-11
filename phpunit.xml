@@ -11,6 +11,10 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- Concurrence MySQL : volontairement HORS des suites par défaut ; lancé par `composer run test:mysql` -->
+        <testsuite name="MySql">
+            <directory>tests/MySql</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

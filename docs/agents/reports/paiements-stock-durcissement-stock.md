@@ -60,3 +60,17 @@ Constats vérifiés dans le code avant correction (QRCodeService.php l.55-65/165
 - Mutations (copie jetable, vendor copié par `cp -a`) : ancien QRCodeService => 5 rouges ; retrait des 3 contrôles du panier => 2 rouges ; retrait de `$newTickets > $maxTickets` => 2 rouges ; `data-max` brut => 1 rouge ; ancienne garde MySQL => 4 rouges ; anciens showAlert/innerHTML => 1 rouge (garde sur le source) ; backoff retiré => 1 rouge ; throttle retiré => 1 rouge. Le DOM JS n'est pas testable sans navigateur : seul le source est gardé.
 - `composer run check` : 8 + 150 tests, ~6 s.
 - À revalider : securite (QR local, logs, throttle, garde S-8, échappement) ; relecteur (I-a, I-b, mineurs). qa-tests : test:mysql avec une vraie base ; scénarios de non-régression dans CheckoutFinalFixesTest.
+
+## Mini-passage final (securite « fusion oui » + relecteur APPROUVÉ)
+
+- M-1 CORRIGÉ : `TicketVerificationController::getTicketVerificationInfo` (utilisé UNIQUEMENT par `verify` et `verifyApi`, routes publiques) ne renvoie plus `holder` ni `order` ; le chargement `orderItem.order.user` est retiré des routes publiques. `authenticatedVerify` construit sa propre structure (titulaire + commande) : inchangé. La vue publique `tickets.verify` n'a jamais lu le titulaire.
+- Qui voit le titulaire (authentifié) : `POST /promoteur/scanner/verify/{code}` (middleware `promoteur` = rôle promoteur UNIQUEMENT, les admins n'y accèdent pas) ; le contrôle `event.promoter_id === user.id` existe (un autre promoteur reçoit « non autorisé », sans titulaire : testé). `Promoteur\ScannerController::verify` renvoie aussi `client`/`email` après le même contrôle de propriétaire. Pas d'élargissement fait.
+- M-2 CORRIGÉ : plus aucun `ticket_code`/code brut dans les logs (TicketVerificationController, Acheteur/OrderController, Admin/TicketController x4) ; `ticket_id` à la place. Hors liste mais même constat : `Promoteur\ScannerController` (4 entrées + trace d'erreur) corrigé de la même façon.
+- F-1 : `ext-gd` et `bacon/bacon-qr-code ^2.0` déclarés ; composer.lock : content-hash + platform seulement (les 4 réécritures d'URL de dépôt faites par composer ont été annulées à la main). Commentaire QRCodeService corrigé.
+- F-2 : taille QR bornée 100..600 (`QRCodeService::MIN_SIZE/MAX_SIZE`).
+- F-3 : `createToast` et `showBootstrapNotification` en nœuds DOM + `textContent` ; aucun appelant ne passe de HTML.
+- R-1 : zone calme 4 modules (ISO 18004) ; test pixel-à-pixel adapté + marge entièrement blanche vérifiée (aucun décodeur zxing/zbar dans cet environnement).
+- R-2 : « Maximum N billets au total dans votre panier » (CheckoutService, CartController via `totalLimitMessage`, booking-form-desktop) ; règle inchangée.
+- Tests : `TicketVerificationPrivacyTest` (7), `CheckoutFinalFixesTest` (+ bornes QR, marge, message).
+- À revalider par securite : absence de titulaire/commande sur `/api/verify-ticket` et `/verify-ticket`, logs sans code (ScannerController inclus).
+- Signalé non corrigé (hors périmètre) : `Promoteur\ScannerController::verify` renvoie encore email/nom du client au promoteur propriétaire (voulu) ; `scan()` public (route commentée) renverrait le nom du titulaire si réactivée ; `authenticatedVerify` 500 si `event_time` est NULL.

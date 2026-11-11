@@ -12,15 +12,19 @@ use Illuminate\Support\Facades\Storage;
  * Service QR Code : génération 100 % LOCALE (S-6, S-7).
  *
  * Aucun appel réseau : le code du billet (secret porteur de /verify-ticket/{code}) ne quitte jamais le serveur.
- * Encodage par bacon/bacon-qr-code (dépendance de simple-qrcode), rendu PNG par GD (déjà requis par DomPDF).
+ * Encodage par bacon/bacon-qr-code (dépendance de simple-qrcode), rendu PNG par GD (ext-gd, requise par la génération PNG ; déclarée dans composer.json).
  * PNG et non SVG : imagick n'est pas disponible (simple-qrcode ne sait faire du PNG qu'avec imagick), et tous
  * les consommateurs existants (colonne qr_code, téléchargement admin, fichier enregistré, DomPDF) attendent un PNG.
  * Temps de génération : quelques millisecondes ; aucun risque de blocage d'un worker.
  */
 class QRCodeService
 {
-    /** Taille de la marge (zone calme) en modules. */
-    private const QUIET_ZONE = 2;
+    /** Taille de la marge (zone calme) en modules : 4 selon ISO/IEC 18004. */
+    private const QUIET_ZONE = 4;
+
+    /** Bornes de la taille demandée (pixels) : évite qu'une valeur extrême n'alloue une image géante. */
+    public const MIN_SIZE = 100;
+    public const MAX_SIZE = 600;
 
     /**
      * Rend un contenu texte en PNG (données binaires) avec GD, sans réseau.
@@ -37,7 +41,8 @@ class QRCodeService
             $matrix = Encoder::encode($content, ErrorCorrectionLevel::M(), 'UTF-8')->getMatrix();
             $modules = $matrix->getWidth();
             $total = $modules + 2 * self::QUIET_ZONE;
-            $scale = max(1, intdiv(max(21, $size), $total));
+            $size = max(self::MIN_SIZE, min(self::MAX_SIZE, $size));
+            $scale = max(1, intdiv($size, $total));
             $pixels = $total * $scale;
 
             $image = imagecreatetruecolor($pixels, $pixels);

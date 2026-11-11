@@ -37,7 +37,7 @@ class CheckoutService
     /** Le TOTAL de billets du panier dépasse le plafond par commande (I-a) : même règle que assertWithinOrderLimits. */
     public static function totalLimitMessage(int $max): string
     {
-        return "Maximum {$max} billet" . ($max > 1 ? 's' : '') . ' au total par commande. Réduisez la quantité demandée.';
+        return "Maximum {$max} billet" . ($max > 1 ? 's' : '') . ' au total dans votre panier. Réduisez la quantité demandée.';
     }
 
     /**

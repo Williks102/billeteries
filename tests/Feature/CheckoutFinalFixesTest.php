@@ -67,18 +67,41 @@ class CheckoutFinalFixesTest extends TestCase
         $matrix = Encoder::encode(url('/verify-ticket/TKT-ABCD1234'), ErrorCorrectionLevel::M(), 'UTF-8')->getMatrix();
         $img = imagecreatefromstring($png);
         $modules = $matrix->getWidth();
-        $total = $modules + 4; // zone calme de 2 modules de chaque côté
+        $total = $modules + 8; // zone calme de 4 modules de chaque côté (ISO/IEC 18004)
         $scale = intdiv(imagesx($img), $total);
         $this->assertGreaterThanOrEqual(2, $scale);
         $this->assertSame($total * $scale, imagesx($img));
         for ($y = 0; $y < $modules; $y++) {
             for ($x = 0; $x < $modules; $x++) {
-                $rgb = imagecolorat($img, ($x + 2) * $scale + intdiv($scale, 2), ($y + 2) * $scale + intdiv($scale, 2));
+                $rgb = imagecolorat($img, ($x + 4) * $scale + intdiv($scale, 2), ($y + 4) * $scale + intdiv($scale, 2));
                 $isDark = (($rgb >> 16) & 0xFF) < 128;
                 $this->assertSame($matrix->get($x, $y) === 1, $isDark, "module {$x},{$y}");
             }
         }
         $this->assertSame(0xFFFFFF, imagecolorat($img, 0, 0) & 0xFFFFFF, 'zone calme blanche');
+        // R-1 : toute la marge de 4 modules est blanche (aucun pixel sombre avant le premier module).
+        $margin = 4 * $scale;
+        for ($i = 0; $i < imagesx($img); $i++) {
+            for ($j = 0; $j < $margin; $j++) {
+                $this->assertSame(0xFFFFFF, imagecolorat($img, $i, $j) & 0xFFFFFF, "marge haute {$i},{$j}");
+                $this->assertSame(0xFFFFFF, imagecolorat($img, $j, $i) & 0xFFFFFF, "marge gauche {$j},{$i}");
+            }
+        }
+    }
+
+    public function test_qr_size_is_clamped_to_safe_bounds(): void
+    {
+        $qr = $this->realQr();
+        $dim = fn (int $size) => getimagesizefromstring($qr->renderPng('https://x.test/verify-ticket/TKT-ABCD1234', $size))[0];
+
+        $this->assertLessThanOrEqual(QRCodeService::MAX_SIZE, $dim(10_000_000));
+        $this->assertGreaterThan(QRCodeService::MAX_SIZE - 60, $dim(10_000_000));
+        $this->assertSame($dim(QRCodeService::MAX_SIZE), $dim(PHP_INT_MAX));
+        $this->assertSame($dim(QRCodeService::MIN_SIZE), $dim(-5));
+        $this->assertSame($dim(QRCodeService::MIN_SIZE), $dim(0));
+        $this->assertSame($dim(QRCodeService::MIN_SIZE), $dim(1));
+        $this->assertGreaterThan($dim(1), $dim(400));
+        $this->assertGreaterThan($dim(400), $dim(10_000_000));
     }
 
     public function test_qr_generation_sends_no_network_request_of_any_kind(): void
@@ -233,7 +256,7 @@ class CheckoutFinalFixesTest extends TestCase
             ['ticket_type_id' => $a->id, 'quantity' => 6], ['ticket_type_id' => $b->id, 'quantity' => 6],
         ]])->assertStatus(400)->assertJsonPath('message', CheckoutService::totalLimitMessage(10));
 
-        $this->assertStringContainsString('Maximum 10 billets au total par commande', CheckoutService::totalLimitMessage(10));
+        $this->assertStringContainsString('Maximum 10 billets au total dans votre panier', CheckoutService::totalLimitMessage(10));
         $this->assertSame([], session('cart', []), 'rien n\'est enregistré');
     }
 
@@ -295,7 +318,7 @@ class CheckoutFinalFixesTest extends TestCase
         }
         $desktop = view('events.partials.booking-form-desktop', ['event' => $event])->render();
         $this->assertStringContainsString('Max 10/commande', $desktop);
-        $this->assertStringContainsString('Maximum 10 billets au total par commande', $desktop);
+        $this->assertStringContainsString('Maximum 10 billets au total dans votre panier', $desktop);
     }
 
     // ===== S-9 : échappement du nom de type de billet =====

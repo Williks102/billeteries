@@ -62,7 +62,7 @@
             @endforeach
             
             <p class="text-muted small mb-2" data-max-total="{{ \App\Services\CheckoutService::maxTicketsPerOrder() }}">
-                <i class="fas fa-info-circle me-1"></i>Maximum {{ \App\Services\CheckoutService::maxTicketsPerOrder() }} billets au total par commande
+                <i class="fas fa-info-circle me-1"></i>Maximum {{ \App\Services\CheckoutService::maxTicketsPerOrder() }} billets au total dans votre panier
             </p>
 
             <!-- Résumé -->

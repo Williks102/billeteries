@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
     }
     
     .event-header-default {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
     }
     
     .btn-black {
@@ -43,7 +43,7 @@ use Illuminate\Support\Facades\Storage;
         padding: 1.5rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         margin-bottom: 1.5rem;
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         text-align: center;
         transition: transform 0.3s ease;
     }
@@ -56,7 +56,7 @@ use Illuminate\Support\Facades\Storage;
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         padding: 2rem;
         margin-bottom: 2rem;
     }
@@ -69,7 +69,7 @@ use Illuminate\Support\Facades\Storage;
     }
     
     .table-header {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         color: white;
         padding: 1rem;
     }
@@ -120,8 +120,8 @@ use Illuminate\Support\Facades\Storage;
     }
     
     .ticket-type-card:hover {
-        border-color: #FF6B35;
-        box-shadow: 0 4px 8px rgba(255, 107, 53, 0.2);
+        border-color: var(--brand);
+        box-shadow: 0 4px 8px rgba(var(--brand-rgb), 0.2);
     }
     
     .chart-container {
@@ -236,10 +236,10 @@ use Illuminate\Support\Facades\Storage;
         <div class="row mb-4">
             <div class="col-md-3">
                 <div class="stat-card">
-                    <div class="progress-circle" style="background: linear-gradient(135deg, #FF6B35, #E55A2B);">
+                    <div class="progress-circle" style="background: linear-gradient(135deg, var(--brand), var(--brand-hover));">
                         {{ number_format(($stats['tickets_sold'] / max($event->totalTicketsAvailable(), 1)) * 100, 0) }}%
                     </div>
-                    <h5 style="color: #FF6B35;">{{ $stats['tickets_sold'] }}</h5>
+                    <h5 style="color: var(--brand);">{{ $stats['tickets_sold'] }}</h5>
                     <p class="text-muted mb-0">Billets vendus</p>
                 </div>
             </div>
@@ -275,7 +275,7 @@ use Illuminate\Support\Facades\Storage;
         <!-- Description -->
         <div class="info-card">
             <h5 class="mb-3">
-                <i class="fas fa-info-circle me-2" style="color: #FF6B35;"></i>
+                <i class="fas fa-info-circle me-2" style="color: var(--brand);"></i>
                 Description
             </h5>
             <p class="mb-0">{{ $event->description }}</p>
@@ -291,7 +291,7 @@ use Illuminate\Support\Facades\Storage;
         <div class="info-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="mb-0">
-                    <i class="fas fa-ticket-alt me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-ticket-alt me-2" style="color: var(--brand);"></i>
                     Types de Billets
                 </h5>
                 <a href="{{ route('promoteur.events.tickets.create', $event) }}" class="btn btn-black">
@@ -307,13 +307,13 @@ use Illuminate\Support\Facades\Storage;
                             <p class="text-muted small mb-0">{{ $ticketType->description }}</p>
                         </div>
                         <div class="col-md-2">
-                            <strong style="color: #FF6B35;">{{ number_format($ticketType->price) }} F</strong>
+                            <strong style="color: var(--brand);">{{ number_format($ticketType->price) }} F</strong>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center">
                                 <div class="fw-bold">{{ $ticketType->quantity_sold }} / {{ $ticketType->quantity_available }}</div>
                                 <div class="progress mt-1" style="height: 6px;">
-                                    <div class="progress-bar" style="background: #FF6B35; width: {{ ($ticketType->quantity_sold / max($ticketType->quantity_available, 1)) * 100 }}%"></div>
+                                    <div class="progress-bar" style="background: var(--brand); width: {{ ($ticketType->quantity_sold / max($ticketType->quantity_available, 1)) * 100 }}%"></div>
                                 </div>
                             </div>
                         </div>
@@ -340,7 +340,7 @@ use Illuminate\Support\Facades\Storage;
         @if($stats['tickets_sold'] > 0)
         <div class="info-card">
             <h5 class="mb-3">
-                <i class="fas fa-chart-line me-2" style="color: #FF6B35;"></i>
+                <i class="fas fa-chart-line me-2" style="color: var(--brand);"></i>
                 Évolution des Ventes
             </h5>
             <div class="chart-container">
@@ -443,7 +443,7 @@ use Illuminate\Support\Facades\Storage;
                     <td>{{ $order->user->name }}</td>
                     <td>{{ $order->billing_email }}</td>
                     <td>{{ $order->orderItems->sum('quantity') }}</td>
-                    <td class="fw-bold" style="color: #FF6B35;">{{ number_format($order->total_amount) }} F</td>
+                    <td class="fw-bold" style="color: var(--brand);">{{ number_format($order->total_amount) }} F</td>
                     <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
                     <td>
                         <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-black">
@@ -497,8 +497,8 @@ use Illuminate\Support\Facades\Storage;
             datasets: [{
                 label: 'Billets vendus',
                 data: [2, 5, 8, 12, 15, 18, {{ $stats['tickets_sold'] }}],
-                borderColor: '#FF6B35',
-                backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                borderColor: '#C2410C',
+                backgroundColor: 'rgba(194, 65, 12, 0.1)',
                 tension: 0.4,
                 fill: true
             }]

@@ -11,7 +11,7 @@
 .event-hero {
     position: relative;
     min-height: 300px;
-    background: linear-gradient(135deg, #FF6B35, #1a237e);
+    background: linear-gradient(135deg, var(--brand), #1a237e);
     margin-bottom: 2rem;
 }
 
@@ -45,7 +45,7 @@
 }
 
 .info-item i {
-    color: #FF6B35;
+    color: var(--brand);
     width: 16px;
 }
 
@@ -99,7 +99,7 @@
 }
 
 .selection-summary {
-    background: rgba(255,107,53,0.1);
+    background: rgba(var(--brand-rgb), 0.1);
     border-radius: 8px;
     padding: 1rem;
     margin-bottom: 1rem;
@@ -111,7 +111,7 @@
 .summary-total {
     font-size: 1.2rem;
     font-weight: bold;
-    color: #FF6B35;
+    color: var(--brand);
 }
 </style>
 @endpush

@@ -1,0 +1,276 @@
+/*
+ * Charte visuelle - étape 1 : jetons, police, espaces.
+ * Chargée APRÈS Bootstrap 5.3 et AVANT les styles propres des layouts.
+ * Changer de charte = changer les valeurs de la section « Jetons » (aucune vue à toucher).
+ * Les échelles d'espacement et de rythme sont communes aux 4 espaces (public, acheteur, promoteur, admin).
+ */
+
+/* ===== Police Inter embarquée (aucun CDN) ===== */
+@font-face {
+    font-family: "Inter Variable";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url("../fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ===== Jetons ===== */
+:root {
+    color-scheme: light;
+
+    /* Marque (orange). --brand = texte/boutons (AA sur blanc) ; --brand-decor = repère décoratif uniquement */
+    --brand: #C2410C;
+    --brand-hover: #9A3412;
+    --brand-soft: #FFEDD5;
+    --brand-ink: #7C2D12;
+    --brand-decor: #FF6B35;
+    --brand-rgb: 255, 107, 53;
+
+    /* Neutres */
+    --ink: #0f172a;
+    --ink-muted: #475569;
+    --canvas: #f8fafc;
+    --surface: #ffffff;
+    --line: #e2e8f0;
+    --placeholder: #52525b;
+
+    /* États : texte (AA >= 4,5:1 sur blanc) + fond doux */
+    --state-success: #15803d;
+    --state-success-soft: #dcfce7;
+    --state-pending: #b45309;
+    --state-pending-soft: #fef3c7;
+    --state-failed: #b91c1c;
+    --state-failed-soft: #fee2e2;
+    --state-info: #0e7490;
+    --state-info-soft: #cffafe;
+
+    /* Typographie */
+    --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    /* Échelle d'espacement */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+
+    /* Mise en page */
+    --gutter: var(--space-4);          /* gouttière mobile : 16 px */
+    --page-max: 1200px;                /* largeur maximale du contenu */
+    --section-gap: var(--space-8);     /* entre sections */
+    --card-gap: var(--space-4);        /* entre cartes */
+    --field-gap: var(--space-4);       /* entre champs */
+    --card-padding: var(--space-4);
+    --touch-min: 44px;
+
+    /* Rayons, ombres, mouvement */
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, .08);
+    --shadow: 0 2px 8px rgba(15, 23, 42, .10);
+    --shadow-lg: 0 8px 24px rgba(15, 23, 42, .14);
+    --motion: 160ms;
+    --focus-ring: 0 0 0 3px rgba(194, 65, 12, .45);
+}
+
+@media (min-width: 768px) {
+    :root {
+        --gutter: var(--space-6);
+        --card-padding: var(--space-6);
+        --section-gap: var(--space-12);
+    }
+}
+
+/* ===== Surcharges Bootstrap 5.3 ===== */
+:root, [data-bs-theme="light"] {
+    --bs-body-font-family: var(--font-sans);
+    --bs-body-color: var(--ink);
+    --bs-primary: var(--brand);
+    --bs-primary-rgb: 194, 65, 12;
+    --bs-link-color: var(--brand);
+    --bs-link-color-rgb: 194, 65, 12;
+    --bs-link-hover-color: var(--brand-hover);
+    --bs-link-hover-color-rgb: 154, 52, 18;
+    --bs-success: var(--state-success);
+    --bs-success-rgb: 21, 128, 61;
+    --bs-danger: var(--state-failed);
+    --bs-danger-rgb: 185, 28, 28;
+    --bs-info: var(--state-info);
+    --bs-info-rgb: 14, 116, 144;
+    --bs-focus-ring-color: rgba(194, 65, 12, .45);
+    --bs-border-radius: var(--radius-sm);
+    --bs-border-radius-lg: var(--radius);
+    --bs-gutter-x: calc(var(--gutter) * 2);
+}
+
+body { font-family: var(--font-sans); }
+
+.text-primary { color: var(--brand) !important; }
+.bg-primary { background-color: var(--brand) !important; }
+.border-primary { border-color: var(--brand) !important; }
+
+.btn-primary {
+    --bs-btn-bg: var(--brand);
+    --bs-btn-border-color: var(--brand);
+    --bs-btn-hover-bg: var(--brand-hover);
+    --bs-btn-hover-border-color: var(--brand-hover);
+    --bs-btn-active-bg: var(--brand-ink);
+    --bs-btn-active-border-color: var(--brand-ink);
+    --bs-btn-disabled-bg: var(--brand);
+    --bs-btn-disabled-border-color: var(--brand);
+    --bs-btn-focus-shadow-rgb: 194, 65, 12;
+}
+.btn-outline-primary {
+    --bs-btn-color: var(--brand);
+    --bs-btn-border-color: var(--brand);
+    --bs-btn-hover-bg: var(--brand);
+    --bs-btn-hover-border-color: var(--brand);
+    --bs-btn-active-bg: var(--brand-hover);
+    --bs-btn-active-border-color: var(--brand-hover);
+    --bs-btn-disabled-color: var(--brand);
+    --bs-btn-disabled-border-color: var(--brand);
+    --bs-btn-focus-shadow-rgb: 194, 65, 12;
+}
+.btn-success { --bs-btn-bg: var(--state-success); --bs-btn-border-color: var(--state-success); --bs-btn-hover-bg: #166534; --bs-btn-hover-border-color: #166534; }
+.btn-danger { --bs-btn-bg: var(--state-failed); --bs-btn-border-color: var(--state-failed); --bs-btn-hover-bg: #991b1b; --bs-btn-hover-border-color: #991b1b; }
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--brand);
+    box-shadow: var(--focus-ring);
+}
+.form-check-input:checked { background-color: var(--brand); border-color: var(--brand); }
+.page-link { color: var(--brand); }
+.page-link:hover { color: var(--brand-hover); }
+.page-item.active .page-link { background-color: var(--brand); border-color: var(--brand); color: #fff; }
+.nav-pills .nav-link.active, .list-group-item.active { background-color: var(--brand); border-color: var(--brand); }
+.progress { --bs-progress-bar-bg: var(--brand); }
+
+/* ===== Focus visible (clavier) ===== */
+:focus-visible {
+    outline: 3px solid var(--brand);
+    outline-offset: 2px;
+}
+.btn:focus-visible, .form-control:focus-visible, .form-select:focus-visible { outline-offset: 1px; }
+
+/* ===== Champs : >= 16 px (pas de zoom iOS) et >= 44 px ===== */
+.form-control, .form-select, input[type="text"], input[type="email"], input[type="tel"],
+input[type="password"], input[type="number"], input[type="search"], input[type="date"],
+input[type="time"], input[type="url"], select, textarea {
+    font-size: 16px;
+}
+.form-control, .form-select, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]), select {
+    min-height: var(--touch-min);
+}
+.form-label { margin-bottom: var(--space-1); font-weight: 500; }
+.form-control::placeholder, textarea::placeholder, ::placeholder { color: var(--placeholder); opacity: 1; }
+
+select, .form-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.5rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right .75rem center;
+    background-size: 1.25rem;
+}
+select[multiple], select[size]:not([size="1"]) { background-image: none; padding-right: .75rem; }
+
+/* Zones tactiles : boutons >= 44 px sur écran tactile */
+@media (pointer: coarse) {
+    .btn, .page-link, .dropdown-item, .nav-link { min-height: var(--touch-min); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+    .btn-sm { min-height: var(--touch-min); padding-inline: var(--space-3); }
+}
+
+/* Messages d'erreur de champ */
+.invalid-feedback, .text-danger.field-error { color: var(--state-failed); font-size: .875rem; }
+
+/* ===== Titres homogènes ===== */
+h1, .h1 { font-size: 1.625rem; line-height: 1.25; font-weight: 700; }
+h2, .h2 { font-size: 1.375rem; line-height: 1.3; font-weight: 700; }
+h3, .h3 { font-size: 1.125rem; line-height: 1.35; font-weight: 600; }
+h1, h2, h3, .h1, .h2, .h3 { margin-top: 0; margin-bottom: var(--space-3); }
+@media (min-width: 768px) {
+    h1, .h1 { font-size: 2rem; }
+    h2, .h2 { font-size: 1.5rem; }
+    h3, .h3 { font-size: 1.25rem; }
+}
+
+/* ===== Conteneur et gouttières (mêmes marges dans les 4 espaces) ===== */
+.container, .container-fluid, .container-sm, .container-md, .container-lg, .container-xl, .container-xxl {
+    --bs-gutter-x: calc(var(--gutter) * 2);
+    padding-inline: var(--gutter);
+}
+.container, .container-sm, .container-md, .container-lg, .container-xl, .container-xxl { max-width: var(--page-max); }
+.row { --bs-gutter-x: var(--space-4); --bs-gutter-y: var(--space-4); }
+.row.g-0 { --bs-gutter-x: 0; --bs-gutter-y: 0; }
+/* Une rangée posée hors .container ne doit jamais déborder horizontalement */
+main, .main-content, .acheteur-content, .promoteur-content, .admin-main { min-width: 0; max-width: 100%; }
+main > .row, .acheteur-content > .row, .promoteur-content > .row, .admin-main > .row { margin-inline: 0; }
+img, video, svg { max-width: 100%; }
+
+/* ===== Utilitaires de mise en page ===== */
+.page { width: 100%; max-width: var(--page-max); margin-inline: auto; padding: var(--space-4) var(--gutter) var(--section-gap); }
+.section { margin-block: var(--section-gap); }
+.stack { display: flex; flex-direction: column; gap: var(--stack-gap, var(--space-4)); }
+.stack-sm { --stack-gap: var(--space-2); }
+.stack-lg { --stack-gap: var(--space-6); }
+.cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cluster-gap, var(--space-3)); }
+.cards-grid { display: grid; gap: var(--card-gap); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.field + .field, .form-group + .form-group { margin-top: var(--field-gap); }
+
+.card { --bs-card-spacer-y: var(--card-padding); --bs-card-spacer-x: var(--card-padding); --bs-card-cap-padding-y: var(--space-3); --bs-card-cap-padding-x: var(--card-padding); border-radius: var(--radius); }
+.card + .card { margin-top: var(--card-gap); }
+.card-body { padding: var(--card-padding); }
+
+/* Barre d'actions collante en bas sur mobile (panier, checkout, formulaires) */
+.action-bar {
+    display: flex; gap: var(--space-3); align-items: center; justify-content: flex-end;
+    padding: var(--space-3) var(--gutter);
+    background: var(--surface); border-top: 1px solid var(--line);
+}
+@media (max-width: 767.98px) {
+    .action-bar {
+        position: sticky; bottom: 0; z-index: 1020;
+        margin-inline: calc(var(--gutter) * -1);
+        box-shadow: 0 -4px 12px rgba(15, 23, 42, .08);
+        padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    }
+    .action-bar .btn { flex: 1; }
+}
+
+/* Tableaux et cartes responsives */
+.table-wrap, .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+@media (max-width: 575.98px) {
+    .table-cards thead { display: none; }
+    .table-cards tr { display: block; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); }
+    .table-cards td { display: flex; justify-content: space-between; gap: var(--space-3); border: 0; padding: var(--space-1) 0; }
+    .table-cards td[data-label]::before { content: attr(data-label); font-weight: 600; color: var(--ink-muted); }
+}
+
+/* ===== Badge d'état (libellé + couleur, jamais la couleur seule) ===== */
+.badge-state {
+    display: inline-flex; align-items: center; gap: var(--space-1);
+    padding: var(--space-1) var(--space-3); border-radius: 999px;
+    font-size: .8125rem; font-weight: 600; line-height: 1.3; border: 1px solid currentColor;
+}
+.badge-state--success { color: var(--state-success); background: var(--state-success-soft); }
+.badge-state--pending { color: var(--state-pending); background: var(--state-pending-soft); }
+.badge-state--failed  { color: var(--state-failed);  background: var(--state-failed-soft); }
+.badge-state--info    { color: var(--state-info);    background: var(--state-info-soft); }
+.badge-state--neutral { color: var(--ink-muted);     background: var(--canvas); }
+
+/* ===== Mouvement : court, coupé si l'utilisateur le demande ===== */
+a, .btn, .form-control, .form-select { transition-duration: var(--motion); }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

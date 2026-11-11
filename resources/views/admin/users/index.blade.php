@@ -267,7 +267,7 @@
 
 #bulk-actions {
     border-left: 4px solid var(--primary-orange);
-    background-color: rgba(255, 107, 53, 0.05);
+    background-color: rgba(var(--brand-rgb), 0.05);
 }
 
 .form-check-input:checked {
@@ -276,7 +276,7 @@
 }
 
 .table-hover tbody tr:hover {
-    background-color: rgba(255, 107, 53, 0.05);
+    background-color: rgba(var(--brand-rgb), 0.05);
 }
 </style>
 @endpush

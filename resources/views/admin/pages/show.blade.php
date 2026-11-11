@@ -29,7 +29,7 @@
         @case('landing')
             <!-- Template page d'atterrissage -->
             <div class="landing-page">
-                <div class="hero-section text-center py-5 mb-5" style="background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(26,35,126,0.1)); border-radius: 20px;">
+                <div class="hero-section text-center py-5 mb-5" style="background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.1), rgba(26,35,126,0.1)); border-radius: 20px;">
                     <h1 class="display-3 fw-bold text-orange mb-4">{{ $page->title }}</h1>
                     @if($page->excerpt)
                         <p class="lead fs-4 text-muted mb-4">{{ $page->excerpt }}</p>
@@ -221,7 +221,7 @@
 }
 
 .page-content h2 {
-    border-bottom: 1px solid rgba(255, 107, 53, 0.3);
+    border-bottom: 1px solid rgba(var(--brand-rgb), 0.3);
     padding-bottom: 0.3rem;
 }
 
@@ -241,7 +241,7 @@
 
 .page-content blockquote {
     border-left: 4px solid var(--primary-orange);
-    background: rgba(255, 107, 53, 0.05);
+    background: rgba(var(--brand-rgb), 0.05);
     padding: 1.5rem;
     margin: 2rem 0;
     border-radius: 0 8px 8px 0;
@@ -293,7 +293,7 @@
 }
 
 .page-content table tbody tr:nth-child(even) {
-    background: rgba(255, 107, 53, 0.05);
+    background: rgba(var(--brand-rgb), 0.05);
 }
 
 .page-content a {

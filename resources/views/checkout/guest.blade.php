@@ -241,8 +241,8 @@
 <style>
 /* ====================== VARIABLES & BASE ====================== */
 :root {
-    --primary-orange: #FF6B35;
-    --primary-dark: #E55A2B;
+    --primary-orange: var(--brand);
+    --primary-dark: var(--brand-hover);
     --header-height: 70px;
     --shadow-light: 0 2px 20px rgba(0,0,0,0.08);
     --shadow-medium: 0 4px 25px rgba(0,0,0,0.15);
@@ -308,7 +308,7 @@ body {
 .step.active .step-number {
     background: var(--primary-orange);
     color: white;
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    box-shadow: 0 4px 15px rgba(var(--brand-rgb), 0.3);
 }
 
 /* ====================== CARTES MODERNES ====================== */
@@ -351,7 +351,7 @@ body {
     color: white;
     border-color: var(--primary-orange);
     transform: scale(1.02);
-    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+    box-shadow: 0 8px 25px rgba(var(--brand-rgb), 0.3);
 }
 
 /* ====================== PAYMENT OPTIONS SIMPLE ====================== */
@@ -419,7 +419,7 @@ body {
     background: var(--primary-dark);
     border-color: var(--primary-dark);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+    box-shadow: 0 8px 25px rgba(var(--brand-rgb), 0.3);
 }
 
 /* ====================== ANIMATIONS ====================== */

@@ -177,7 +177,7 @@
 }
 
 .ticket-header {
-    background: linear-gradient(135deg, #FF6B35, #ff8c61);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
     color: white;
     padding: 2rem;
     text-align: center;
@@ -240,7 +240,7 @@
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 1.1rem;
-    color: #FF6B35;
+    color: var(--brand);
     font-weight: 600;
 }
 
@@ -318,7 +318,7 @@
     }
     
     .ticket-header {
-        background: #FF6B35 !important;
+        background: var(--brand) !important;
         -webkit-print-color-adjust: exact;
     }
 }

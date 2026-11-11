@@ -6,8 +6,8 @@
 @push('styles')
 <style>
     :root {
-        --primary-orange: #FF6B35;
-        --primary-dark: #E55A2B;
+        --primary-orange: var(--brand);
+        --primary-dark: var(--brand-hover);
         --success-color: #28a745;
     }
 
@@ -74,7 +74,7 @@
 
     .feature-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(255, 107, 53, 0.2);
+        box-shadow: 0 8px 30px rgba(var(--brand-rgb), 0.2);
     }
 
     .feature-icon {
@@ -122,7 +122,7 @@
 
     .calculator-input input:focus {
         border-color: var(--primary-orange);
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.25);
         outline: none;
     }
 
@@ -183,7 +183,7 @@
     }
 
     .step:hover {
-        background: rgba(255, 107, 53, 0.05);
+        background: rgba(var(--brand-rgb), 0.05);
         transform: translateX(10px);
     }
 
@@ -200,7 +200,7 @@
         font-weight: 700;
         margin-right: 2rem;
         flex-shrink: 0;
-        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        box-shadow: 0 4px 15px rgba(var(--brand-rgb), 0.3);
     }
 
     .step-content h4 {

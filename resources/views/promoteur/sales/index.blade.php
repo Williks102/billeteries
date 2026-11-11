@@ -8,7 +8,7 @@
         border-radius: 15px;
         padding: 2rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         margin-bottom: 1.5rem;
         transition: transform 0.3s ease;
     }
@@ -33,7 +33,7 @@
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         padding: 2rem;
         margin-bottom: 2rem;
     }
@@ -47,27 +47,27 @@
     }
     
     .event-performance-card:hover {
-        border-color: #FF6B35;
-        box-shadow: 0 4px 8px rgba(255, 107, 53, 0.2);
+        border-color: var(--brand);
+        box-shadow: 0 4px 8px rgba(var(--brand-rgb), 0.2);
     }
     
     .filter-card {
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         padding: 1.5rem;
         margin-bottom: 2rem;
     }
     
     .btn-orange {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border: none;
         color: white;
     }
     
     .btn-orange:hover {
-        background: linear-gradient(135deg, #E55A2B, #D4491F);
+        background: linear-gradient(135deg, var(--brand-hover), #D4491F);
         color: white;
     }
 </style>
@@ -80,7 +80,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="h2 mb-1" style="color: #FF6B35;">
+                    <h1 class="h2 mb-1" style="color: var(--brand);">
                         <i class="fas fa-chart-line me-2"></i>
                         Analyse des Ventes
                     </h1>
@@ -121,10 +121,10 @@
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="stats-card text-center">
-                <div class="stats-icon mx-auto" style="background: linear-gradient(135deg, #FF6B35, #E55A2B);">
+                <div class="stats-icon mx-auto" style="background: linear-gradient(135deg, var(--brand), var(--brand-hover));">
                     <i class="fas fa-euro-sign"></i>
                 </div>
-                <h3 class="fw-bold" style="color: #FF6B35;">
+                <h3 class="fw-bold" style="color: var(--brand);">
                     {{ isset($totalStats['total_revenue']) ? number_format($totalStats['total_revenue']) : 0 }} F
                 </h3>
                 <p class="text-muted mb-0">Revenus Totaux</p>
@@ -170,7 +170,7 @@
             <div class="chart-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h5 class="fw-bold mb-0">
-                        <i class="fas fa-chart-area me-2" style="color: #FF6B35;"></i>
+                        <i class="fas fa-chart-area me-2" style="color: var(--brand);"></i>
                         Évolution des Ventes
                     </h5>
                 </div>
@@ -184,7 +184,7 @@
         <div class="col-lg-4">
             <div class="chart-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-trophy me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-trophy me-2" style="color: var(--brand);"></i>
                     Top Événements
                 </h5>
                 
@@ -196,7 +196,7 @@
                                 <small class="text-muted">{{ $sale['tickets_sold'] }} billets</small>
                             </div>
                             <div class="text-end">
-                                <strong style="color: #FF6B35;">{{ number_format($sale['revenue']) }} F</strong>
+                                <strong style="color: var(--brand);">{{ number_format($sale['revenue']) }} F</strong>
                             </div>
                         </div>
                     @endforeach
@@ -214,7 +214,7 @@
     <div class="chart-card">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h5 class="fw-bold mb-0">
-                <i class="fas fa-list-alt me-2" style="color: #FF6B35;"></i>
+                <i class="fas fa-list-alt me-2" style="color: var(--brand);"></i>
                 Performance Détaillée des Événements
             </h5>
         </div>
@@ -233,7 +233,7 @@
                             
                             <div class="row text-center">
                                 <div class="col-4">
-                                    <div class="fw-bold" style="color: #FF6B35;">{{ number_format($sale['revenue']) }} F</div>
+                                    <div class="fw-bold" style="color: var(--brand);">{{ number_format($sale['revenue']) }} F</div>
                                     <small class="text-muted">Revenus</small>
                                 </div>
                                 <div class="col-4">
@@ -251,7 +251,7 @@
                                     $totalAvailable = $sale['event']->totalTicketsAvailable();
                                     $percentage = $totalAvailable > 0 ? ($sale['tickets_sold'] / $totalAvailable) * 100 : 0;
                                 @endphp
-                                <div class="progress-bar" style="background: #FF6B35; width: {{ min($percentage, 100) }}%"></div>
+                                <div class="progress-bar" style="background: var(--brand); width: {{ min($percentage, 100) }}%"></div>
                             </div>
                             <small class="text-muted">{{ number_format($percentage, 1) }}% vendu</small>
                         </div>
@@ -315,8 +315,8 @@ document.addEventListener('DOMContentLoaded', function() {
         datasets: [{
             label: 'Revenus (FCFA)',
             data: chartData,
-            borderColor: '#FF6B35',
-            backgroundColor: 'rgba(255, 107, 53, 0.1)',
+            borderColor: '#C2410C',
+            backgroundColor: 'rgba(194, 65, 12, 0.1)',
             tension: 0.4,
             fill: true
         }]

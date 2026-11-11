@@ -368,7 +368,7 @@
 .user-avatar {
     width: 50px;
     height: 50px;
-    background: linear-gradient(135deg, #FF6B35, #ff8c61);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -380,8 +380,8 @@
 
 /* Cartes d'information sur les rôles */
 .role-info-card {
-    background: linear-gradient(135deg, rgba(255, 107, 53, 0.05), rgba(255, 140, 97, 0.05));
-    border: 1px solid rgba(255, 107, 53, 0.1);
+    background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.05), rgba(255, 140, 97, 0.05));
+    border: 1px solid rgba(var(--brand-rgb), 0.1);
     border-radius: 12px;
     padding: 20px;
     transition: all 0.3s ease;
@@ -410,7 +410,7 @@
 }
 
 .role-icon.promoteur {
-    background: linear-gradient(135deg, #FF6B35, #ff8c61);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
 }
 
 .role-icon.acheteur {

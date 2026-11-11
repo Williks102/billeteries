@@ -272,7 +272,7 @@ use Illuminate\Support\Facades\Storage;
     
     .event-card:hover {
         border-color: var(--primary-orange) !important;
-        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
+        box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.15);
         transform: translateY(-2px);
     }
     
@@ -303,7 +303,7 @@ use Illuminate\Support\Facades\Storage;
     }
     
     .stat-icon.primary {
-        background: linear-gradient(135deg, var(--primary-orange), #ff8c42);
+        background: linear-gradient(135deg, var(--primary-orange), var(--brand-decor));
     }
     
     .stat-icon.success {
@@ -323,7 +323,7 @@ use Illuminate\Support\Facades\Storage;
     }
     
     .table tr:hover {
-        background-color: rgba(255, 107, 53, 0.05);
+        background-color: rgba(var(--brand-rgb), 0.05);
     }
     
     .btn-group-sm .btn {

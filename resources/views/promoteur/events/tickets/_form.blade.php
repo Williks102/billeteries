@@ -97,16 +97,16 @@
 @push('styles')
 <style>
     .tt-page { max-width: 880px; }
-    .tt-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.08); border-left: 4px solid #FF6B35; padding: 1rem; margin-bottom: 1rem; }
+    .tt-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.08); border-left: 4px solid var(--brand); padding: 1rem; margin-bottom: 1rem; }
     .tt-card > summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
-    .tt-accent { color: #FF6B35; }
+    .tt-accent { color: var(--brand); }
     .tt-form .form-control, .tt-form .btn, .tt-form .form-control::placeholder { font-size: 16px; }
     .tt-form .form-control { min-height: 44px; }
     .tt-form .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
-    .tt-form .btn-orange { background: #FF6B35; border-color: #FF6B35; color: #fff; }
-    .tt-form .btn-orange:hover, .tt-form .btn-orange:focus { background: #E55A2B; border-color: #E55A2B; color: #fff; }
+    .tt-form .btn-orange { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .tt-form .btn-orange:hover, .tt-form .btn-orange:focus { background: var(--brand-hover); border-color: var(--brand-hover); color: #fff; }
     .tt-form .form-text, .tt-form .invalid-feedback { font-size: 14px; }
-    .tt-block { position: relative; background: #fff; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.08); border-left: 4px solid #FF6B35; padding: 1rem; margin: 0 0 1rem; min-width: 0; }
+    .tt-block { position: relative; background: #fff; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.08); border-left: 4px solid var(--brand); padding: 1rem; margin: 0 0 1rem; min-width: 0; }
     .tt-block-title { float: none; width: auto; font-size: 1.1rem; font-weight: 600; margin: 0 0 .75rem; padding-right: 56px; }
     .tt-remove { position: absolute; top: .5rem; right: .5rem; min-width: 44px; }
     .tt-revenue { display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; background: #f1f3f5; border-radius: 8px; padding: .75rem 1rem; margin-top: 1rem; }

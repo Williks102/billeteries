@@ -7,7 +7,7 @@
         border-radius: 15px;
         padding: 2rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         margin-bottom: 2rem;
         transition: transform 0.3s ease;
     }
@@ -35,8 +35,8 @@
     }
     
     .event-rank-item:hover {
-        border-color: #FF6B35;
-        box-shadow: 0 4px 8px rgba(255, 107, 53, 0.2);
+        border-color: var(--brand);
+        box-shadow: 0 4px 8px rgba(var(--brand-rgb), 0.2);
     }
     
     .rank-number {
@@ -66,19 +66,19 @@
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         padding: 1.5rem;
         margin-bottom: 2rem;
     }
     
     .btn-orange {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border: none;
         color: white;
     }
     
     .btn-orange:hover {
-        background: linear-gradient(135deg, #E55A2B, #D4491F);
+        background: linear-gradient(135deg, var(--brand-hover), #D4491F);
         color: white;
     }
     
@@ -103,7 +103,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="h2 mb-1" style="color: #FF6B35;">
+                    <h1 class="h2 mb-1" style="color: var(--brand);">
                         <i class="fas fa-chart-bar me-2"></i>
                         Rapports & Analyses
                     </h1>
@@ -146,8 +146,8 @@
     <!-- Statistiques générales -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="stat-box" style="border-left: 4px solid #FF6B35;">
-                <div class="progress-ring" style="background: linear-gradient(135deg, #FF6B35, #E55A2B);">
+            <div class="stat-box" style="border-left: 4px solid var(--brand);">
+                <div class="progress-ring" style="background: linear-gradient(135deg, var(--brand), var(--brand-hover));">
                     {{ $stats['total_events'] ?? 0 }}
                 </div>
                 <h6 class="fw-bold mb-1">Total Événements</h6>
@@ -194,7 +194,7 @@
             <div class="report-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h5 class="fw-bold mb-0">
-                        <i class="fas fa-chart-area me-2" style="color: #FF6B35;"></i>
+                        <i class="fas fa-chart-area me-2" style="color: var(--brand);"></i>
                         Évolution Mensuelle des Revenus
                     </h5>
                 </div>
@@ -208,7 +208,7 @@
         <div class="col-lg-4">
             <div class="report-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-trophy me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-trophy me-2" style="color: var(--brand);"></i>
                     Top Événements
                 </h5>
                 
@@ -222,7 +222,7 @@
                                 <h6 class="mb-1">{{ Str::limit($event->title, 25) }}</h6>
                                 <div class="d-flex justify-content-between">
                                     <small class="text-muted">{{ $event->orders_count }} commandes</small>
-                                    <strong style="color: #FF6B35;">{{ number_format($event->revenue ?? 0) }} F</strong>
+                                    <strong style="color: var(--brand);">{{ number_format($event->revenue ?? 0) }} F</strong>
                                 </div>
                             </div>
                         </div>
@@ -242,7 +242,7 @@
         <div class="col-lg-6">
             <div class="report-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-ticket-alt me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-ticket-alt me-2" style="color: var(--brand);"></i>
                     Types de Billets les Plus Vendus
                 </h5>
                 
@@ -254,7 +254,7 @@
                                 <small class="text-muted">{{ $ticketType->tickets_sold }} billets vendus</small>
                             </div>
                             <div class="text-end">
-                                <strong style="color: #FF6B35;">{{ number_format($ticketType->revenue ?? 0) }} F</strong>
+                                <strong style="color: var(--brand);">{{ number_format($ticketType->revenue ?? 0) }} F</strong>
                                 <br>
                                 <small class="text-muted">{{ number_format($ticketType->price) }} F / billet</small>
                             </div>
@@ -273,7 +273,7 @@
         <div class="col-lg-6">
             <div class="report-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-analytics me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-analytics me-2" style="color: var(--brand);"></i>
                     Métriques Détaillées
                 </h5>
                 
@@ -307,7 +307,7 @@
                     
                     <div class="col-6 mb-3">
                         <div class="text-center p-3 bg-light rounded">
-                            <h4 class="fw-bold" style="color: #FF6B35;">
+                            <h4 class="fw-bold" style="color: var(--brand);">
                                 {{ isset($topEvents) ? $topEvents->where('revenue', '>', 0)->count() : 0 }}
                             </h4>
                             <small class="text-muted">Événements Rentables</small>
@@ -360,8 +360,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     @endforeach
                 @endif
             ],
-            borderColor: '#FF6B35',
-            backgroundColor: 'rgba(255, 107, 53, 0.1)',
+            borderColor: '#C2410C',
+            backgroundColor: 'rgba(194, 65, 12, 0.1)',
             tension: 0.4,
             fill: true
         }]

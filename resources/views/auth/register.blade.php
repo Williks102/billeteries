@@ -9,9 +9,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-orange: #FF6B35;
-            --orange-light: #ff8c61;
-            --orange-dark: #e55a2b;
+            --primary-orange: var(--brand);
+            --orange-light: var(--brand-decor);
+            --orange-dark: var(--brand-hover);
         }
         
         * {
@@ -79,7 +79,7 @@
         .form-floating > .form-control:focus,
         .form-floating > .form-select:focus {
             border-color: var(--primary-orange);
-            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.1);
             outline: none;
         }
         
@@ -185,7 +185,7 @@
         .btn-primary:hover {
             background: var(--orange-dark);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+            box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.4);
         }
         
         .btn-primary:active {

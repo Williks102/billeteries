@@ -280,8 +280,8 @@
 <!-- Styles CSS -->
 <style>
 :root {
-    --primary-orange: #FF6B35;
-    --secondary-orange: #ff8c61;
+    --primary-orange: var(--brand);
+    --secondary-orange: var(--brand-decor);
     --dark-blue: #1a237e;
 }
 
@@ -306,7 +306,7 @@
 
 .btn-orange:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.3);
     color: white;
 }
 
@@ -337,7 +337,7 @@
 .nav-link:hover,
 .nav-link.active {
     color: var(--primary-orange) !important;
-    background: rgba(255, 107, 53, 0.1);
+    background: rgba(var(--brand-rgb), 0.1);
 }
 
 /* Barre de recherche desktop */
@@ -355,7 +355,7 @@
 
 .search-input-group:focus-within {
     border-color: var(--primary-orange);
-    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.1);
 }
 
 .search-input {
@@ -387,7 +387,7 @@
 .user-avatar {
     width: 35px;
     height: 35px;
-    background: rgba(255, 107, 53, 0.1);
+    background: rgba(var(--brand-rgb), 0.1);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -480,7 +480,7 @@
 }
 
 .dropdown-item:hover {
-    background: rgba(255, 107, 53, 0.1);
+    background: rgba(var(--brand-rgb), 0.1);
     color: var(--primary-orange);
 }
 

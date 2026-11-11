@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Storage;
                         </ol>
                     </nav>
                     
-                    <h1 class="h2 mb-1" style="color: #FF6B35;">
+                    <h1 class="h2 mb-1" style="color: var(--brand);">
                         <i class="fas fa-ticket-alt me-2"></i>
                         Gestion des billets
                     </h1>
@@ -121,7 +121,7 @@ use Illuminate\Support\Facades\Storage;
 
                                             <!-- Prix -->
                                             <td>
-                                                <span class="fw-bold" style="color: #FF6B35;">
+                                                <span class="fw-bold" style="color: var(--brand);">
                                                     {{ number_format($ticketType->price) }} FCFA
                                                 </span>
                                             </td>
@@ -264,7 +264,7 @@ use Illuminate\Support\Facades\Storage;
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="card border-0 text-white" style="background-color: #FF6B35;">
+                        <div class="card border-0 text-white" style="background-color: var(--brand);">
                             <div class="card-body text-center">
                                 <h3 class="mb-1">{{ number_format($ticketTypes->sum(function($t) { return $t->quantity_sold * $t->price; })) }} F</h3>
                                 <p class="mb-0 small">Revenus générés</p>
@@ -348,14 +348,14 @@ use Illuminate\Support\Facades\Storage;
 @push('styles')
 <style>
     .btn-orange {
-        background-color: #FF6B35;
-        border-color: #FF6B35;
+        background-color: var(--brand);
+        border-color: var(--brand);
         color: white;
     }
     
     .btn-orange:hover {
-        background-color: #E55A2B;
-        border-color: #E55A2B;
+        background-color: var(--brand-hover);
+        border-color: var(--brand-hover);
         color: white;
     }
     

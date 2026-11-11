@@ -12,23 +12,23 @@ use Illuminate\Support\Facades\Storage;
         border-radius: 15px;
         padding: 2rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         margin-bottom: 2rem;
     }
     
     .form-control:focus {
-        border-color: #FF6B35;
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        border-color: var(--brand);
+        box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.25);
     }
     
     .btn-orange {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border: none;
         color: white;
     }
     
     .btn-orange:hover {
-        background: linear-gradient(135deg, #E55A2B, #D4491F);
+        background: linear-gradient(135deg, var(--brand-hover), #D4491F);
         color: white;
     }
     
@@ -67,7 +67,7 @@ use Illuminate\Support\Facades\Storage;
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="h2" style="color: #FF6B35;">
+                    <h1 class="h2" style="color: var(--brand);">
                         <i class="fas fa-edit me-2"></i>
                         Modifier l'événement
                     </h1>
@@ -91,7 +91,7 @@ use Illuminate\Support\Facades\Storage;
             <div class="col-lg-8">
                 <div class="form-card">
                     <h5 class="fw-bold mb-4">
-                        <i class="fas fa-info-circle me-2" style="color: #FF6B35;"></i>
+                        <i class="fas fa-info-circle me-2" style="color: var(--brand);"></i>
                         Informations générales
                     </h5>
                     
@@ -217,7 +217,7 @@ use Illuminate\Support\Facades\Storage;
                 <!-- Image -->
                 <div class="form-card">
                     <h5 class="fw-bold mb-4">
-                        <i class="fas fa-image me-2" style="color: #FF6B35;"></i>
+                        <i class="fas fa-image me-2" style="color: var(--brand);"></i>
                         Image de l'événement
                     </h5>
                     
@@ -332,7 +332,7 @@ use Illuminate\Support\Facades\Storage;
                             <small class="text-muted">Billets vendus</small>
                         </div>
                         <div class="col-12">
-                            <div class="fw-bold" style="color: #FF6B35;">{{ number_format($event->totalRevenue()) }} F</div>
+                            <div class="fw-bold" style="color: var(--brand);">{{ number_format($event->totalRevenue()) }} F</div>
                             <small class="text-muted">Revenus</small>
                         </div>
                     </div>

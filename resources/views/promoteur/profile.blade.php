@@ -8,7 +8,7 @@
         border-radius: 15px;
         padding: 2rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         margin-bottom: 2rem;
         transition: transform 0.3s ease;
     }
@@ -18,7 +18,7 @@
     }
     
     .profile-header {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border-radius: 15px;
         padding: 2rem;
         color: white;
@@ -50,7 +50,7 @@
     }
     
     .btn-orange {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border: none;
         color: white;
         padding: 0.75rem 2rem;
@@ -60,14 +60,14 @@
     }
     
     .btn-orange:hover {
-        background: linear-gradient(135deg, #E55A2B, #D4491F);
+        background: linear-gradient(135deg, var(--brand-hover), #D4491F);
         color: white;
         transform: translateY(-2px);
     }
     
     .form-control:focus, .form-select:focus {
-        border-color: #FF6B35;
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        border-color: var(--brand);
+        box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.25);
     }
     
     .badge-role {
@@ -80,7 +80,7 @@
     }
     
     .activity-item {
-        border-left: 3px solid #FF6B35;
+        border-left: 3px solid var(--brand);
         padding-left: 1rem;
         margin-bottom: 1rem;
         padding-bottom: 1rem;
@@ -149,7 +149,7 @@
             <div class="profile-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h5 class="fw-bold mb-0">
-                        <i class="fas fa-user-edit me-2" style="color: #FF6B35;"></i>
+                        <i class="fas fa-user-edit me-2" style="color: var(--brand);"></i>
                         Informations Personnelles
                     </h5>
                     <button class="btn btn-outline-secondary btn-sm" onclick="toggleEdit()">
@@ -208,7 +208,7 @@
             <!-- Sécurité -->
             <div class="profile-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-shield-alt me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-shield-alt me-2" style="color: var(--brand);"></i>
                     Sécurité du Compte
                 </h5>
                 
@@ -255,7 +255,7 @@
             <!-- Activité récente -->
             <div class="profile-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-clock me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-clock me-2" style="color: var(--brand);"></i>
                     Activité Récente
                 </h5>
                 
@@ -295,7 +295,7 @@
             <!-- Liens utiles -->
             <div class="profile-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-link me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-link me-2" style="color: var(--brand);"></i>
                     Liens Utiles
                 </h5>
                 

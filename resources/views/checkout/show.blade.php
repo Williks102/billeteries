@@ -250,7 +250,7 @@
 }
 
 .step.active .step-number {
-    background: #ff6b35;
+    background: var(--brand);
     color: white;
 }
 

@@ -360,7 +360,7 @@
         width: 60px;
         height: 60px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #FF6B35, #F7931E);
+        background: linear-gradient(135deg, var(--brand), var(--brand-decor));
         display: flex;
         align-items: center;
         justify-content: center;

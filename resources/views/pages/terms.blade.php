@@ -17,20 +17,20 @@
         text-align: center;
         margin-bottom: 3rem;
         padding-bottom: 2rem;
-        border-bottom: 3px solid #FF6B35;
+        border-bottom: 3px solid var(--brand);
     }
 
     .terms-header h1 {
-        color: #FF6B35;
+        color: var(--brand);
         font-weight: 700;
         margin-bottom: 1rem;
     }
 
     .update-date {
-        background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05));
+        background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.1), rgba(var(--brand-rgb), 0.05));
         padding: 1rem;
         border-radius: 10px;
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         margin-bottom: 2rem;
     }
 
@@ -44,7 +44,7 @@
     }
 
     .subsection-title {
-        color: #FF6B35;
+        color: var(--brand);
         font-weight: 600;
         margin-top: 1.5rem;
         margin-bottom: 1rem;
@@ -52,14 +52,14 @@
 
     .definition-box {
         background: #f8f9fa;
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         padding: 1.5rem;
         margin: 1.5rem 0;
         border-radius: 0 10px 10px 0;
     }
 
     .contact-info {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         color: white;
         padding: 2rem;
         border-radius: 15px;

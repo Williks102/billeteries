@@ -8,7 +8,7 @@
         padding: 2rem;
         margin-bottom: 2rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
     }
     
     .step {
@@ -32,8 +32,8 @@
     }
     
     .step-number.active {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
-        box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
+        box-shadow: 0 4px 8px rgba(var(--brand-rgb), 0.3);
     }
     
     .step-number.completed {
@@ -60,7 +60,7 @@
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         margin-bottom: 2rem;
         transition: transform 0.2s ease;
     }
@@ -71,26 +71,26 @@
     }
     
     .btn-orange {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border: none;
         color: white;
         font-weight: 600;
         padding: 0.75rem 2rem;
         border-radius: 10px;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+        box-shadow: 0 4px 8px rgba(var(--brand-rgb), 0.3);
     }
     
     .btn-orange:hover {
-        background: linear-gradient(135deg, #E55A2B, #D4491F);
+        background: linear-gradient(135deg, var(--brand-hover), #D4491F);
         transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(255, 107, 53, 0.4);
+        box-shadow: 0 6px 12px rgba(var(--brand-rgb), 0.4);
         color: white;
     }
     
     .form-control:focus, .form-select:focus {
-        border-color: #FF6B35;
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        border-color: var(--brand);
+        box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.25);
     }
     
     .form-label {
@@ -100,15 +100,15 @@
     }
     
     .text-orange {
-        color: #FF6B35 !important;
+        color: var(--brand) !important;
     }
     
     .border-orange {
-        border-color: #FF6B35 !important;
+        border-color: var(--brand) !important;
     }
     
     .icon-section {
-        color: #FF6B35;
+        color: var(--brand);
         font-size: 1.5rem;
     }
 </style>

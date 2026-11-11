@@ -9,7 +9,7 @@ disable-model-invocation: true
 2. Dans UN SEUL message, lance en parallèle (lecture seule, brief : « audit uniquement, rapport dans docs/agents/reports/ ») :
    - `securite` : checklist complète.
    - `architecte` : tailles de classes, routes, duplication, dette.
-   - `qa-tests` : état des tests et de `composer check`, couverture des flux critiques (sans écrire de code applicatif).
+   - `qa-tests` : état des tests et de `composer run check`, couverture des flux critiques (sans écrire de code applicatif).
    - `devops-hygiene` : dépôt, config prod, seeders, env.
    - `ui-design` : parcours d'achat mobile, accessibilité, vues obsolètes.
 3. Consolide dans `docs/agents/reports/checkup.md` : tableau `Constat | Gravité | Agent propriétaire | Effort (S/M/L) | Statut (corrigé / toujours vrai / nouveau)`.

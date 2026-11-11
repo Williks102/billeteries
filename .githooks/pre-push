@@ -3,5 +3,5 @@
 # Activation (une fois par clone) : composer run setup-hooks
 # Contournement ponctuel : git push --no-verify
 [ -x vendor/bin/phpunit ] || { echo "pre-push : vendor/ absent, lancez composer install (vérification ignorée)"; exit 0; }
-echo "pre-push : composer check…"
+echo "pre-push : composer run check…"
 composer run check --quiet || { echo "pre-push : échec, push annulé."; exit 1; }

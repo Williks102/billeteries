@@ -21,7 +21,7 @@ D3 CheckoutController et GuestCheckoutController dupliqués ; pas de CheckoutSer
 D4 Rôles maison + Spatie en doublon ; mélange promoteur/promoter.
 D5 Pas de Form Requests ni Policies ; TicketController::download laisse passer les rôles autres qu'acheteur/promoteur.
 D6 Emails/PDF synchrones malgré la table jobs.
-D7 Aucun test réel, pas de CI, pas de .env.example, README par défaut.
+D7 Aucun test réel, pas de CI (volontaire : pas de GitHub Actions, vérifs locales), pas de .env.example, README par défaut.
 D8 Logs trop bavards (`$request->all()`).
 
 # Règles pour tous
@@ -46,3 +46,10 @@ D8 Logs trop bavards (`$request->all()`).
 - Ressource imbriquée : `Route::resource('events.tickets', …)->parameters(['tickets' => 'ticketType'])` — le nom du paramètre DOIT égaler le nom de l'argument du contrôleur (sinon pas de route-model binding).
 - Après toute modif de routes : `php artisan test tests/Feature/RoutingConventionsTest.php` (shadowing, noms uniques, actions existantes, noms utilisés dans les vues, route:cache).
 - Les URLs d'admin sont référencées en dur dans `public/js/admin-*.js` : ne pas les changer sans mettre à jour ces fichiers.
+
+# Vérifications locales (remplacent la CI — pas de GitHub Actions)
+- Avant TOUT commit/push et avant d'annoncer qu'une mission est finie : `composer check` doit être vert. Le coller dans le compte rendu.
+- `composer install` d'abord si `vendor/` est absent (cloud : plusieurs minutes, lancer en arrière-plan).
+- Hook optionnel : `composer run setup-hooks` active `.githooks/pre-push` (relance `composer check` avant chaque push).
+- Étendre `composer check` quand de nouveaux tests critiques existent (paiement, stock) ; ne jamais le rendre rouge « pour plus tard ».
+- Ne pas ajouter de workflow `.github/workflows/` sans demande explicite de l'utilisateur.

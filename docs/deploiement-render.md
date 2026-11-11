@@ -5,7 +5,10 @@ Guide pas à pas pour mettre en ligne une démo PROVISOIRE de la billetterie, de
 - Hébergement : Render, offre gratuite, déploiement par Docker (Render n'a pas de PHP natif).
 - Base de données : TiDB Cloud Starter (compatible MySQL, TLS obligatoire, port 4000).
 - Paiement : manuel, confirmé par l'admin. Aucun vrai paiement n'est branché.
-- Règle d'or : ne collez JAMAIS un mot de passe ou une clé dans le dépôt, dans une issue ou dans un chat. Saisissez-les uniquement dans les champs « Environment » de Render.
+- Règle d'or : ne collez JAMAIS un mot de passe ou une clé dans le dépôt ni dans une issue. Saisissez-les uniquement dans les champs « Environment » de Render.
+
+> **AVANT TOUT : fusionnez la Pull Request dans `main` AVANT de créer le service Render.**
+> Le fichier `render.yaml` impose `branch: main`, et `main` ne contient ni `Dockerfile` ni `render.yaml` tant que la PR n'est pas fusionnée : le service échouerait dès la construction. Toutes les étapes ci-dessous supposent que la fusion est faite.
 
 ## A. Créer la base sur TiDB Cloud
 
@@ -31,7 +34,7 @@ Les libellés de l'interface TiDB peuvent changer : cherchez « Connect », « P
 
 ### Option 1 : Blueprint (recommandé)
 
-1. Sur Render : **New +** puis **Blueprint**, connectez le dépôt GitHub, choisissez la branche à déployer. Render lit `render.yaml`.
+1. Vérifiez que la PR est fusionnée dans `main` (voir l'avertissement en haut). Sur Render : **New +** puis **Blueprint**, connectez le dépôt GitHub. Render lit `render.yaml` et déploie la branche `main` (fixée dans ce fichier ; elle n'est pas modifiable ici).
 2. Render demande les variables marquées « sync: false » (voir tableau ci-dessous). Remplissez-les puis lancez le déploiement.
 
 ### Option 2 : manuel
@@ -44,7 +47,7 @@ Variables à saisir par vous (secrètes ou propres à votre installation) :
 
 | Variable | Où trouver la valeur |
 |---|---|
-| APP_KEY | Voir « Générer APP_KEY » ci-dessous. Forme : `base64:` suivi de 44 caractères. |
+| APP_KEY | **Utilisez la clé que l'assistant vous a donnée dans la conversation** (jamais dans le dépôt). Pour en obtenir une autre sans ligne de commande : voir « APP_KEY » ci-dessous. |
 | APP_URL | L'adresse publique du service, visible en haut de la page du service Render : `https://<nom>.onrender.com`, sans `/` final. Au premier déploiement, mettez le nom prévu, puis corrigez si Render en a choisi un autre. |
 | DB_HOST | TiDB Cloud, bouton Connect, champ Host. |
 | DB_DATABASE | `billetterie` (créée à l'étape A.7). |
@@ -70,21 +73,35 @@ Variables déjà fixées dans `render.yaml` (en clair, sans danger) :
 | TRUSTED_PROXIES | `*` : acceptable ici parce que l'application n'est joignable que via le proxy de Render. À ne pas copier ailleurs. |
 | TELESCOPE_ENABLED | `false` |
 | DEFAULT_COMMISSION_RATE | `6` |
-| DEMO_SEED | `true` : au premier démarrage, si la base est vide, crée catégories, commissions et le compte admin. Sans effet ensuite. |
-| MAX_*, PENDING_*, *_THROTTLE_PER_MINUTE, *_RESERVATION_MINUTES | Plafonds anti-abus, valeurs par défaut du projet. |
+| DEMO_SEED | `true` : au premier démarrage, si la base est vide, crée catégories, commissions et le compte admin. **Passez-le à `false` dès que le premier démarrage a réussi** (voir C.0). |
+| APP_NAME / APP_LOCALE / APP_FALLBACK_LOCALE | `Billetterie` / `fr` / `fr` |
+| SESSION_LIFETIME / FILESYSTEM_DISK | `120` (minutes) / `local` |
+| MAIL_FROM_ADDRESS / MAIL_FROM_NAME | `noreply@example.com` / `Billetterie` (adresse fictive) |
+| MAX_*, PENDING_*, *_THROTTLE_PER_MINUTE, *_RESERVATION_MINUTES, MANUAL_RESERVATION_MINUTES, GUEST_MANUAL_RESERVATION_MINUTES | Plafonds anti-abus : valeurs de `render.yaml` (identiques aux défauts du projet). **Facultatives** en option manuelle : sans elles, les défauts du projet s'appliquent. |
 
-### Générer APP_KEY
+### APP_KEY
 
-APP_KEY doit avoir la forme `base64:` suivi de 32 octets aléatoires encodés en base64 (44 caractères, souvent terminés par `=`). L'option `generateValue` de Render ne produit PAS ce format : ne l'utilisez pas.
+APP_KEY est la clé qui chiffre les sessions et les cookies. Trois formes sont acceptées (le conteneur normalise la valeur au démarrage et, si elle est inutilisable, s'arrête avec un message clair SANS afficher la valeur) :
 
-- Avec PHP et le projet sur un ordinateur : `php artisan key:generate --show` affiche la clé sans modifier de fichier.
-- Sans PHP : `echo "base64:$(openssl rand -base64 32)"` sur n'importe quel Linux/macOS (ou dans un terminal en ligne de confiance sur votre propre machine).
+1. `base64:` suivi de 44 caractères (32 octets en base64) : forme habituelle de Laravel.
+2. 44 caractères base64 SANS le préfixe `base64:` : le conteneur ajoute le préfixe tout seul. C'est le cas d'une valeur générée par Render.
+3. Exactement 32 caractères quelconques : acceptés tels quels.
 
-Copiez la valeur directement dans Render. Ne la publiez nulle part. La changer plus tard déconnecte tout le monde et invalide les données chiffrées.
+**Votre clé :** utilisez la clé que l'assistant vous a donnée dans la conversation. Collez-la directement dans le champ APP_KEY de Render, sans espace ni retour à la ligne.
+
+**En obtenir une autre sans ligne de commande (depuis un téléphone) :**
+
+- Le plus simple : le générateur de mots de passe de votre téléphone ou de votre gestionnaire de mots de passe. Demandez **exactement 32 caractères**, lettres et chiffres seulement. Vérifiez la longueur (le champ APP_KEY de Render n'en dit rien ; si elle est fausse, le conteneur s'arrête avec « APP_KEY invalide »). Collez le résultat dans APP_KEY.
+- Ou, si votre écran Render propose un bouton **Generate** (ou l'option `generateValue`) pour une variable : utilisez-le pour APP_KEY (non vérifié ici ; ces valeurs sont du base64 de 32 octets sans préfixe, ce que le conteneur sait normaliser).
+- Sur un ordinateur : `php artisan key:generate --show` (avec PHP et le projet), ou `echo "base64:$(openssl rand -base64 32)"` sur Linux/macOS.
+
+Ne la publiez nulle part. La changer plus tard déconnecte tout le monde et invalide les données chiffrées.
 
 ## C. Vérifier après déploiement
 
 Le premier déploiement dure quelques minutes (construction de l'image). Dans l'onglet Logs, cherchez `[entrypoint]` : migrations, puis « Démarrage d'Apache ».
+
+**C.0 (immédiat, dès que « Démarrage d'Apache » apparaît) : passez `DEMO_SEED` à `false`.** Dans Render : Environment, `DEMO_SEED` = `false`, puis enregistrez (Render redéploie). Le compte admin et les catégories sont déjà créés ; laisser `true` ferait recréer un admin avec ADMIN_PASSWORD si la base était un jour vidée ou remplacée. Si vous voyez « DEMO_SEED=true : seed de démo » puis « la table users n'est pas vide, rien à faire », c'est normal pour un redémarrage.
 
 1. Page d'accueil : ouvrez APP_URL, la page se charge avec ses styles.
 2. `/up` : doit répondre 200.
@@ -98,26 +115,28 @@ Le premier déploiement dure quelques minutes (construction de l'image). Dans l'
 
 - Veille : après environ 15 minutes sans visite, le service s'endort. Le réveil prend 30 à 50 secondes.
 - Fichiers éphémères : le disque est effacé à chaque déploiement ou redémarrage. Les images téléversées (affiches, avatars) et les QR codes générés disparaissent ; les données de la base (TiDB) restent.
-- Emails : journalisés (MAIL_MAILER=log), jamais envoyés.
+- Emails : journalisés (MAIL_MAILER=log), jamais envoyés. **Attention : avec `MAIL_MAILER=log` et `LOG_CHANNEL=stderr`, le contenu des emails (liens de confirmation, instructions de paiement, adresses email des acheteurs) est écrit EN CLAIR dans les journaux Render.** N'utilisez cette configuration qu'avec des données fictives ; avec de vraies données, passez à un vrai SMTP (voir F) ou à `MAIL_MAILER=array` (rien n'est écrit ni envoyé).
 - Planificateur : `schedule:work` tourne dans le conteneur, donc il est arrêté pendant la veille. Les commandes expirées ne sont libérées qu'au réveil, ce qui peut retenir du stock un moment.
 - Paiement : manuel uniquement, aucune transaction réelle.
 - Pas de sauvegarde automatique au-delà de ce que propose TiDB.
 
 ## E. Dépannage
 
-**Erreur TLS ou certificat** (`SSL`, `certificate`, `Connections using insecure transport are prohibited`) : vérifiez que DB_PORT vaut `4000`, que DB_SSL_CA vaut `/etc/ssl/certs/ca-certificates.crt` et que DB_HOST est bien celui du bouton Connect. TiDB refuse toute connexion sans TLS. Si l'erreur mentionne la vérification du nom ou du certificat, l'essai de dernier recours est DB_SSL_VERIFY=`false` (le trafic reste chiffré mais le serveur n'est plus authentifié) ; remettez `true` dès que possible et signalez le message.
+**Erreur TLS ou certificat** (`SSL`, `certificate`, `Connections using insecure transport are prohibited`) : vérifiez que DB_PORT vaut `4000`, que DB_SSL_CA vaut `/etc/ssl/certs/ca-certificates.crt` et que DB_HOST est bien celui du bouton Connect. TiDB refuse toute connexion sans TLS. Si l'erreur mentionne la vérification du nom ou du certificat, **corrigez d'abord DB_SSL_CA** (le chemin du fichier de certificats) et DB_HOST. Ne désactivez la vérification (DB_SSL_VERIFY=`false`) qu'en DERNIER RECOURS et TEMPORAIREMENT : le trafic reste chiffré mais le serveur n'est plus authentifié, donc une interception (attaque de l'homme du milieu) devient possible sur Internet. Remettez `true` dès que possible et ne laissez jamais `false` avec de vraies données.
 
 **Erreur d'accès refusé / utilisateur inconnu** : l'utilisateur TiDB contient un préfixe (`xxxx.root`). Recopiez-le en entier, régénérez le mot de passe si besoin.
 
 **Le conteneur s'arrête au démarrage** : lisez la dernière ligne `[entrypoint] ERREUR` dans les Logs. Causes courantes : variable manquante, ADMIN_PASSWORD de moins de 12 caractères, migration en échec.
 
-**Migration qui échoue sur TiDB.** Les migrations n'ont JAMAIS été exécutées sur TiDB, seulement sur SQLite et MySQL. Trois migrations exécutent `ALTER TABLE … MODIFY COLUMN … ENUM(…)`, une syntaxe que TiDB peut refuser :
+**Migration qui échoue.** Les 39 migrations exécutables de `database/migrations` n'ont JAMAIS été exécutés de bout en bout sur MySQL ni sur TiDB (aucun serveur MySQL/TiDB n'était disponible pour les essais) : la première exécution sur votre base vierge est donc la première réelle. Ce qui a été fait : audit migration par migration (`docs/agents/reports/devops-audit-migrations.md`), correction d'une erreur certaine (clé étrangère en double sur `commissions`, erreur MySQL 1826) et exécution de toute la chaîne sur SQLite par un test automatique. Ce qui n'a PAS pu être prouvé : le comportement exact de MySQL/TiDB.
 
-1. `database/migrations/2025_09_11_021012_add_reserved_status_to_tickets_table.php` : `tickets.status`
-2. `database/migrations/2025_09_11_100326_add_processing_status_to_tickets_table.php.php` : `tickets.status`
-3. `database/migrations/2025_09_11_102806_add_processing_status_to_orders_table.php` : `orders.payment_status`
+Points restant à risque sur TiDB (non éprouvés) :
 
-(Le décompte initial annonçait quatre migrations ; la recherche dans le dépôt en trouve trois dans leur méthode `up`, les trois autres instructions étant leurs `down`.) Si l'une échoue, le conteneur s'arrête et le journal montre l'erreur SQL. Procédure : NE PAS modifier la base à la main. Copiez le journal Render complet (sans mot de passe : il n'y en a pas dans les journaux, relisez avant d'envoyer) et transmettez-le à l'équipe technique, qui adaptera ces migrations. Une migration à moitié appliquée peut laisser des tables : l'équipe vous dira s'il faut vider la base `billetterie` (`DROP DATABASE` puis `CREATE DATABASE`) avant de redéployer.
+1. Trois migrations exécutent `ALTER TABLE … MODIFY COLUMN … ENUM(…)` : `…_021012_add_reserved_status_to_tickets_table` et `…_100326_add_processing_status_to_tickets_table.php.php` (`tickets.status`, ajout en fin de liste), `…_102806_add_processing_status_to_orders_table` (`orders.payment_status`, ajout au milieu de la liste). TiDB accepte l'ajout de membres d'ENUM (lecture de son code source, non exécuté) ; sur des tables vides le risque est faible.
+2. Deux migrations modifient `commissions.status` avec `->change()` (ajout de `cancelled` au milieu de la liste) : `2025_07_28_122001` et `2025_08_02_195133`. Même remarque.
+3. Les renommages de colonnes (`promoteur_id` en `promoter_id` sur `events`, `commissions`, `commission_settings`) : la clé étrangère garde son ancien nom, ce qui est normal.
+
+Si l'une échoue, le conteneur s'arrête et le journal montre l'erreur SQL. Procédure : NE PAS modifier la base à la main. Copiez le journal Render (il ne contient pas de mot de passe ; relisez avant d'envoyer) et transmettez-le à l'équipe technique. Une migration partiellement appliquée peut laisser des tables : l'équipe vous dira s'il faut vider la base `billetterie` (`DROP DATABASE` puis `CREATE DATABASE`) avant de redéployer.
 
 Autre point de vigilance, non vérifié sur TiDB : les verrous `SELECT … FOR UPDATE` (`lockForUpdate`) utilisés pour protéger le stock. TiDB les supporte mais leur comportement sous forte concurrence n'a pas été testé ; pour une démo à faible trafic, le risque est faible.
 

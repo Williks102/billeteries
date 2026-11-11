@@ -1,5 +1,8 @@
 # Blueprint Render : déploiement PROVISOIRE DE DÉMO (offre gratuite, base TiDB Cloud Starter).
 # Guide pas à pas : docs/deploiement-render.md
+#
+# ATTENTION : `branch: main` ci-dessous. Fusionnez la Pull Request dans main AVANT de créer le service Render :
+# tant que ce fichier et le Dockerfile ne sont pas dans main, le déploiement échoue.
 # Règle : les valeurs secrètes ne sont JAMAIS dans ce fichier. Les variables `sync: false` sont saisies
 # dans le tableau de bord Render (Environment) au premier déploiement.
 services:
@@ -30,7 +33,7 @@ services:
         value: info
 
       # --- Secrets à saisir dans Render (aucune valeur ici) ---
-      - key: APP_KEY # forme attendue : base64:<32 octets en base64> (voir le guide)
+      - key: APP_KEY # base64:<32 octets en base64>, ou le même base64 sans préfixe, ou 32 caractères ; normalisé au démarrage (voir le guide)
         sync: false
       - key: APP_URL # ex. https://<nom-du-service>.onrender.com, sans « / » final
         sync: false
@@ -85,6 +88,8 @@ services:
         value: Billetterie
 
       # --- Démo : compte admin créé au premier démarrage si la base est vide ---
+      # DEMO_SEED reste "true" volontairement : le compte admin se crée sans autre manipulation (propriétaire sur
+      # téléphone). Contrepartie : le guide demande de le passer à "false" DÈS le premier démarrage réussi (étape C.0).
       - key: DEMO_SEED
         value: "true"
       - key: ADMIN_EMAIL

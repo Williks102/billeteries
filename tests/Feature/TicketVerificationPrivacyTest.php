@@ -26,7 +26,6 @@ class TicketVerificationPrivacyTest extends TestCase
         parent::setUp();
         $this->buildOrderSchema();
         Schema::table('tickets', function ($t) {
-            $t->unsignedBigInteger('order_item_id')->nullable();
             $t->timestamp('used_at')->nullable();
             $t->timestamp('cancelled_at')->nullable();
             $t->unsignedBigInteger('cancelled_by')->nullable();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Acheteur;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Order;
 use App\Models\Ticket;
 
 /**
@@ -58,13 +59,26 @@ class TicketController extends Controller
     public function show(Ticket $ticket)
     {
         // Vérifier que l'utilisateur peut voir ce billet
-        $order = $ticket->order()->where('user_id', Auth::id())->first();
+        // Lien direct (order_item_id) ou, à défaut, table de liaison order_tickets (billets anciens).
+        $order = $ticket->order()->where('user_id', Auth::id())->first()
+            ?? Order::where('user_id', Auth::id())
+                ->whereIn('id', \DB::table('order_tickets')->where('ticket_id', $ticket->id)->select('order_id'))
+                ->first();
         if (!$order && !Auth::user()->isAdmin()) {
             abort(403);
         }
 
         $ticket->load(['ticketType.event.category']);
 
-        return view('acheteur.ticket-detail', compact('ticket'));
+        // Le QR n'est fourni à la vue que si le billet est émis (paiement confirmé) : sinon null.
+        $order ??= $ticket->order;
+        $isIssued = $ticket->isIssued();
+
+        return view('acheteur.ticket-detail', [
+            'ticket' => $ticket,
+            'order' => $order,
+            'isIssued' => $isIssued,
+            'qrDataUri' => $isIssued ? $ticket->qrDataUri() : null,
+        ]);
     }
 }

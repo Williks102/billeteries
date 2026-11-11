@@ -163,3 +163,7 @@ Checklist « avant production » :
 - [ ] Captcha sur l'inscription et le checkout invité.
 - [ ] `composer run check` vert, APP_DEBUG=false, HTTPS forcé, sauvegardes de la base testées.
 - [ ] Mots de passe admin changés, comptes de démo supprimés, DEMO_SEED retiré.
+
+## Mode démo : paiements simulés
+
+Pour une démonstration où les commandes sont confirmées automatiquement (QR visibles tout de suite), posez **les deux** variables dans Render : `DEMO_AUTO_CONFIRM_PAYMENTS=true` et `DEMO_MODE_ACKNOWLEDGED=true`. Avec une seule des deux, en production, le mode reste désactivé et un message critique est écrit dans les journaux. Un bandeau « MODE DÉMO » s'affiche. Les billets deviennent gratuits : supprimez les deux variables après la démonstration. Pour les commandes déjà confirmées sans QR : `php artisan tickets:generate-qr`.

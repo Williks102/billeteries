@@ -6,7 +6,6 @@ use App\Models\Ticket;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Encoder\Encoder;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Service QR Code : génération 100 % LOCALE (S-6, S-7).
@@ -14,7 +13,8 @@ use Illuminate\Support\Facades\Storage;
  * Aucun appel réseau : le code du billet (secret porteur de /verify-ticket/{code}) ne quitte jamais le serveur.
  * Encodage par bacon/bacon-qr-code (dépendance de simple-qrcode), rendu PNG par GD (ext-gd, requise par la génération PNG ; déclarée dans composer.json).
  * PNG et non SVG : imagick n'est pas disponible (simple-qrcode ne sait faire du PNG qu'avec imagick), et tous
- * les consommateurs existants (colonne qr_code, téléchargement admin, fichier enregistré, DomPDF) attendent un PNG.
+ * les consommateurs existants (colonne qr_code, téléchargement admin, DomPDF) attendent un PNG.
+ * AUCUN fichier n'est écrit (disque éphémère sur Render) : le QR est une data-URI persistée dans tickets.qr_code.
  * Temps de génération : quelques millisecondes ; aucun risque de blocage d'un worker.
  */
 class QRCodeService
@@ -99,67 +99,13 @@ class QRCodeService
     }
 
     /**
-     * Générer et sauvegarder un QR code sur le disque.
-     */
-    public function generateAndSaveTicketQR(Ticket $ticket, $size = 200)
-    {
-        try {
-            $png = $this->renderPng($this->verificationUrl($ticket), (int) $size);
-
-            if (! $png) {
-                Log::warning("QR : impossible de générer le QR du billet #{$ticket->id}.");
-
-                return null;
-            }
-
-            $directory = 'public/qrcodes';
-            $filepath = "{$directory}/qr-{$ticket->ticket_code}.png";
-
-            Storage::put($filepath, $png);
-
-            try {
-                $ticket->update(['qr_code_path' => $filepath]);
-            } catch (\Exception $e) {
-                Log::warning("QR : qr_code_path non mis à jour pour le billet #{$ticket->id} (" . get_class($e) . ').');
-            }
-
-            return Storage::url($filepath);
-        } catch (\Exception $e) {
-            Log::error("QR : erreur de sauvegarde pour le billet #{$ticket->id} (" . get_class($e) . ').');
-
-            return null;
-        }
-    }
-
-    /**
-     * Vérifier si un QR code existe déjà en cache.
-     */
-    public function getTicketQRFromCache(Ticket $ticket)
-    {
-        $filename = "public/qrcodes/qr-{$ticket->ticket_code}.png";
-
-        if (Storage::exists($filename)) {
-            return Storage::url($filename);
-        }
-
-        return null;
-    }
-
-    /**
-     * Méthode principale : génère le QR avec cache.
+     * Point d'entrée des vues acheteur : data-URI du QR, uniquement pour un billet ÉMIS (payé).
+     * Aucun fichier : le QR est persisté en base (tickets.qr_code) par Ticket::qrDataUri().
+     * Le paramètre $format est conservé pour compatibilité : toute valeur renvoie une data-URI.
      */
     public function getOrGenerateTicketQR(Ticket $ticket, $format = 'base64')
     {
-        if ($format === 'base64') {
-            return $this->generateTicketQRBase64($ticket);
-        }
-
-        $cachedQR = $this->getTicketQRFromCache($ticket);
-        if ($cachedQR) {
-            return $cachedQR;
-        }
-
-        return $this->generateAndSaveTicketQR($ticket);
+        return $ticket->qrDataUri();
     }
 
     /**
@@ -212,27 +158,6 @@ class QRCodeService
                 'recommendation' => $png ? 'QR generation should work' : 'GD manquant ou erreur d\'encodage',
             ],
         ];
-    }
-
-    /**
-     * Nettoyer les anciens QR codes (commande artisan).
-     */
-    public function cleanupOldQRCodes($daysOld = 30)
-    {
-        $deletedCount = 0;
-        $files = Storage::files('public/qrcodes');
-        $cutoffTime = now()->subDays($daysOld);
-
-        foreach ($files as $file) {
-            if (Storage::lastModified($file) < $cutoffTime->timestamp) {
-                Storage::delete($file);
-                $deletedCount++;
-            }
-        }
-
-        Log::info("QR cleanup: {$deletedCount} fichiers supprimés");
-
-        return $deletedCount;
     }
 
     /**

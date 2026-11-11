@@ -160,4 +160,30 @@ class DemoSeedCommandTest extends TestCase
         $this->setEnv('ADMIN_PASSWORD', 'court');
         $this->artisan('demo:seed')->doesntExpectOutputToContain('court')->assertExitCode(1);
     }
+
+    public function test_missing_password_message_says_the_variable_is_not_defined(): void
+    {
+        $this->setEnv('ADMIN_PASSWORD', null);
+
+        $this->artisan('demo:seed')
+            ->expectsOutputToContain("ADMIN_PASSWORD n'est pas défini")
+            ->assertExitCode(1);
+    }
+
+    public function test_short_password_message_gives_only_the_length_never_the_value(): void
+    {
+        $this->setEnv('ADMIN_PASSWORD', 'Secret-9xyz'); // 11 caractères
+
+        $this->artisan('demo:seed')
+            ->expectsOutputToContain('longueur est insuffisante : 11 caractère(s) reçu(s), 12 minimum')
+            ->doesntExpectOutputToContain('Secret-9xyz')
+            ->assertExitCode(1);
+    }
+
+    public function test_a_valid_password_is_never_printed(): void
+    {
+        $this->artisan('demo:seed')
+            ->doesntExpectOutputToContain(self::STRONG)
+            ->assertExitCode(0);
+    }
 }

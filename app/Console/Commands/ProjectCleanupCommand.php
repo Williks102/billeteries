@@ -127,28 +127,8 @@ Artisan::command('project:cleanup {--dry-run : Simulation sans modifications} {-
         $this->info("\n🖼️ Nettoyage des QR codes");
         $this->line("─────────────────────────────────────────");
         
-        if (!$dryRun) {
-            $qrService = app(\App\Services\QRCodeService::class);
-            $stats['qr_cleaned'] = $qrService->cleanupOldQRCodes(30);
-            $this->info("✅ {$stats['qr_cleaned']} anciens QR codes supprimés");
-        } else {
-            $files = \Illuminate\Support\Facades\Storage::files('public/qrcodes');
-            $oldFiles = 0;
-            $cutoffTime = now()->subDays(30);
-            
-            foreach ($files as $file) {
-                try {
-                    $lastModified = \Illuminate\Support\Facades\Storage::lastModified($file);
-                    if ($lastModified < $cutoffTime->timestamp) {
-                        $oldFiles++;
-                    }
-                } catch (\Exception $e) {
-                    // Ignorer les erreurs
-                }
-            }
-            
-            $this->info("📋 {$oldFiles} anciens QR codes seraient supprimés");
-        }
+        // Les QR sont des data-URI en base (aucun fichier à nettoyer).
+        $this->info("✅ Aucun fichier QR à nettoyer (QR stockés en base)");
     }
     
     // Nettoyage cache

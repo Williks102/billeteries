@@ -102,21 +102,14 @@
                             <!-- QR Code Section -->
                             <div class="qr-section">
                                 <div class="qr-container mx-auto">
-                                    @php
-                                        try {
-                                            $qrService = app(\App\Services\QRCodeService::class);
-                                            $qrBase64 = $qrService->getOrGenerateTicketQR($ticket, 'base64');
-                                        } catch (\Exception $e) {
-                                            $qrBase64 = null;
-                                        }
-                                    @endphp
+                                    @php($qrBase64 = $ticket->qrDataUri())
                                     
                                     @if($qrBase64)
                                         <img src="{{ $qrBase64 }}" 
                                              alt="QR Code" 
                                              class="qr-code"
                                              style="width: 120px; height: 120px; cursor: pointer;"
-                                             onclick="showLargeQR('{{ $qrBase64 }}', '{{ $ticket->ticket_code }}')">
+                                             data-qr-src="{{ $qrBase64 }}" data-ticket-code="{{ $ticket->ticket_code }}" onclick="showLargeQR(this)">
                                     @else
                                         <div class="qr-placeholder" 
                                              style="width: 120px; height: 120px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
@@ -176,7 +169,7 @@
                             <div class="ticket-actions">
                                 @if($qrBase64)
                                 <button type="button" class="btn btn-qr btn-sm" 
-                                        onclick="showLargeQR('{{ $qrBase64 }}', '{{ $ticket->ticket_code }}')">
+                                        data-qr-src="{{ $qrBase64 }}" data-ticket-code="{{ $ticket->ticket_code }}" onclick="showLargeQR(this)">
                                     <i class="fas fa-expand me-1"></i>Agrandir QR
                                 </button>
                                 @endif
@@ -567,9 +560,9 @@
 
 @push('scripts')
 <script>
-    function showLargeQR(qrBase64, ticketCode) {
-        document.getElementById('modalQRImage').src = qrBase64;
-        document.getElementById('modalTicketCode').textContent = ticketCode;
+    function showLargeQR(el) {
+        document.getElementById('modalQRImage').src = el.dataset.qrSrc;
+        document.getElementById('modalTicketCode').textContent = el.dataset.ticketCode;
         
         const modal = new bootstrap.Modal(document.getElementById('qrModal'));
         modal.show();

@@ -549,6 +549,7 @@
     @stack('styles')
 </head>
 <body>
+    @include('partials.demo-banner')
     <div class="promoteur-wrapper">
         <!-- Mobile Overlay -->
         <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>

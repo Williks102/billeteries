@@ -131,8 +131,11 @@ trait BuildsOrderSchema
         Schema::create('tickets', function ($t) {
             $t->id();
             $t->unsignedBigInteger('ticket_type_id');
+            $t->unsignedBigInteger('order_item_id')->nullable();
             $t->string('ticket_code')->nullable();
             $t->string('status')->default('reserved');
+            $t->text('qr_code')->nullable();
+            $t->string('qr_code_path')->nullable();
             $t->timestamps();
         });
         Schema::create('order_tickets', function ($t) {

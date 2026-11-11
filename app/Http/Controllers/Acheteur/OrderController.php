@@ -111,13 +111,28 @@ public function index(Request $request)
             'commission'
         ]);
 
-        return view('acheteur.order-detail', compact('order'));
+        return view('acheteur.order-detail', [
+            'order' => $order,
+            'awaitingPayment' => $order->isAwaitingPayment(),
+            'paymentInfo' => \App\Services\CheckoutService::manualPaymentInfo($order->payment_method),
+            'paymentDeadline' => $order->paymentDeadline(),
+            'demoSimulatedPayment' => $order->isPaid() && $order->payment_reference === \App\Services\CheckoutService::DEMO_REFERENCE,
+        ]);
     }
 
     public function download(Order $order)
 {
-    // Vérifications existantes...
-    
+    // Autorisation : le PDF contient les billets et leurs QR codes. Réservé au propriétaire de la commande
+    // (ou à un admin) ; jamais de PDF de billets avant la confirmation du paiement.
+    if ($order->user_id !== Auth::id() && !Auth::user()->isAdmin()) {
+        abort(403);
+    }
+
+    if (!$order->isPaid()) {
+        return redirect()->route('acheteur.orders.show', $order)
+            ->with('error', 'Vos billets seront disponibles au téléchargement après la confirmation du paiement.');
+    }
+
     // Charger les relations nécessaires
     $order->load(['event.category', 'tickets.ticketType', 'orderItems.ticketType', 'user']);
     

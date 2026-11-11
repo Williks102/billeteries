@@ -169,11 +169,12 @@ class CheckoutController extends Controller
                 return $orders;
             });
 
-            $service->generateQrCodes($orders); // I2 : hors transaction
-
             if ($capByIp) {
                 $service->recordGuestOrders($request->ip(), count($orders), $tickets);
             }
+
+            // Mode démo (désactivé par défaut) : confirmation automatique APRÈS commit, validation et plafonds.
+            $orders = $service->autoConfirmDemo($orders);
 
             $service->sendManualInstructions($orders);
 
@@ -183,9 +184,7 @@ class CheckoutController extends Controller
                 session()->forget(['cart', 'cart_timer']);
             }
 
-            $message = count($orders) > 1
-                ? 'Commandes enregistrées ! Instructions de paiement envoyées par email.'
-                : 'Commande enregistrée ! Instructions de paiement envoyées par email.';
+            $message = CheckoutService::successMessage(count($orders));
 
             return redirect()->route('checkout.confirmation', $orders[0])
                 ->with('success', $message)
@@ -214,7 +213,7 @@ class CheckoutController extends Controller
 
         $order->load(['orderItems.ticketType', 'event', 'tickets']);
 
-        return view('checkout.confirmation', compact('order'));
+        return view('checkout.confirmation', $this->confirmationData($order));
     }
 
     /**
@@ -245,5 +244,20 @@ class CheckoutController extends Controller
             // Ne pas faire échouer toute la commande à cause d'un email
             // Mais alerter dans les logs
         }
+    }
+
+    /**
+     * Variables de la page de confirmation : instructions de paiement tant que la commande est en attente ;
+     * `demoSimulatedPayment` vrai si la commande a été confirmée par le mode démo.
+     */
+    private function confirmationData(Order $order): array
+    {
+        return [
+            'order' => $order,
+            'demoSimulatedPayment' => $order->isPaid() && $order->payment_reference === CheckoutService::DEMO_REFERENCE,
+            'awaitingPayment' => $order->isAwaitingPayment(),
+            'paymentInfo' => CheckoutService::manualPaymentInfo($order->payment_method),
+            'paymentDeadline' => $order->paymentDeadline(),
+        ];
     }
 }

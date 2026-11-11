@@ -40,10 +40,21 @@ class DemoSeed extends Command
             return self::FAILURE;
         }
 
-        if (mb_strlen($password) < self::MIN_PASSWORD_LENGTH) {
-            $this->error('demo:seed : ADMIN_PASSWORD est absent ou fait moins de '.self::MIN_PASSWORD_LENGTH.' caractères. Aucun compte créé.');
+        if ($password === '') {
+            $this->error("demo:seed : ADMIN_PASSWORD n'est pas défini (ou vide) dans l'environnement. Vérifiez le nom exact de la variable : ADMIN_PASSWORD, en majuscules, sans espace, puis enregistrez et redéployez. Aucun compte créé.");
 
             return self::FAILURE;
+        }
+
+        if (mb_strlen($password) < self::MIN_PASSWORD_LENGTH) {
+            // Seule la LONGUEUR est affichée, jamais la valeur.
+            $this->error('demo:seed : ADMIN_PASSWORD est défini mais sa longueur est insuffisante : '.mb_strlen($password).' caractère(s) reçu(s), '.self::MIN_PASSWORD_LENGTH.' minimum. Aucun compte créé.');
+
+            return self::FAILURE;
+        }
+
+        if ($password !== trim($password)) {
+            $this->warn('demo:seed : ADMIN_PASSWORD commence ou finit par un espace (ils font partie du mot de passe). Vérifiez que c\'est voulu.');
         }
 
         DB::transaction(function () use ($email, $password) {

@@ -39,3 +39,10 @@ C1 (Élevé, préexistant mais non corrigé, lié à la validation de cancel) : 
 - `checkStatus` et `initiate` ne sont pas routés dans les fichiers lus.
 - Index unique sur `payments.provider_transaction_id` toujours absent (faible).
 - Recommandation : alerter (log critical → monitoring) sur le rejeu avec `responsecode` modifié. Vérifier avec PaiementPro si `responsecode` est couvert par un hash.
+
+## Re-vérification C1 (diff d9b4a17..HEAD) : VALIDÉ
+1. return : `PaiementProController.php:173-184`. Redirection vers la confirmation uniquement si `ownsGuestOrder` (token en session). Sinon `home` neutre, sans flash. Test `StockAndWebhookFlowTest` (return avec order_id/referenceNumber).
+2. cancel : `canCancel` (`:228-240`) exige propriétaire authentifié ou preuve en session. Le `guest_token` de la requête n'est plus lu. Le test vérifie que le statut reste `pending`.
+3. create-account : `GuestCheckoutController.php:321-324`. `ownsGuestOrder($order, $token)` exige session ET token, sinon 403. Test 403 + `assertGuest`.
+4. Pas de régression : `rememberGuestOrder` est appelé après la transaction (`:85-88`). `auth()->login` migre la session sans l'invalider, donc pas de fixation. Le token n'est pas régénéré, et il est mis à null à la conversion, donc `ownsGuestOrder` devient faux. La confirmation par lien email (`confirmation($token)`, `:300`) reste token seul, comme avant (32 caractères aléatoires, inchangé).
+Résiduel (faible, UX) : un invité qui revient du paiement dans un autre navigateur ou webview, ou après expiration de session, arrive sur `home` sans message. Il garde le lien email. Non bloquant.

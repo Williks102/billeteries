@@ -26,18 +26,18 @@
         @foreach($order->orderItems as $item)
             <div class="order-item">
                 <strong>{{ $item->ticketType->name ?? 'Billet' }}</strong><br>
-                {{ $item->quantity }} billets × {{ number_format($item->unit_price) }} FCFA<br>
-                <strong>Sous-total : {{ number_format($item->total_price) }} FCFA</strong>
+                {{ $item->quantity }} billets × {{ \App\Helpers\CurrencyHelper::formatFCFA($item->unit_price) }}<br>
+                <strong>Sous-total : {{ \App\Helpers\CurrencyHelper::formatFCFA($item->total_price) }}</strong>
             </div>
         @endforeach
         
         <div class="total-row">
-            Total de la vente : {{ number_format($order->total_amount) }} FCFA
+            Total de la vente : {{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}
         </div>
         
         @if($order->commission)
             <div class="order-item">
-                <strong>Votre gain net :</strong> {{ number_format($order->commission->net_amount) }} FCFA<br>
+                <strong>Votre gain net :</strong> {{ \App\Helpers\CurrencyHelper::formatFCFA($order->commission->net_amount) }}<br>
                 <small>Après déduction de la commission plateforme ({{ $order->commission->commission_rate }} % du prix des billets)</small>
             </div>
         @endif

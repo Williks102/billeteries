@@ -141,15 +141,15 @@ use Illuminate\Support\Facades\Storage;
                                             <td class="text-center">
                                                 <span class="badge bg-primary">{{ $item->quantity }}</span>
                                             </td>
-                                            <td class="text-end">{{ number_format($item->unit_price) }} FCFA</td>
-                                            <td class="text-end fw-bold">{{ number_format($item->total_price) }} FCFA</td>
+                                            <td class="text-end">{{ \App\Helpers\CurrencyHelper::formatFCFA($item->unit_price) }}</td>
+                                            <td class="text-end fw-bold">{{ \App\Helpers\CurrencyHelper::formatFCFA($item->total_price) }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                                 <tfoot class="table-light">
                                     <tr>
                                         <th colspan="3" class="text-end">Total commande :</th>
-                                        <th class="text-end text-primary fs-5">{{ number_format($order->total_amount) }} FCFA</th>
+                                        <th class="text-end text-primary fs-5">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -260,7 +260,7 @@ use Illuminate\Support\Facades\Storage;
                         </tr>
                         <tr class="table-active">
                             <td class="fw-bold">Total :</td>
-                            <td class="fw-bold text-primary">{{ number_format($order->total_amount) }} FCFA</td>
+                            <td class="fw-bold text-primary">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</td>
                         </tr>
                     </table>
                 </div>

@@ -332,6 +332,8 @@
         .promoteur-main {
             margin-left: var(--sidebar-width);
             flex: 1;
+            min-width: 0; /* un enfant flex ne doit pas dépasser la fenêtre (sinon défilement horizontal à 390 px) */
+            max-width: 100%;
             min-height: 100vh;
             transition: margin-left 0.3s ease-in-out;
         }

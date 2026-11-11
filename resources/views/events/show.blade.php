@@ -139,7 +139,7 @@
                 @if($event->ticketTypes->count() > 0)
                 <div class="info-item">
                     <i class="fas fa-ticket-alt"></i>
-                    <span>À partir de {{ number_format($event->ticketTypes->min('price')) }} FCFA</span>
+                    <span>À partir de {{ \App\Helpers\CurrencyHelper::formatFCFA($event->ticketTypes->min('price')) }}</span>
                 </div>
                 @endif
             </div>

@@ -7,6 +7,7 @@
     <title>Inscription - ClicBillet CI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
     <style>
         :root {
             --primary-orange: var(--brand);
@@ -21,7 +22,7 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: var(--font-sans);
             background: #f8fafc;
             min-height: 100vh;
             display: flex;
@@ -61,32 +62,32 @@
             font-weight: 400;
         }
         
-        .form-floating {
+        .auth-field {
             margin-bottom: 1rem;
         }
         
-        .form-floating > .form-control,
-        .form-floating > .form-select {
+        .auth-field > .form-control,
+        .auth-field > .form-select {
             border: 1px solid #d1d5db;
             border-radius: 8px;
-            padding: 1rem 0.75rem 0.25rem;
-            height: 58px;
+            padding: 0.5rem 0.75rem;
+            min-height: 44px;
             font-size: 1rem;
             transition: all 0.15s ease-in-out;
             background: #fff;
         }
         
-        .form-floating > .form-control:focus,
-        .form-floating > .form-select:focus {
+        .auth-field > .form-control:focus,
+        .auth-field > .form-select:focus {
             border-color: var(--primary-orange);
             box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.1);
             outline: none;
         }
         
-        .form-floating > label {
-            color: #6b7280;
-            font-weight: 400;
-            padding: 1rem 0.75rem;
+        .auth-field > .form-label {
+            color: var(--ink);
+            font-weight: 500;
+            padding: 0;
         }
         
         .role-selection {
@@ -299,7 +300,7 @@
 
         <!-- Messages d'erreur -->
         @if ($errors->any())
-            <div class="alert alert-danger">
+            <div class="alert alert-danger" role="alert">
                 <ul class="mb-0">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
@@ -312,7 +313,8 @@
         <form method="POST" action="{{ route('register') }}">
             @csrf
             
-            <div class="form-floating">
+            <div class="auth-field ">
+                <label for="name" class="form-label">Nom complet</label>
                 <input type="text" 
                        class="form-control @error('name') is-invalid @enderror" 
                        id="name" 
@@ -321,24 +323,28 @@
                        value="{{ old('name') }}" 
                        required 
                        autocomplete="name" 
-                       autofocus>
-                <label for="name">Nom complet</label>
+                       autofocus
+                       aria-describedby="@error('name') name-error @enderror" @error('name') aria-invalid="true" @enderror>
+                <x-field-error name="name" />
             </div>
 
-            <div class="form-floating">
-                <input type="email" 
+            <div class="auth-field ">
+                <label for="email" class="form-label">Adresse email</label>
+                <input type="email" inputmode="email" autocapitalize="none" spellcheck="false" 
                        class="form-control @error('email') is-invalid @enderror" 
                        id="email" 
                        name="email" 
                        placeholder="nom@exemple.com"
                        value="{{ old('email') }}" 
                        required 
-                       autocomplete="email">
-                <label for="email">Adresse email</label>
+                       autocomplete="email"
+                       aria-describedby="@error('email') email-error @enderror" @error('email') aria-invalid="true" @enderror>
+                <x-field-error name="email" />
             </div>
 
-            <div class="form-floating phone-input-group">
-                <input type="tel" 
+            <div class="auth-field phone-input-group">
+                <label for="phone" class="form-label">Téléphone</label>
+                <input type="tel" inputmode="tel" 
                        class="form-control @error('phone') is-invalid @enderror" 
                        id="phone" 
                        name="phone" 
@@ -346,8 +352,10 @@
                        value="{{ old('phone') }}" 
                        required 
                        pattern="[0-9\s]{10,}"
-                       autocomplete="tel">
-                <label for="phone">Téléphone</label>
+                       autocomplete="tel"
+                       aria-describedby="phone-help @error('phone') phone-error @enderror" @error('phone') aria-invalid="true" @enderror>
+                <div id="phone-help" class="form-text">Ex : 07 12 34 56 78</div>
+                <x-field-error name="phone" />
             </div>
 
             <!-- Sélection du rôle -->
@@ -383,26 +391,29 @@
                 </div>
             </div>
 
-            <div class="form-floating">
+            <div class="auth-field ">
+                <label for="password" class="form-label">Mot de passe</label>
                 <input type="password" 
                        class="form-control @error('password') is-invalid @enderror" 
                        id="password" 
-                       name="password" 
-                       placeholder="Mot de passe"
+                       name="password"
                        required 
                        autocomplete="new-password"
-                       minlength="8">
-                <label for="password">Mot de passe</label>
+                       minlength="8"
+                       aria-describedby="password-help @error('password') password-error @enderror" @error('password') aria-invalid="true" @enderror>
+                <div id="password-help" class="form-text">Au moins 8 caractères</div>
+                <x-field-error name="password" />
             </div>
 
-            <div class="form-floating">
+            <div class="auth-field ">
+                <label for="password_confirmation" class="form-label">Confirmer le mot de passe</label>
                 <input type="password" 
                        class="form-control" 
                        id="password_confirmation" 
-                       name="password_confirmation" 
-                       placeholder="Confirmer le mot de passe"
-                       required>
-                <label for="password_confirmation">Confirmer le mot de passe</label>
+                       name="password_confirmation"
+                       required
+                       aria-describedby="@error('password_confirmation') password_confirmation-error @enderror" @error('password_confirmation') aria-invalid="true" @enderror>
+                <x-field-error name="password_confirmation" />
             </div>
 
             <!-- Exigences du mot de passe -->

@@ -129,16 +129,16 @@ use Illuminate\Support\Facades\Storage;
         <div class="card-body">
             <form method="GET" action="{{ route('promoteur.events.index') }}" class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label">Statut</label>
-                    <select name="status" class="form-select">
+                    <label class="form-label" for="status">Statut</label>
+                    <select id="status" name="status" class="form-select">
                         <option value="">Tous les statuts</option>
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Brouillon</option>
                         <option value="published" {{ request('status') === 'published' ? 'selected' : '' }}>Publié</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Catégorie</label>
-                    <select name="category" class="form-select">
+                    <label class="form-label" for="category">Catégorie</label>
+                    <select id="category" name="category" class="form-select">
                         <option value="">Toutes les catégories</option>
                         @if(isset($categories))
                             @foreach($categories as $category)
@@ -150,8 +150,8 @@ use Illuminate\Support\Facades\Storage;
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Recherche</label>
-                    <input type="text" name="search" class="form-control" 
+                    <label class="form-label" for="search">Recherche</label>
+                    <input id="search" type="text" name="search" class="form-control" 
                            placeholder="Nom de l'événement..." value="{{ request('search') }}">
                 </div>
                 <div class="col-md-3">

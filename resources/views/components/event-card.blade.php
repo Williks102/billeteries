@@ -2,6 +2,8 @@
 @php
     $minPrice = $event->ticketTypes->min('price');
     $maxPrice = $event->ticketTypes->max('price');
+    // Affichage seulement : total restant sur les types de billets déjà chargés (aucune requête, aucune règle de stock)
+    $remainingTotal = $event->ticketTypes->sum(fn ($t) => max(0, $t->quantity_available - $t->quantity_sold));
 @endphp
 <article class="card h-100 shadow-sm border-0">
     @if($event->image)
@@ -19,6 +21,9 @@
         </p>
         @if($event->venue)
             <p class="small text-muted mb-2">{{ \Illuminate\Support\Str::limit($event->venue, 40) }}</p>
+        @endif
+        @if($minPrice !== null && $remainingTotal <= config('payments.low_stock_threshold', 10))
+            <p class="mb-2"><x-ticket-availability-badge :remaining="$remainingTotal" /></p>
         @endif
         @if($minPrice !== null)
             <p class="fw-bold text-primary mb-0">

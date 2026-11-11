@@ -351,7 +351,7 @@ use Illuminate\Support\Facades\Storage;
                     <!-- Image actuelle -->
                     @if($event->image)
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Image actuelle</label>
+                            <label class="form-label fw-semibold" for="image">Image actuelle</label>
                             <div class="current-image-container">
                                 <img src="{{ Storage::url($event->image) }}" 
                                      alt="Image actuelle" 

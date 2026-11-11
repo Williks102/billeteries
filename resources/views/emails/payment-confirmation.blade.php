@@ -11,7 +11,7 @@
     <p>Votre paiement a été confirmé avec succès. Vos billets pour <strong>{{ $order->event->title }}</strong> sont maintenant disponibles !</p>
     
     <div class="highlight">
-        <p><strong>✅ Paiement confirmé : {{ number_format($order->total_amount) }} FCFA</strong><br>
+        <p><strong>✅ Paiement confirmé : {{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</strong><br>
         📎 Vos billets sont disponibles sur votre espace</p>
     </div>
 

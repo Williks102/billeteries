@@ -76,13 +76,13 @@
         <div class="card-body">
             <form method="GET" action="{{ route('admin.events.index') }}" class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label small fw-semibold text-muted">RECHERCHE</label>
-                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" 
+                    <label class="form-label small fw-semibold text-muted" for="search">RECHERCHE</label>
+                    <input id="search" type="text" class="form-control" name="search" value="{{ request('search') }}" 
                            placeholder="Titre, description, promoteur...">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-semibold text-muted">STATUT</label>
-                    <select class="form-select" name="status">
+                    <label class="form-label small fw-semibold text-muted" for="status">STATUT</label>
+                    <select id="status" class="form-select" name="status">
                         <option value="">Tous les statuts</option>
                         <option value="published" {{ request('status') === 'published' ? 'selected' : '' }}>Publié</option>
                         <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>En attente</option>
@@ -91,8 +91,8 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-semibold text-muted">CATÉGORIE</label>
-                    <select class="form-select" name="category">
+                    <label class="form-label small fw-semibold text-muted" for="category">CATÉGORIE</label>
+                    <select id="category" class="form-select" name="category">
                         <option value="">Toutes catégories</option>
                         @foreach($categories as $category)
                         <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>
@@ -102,8 +102,8 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-semibold text-muted">PROMOTEUR</label>
-                    <select class="form-select" name="promoteur">
+                    <label class="form-label small fw-semibold text-muted" for="promoteur">PROMOTEUR</label>
+                    <select id="promoteur" class="form-select" name="promoteur">
                         <option value="">Tous promoteurs</option>
                         @foreach($promoteurs as $promoteur)
                         <option value="{{ $promoteur->id }}" {{ request('promoteur') == $promoteur->id ? 'selected' : '' }}>
@@ -113,7 +113,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-semibold text-muted">ACTIONS</label>
+                    <label class="form-label small fw-semibold text-muted" for="action">ACTIONS</label>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-filter me-1"></i> Filtrer
@@ -134,7 +134,7 @@
                 @csrf
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold">ACTIONS EN LOT</label>
-                    <select class="form-select" name="action" required>
+                    <select id="action" class="form-select" name="action" required>
                         <option value="">Choisir une action...</option>
                         <option value="publish">Publier les événements</option>
                         <option value="reject">Rejeter les événements</option>
@@ -165,7 +165,7 @@
                     <thead class="bg-light">
                         <tr>
                             <th width="40">
-                                <input type="checkbox" class="form-check-input" id="select-all">
+                                <input type="checkbox" class="form-check-input" id="select-all" aria-label="Tout sélectionner">
                             </th>
                             <th>Événement</th>
                             <th>Promoteur</th>
@@ -182,7 +182,7 @@
                         <tr>
                             <td>
                                 <input type="checkbox" class="form-check-input row-checkbox" 
-                                       name="events[]" value="{{ $event->id }}">
+                                       name="events[]" aria-label="Sélectionner l'événement {{ $event->title }}" value="{{ $event->id }}">
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">

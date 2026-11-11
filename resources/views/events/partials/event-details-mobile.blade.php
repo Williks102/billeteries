@@ -128,7 +128,7 @@ use Illuminate\Support\Facades\Storage;
                         {{ $similar->formatted_event_date }} • {{ $similar->venue }}
                     </div>
                     <div class="text-primary small fw-bold">
-                        À partir de {{ number_format($similar->ticketTypes->min('price')) }} FCFA
+                        À partir de {{ \App\Helpers\CurrencyHelper::formatFCFA($similar->ticketTypes->min('price')) }}
                     </div>
                 </div>
                 <a href="{{ route('events.show', $similar) }}" 

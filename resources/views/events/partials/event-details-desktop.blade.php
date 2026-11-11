@@ -130,7 +130,7 @@ use Illuminate\Support\Facades\Storage;
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="text-primary fw-bold">
-                            {{ number_format($similar->ticketTypes->min('price')) }} FCFA
+                            {{ \App\Helpers\CurrencyHelper::formatFCFA($similar->ticketTypes->min('price')) }}
                         </div>
                         <a href="{{ route('events.show', $similar) }}" 
                            class="btn btn-outline-primary btn-sm">

@@ -30,7 +30,8 @@
 
         // Animation du formulaire
         const cards = document.querySelectorAll('.card-custom');
-        cards.forEach((card, index) => {
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!reduceMotion) cards.forEach((card, index) => {
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';
             
@@ -45,11 +46,13 @@
         const inputs = document.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
             input.addEventListener('focus', function() {
+                if (!this.closest('.card-custom')) return;
                 this.closest('.card-custom').style.borderLeftColor = '#FF6B35';
                 this.closest('.card-custom').style.borderLeftWidth = '6px';
             });
             
             input.addEventListener('blur', function() {
+                if (!this.closest('.card-custom')) return;
                 this.closest('.card-custom').style.borderLeftColor = '#FF6B35';
                 this.closest('.card-custom').style.borderLeftWidth = '4px';
             });

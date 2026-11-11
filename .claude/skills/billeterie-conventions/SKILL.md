@@ -26,7 +26,7 @@ D8 Logs trop bavards (`$request->all()`).
 
 # Règles pour tous
 1. Langue : français pour les rapports et messages de commit ; code et identifiants en anglais comme l'existant.
-2. Branche de travail : `ccr-ac4ce980-b71gip`. Jamais de push ailleurs, jamais de PR sans demande explicite.
+2. Branches : JAMAIS de commit ni de push sur `main`/`master`, y compris pour un agent. Tout travail se fait sur une branche auxiliaire : la branche désignée par la session si elle existe, sinon `claude/<mission-en-kebab-case>` créée depuis `main` à jour. Une mission = une branche. Intégration dans `main` uniquement par PR relue par l'utilisateur ; ne jamais ouvrir ni fusionner de PR sans demande explicite. Vérifier `git branch --show-current` avant tout commit : si c'est `main`, s'arrêter et créer la branche.
 3. Un agent ne modifie QUE les fichiers de son périmètre (voir sa fiche). Hors périmètre : le signaler dans le BOARD, ne pas toucher.
 4. Ne jamais inventer : citer `fichier:ligne` pour toute affirmation. Distinguer « vérifié » de « supposé ».
 5. Aucun secret réel dans le dépôt, les logs ou les rapports.

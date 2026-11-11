@@ -19,9 +19,10 @@ DB_USERNAME=root DB_PASSWORD=... composer run test:mysql
 
 ## Garde de sécurité (S-4)
 `tests/MySql/MySqlTestGuard.php` (testée par `tests/Unit/MySqlTestGuardTest.php`, dans `check`) refuse de lancer `migrate:fresh` si :
-- le nom de base ne correspond pas EXACTEMENT à `^[a-z0-9_]*_test$` (« latest », « contest_prod » sont refusés) ;
+- le nom de base ne correspond pas EXACTEMENT à `^[a-z0-9_]*_test$`, fin de chaîne absolue `\z` (« latest », « contest_prod », « x_test\n » sont refusés) ;
 - l'hôte (`DB_HOST`) n'est pas `127.0.0.1`, `localhost` ou `::1`, sauf s'il figure dans `TEST_MYSQL_ALLOWED_HOSTS` (liste séparée par des virgules) ;
-- `APP_ENV=production`.
+- `APP_ENV=production` (lu dans l'environnement ET dans la config chargée) ;
+- une URL de connexion est définie (`DB_URL`, `DATABASE_URL`, `MYSQL_URL`) : elle surcharge hôte et base dans config/database.php (S-8). Le test force aussi `url=null` et rejoue la garde sur la connexion réellement utilisée par `migrate:fresh`.
 Un refus se traduit par un test « skipped » avec le motif.
 
 ## Ce que le test prouve

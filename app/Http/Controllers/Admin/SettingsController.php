@@ -479,7 +479,7 @@ class SettingsController extends Controller
         try {
             // Dépend du driver de cache utilisé
             return Cache::getStore()->getRedis()->dbSize() ?? 'Inconnu';
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) { // getRedis() inexistant hors Redis = \Error, pas \Exception
             return 'Inconnu';
         }
     }

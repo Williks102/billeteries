@@ -180,6 +180,68 @@ class Event extends Model
         return $this->event_time->format('H:i');
     }
 
+    /** Date lisible en français (« Dimanche 15 novembre 2026 »), fuseau Africa/Abidjan. */
+    public function getLongDateLabelAttribute(): string
+    {
+        if ($this->event_date === null) {
+            return '';
+        }
+
+        return ucfirst($this->event_date->copy()->locale('fr')->translatedFormat('l j F Y'));
+    }
+
+    /** Horaire « 12h00 » ou « 12h00 – 15h00 » (heure de fin si elle existe) ; chaîne vide sans heure de début. */
+    public function getTimeRangeLabelAttribute(): string
+    {
+        if ($this->event_time === null) {
+            return '';
+        }
+
+        $format = fn ($t) => $t->copy()->setTimezone('Africa/Abidjan')->format('H\hi');
+        $label = $format($this->event_time);
+
+        return $this->end_time ? $label . ' – ' . $format($this->end_time) : $label;
+    }
+
+    /** Date et horaire sur une ligne : « Dimanche 15 novembre 2026 · 12h00 – 15h00 ». */
+    public function getDateTimeLabelAttribute(): string
+    {
+        return trim($this->long_date_label . ($this->time_range_label !== '' ? ' · ' . $this->time_range_label : ''), ' ·');
+    }
+
+    /** Seuil sous lequel le nombre exact de places restantes est affiché. */
+    public const LOW_PLACES_THRESHOLD = 20;
+
+    /** Libellé public des places : le compte n'apparaît que s'il en reste peu. */
+    public function placesLabel(): string
+    {
+        $left = $this->remainingPlaces();
+
+        return match (true) {
+            $left <= 0 => 'Complet',
+            $left === 1 => '1 place restante',
+            $left <= self::LOW_PLACES_THRESHOLD => $left . ' places restantes',
+            default => 'Places disponibles',
+        };
+    }
+
+    /** Prix d'appel affiché (« À partir de 5 000 FCFA » ou « Gratuit »), null sans billet chargé. */
+    public function startingPriceLabel(): ?string
+    {
+        if ($this->ticketTypes->isEmpty()) {
+            return null;
+        }
+        $min = $this->ticketTypes->min('price');
+
+        return ((int) $min === 0 ? '' : 'À partir de ') . \App\Helpers\CurrencyHelper::formatPrice($min);
+    }
+
+    /** La barre d'achat n'apparaît que si l'événement accepte des ventes et qu'un billet est en vente. */
+    public function showsBuyBar(): bool
+    {
+        return $this->ticketTypes->isNotEmpty() && $this->ticketTypes->first()->setRelation('event', $this)->eventAcceptsSales();
+    }
+
     public function getIsUpcomingAttribute()
     {
         return $this->event_date >= now()->toDateString();

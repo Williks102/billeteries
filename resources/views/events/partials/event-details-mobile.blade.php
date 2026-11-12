@@ -7,74 +7,53 @@ use Illuminate\Support\Facades\Storage;
 <div class="event-details">
     <!-- Description -->
     @if($event->description)
-    <div class="detail-card">
-        <div class="detail-title">
-            <i class="fas fa-info-circle"></i>
-            À propos de l'événement
-        </div>
+    <section class="detail-section" aria-labelledby="about-title">
+        <h2 class="detail-section__title" id="about-title">À propos</h2>
         <div class="event-description">
             {!! nl2br(e($event->description)) !!}
         </div>
-    </div>
+    </section>
     @endif
-    
+
     <!-- Informations pratiques -->
-    <div class="detail-card">
-        <div class="detail-title">
-            <i class="fas fa-map-marker-alt"></i>
-            Informations pratiques
-        </div>
-        <div class="info-grid">
-            <div class="info-item mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-calendar-alt text-primary me-3"></i>
-                    <div>
-                        <div class="fw-bold">Date et heure</div>
-                        <div class="text-muted">{{ $event->formatted_event_date }} à {{ $event->event_time?->format('H:i') ?? '20h00' }}</div>
-                    </div>
+    <section class="detail-section detail-section--practical" aria-labelledby="practical-title">
+        <h2 class="detail-section__title" id="practical-title">Informations pratiques</h2>
+        <ul class="info-list">
+            <li class="info-row">
+                <span class="info-row__icon"><i class="fas fa-calendar-alt" aria-hidden="true"></i></span>
+                <div class="info-row__body">
+                    <span class="info-row__label">{{ $event->long_date_label }}</span>
+                    @if($event->time_range_label !== '')
+                    <span class="info-row__value">{{ $event->time_range_label }}</span>
+                    @endif
                 </div>
-            </div>
-            
-            <div class="info-item mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-map-marker-alt text-danger me-3"></i>
-                    <div>
-                        <div class="fw-bold">Lieu</div>
-                        <div class="text-muted">{{ $event->venue }}</div>
-                        @if($event->address)
-                        <div class="text-muted small">{{ $event->address }}</div>
-                        @endif
-                    </div>
+            </li>
+            <li class="info-row">
+                <span class="info-row__icon"><i class="fas fa-map-marker-alt" aria-hidden="true"></i></span>
+                <div class="info-row__body">
+                    <span class="info-row__label">{{ $event->venue }}</span>
+                    @if($event->address)
+                    <span class="info-row__value">{{ $event->address }}</span>
+                    @endif
                 </div>
-            </div>
-            
-            <div class="info-item mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-user-tie text-success me-3"></i>
-                    <div>
-                        <div class="fw-bold">Organisateur</div>
-                        <div class="text-muted">{{ $event->promoteur->name ?? 'ClicBillet CI' }}</div>
-                    </div>
+            </li>
+            <li class="info-row">
+                <span class="info-row__icon"><i class="fas fa-user-tie" aria-hidden="true"></i></span>
+                <div class="info-row__body">
+                    <span class="info-row__label">Organisé par {{ $event->promoteur->name ?? 'ClicBillet CI' }}</span>
                 </div>
-            </div>
-            
+            </li>
             @if($event->ticketTypes->isNotEmpty())
-            <div class="info-item">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-ticket-alt text-warning me-3"></i>
-                    <div>
-                        <div class="fw-bold">Billets disponibles</div>
-                        <div class="text-muted">
-                            {{ $event->remainingPlaces() }} 
-                            places restantes
-                        </div>
-                    </div>
+            <li class="info-row">
+                <span class="info-row__icon"><i class="fas fa-ticket-alt" aria-hidden="true"></i></span>
+                <div class="info-row__body">
+                    <span class="info-row__label">{{ $event->placesLabel() }}</span>
                 </div>
-            </div>
+            </li>
             @endif
-        </div>
-    </div>
-    
+        </ul>
+    </section>
+
     <!-- Partage social -->
     <div class="detail-card">
         <div class="detail-title">

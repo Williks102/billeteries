@@ -303,9 +303,8 @@ class BuyerPublicScreensTest extends TestCase
         $this->assertStringContainsString('data-available="95"', $html);
         $this->assertStringContainsString('data-available="5"', $html);
         $this->assertStringContainsString('data-available="19"', $html);
-        // total 95 + 5 + 19 = 119 places restantes (fiche mobile)
-        $this->assertStringContainsString('119', $this->text($html));
-        $this->assertStringContainsString('places restantes', $html);
+        // total 95 + 5 + 19 = 119 > 20 : la fiche mobile affiche « Places disponibles » sans le compte
+        $this->assertStringContainsString('Places disponibles', $this->text($html));
         // les badges continuent de fonctionner
         $this->assertStringContainsString('Bientôt complet · 5 restants', $this->text($html));
         $this->assertStringContainsString('Disponible', $this->text($html));

@@ -272,6 +272,40 @@ class Event extends Model
         return app(\App\Services\Stats\PublicStats::class)->remaining($this)['total'];
     }
 
+    /** Vrai si l'événement a une image (le bandeau de la fiche est compact sans image). */
+    public function hasImage(): bool
+    {
+        return ! empty($this->image);
+    }
+
+    /** Lien Google Maps (recherche par lieu + adresse), correctement encodé ; null sans lieu ni adresse. */
+    public function directionsUrl(): ?string
+    {
+        $query = trim(implode(', ', array_filter([trim((string) $this->venue), trim((string) $this->address)])));
+
+        return $query === '' ? null : 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($query);
+    }
+
+    /**
+     * Liens de partage, WhatsApp en premier. Chaque entrée : key, label, icon (classes Font Awesome), href.
+     *
+     * @return array<int, array{key: string, label: string, icon: string, href: string}>
+     */
+    public function shareLinks(string $pageUrl): array
+    {
+        $url = rawurlencode($pageUrl);
+        $title = rawurlencode((string) $this->title);
+
+        return [
+            ['key' => 'whatsapp', 'label' => 'WhatsApp', 'icon' => 'fab fa-whatsapp',
+                'href' => 'https://wa.me/?text=' . rawurlencode($this->title . ' - ' . $pageUrl)],
+            ['key' => 'facebook', 'label' => 'Facebook', 'icon' => 'fab fa-facebook-f',
+                'href' => 'https://www.facebook.com/sharer/sharer.php?u=' . $url],
+            ['key' => 'x', 'label' => 'X', 'icon' => 'fab fa-x-twitter',
+                'href' => 'https://x.com/intent/post?url=' . $url . '&text=' . $title],
+        ];
+    }
+
     /** Nombre de types de billets chargés (affichage de la fiche publique). */
     public function ticketTypesCount(): int
     {

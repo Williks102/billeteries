@@ -9,13 +9,6 @@
 <style>
 /* ===== SYSTÈME UNIFIÉ - MOBILE FIRST ===== */
 
-.event-hero {
-    position: relative;
-    min-height: 300px;
-    background: linear-gradient(135deg, var(--brand), #1a237e);
-    margin-bottom: 2rem;
-}
-
 .hero-content {
     position: relative;
     z-index: 3;
@@ -43,11 +36,6 @@
     gap: 8px;
     color: rgba(255,255,255,0.9);
     font-size: 0.9rem;
-}
-
-.info-item i {
-    color: var(--brand);
-    width: 16px;
 }
 
 /* ===== RESPONSIVE DESKTOP ===== */
@@ -119,7 +107,7 @@
 
 @section('content')
 <!-- Hero Section -->
-<section class="event-hero">
+<section class="event-hero{{ $event->hasImage() ? '' : ' event-hero--compact' }}">
     <div class="container">
         <div class="hero-content">
             <h1 class="event-title">{{ $event->title }}</h1>
@@ -136,12 +124,12 @@
                 </div>
                 @endif
                 <div class="info-item">
-                    <i class="fas fa-map-marker-alt"></i>
+                    <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
                     <span>{{ $event->venue }}</span>
                 </div>
                 @if($event->startingPriceLabel())
                 <div class="info-item">
-                    <i class="fas fa-ticket-alt"></i>
+                    <i class="fas fa-ticket-alt" aria-hidden="true"></i>
                     <span>{{ $event->startingPriceLabel() }}</span>
                 </div>
                 @endif

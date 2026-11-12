@@ -16,6 +16,15 @@
             
             <!-- Actions droite : Search + Compte -->
             <div class="d-flex align-items-center gap-2">
+                <!-- Panier (mobile) : accessible sans ouvrir le menu -->
+                <a class="btn btn-link p-2 text-muted position-relative cart-link-mobile" href="{{ route('cart.show') }}" aria-label="Mon panier">
+                    <i class="fas fa-shopping-cart" aria-hidden="true"></i>
+                    @php $mobileCartCount = array_sum(array_column((array) session('cart', []), 'quantity')); @endphp
+                    @if($mobileCartCount > 0)
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-orange cart-badge">{{ $mobileCartCount }}<span class="visually-hidden"> article(s)</span></span>
+                    @endif
+                </a>
+
                 <!-- Bouton recherche mobile -->
                 <button class="btn btn-link p-2 text-muted" type="button" data-bs-toggle="modal" data-bs-target="#mobileSearchModal">
                     <i class="fas fa-search"></i>

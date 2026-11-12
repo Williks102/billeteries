@@ -172,6 +172,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/bfcache-reset.js') }}"></script>
 <!-- Charger jQuery AVANT le script de réservation -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 

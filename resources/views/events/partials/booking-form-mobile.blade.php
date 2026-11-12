@@ -145,6 +145,12 @@
             <i class="fas fa-shopping-cart" aria-hidden="true"></i>
             Ajouter au panier
         </button>
+        @php $cartItems = array_sum(array_column((array) session('cart', []), 'quantity')); @endphp
+        @if($cartItems > 0)
+            <a href="{{ route('cart.show') }}" class="view-cart-link" data-view-cart>
+                <i class="fas fa-shopping-cart" aria-hidden="true"></i> Voir mon panier ({{ $cartItems }})
+            </a>
+        @endif
     </div>
 </div>
 
@@ -540,6 +546,7 @@
 .add-to-cart-btn { background: var(--surface); color: var(--brand); border: 2px solid var(--brand); margin-top: var(--space-3); }
 .add-to-cart-btn:hover:not(:disabled) { background: var(--brand-soft); }
 .add-to-cart-btn:disabled, .reserve-now-btn:disabled { opacity: .5; cursor: not-allowed; }
+.view-cart-link { display: flex; align-items: center; justify-content: center; gap: var(--space-2, 8px); min-height: 44px; margin-top: var(--space-3, 12px); color: var(--link-ink, var(--brand)); font-weight: 600; text-decoration: underline; }
 
 /* Responsive */
 @media (max-width: 576px) {

@@ -58,14 +58,14 @@ use Illuminate\Support\Facades\Storage;
                 </div>
             </div>
             
-            @if($event->ticketTypes->count() > 0)
+            @if($event->ticketTypes->isNotEmpty())
             <div class="info-item">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-ticket-alt text-warning me-3"></i>
                     <div>
                         <div class="fw-bold">Billets disponibles</div>
                         <div class="text-muted">
-                            {{ $event->ticketTypes->sum(fn($t) => $t->quantity_available - $t->quantity_sold) }} 
+                            {{ $event->remainingPlaces() }} 
                             places restantes
                         </div>
                     </div>
@@ -100,7 +100,7 @@ use Illuminate\Support\Facades\Storage;
     </div>
     
     <!-- Événements similaires -->
-    @if($similarEvents && $similarEvents->count() > 0)
+    @if($similarEvents && $similarEvents->isNotEmpty())
     <div class="detail-card">
         <div class="detail-title">
             <i class="fas fa-heart"></i>

@@ -62,6 +62,17 @@ use Illuminate\Support\Facades\Storage;
     </div>
 </section>
 
+<!-- Compteurs publics (PublicStats : agrégats globaux, aucune donnée par utilisateur) -->
+<section class="py-4" aria-label="ClicBillet CI en chiffres" id="public-counters">
+    <div class="container">
+        <x-stat-grid cols="3" label="ClicBillet CI en chiffres">
+            <x-stat-card label="Événements à venir" :value="$stats['events_upcoming'] ?? null" hint="Publiés, à partir d'aujourd'hui" />
+            <x-stat-card label="Billets vendus" :value="$stats['tickets_sold'] ?? null" hint="Payés ou utilisés, depuis le lancement" />
+            <x-stat-card label="Organisateurs" :value="$stats['promoters'] ?? null" hint="Comptes organisateur inscrits" />
+        </x-stat-grid>
+    </div>
+</section>
+
 <!-- Section Événements -->
 <section id="events" class="events-section py-5">
     <div class="container">
@@ -105,7 +116,7 @@ use Illuminate\Support\Facades\Storage;
 
         <!-- Liste des événements -->
         <div class="row" id="eventsContainer">
-            @if(isset($events) && $events->count() > 0)
+            @if(isset($events) && $events->isNotEmpty())
                 @foreach($events as $event)
                     <div class="col-lg-4 col-md-6 mb-4 event-card" data-category="{{ $event->category->slug }}">
                         <div class="card border-0 shadow-sm h-100 event-item">
@@ -143,7 +154,7 @@ use Illuminate\Support\Facades\Storage;
 
 
                                
-                                @if($event->ticketTypes->count() > 0)
+                                @if($event->ticketTypes->isNotEmpty())
                                     <div class="event-price mb-3">
                                         <span class="text-muted">À partir de</span>
                                         <span class="h5 text-orange mb-0">

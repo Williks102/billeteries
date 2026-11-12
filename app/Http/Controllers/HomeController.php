@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\EventCategory;
-use App\Models\User;
-use App\Models\Ticket;
-use App\Models\Order;
+use App\Services\Stats\PublicStats;
 
 class HomeController extends Controller
 {
@@ -44,47 +42,19 @@ class HomeController extends Controller
                 });
             }
 
-            // Limiter à 12 événements pour la page d'accueil (ou paginer si nécessaire)
-            $events = $query->limit(12)->get();
-            
             // Récupérer les catégories pour les filtres
             $categories = EventCategory::withActiveEvents()->get();
 
-            // Statistiques détaillées pour la page d'accueil
-            $totalEvents = Event::where('status', 'published')->count();
-            $totalTickets = Ticket::where('status', 'sold')->count();
-            $totalUsers = User::where('role', 'acheteur')->count();
-            $totalPromoters = User::where('role', 'promoteur')->count();
+            // Événements les plus récents en premier (12 maximum)
+            $events = $query->orderBy('created_at', 'desc')
+                ->orderBy('event_date', 'asc')
+                ->limit(12)
+                ->get();
 
-            // Statistiques pour les cartes de la page d'accueil
-            $stats = [
-                'total_events' => $totalEvents,
-                'total_categories' => $categories->count(),
-                'upcoming_events' => Event::where('status', 'published')
-                    ->where('event_date', '>=', now()->toDateString())
-                    ->count(),
-                'today_events' => Event::where('status', 'published')
-                    ->where('event_date', now()->toDateString())
-                    ->count(),
-                'sold_tickets' => $totalTickets,
-                'active_users' => $totalUsers,
-                'active_promoters' => $totalPromoters,
-            ];
+            // Compteurs publics (agrégats globaux, PublicStats) : jamais de donnée par utilisateur
+            $stats = app(PublicStats::class)->homeCounters();
 
-        // CORRECTION : Afficher les événements les plus récents en premier
-$events = $query->orderBy('created_at', 'desc')
-              ->orderBy('event_date', 'asc')
-              ->limit(12)
-              ->get();
-
-            return view('welcome', compact(
-                'events', 
-                'categories', 
-                'stats',
-                'totalEvents',
-                'totalTickets', 
-                'totalUsers'
-            ));
+            return view('welcome', compact('events', 'categories', 'stats'));
             
         } catch (\Exception $e) {
             \Log::error('Erreur page d\'accueil: ' . $e->getMessage());
@@ -93,66 +63,15 @@ $events = $query->orderBy('created_at', 'desc')
             $events = collect();
             $categories = EventCategory::all();
             $stats = [
-                'total_events' => 0,
-                'upcoming_events' => 0,
-                'total_categories' => $categories->count(),
-                'today_events' => 0,
+                'events_upcoming' => null,
+                'tickets_sold' => null,
+                'buyers' => null,
+                'promoters' => null,
             ];
             
             return view('welcome', compact('events', 'categories', 'stats'))
                 ->with('error', 'Une erreur est survenue lors du chargement de la page.');
         }
-    }
-
-    /**
-     * Affichage du détail d'un événement
-     */
-    public function show(Event $event)
-    {
-        // Vérifier que l'événement est publié
-        if ($event->status !== 'published') {
-            abort(404, 'Événement non trouvé ou non publié');
-        }
-
-        // Charger les relations nécessaires
-        $event->load(['category', 'promoter', 'ticketTypes' => function($query) {
-            $query->where('is_active', true)
-                  ->where('sale_start_date', '<=', now())
-                  ->where('sale_end_date', '>=', now())
-                  ->orderBy('price', 'asc');
-        }]);
-
-        // Vérifier que l'événement a des billets disponibles
-        $hasAvailableTickets = $event->ticketTypes->filter(function($ticketType) {
-            return $ticketType->remainingTickets() > 0;
-        })->count() > 0;
-
-        // Événements similaires (même catégorie)
-        $similarEvents = Event::with(['category', 'ticketTypes'])
-            ->where('category_id', $event->category_id)
-            ->where('id', '!=', $event->id)
-            ->where('status', 'published')
-            ->where('event_date', '>=', now()->toDateString())
-            ->limit(4)
-            ->get();
-
-        // Statistiques de l'événement
-        $eventStats = [
-            'total_tickets' => $event->ticketTypes->sum('quantity_available'),
-            'sold_tickets' => $event->ticketTypes->sum('quantity_sold'),
-            'available_tickets' => $event->ticketTypes->sum(function($type) {
-                return $type->remainingTickets();
-            }),
-            'min_price' => $event->ticketTypes->min('price'),
-            'max_price' => $event->ticketTypes->max('price'),
-        ];
-
-        return view('events.show', compact(
-            'event', 
-            'similarEvents', 
-            'hasAvailableTickets',
-            'eventStats'
-        ));
     }
 
     /**

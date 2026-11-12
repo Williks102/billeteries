@@ -122,43 +122,11 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6 mb-3">
-                            <div class="stat-item">
-                                <h4 class="text-primary mb-1">{{ $user->orders()->visibleInBuyerHistory()->count() }}</h4>
-                                <small class="text-muted">Commandes</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="stat-item">
-                                <h4 class="text-success mb-1">{{ $user->orders()->where('payment_status', 'paid')->count() }}</h4>
-                                <small class="text-muted">Payées</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="stat-item">
-                                @php
-                                    $totalSpent = $user->orders()->where('payment_status', 'paid')->sum('total_amount');
-                                @endphp
-                                <h4 class="text-info mb-1">{{ number_format($totalSpent) }}</h4>
-                                <small class="text-muted">FCFA dépensés</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="stat-item">
-                                @php
-                                    $totalTickets = $user->orders()
-                                        ->where('payment_status', 'paid')
-                                        ->with('orderItems')
-                                        ->get()
-                                        ->sum(function($order) {
-                                            return $order->orderItems->sum('quantity');
-                                        });
-                                @endphp
-                                <h4 class="text-warning mb-1">{{ $totalTickets }}</h4>
-                                <small class="text-muted">Billets</small>
-                            </div>
-                        </div>
+                    <div class="d-grid gap-2">
+                        <x-stat-card label="Commandes" :value="$stats['orders_total'] ?? null" hint="Toutes dates" />
+                        <x-stat-card label="Commandes payées" :value="$stats['orders_paid'] ?? null" />
+                        <x-stat-card label="Billets" :value="$stats['tickets'] ?? null" hint="Payés ou utilisés" />
+                        <x-stat-card label="Dépensé" unit="FCFA" :value="$stats['spent'] ?? null" hint="Commandes payées, hors remboursements" />
                     </div>
                 </div>
             </div>

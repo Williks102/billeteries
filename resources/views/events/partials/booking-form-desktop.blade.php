@@ -13,7 +13,7 @@
     </div>
     
     <div class="booking-form" id="bookingFormDesktop">
-        @if($event->ticketTypes->count() > 0)
+        @if($event->ticketTypes->isNotEmpty())
             @foreach($event->ticketTypes as $ticketType)
             <div class="ticket-type">
                 <div class="ticket-header">
@@ -40,7 +40,7 @@
                              data-name="{{ $ticketType->name }}"
                              data-price="{{ $ticketType->price }}"
                              data-max="{{ \App\Services\CheckoutService::maxTicketsPerOrder($ticketType->max_per_order) }}"
-                             data-available="{{ $ticketType->quantity_available - $ticketType->quantity_sold }}">0</div>
+                             data-available="{{ $ticketType->publicRemaining() }}">0</div>
                         
                         <button type="button" class="qty-btn" 
                                 data-action="increase" 
@@ -51,7 +51,7 @@
                 </div>
                 
                 <div class="mt-2">
-                    <x-ticket-availability-badge :remaining="$ticketType->quantity_available - $ticketType->quantity_sold" class="me-2" />
+                    <x-ticket-availability-badge :remaining="$ticketType->publicRemaining()" class="me-2" />
                     <small class="text-muted">
                         <i class="fas fa-shopping-cart me-1" aria-hidden="true"></i>
                         Max {{ \App\Services\CheckoutService::maxTicketsPerOrder($ticketType->max_per_order) }}/commande

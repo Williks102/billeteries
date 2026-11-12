@@ -290,7 +290,7 @@ class PendingCapsTest extends TestCase
         $this->actingAs($victim)->get(route('acheteur.orders.index'))
             ->assertOk()
             ->assertViewIs('acheteur.orders')
-            ->assertViewHas('stats', fn ($stats) => $stats['total_orders'] === 0);
+            ->assertViewHas('stats', fn ($stats) => $stats['orders_total'] === 0);
 
         unlink($dir . '/acheteur/orders.blade.php');
         rmdir($dir . '/acheteur');

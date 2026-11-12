@@ -64,6 +64,12 @@ class TicketType extends Model
         return $this->quantity_available - $this->quantity_sold;
     }
 
+    /** Places restantes AFFICHÉES AU PUBLIC (D6) : capacité - quantity_sold, jamais négatif (voir PublicStats). */
+    public function publicRemaining(): int
+    {
+        return app(\App\Services\Stats\PublicStats::class)->remainingForType($this);
+    }
+
     public function getProgressPercentage()
     {
         return $this->quantity_available > 0 

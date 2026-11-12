@@ -2,8 +2,8 @@
 @php
     $minPrice = $event->ticketTypes->min('price');
     $maxPrice = $event->ticketTypes->max('price');
-    // Affichage seulement : total restant sur les types de billets déjà chargés (aucune requête, aucune règle de stock)
-    $remainingTotal = $event->ticketTypes->sum(fn ($t) => max(0, $t->quantity_available - $t->quantity_sold));
+    // Affichage seulement (D6) : places restantes publiques, calculées par Event::remainingPlaces (types déjà chargés)
+    $remainingTotal = $event->remainingPlaces();
 @endphp
 <article class="card h-100 shadow-sm border-0">
     @if($event->image)

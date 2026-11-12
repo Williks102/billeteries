@@ -129,6 +129,21 @@ class Event extends Model
         return app(\App\Services\Stats\SalesStats::class)->gmv(\App\Services\Stats\Scope::event($this->id), \App\Support\Stats\DatePeriod::all());
     }
 
+    /**
+     * Places restantes AFFICHÉES AU PUBLIC (D6) : capacité - quantity_sold, réservations non payées déduites
+     * (anti-survente), sur les types de billets chargés. Distinct de availableTicketsCount() (écrans internes).
+     */
+    public function remainingPlaces(): int
+    {
+        return app(\App\Services\Stats\PublicStats::class)->remaining($this)['total'];
+    }
+
+    /** Nombre de types de billets chargés (affichage de la fiche publique). */
+    public function ticketTypesCount(): int
+    {
+        return $this->ticketTypes->count();
+    }
+
     /** Billets vendus = sold + used d'une commande payée. */
     public function getTicketsSoldCount()
     {

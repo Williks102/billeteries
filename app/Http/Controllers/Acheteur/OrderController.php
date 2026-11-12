@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
+use App\Services\Stats\BuyerStats;
 
 /**
  * Commandes de l'acheteur (ressource : index, show) + actions download / qr-codes.
@@ -34,6 +35,7 @@ public function index(Request $request)
         // Construction de la requête
         $query = $user->orders()
             ->with(['event.category', 'orderItems.ticketType', 'tickets.ticketType'])
+            ->withCount('tickets')
             ->visibleInBuyerHistory();
 
         // Filtres
@@ -61,21 +63,8 @@ public function index(Request $request)
 
         $orders = $query->orderBy('created_at', 'desc')->paginate(10);
         
-        // Statistiques
-        $stats = [
-            'total_orders' => $user->orders()->visibleInBuyerHistory()->count(),
-            'paid_orders' => $user->orders()->where('payment_status', 'paid')->count(),
-            'total_tickets' => $user->orders()
-                ->where('payment_status', 'paid')
-                ->with('orderItems')
-                ->get()
-                ->sum(function($order) {
-                    return $order->orderItems->sum('quantity');
-                }),
-            'total_spent' => $user->orders()
-                ->where('payment_status', 'paid')
-                ->sum('total_amount')
-        ];
+        // Statistiques du compte (cumulées, indépendantes des filtres de la liste) : BuyerStats, Scope::buyer
+        $stats = app(BuyerStats::class)->overview($user->id);
 
         return view('acheteur.orders', compact('orders', 'stats'));
         
@@ -84,12 +73,7 @@ public function index(Request $request)
         
         return view('acheteur.orders', [
             'orders' => collect()->paginate(10),
-            'stats' => [
-                'total_orders' => 0,
-                'paid_orders' => 0, 
-                'total_tickets' => 0,
-                'total_spent' => 0
-            ]
+            'stats' => null,
         ])->with('error', 'Erreur lors du chargement des commandes.');
     }
 }

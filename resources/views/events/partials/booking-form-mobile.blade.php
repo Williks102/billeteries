@@ -10,7 +10,7 @@
     </div>
     
     <div class="booking-form">
-        @if($event->ticketTypes->count() > 0)
+        @if($event->ticketTypes->isNotEmpty())
             <button type="button" 
                     class="btn-open-modal" 
                     onclick="openTicketModal()"
@@ -23,7 +23,7 @@
             <div class="quick-info mt-3">
                 <div class="info-row">
                     <i class="fas fa-tags me-2"></i>
-                    <span>{{ $event->ticketTypes->count() }} type{{ $event->ticketTypes->count() > 1 ? 's' : '' }} de billet{{ $event->ticketTypes->count() > 1 ? 's' : '' }}</span>
+                    <span>{{ $event->ticketTypesCount() }} type{{ $event->ticketTypesCount() > 1 ? 's' : '' }} de billet{{ $event->ticketTypesCount() > 1 ? 's' : '' }}</span>
                 </div>
                 <div class="info-row">
                     <i class="fas fa-clock me-2"></i>
@@ -62,13 +62,13 @@
         <p class="sheet-event-title">{{ $event->title }}</p>
 
         {{-- Types de billets --}}
-        @if($event->ticketTypes->count() > 0)
+        @if($event->ticketTypes->isNotEmpty())
             <div class="tickets-section">
                 <h4 class="section-title">Types de billets</h4>
                 
                 @foreach($event->ticketTypes as $ticketType)
                     @php
-                        $available = $ticketType->quantity_available - $ticketType->quantity_sold;
+                        $available = $ticketType->publicRemaining();
                         $isAvailable = $available > 0 && now()->between($ticketType->sale_start_date, $ticketType->sale_end_date);
                     @endphp
                     
@@ -573,10 +573,10 @@ let ticketMaxes = {};
 let ticketAvailable = {};
 
 // Initialiser les données des billets
-@if($event->ticketTypes->count() > 0)
+@if($event->ticketTypes->isNotEmpty())
     @foreach($event->ticketTypes as $ticketType)
         @php
-            $available = $ticketType->quantity_available - $ticketType->quantity_sold;
+            $available = $ticketType->publicRemaining();
             $isAvailable = $available > 0 && now()->between($ticketType->sale_start_date, $ticketType->sale_end_date);
         @endphp
         @if($isAvailable)

@@ -136,7 +136,7 @@
                     <i class="fas fa-map-marker-alt"></i>
                     <span>{{ $event->venue }}</span>
                 </div>
-                @if($event->ticketTypes->count() > 0)
+                @if($event->ticketTypes->isNotEmpty())
                 <div class="info-item">
                     <i class="fas fa-ticket-alt"></i>
                     <span>{{ (int) $event->ticketTypes->min('price') === 0 ? '' : 'À partir de ' }}{{ \App\Helpers\CurrencyHelper::formatPrice($event->ticketTypes->min('price')) }}</span>

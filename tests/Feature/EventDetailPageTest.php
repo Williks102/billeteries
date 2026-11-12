@@ -69,6 +69,16 @@ class EventDetailPageTest extends TestCase
         $this->get('/events/1')->assertOk()->assertDontSee('event-hero--compact', false);
     }
 
+    public function test_event_image_is_rendered_in_the_hero(): void
+    {
+        $this->get('/events/1')->assertOk()->assertDontSee('event-hero__image', false);
+        DB::table('events')->where('id', 1)->update(['image' => 'events/a.jpg']);
+        $this->get('/events/1')->assertOk()
+            ->assertSee('event-hero event-hero--image', false)
+            ->assertSee('class="event-hero__image"', false)
+            ->assertSee('/storage/events/a.jpg', false);
+    }
+
     public function test_ticket_list_shows_price_free_and_sold_out(): void
     {
         $now = now();

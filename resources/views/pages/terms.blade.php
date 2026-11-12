@@ -203,7 +203,7 @@
 
                     <p>Les coordonnées de paiement et le numéro de commande à indiquer en référence sont communiqués au Client après l'enregistrement de sa commande.</p>
 
-                    <p>Dès l'enregistrement de la commande, les places sont <strong>réservées pendant 48 heures</strong> (24 heures pour un Client non connecté). Sans paiement confirmé avant la fin de ce délai, la réservation est libérée automatiquement et la commande expire.</p>
+                    <p>Dès l'enregistrement de la commande, les places sont <strong>réservées pendant {{ \App\Helpers\DurationHelper::reservationLabel(false) }}</strong> ({{ \App\Helpers\DurationHelper::reservationLabel(true) }} pour un Client non connecté). Sans paiement confirmé avant la fin de ce délai, la réservation est libérée automatiquement et la commande expire.</p>
 
                     <p>Les tickets ne sont émis qu'après <strong>confirmation manuelle du paiement</strong> par <strong>CLICBILLET</strong>. Ils sont alors envoyés par e-mail au Client. Le délai de confirmation dépend du moyen de paiement choisi et du moment où le paiement est effectivement reçu : [À COMPLÉTER PAR L'ORGANISATEUR : délai de confirmation du paiement]. Les délais de réception de l'e-mail ne dépendent pas de <strong>CLICBILLET</strong>, mais du serveur de messagerie du Client.</p>
                     

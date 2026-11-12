@@ -521,8 +521,8 @@ class CheckoutService
         }
 
         return $orderCount > 1
-            ? 'Commandes enregistrées ! Instructions de paiement envoyées par email.'
-            : 'Commande enregistrée ! Instructions de paiement envoyées par email.';
+            ? 'Commandes enregistrées. Les instructions de paiement figurent ci-dessous.'
+            : 'Commande enregistrée. Les instructions de paiement figurent ci-dessous.';
     }
 
     private function createCommission(Order $order): void

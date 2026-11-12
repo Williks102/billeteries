@@ -88,8 +88,8 @@ class DisplayedTotalNoFeeTest extends TestCase
     {
         $res = $this->withSession(['cart' => $this->build($specs)])->get(route('cart.show'));
         $this->assertTotalIs($res, $total);
-        // Valeur initiale rendue pour le JS mobile (id mobileTotal) = somme des lignes
-        $res->assertSee('id="mobileTotal">' . \App\Helpers\CurrencyHelper::formatFCFA($total), false);
+        // Valeur initiale rendue pour le JS du panier (id cart-total) = somme des lignes
+        $res->assertSee('id="cart-total">' . \App\Helpers\CurrencyHelper::formatFCFA($total), false);
     }
 
     public function test_client_js_and_views_add_no_fixed_amount_to_totals(): void

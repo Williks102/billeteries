@@ -29,12 +29,12 @@ use Illuminate\Support\Facades\Storage;
                 <div class="info-list">
                     <div class="d-flex justify-content-between py-2 border-bottom">
                         <span class="text-muted">Début:</span>
-                        <span class="fw-bold">{{ $event->event_time ?? '20h00' }}</span>
+                        <span class="fw-bold">{{ $event->event_time?->format('H:i') ?? '20h00' }}</span>
                     </div>
                     @if($event->end_time)
                     <div class="d-flex justify-content-between py-2 border-bottom">
                         <span class="text-muted">Fin:</span>
-                        <span class="fw-bold">{{ $event->end_time }}</span>
+                        <span class="fw-bold">{{ $event->end_time?->format('H:i') }}</span>
                     </div>
                     @endif
                     <div class="d-flex justify-content-between py-2">

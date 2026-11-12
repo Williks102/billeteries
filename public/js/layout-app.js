@@ -145,16 +145,6 @@
       }
     });
 
-    const flash = document.getElementById('flash-messages');
-    if (flash) {
-      const success = flash.dataset.success;
-      const error = flash.dataset.error;
-      const warning = flash.dataset.warning;
-      const info = flash.dataset.info;
-      if (success) window.notifications.success(success);
-      if (error) window.notifications.error(error);
-      if (warning) window.notifications.warning(warning);
-      if (info) window.notifications.info(info);
-    }
+    // Messages flash : déjà affichés en alertes intégrées par le layout (pas de seconde notification flottante).
   });
 })();

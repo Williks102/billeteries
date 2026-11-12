@@ -23,6 +23,14 @@ class CurrencyHelper
     }
 
     /**
+     * Prix affiché au public : « Gratuit » pour 0, sinon le montant FCFA. Affichage seul, aucun calcul.
+     */
+    public static function formatPrice($amount)
+    {
+        return (int) $amount === 0 ? 'Gratuit' : self::formatFCFA($amount);
+    }
+
+    /**
      * Parse un montant formaté en FCFA vers un entier
      * 
      * @param string $formatted Montant formaté (ex: "25 000 FCFA")

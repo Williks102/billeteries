@@ -99,9 +99,13 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
         Route::post('/process', [CheckoutController::class, 'process'])
             ->middleware('throttle:' . config('payments.checkout_throttle_per_minute', 10) . ',1,checkout')
             ->name('process');
-        Route::post('/direct', [CheckoutController::class, 'direct'])->name('direct');
         Route::get('/confirmation/{order}', [CheckoutController::class, 'confirmation'])->name('confirmation');
     });
+
+    // Réservation directe depuis la fiche événement (connecté ou invité) : saute la page Panier
+    Route::post('/direct', [CheckoutController::class, 'direct'])
+        ->middleware('throttle:' . config('payments.checkout_throttle_per_minute', 10) . ',1,checkout')
+        ->name('direct');
 
     // Checkout invité (sans auth)
     Route::prefix('guest')->name('guest.')->group(function () {

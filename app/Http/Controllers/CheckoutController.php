@@ -20,7 +20,7 @@ class CheckoutController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth');
+        $this->middleware('auth')->except('direct');
     }
 
     /**
@@ -114,11 +114,13 @@ class CheckoutController extends Controller
             return redirect()->back()->with('error', 'Aucun billet sélectionné.');
         }
 
-        // Stocker temporairement en session pour le checkout
+        // Sélection mise en session (le checkout recalcule prix et stock côté serveur) : on va directement
+        // à l'étape « Informations », sans page intermédiaire ni passage par le panier.
         session()->put('direct_booking', $selectedTickets);
-        session()->put('booking_timer', now()->addMinutes(60)); // 1 heure de réservation
 
-        return view('checkout.direct', compact('selectedTickets', 'cartTotal', 'event'));
+        return Auth::check()
+            ? redirect()->route('checkout.show')
+            : redirect()->route('checkout.guest.show');
     }
 
     /**

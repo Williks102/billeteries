@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Storage;
                     <i class="fas fa-calendar-alt text-primary me-3"></i>
                     <div>
                         <div class="fw-bold">Date et heure</div>
-                        <div class="text-muted">{{ $event->formatted_event_date }} à {{ $event->event_time ?? '20h00' }}</div>
+                        <div class="text-muted">{{ $event->formatted_event_date }} à {{ $event->event_time?->format('H:i') ?? '20h00' }}</div>
                     </div>
                 </div>
             </div>

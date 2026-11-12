@@ -7,11 +7,6 @@
             <i class="fas fa-ticket-alt me-2"></i>
             Réservation
         </h3>
-        @if($event->ticketTypes->count() > 0)
-            <div class="booking-preview">
-                <span>À partir de {{ \App\Helpers\CurrencyHelper::formatFCFA($event->ticketTypes->min('price')) }}</span>
-            </div>
-        @endif
     </div>
     
     <div class="booking-form">
@@ -63,26 +58,8 @@
 
     {{-- Body --}}
     <div class="modal-body">
-        {{-- Event Info --}}
-        <div class="event-info">
-            <div class="event-image">
-                @if($event->image)
-                    <img src="{{ Storage::url($event->image) }}" alt="{{ $event->title }}">
-                @else
-                    <i class="fas fa-calendar-alt"></i>
-                @endif
-            </div>
-            <div class="event-details">
-                <h4>{{ $event->title }}</h4>
-                <p>
-                    <i class="fas fa-calendar me-1"></i>{{ $event->event_date ? $event->event_date->format('d/m/Y') : 'Date à confirmer' }} • 
-                    <i class="fas fa-clock me-1"></i>{{ $event->formatted_event_time ?? '20h00' }}
-                </p>
-                <p class="venue">
-                    <i class="fas fa-map-marker-alt me-1"></i>{{ $event->venue }}
-                </p>
-            </div>
-        </div>
+        {{-- Titre court : date, lieu et prix sont déjà visibles sur la fiche --}}
+        <p class="sheet-event-title">{{ $event->title }}</p>
 
         {{-- Types de billets --}}
         @if($event->ticketTypes->count() > 0)
@@ -109,7 +86,7 @@
                                 @endif
                             </div>
                             <div class="ticket-price">
-                                {{ \App\Helpers\CurrencyHelper::formatFCFA($ticketType->price) }}
+                                {{ \App\Helpers\CurrencyHelper::formatPrice($ticketType->price) }}
                             </div>
                         </div>
                         
@@ -151,11 +128,21 @@
             <div class="summary-details" id="summaryDetails"></div>
             <div class="total-section">
                 <span class="total-label">Total</span>
-                <span class="total-price" id="totalPrice">0 FCFA</span>
+                <span class="total-price" id="totalPrice">—</span>
             </div>
         </div>
-        <button class="add-to-cart-btn" id="addToCartBtn" onclick="addToCart()" disabled>
-            <i class="fas fa-shopping-cart me-2"></i>
+        {{-- Action principale : directement aux informations de commande (un seul événement), sans page Panier --}}
+        <form method="POST" action="{{ route('checkout.direct') }}" id="directForm">
+            @csrf
+            <input type="hidden" name="event_id" value="{{ $event->id }}">
+            <div id="directTickets"></div>
+            <button type="submit" class="reserve-now-btn" id="reserveNowBtn" disabled>
+                <i class="fas fa-ticket-alt" aria-hidden="true"></i>
+                Réserver maintenant
+            </button>
+        </form>
+        <button type="button" class="add-to-cart-btn" id="addToCartBtn" onclick="addToCart()" disabled>
+            <i class="fas fa-shopping-cart" aria-hidden="true"></i>
             Ajouter au panier
         </button>
     </div>
@@ -541,34 +528,18 @@
     color: var(--brand);
 }
 
-.add-to-cart-btn {
-    width: 100%;
-    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
-    color: white;
-    border: none;
-    padding: 16px;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+.sheet-event-title { font-weight: 600; margin: 0 0 var(--space-3); overflow-wrap: anywhere; }
+.total-section { gap: var(--space-3); }
+.add-to-cart-btn, .reserve-now-btn {
+    width: 100%; min-height: 48px; padding: 12px 16px; border-radius: var(--radius);
+    font-size: 1.0625rem; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: var(--space-2);
 }
-
-.add-to-cart-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.4);
-}
-
-.add-to-cart-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
+.reserve-now-btn { background: var(--brand); color: var(--surface); border: 2px solid var(--brand); }
+.reserve-now-btn:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); }
+.add-to-cart-btn { background: var(--surface); color: var(--brand); border: 2px solid var(--brand); margin-top: var(--space-3); }
+.add-to-cart-btn:hover:not(:disabled) { background: var(--brand-soft); }
+.add-to-cart-btn:disabled, .reserve-now-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* Responsive */
 @media (max-width: 576px) {
@@ -696,16 +667,35 @@ function updateSummary() {
     
     if (totalTickets === 0) {
         summaryDetails.innerHTML = '';
-        totalPriceElement.textContent = '0 FCFA';
+        totalPriceElement.textContent = '—';
         addToCartBtn.disabled = true;
-        addToCartBtn.innerHTML = '<i class="fas fa-shopping-cart me-2"></i>Ajouter au panier';
+        addToCartBtn.innerHTML = '<i class="fas fa-shopping-cart" aria-hidden="true"></i>Ajouter au panier';
     } else {
         // S-9 : le nom du billet est du texte saisi par l'organisateur : jamais d'innerHTML
         summaryDetails.textContent = summaryItems.join(' • ');
-        totalPriceElement.textContent = new Intl.NumberFormat('fr-FR').format(totalPrice) + ' FCFA';
+        totalPriceElement.textContent = totalPrice === 0 ? 'Gratuit' : String(totalPrice).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0') + '\u00A0FCFA';
         addToCartBtn.disabled = false;
-        addToCartBtn.innerHTML = `<i class="fas fa-shopping-cart me-2"></i>Ajouter ${totalTickets} billet${totalTickets > 1 ? 's' : ''} au panier`;
+        addToCartBtn.innerHTML = `<i class="fas fa-shopping-cart" aria-hidden="true"></i>Ajouter au panier`;
     }
+    syncDirectForm(totalTickets);
+}
+
+// Réservation directe : les quantités choisies alimentent le formulaire POST checkout.direct
+function syncDirectForm(totalTickets) {
+    const holder = document.getElementById('directTickets');
+    const btn = document.getElementById('reserveNowBtn');
+    if (!holder || !btn) return;
+    holder.textContent = '';
+    for (const [ticketId, quantity] of Object.entries(ticketQuantities)) {
+        if (quantity > 0) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'tickets[' + ticketId + ']';
+            input.value = quantity;
+            holder.appendChild(input);
+        }
+    }
+    btn.disabled = totalTickets === 0;
 }
 
 // Ajouter au panier
@@ -747,7 +737,7 @@ function addToCart() {
         if (data.success) {
             // Animation de succès
             btn.innerHTML = '<i class="fas fa-check me-2"></i>Ajouté au panier !';
-            btn.style.background = '#28a745';
+            
             
             // Fermer le modal après un délai
             setTimeout(() => {
@@ -797,7 +787,7 @@ function resetModal() {
     
     // Reset bouton principal
     const btn = document.getElementById('addToCartBtn');
-    btn.innerHTML = '<i class="fas fa-shopping-cart me-2"></i>Ajouter au panier';
+    btn.innerHTML = '<i class="fas fa-shopping-cart" aria-hidden="true"></i>Ajouter au panier';
     btn.style.background = '';
     btn.disabled = true;
     

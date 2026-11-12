@@ -4,13 +4,16 @@
 
 @section('title', 'Commande confirmée')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/parcours-achat.css') }}">
+@endpush
+
 @section('content')
 <div class="container py-4 py-md-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            @if(session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
+            {{-- Le message flash de succès est déjà affiché par le layout : un seul message --}}
+            <x-checkout-steps :current="3" />
 
             @if($order->payment_status === 'paid')
             <!-- Header de confirmation -->
@@ -68,13 +71,13 @@
                     @foreach($order->orderItems as $item)
                         <div class="d-flex justify-content-between py-2 border-bottom">
                             <span>{{ $item->ticketType->name }} × {{ $item->quantity }}</span>
-                            <span class="fw-bold">{{ \App\Helpers\CurrencyHelper::formatFCFA($item->total_price) }}</span>
+                            <span class="fw-bold">{{ \App\Helpers\CurrencyHelper::formatPrice($item->total_price) }}</span>
                         </div>
                     @endforeach
                     
                     <div class="d-flex justify-content-between py-3 fw-bold fs-5 border-top">
                         <span>Total</span>
-                        <span class="text-primary">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</span>
+                        <span class="text-primary">{{ \App\Helpers\CurrencyHelper::formatPrice($order->total_amount) }}</span>
                     </div>
                 </div>
             </div>

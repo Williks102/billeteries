@@ -14,6 +14,7 @@ class CartController extends Controller
      */
     public function add(Request $request)
     {
+        session()->forget(['direct_booking', 'booking_timer']); // une réservation directe abandonnée ne doit pas masquer le panier
         // Supporter les deux formats : ancien (single) et nouveau (multiple)
         if ($request->has('tickets')) {
             // Nouveau format du modal (multiple tickets)
@@ -225,6 +226,7 @@ class CartController extends Controller
      */
     public function show()
     {
+        session()->forget(['direct_booking', 'booking_timer']);
         $cart = session()->get('cart', []);
         $cartTotal = $this->getCartTotal();
         $cartCount = $this->getCartCount();

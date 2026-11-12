@@ -217,6 +217,13 @@ use Illuminate\Support\Facades\Storage;
                                     </a>
                                 </div>
                                 
+                                <form method="POST" action="{{ route('promoteur.events.duplicate', $event) }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline-dark btn-sm w-100">
+                                        <i class="fas fa-copy me-1"></i> Dupliquer
+                                    </button>
+                                </form>
+
                                 @if($event->status === 'draft')
                                     <form method="POST" action="{{ route('promoteur.events.publish', $event) }}">
                                         @csrf

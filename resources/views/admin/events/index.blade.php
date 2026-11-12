@@ -263,6 +263,14 @@
                                                 <i class="fas fa-edit me-2"></i>Modifier
                                             </a>
                                         </li>
+                                        <li>
+                                            <form action="{{ route('admin.events.duplicate', $event) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="dropdown-item">
+                                                    <i class="fas fa-copy me-2"></i>Dupliquer
+                                                </button>
+                                            </form>
+                                        </li>
                                         <li><hr class="dropdown-divider"></li>
                                         @if($event->status === 'pending')
                                         <li>

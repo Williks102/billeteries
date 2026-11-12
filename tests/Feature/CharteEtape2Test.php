@@ -27,7 +27,7 @@ class CharteEtape2Test extends TestCase
     /** Vues de formulaires migrées : tout champ doit avoir un libellé (for=id), un aria-label ou un aria-labelledby. */
     private const MIGRATED_FORMS = [
         'events/_form', 'promoteur/events/edit', 'promoteur/events/index', 'promoteur/profile', 'events/all',
-        'admin/events/create', 'admin/events/edit', 'admin/events/index', 'admin/orders/index',
+        'admin/events/_promoter-field', 'admin/events/edit', 'admin/events/index', 'admin/orders/index',
         'auth/login', 'auth/register', 'auth/passwords/email', 'auth/passwords/reset', 'auth/passwords/confirm',
     ];
 

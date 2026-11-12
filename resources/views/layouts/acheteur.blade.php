@@ -442,7 +442,7 @@
 
     @stack('styles')
 </head>
-<body>
+<body class="has-bottom-nav">
     @include('partials.demo-banner')
     <div class="acheteur-wrapper">
         <!-- Mobile Overlay -->
@@ -637,6 +637,16 @@
             </main>
         </div>
     </div>
+
+    @php
+        $bottomNavItems = [
+        ['label' => 'Accueil', 'icon' => 'fa-home', 'route' => 'acheteur.dashboard', 'active' => 'acheteur.dashboard'],
+        ['label' => 'Billets', 'icon' => 'fa-ticket-alt', 'route' => 'acheteur.tickets.index', 'active' => 'acheteur.tickets*'],
+        ['label' => 'Commandes', 'icon' => 'fa-shopping-bag', 'route' => 'acheteur.orders.index', 'active' => 'acheteur.orders*'],
+        ['label' => 'Profil', 'icon' => 'fa-user-circle', 'route' => 'acheteur.profile.show', 'active' => 'acheteur.profile*'],
+    ];
+    @endphp
+    <x-bottom-nav :items="$bottomNavItems" />
 
     <!-- Logout Form -->
     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">

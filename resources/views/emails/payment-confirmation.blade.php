@@ -3,15 +3,23 @@
 @section('title', 'Vos billets sont prêts !')
 
 @section('header-title', '🎫 Vos billets sont prêts !')
-@section('header-subtitle', 'Paiement confirmé pour la commande #' . $order->order_number)
+@section('header-subtitle', ($order->isFree() ? 'Commande gratuite confirmée' : 'Paiement confirmé') . ' pour la commande #' . $order->order_number)
 
 @section('content')
     <h2>Félicitations {{ $order->user->name }} !</h2>
     
+    @if($order->isFree())
+    <p>Votre commande gratuite est confirmée : aucun paiement n'est nécessaire. Vos billets pour <strong>{{ $order->event->title }}</strong> sont maintenant disponibles !</p>
+    @else
     <p>Votre paiement a été confirmé avec succès. Vos billets pour <strong>{{ $order->event->title }}</strong> sont maintenant disponibles !</p>
+    @endif
     
     <div class="highlight">
+        @if($order->isFree())
+        <p><strong>✅ Commande gratuite confirmée</strong><br>
+        @else
         <p><strong>✅ Paiement confirmé : {{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</strong><br>
+        @endif
         📎 Vos billets sont disponibles sur votre espace</p>
     </div>
 

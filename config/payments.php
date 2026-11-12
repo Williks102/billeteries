@@ -39,6 +39,12 @@ return [
     // Quota de billets par IP sur la fenêtre de réservation invité (plus large : CGNAT / réseau partagé)
     'max_pending_tickets_per_ip' => (int) env('MAX_PENDING_TICKETS_PER_IP', 20),
 
+    // Commandes GRATUITES (total serveur = 0 FCFA) : confirmées immédiatement, donc non limitées par les plafonds
+    // « en attente ». Plafonds dédiés, comptés en base : par IP (empreinte HMAC) sur 1 h, par email normalisé sur 24 h.
+    // Billets par commande gratuite : même plafond que max_pending_tickets_per_buyer / max_per_order.
+    'free_orders_per_ip_per_hour' => (int) env('FREE_ORDERS_PER_IP_PER_HOUR', 5),
+    'free_orders_per_email_per_day' => (int) env('FREE_ORDERS_PER_EMAIL_PER_DAY', 5),
+
     // Throttle de l'inscription (POST register) : tentatives par minute et par IP
     'register_throttle_per_minute' => (int) env('REGISTER_THROTTLE_PER_MINUTE', 5),
 

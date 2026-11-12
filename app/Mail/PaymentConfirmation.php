@@ -26,7 +26,7 @@ class PaymentConfirmation extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '✅ Paiement confirmé - Vos billets #' . $this->order->order_number,
+            subject: ($this->order->isFree() ? '✅ Réservation confirmée' : '✅ Paiement confirmé') . ' - Vos billets #' . $this->order->order_number,
         );
     }
 

@@ -256,7 +256,7 @@ use Illuminate\Support\Facades\Storage;
                         </tr>
                         <tr>
                             <td class="fw-bold">Méthode :</td>
-                            <td>{{ $order->payment_method ? $paymentInfo['label'] : 'Non définie' }}</td>
+                            <td>{{ $order->isFree() ? 'Gratuit (aucun paiement)' : ($order->payment_method ? $paymentInfo['label'] : 'Non définie') }}</td>
                         </tr>
                         <tr class="table-active">
                             <td class="fw-bold">Total :</td>

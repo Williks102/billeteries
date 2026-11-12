@@ -14,7 +14,14 @@
             {{-- Le message flash de succès est déjà affiché par le layout : un seul message --}}
             <x-checkout-steps :current="3" />
 
-            @if($order->payment_status === 'paid')
+            @if($order->payment_status === 'paid' && !empty($isFreeOrder))
+                @include('checkout.partials.free-confirmed', ['showTickets' => true])
+                <div class="d-grid mb-4">
+                    <a href="{{ route('acheteur.orders.show', $order) }}" class="btn btn-success btn-lg" style="min-height: 48px;">
+                        <i class="fas fa-ticket-alt me-2" aria-hidden="true"></i>Voir mes billets
+                    </a>
+                </div>
+            @elseif($order->payment_status === 'paid')
                 <div class="text-center mb-4">
                     <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
                     <h1 class="text-success">Paiement confirmé</h1>
@@ -51,7 +58,7 @@
                     @endforeach
                     <div class="d-flex justify-content-between py-3 fw-bold fs-5">
                         <span>Total</span>
-                        <span class="text-primary">{{ \App\Helpers\CurrencyHelper::formatPrice($order->total_amount) }}</span>
+                        <span class="text-primary">{{ !empty($isFreeOrder) ? 'Gratuit' : \App\Helpers\CurrencyHelper::formatPrice($order->total_amount) }}</span>
                     </div>
                 </div>
             </div>

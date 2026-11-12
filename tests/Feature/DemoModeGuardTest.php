@@ -18,7 +18,10 @@ class DemoModeGuardTest extends TestCase
 
     protected function tearDown(): void
     {
-        $this->load([]);
+        // Restaure l'environnement d'origine (phpunit.xml : APP_ENV=testing) : sinon les tests suivants du même
+        // processus tournent sans APP_ENV (CSRF actif, 419) selon l'ordre d'exécution.
+        $original = ['APP_ENV' => 'testing'];
+        $this->load($original);
         parent::tearDown();
     }
 

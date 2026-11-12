@@ -49,6 +49,13 @@ class CheckoutService
         return ($typeMax !== null && $typeMax > 0) ? min($typeMax, $quota) : $quota;
     }
 
+    /** Plafond de commandes GRATUITES atteint (IP ou email) : message unique, ne dit pas quel critère a joué. */
+    public const FREE_LIMIT_ERROR = 'Limite de réservations gratuites atteinte pour le moment. Réessayez plus tard.';
+
+    /** Référence de paiement et méthode des commandes gratuites (total serveur = 0 FCFA). */
+    public const FREE_REFERENCE = 'GRATUIT';
+    public const FREE_METHOD = 'free';
+
     /** Limite de l'ÉVÉNEMENT : ne suggère rien à l'acheteur (il n'a peut-être aucune commande). */
     public const EVENT_LIMIT_ERROR = 'Cet événement a momentanément trop de réservations en attente. Réessayez dans quelques heures.';
 
@@ -164,6 +171,15 @@ class CheckoutService
             return $q->where('orders.user_id', $userId)->whereNull('orders.guest_token')->get();
         }
 
+        return $this->rowsForNormalizedEmail($q, $email);
+    }
+
+    /**
+     * Applique le filtre « même email normalisé » (alias +tag, points/googlemail de Gmail) à une requête sur `orders` :
+     * préfiltre SQL large puis égalité exacte en PHP. Partagé par les plafonds « en attente » et « gratuites ».
+     */
+    private function rowsForNormalizedEmail($q, string $email)
+    {
         $norm = self::normalizeEmail($email);
         $at = strrpos($norm, '@');
         $esc = fn (string $v) => str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $v);
@@ -296,10 +312,22 @@ class CheckoutService
     /**
      * Crée la commande (pending, avec expiration) + items + billets réservés + commission.
      * À appeler DANS une DB::transaction.
+     *
+     * Commande GRATUITE (sous-total serveur = 0) : méthode `free`, pas d'expiration, pas de commission
+     * (aucun revenu à partager), empreinte HMAC de l'IP pour le plafond ; elle reste `pending` jusqu'à
+     * finalizeFreeOrders() (après commit), qui passe par OrderPaymentService::confirmPayment.
+     * Pas de plafond « en attente » : elle est payée immédiatement, le plafond gratuit s'applique en amont.
      */
-    public function createOrder(int $userId, int $eventId, array $group, array $attributes): Order
+    public function createOrder(int $userId, int $eventId, array $group, array $attributes, ?string $ip = null): Order
     {
-        $this->assertEventPendingTicketsWithinCap($eventId, (int) collect($group['items'])->sum('quantity'));
+        $free = self::isFreeGroup($group);
+
+        if ($free) {
+            $attributes['payment_method'] = self::FREE_METHOD;
+            $attributes['checkout_ip_hash'] = $ip !== null ? self::ipHash($ip) : null;
+        } else {
+            $this->assertEventPendingTicketsWithinCap($eventId, (int) collect($group['items'])->sum('quantity'));
+        }
 
         $order = Order::create($attributes + [
             'user_id' => $userId,
@@ -307,7 +335,9 @@ class CheckoutService
             'total_amount' => $group['subtotal'], // prix des billets uniquement : aucun frais pour l'acheteur
             'payment_status' => 'pending',
             'order_number' => Order::generateOrderNumber(),
-            'expires_at' => now()->addMinutes($this->reservationMinutes($attributes['payment_method'] ?? null, !empty($attributes['guest_token']))),
+            'expires_at' => $free
+                ? now()->addMinutes($this->reservationMinutes(null))
+                : now()->addMinutes($this->reservationMinutes($attributes['payment_method'] ?? null, !empty($attributes['guest_token']))),
         ]);
 
         // Ordre d'id croissant des types de billets : évite les deadlocks entre commandes concurrentes
@@ -316,7 +346,9 @@ class CheckoutService
             $this->createOrderItemWithTickets($order, $item);
         }
 
-        $this->createCommission($order);
+        if (!$free) {
+            $this->createCommission($order);
+        }
 
         return $order;
     }
@@ -501,6 +533,9 @@ class CheckoutService
         $payments = app(OrderPaymentService::class);
 
         return array_map(function (Order $order) use ($payments) {
+            if ($order->isFree()) {
+                return $order; // gratuite : déjà confirmée (référence GRATUIT), jamais « paiement simulé »
+            }
             try {
                 return $payments->confirmPayment($order, self::DEMO_REFERENCE, null);
             } catch (\Throwable $e) {
@@ -511,9 +546,182 @@ class CheckoutService
         }, $orders);
     }
 
-    /** Message de succès du checkout selon le mode (démo : paiement simulé). */
-    public static function successMessage(int $orderCount): string
+    // ===== Commandes gratuites (total serveur = 0 FCFA) =====
+
+    /** Un groupe (= une commande) est gratuit si son sous-total RECALCULÉ côté serveur vaut 0. Jamais un champ client. */
+    public static function isFreeGroup(array $group): bool
     {
+        return (int) ($group['subtotal'] ?? 0) === 0;
+    }
+
+    /** `payment_method` n'est exigé que si au moins une commande a un total serveur > 0. */
+    public function requiresPaymentMethod(array $groups): bool
+    {
+        return collect($groups)->contains(fn ($g) => !self::isFreeGroup($g));
+    }
+
+    /** Total serveur (prix actuels de TicketType) d'un panier de session, pour l'affichage : jamais la session. */
+    public function serverCartTotal(array $cart): int
+    {
+        $total = 0;
+        foreach ($cart as $item) {
+            $type = TicketType::find($item['ticket_type_id'] ?? 0);
+            $total += $type ? (int) $type->price * max(0, (int) ($item['quantity'] ?? 0)) : 0;
+        }
+
+        return $total;
+    }
+
+    /** Empreinte HMAC (clé de l'application) de l'IP normalisée : l'IP en clair n'est jamais stockée. */
+    public static function ipHash(string $ip): string
+    {
+        return hash_hmac('sha256', self::normalizeIp($ip), (string) config('app.key'));
+    }
+
+    /**
+     * Plafonds « en attente » : ne concernent que les commandes PAYANTES (une commande gratuite est payée
+     * immédiatement). Sans commande payante, aucun contrôle (et aucun compteur) n'est touché.
+     *
+     * @return array{orders:int, tickets:int} nombre de commandes et de billets payants (compteurs IP)
+     */
+    public function assertPendingLimitsForPaidGroups(array $groups, string $email, ?int $userId, ?string $ip, bool $capByIp): array
+    {
+        $paid = array_filter($groups, fn ($g) => !self::isFreeGroup($g));
+        $tickets = $this->countTickets($paid);
+
+        if ($paid !== []) {
+            $this->assertWithinOrderLimits($email, $userId, $ip, count($paid), $capByIp, $tickets);
+        }
+
+        return ['orders' => count($paid), 'tickets' => $tickets];
+    }
+
+    /**
+     * Plafonds des commandes gratuites, comptés EN BASE (commandes `free` créées, tous statuts) : par IP sur 1 h
+     * (empreinte HMAC) et par email normalisé sur 24 h ; billets par commande gratuite = plafond effectif par commande.
+     * Refus avant toute réservation de stock. À appeler sous withFreeOrderLocks() pour la concurrence.
+     *
+     * @throws CheckoutRefusedException
+     */
+    public function assertWithinFreeOrderLimits(array $groups, string $email, ?string $ip): void
+    {
+        $free = array_filter($groups, fn ($g) => self::isFreeGroup($g));
+        if ($free === []) {
+            return;
+        }
+
+        $perOrder = self::maxTicketsPerOrder();
+        foreach ($free as $g) {
+            if ($this->countTickets([$g]) > $perOrder) {
+                throw new CheckoutRefusedException(self::perOrderLimitMessage($perOrder));
+            }
+        }
+
+        $new = count($free);
+
+        $maxEmail = max(1, (int) config('payments.free_orders_per_email_per_day', 5));
+        $q = DB::table('orders')->where('payment_method', self::FREE_METHOD)->where('created_at', '>=', now()->subDay())
+            ->select('orders.id', 'orders.billing_email');
+        if ($this->rowsForNormalizedEmail($q, $email)->count() + $new > $maxEmail) {
+            Log::warning('Plafond de commandes gratuites par email atteint', ['scope' => 'free_email']);
+            throw new CheckoutRefusedException(self::FREE_LIMIT_ERROR);
+        }
+
+        if ($ip !== null) {
+            $maxIp = max(1, (int) config('payments.free_orders_per_ip_per_hour', 5));
+            $count = DB::table('orders')->where('payment_method', self::FREE_METHOD)
+                ->where('checkout_ip_hash', self::ipHash($ip))->where('created_at', '>=', now()->subHour())->count();
+            if ($count + $new > $maxIp) {
+                Log::warning('Plafond de commandes gratuites par IP atteint', ['scope' => 'free_ip']);
+                throw new CheckoutRefusedException(self::FREE_LIMIT_ERROR);
+            }
+        }
+    }
+
+    /**
+     * Exécute $fn en sérialisant les commandes gratuites d'une même IP / d'un même email (verrous atomiques du cache,
+     * pris HORS transaction, clés triées : pas d'interblocage). Sans groupe gratuit : exécution directe.
+     * Le comptage (assertWithinFreeOrderLimits) et la création de commande doivent être DANS $fn : deux requêtes
+     * simultanées ne peuvent pas passer toutes deux sous le plafond.
+     *
+     * @template T
+     * @param  \Closure(): T  $fn
+     * @return T
+     */
+    public function withFreeOrderLocks(array $groups, string $email, ?string $ip, \Closure $fn)
+    {
+        if (!collect($groups)->contains(fn ($g) => self::isFreeGroup($g))) {
+            return $fn();
+        }
+
+        $keys = ['free-orders-lock:email:' . sha1(self::normalizeEmail($email))];
+        if ($ip !== null) {
+            $keys[] = 'free-orders-lock:ip:' . sha1(self::normalizeIp($ip));
+        }
+        sort($keys);
+
+        $held = [];
+        try {
+            foreach ($keys as $key) {
+                $lock = Cache::lock($key, 30);
+                try {
+                    $lock->block(5);
+                } catch (\Illuminate\Contracts\Cache\LockTimeoutException) {
+                    throw new CheckoutRefusedException(self::GENERIC_ERROR);
+                }
+                $held[] = $lock;
+            }
+
+            return $fn();
+        } finally {
+            foreach (array_reverse($held) as $lock) {
+                $lock->release();
+            }
+        }
+    }
+
+    /**
+     * APRÈS le commit : confirme chaque commande gratuite via OrderPaymentService::confirmPayment (mêmes verrous,
+     * idempotence, billets `sold`, QR après commit, email), référence FREE_REFERENCE. Jamais d'update direct du statut.
+     * En cas d'échec, la commande est libérée (stock rendu, jamais de commande gratuite en suspens) et le checkout est refusé.
+     *
+     * @param  array<int, Order>  $orders
+     * @return array<int, Order>
+     * @throws CheckoutRefusedException
+     */
+    public function finalizeFreeOrders(array $orders): array
+    {
+        $payments = app(OrderPaymentService::class);
+
+        return array_map(function (Order $order) use ($payments) {
+            if (!$order->isFree() || $order->payment_method !== self::FREE_METHOD) {
+                return $order;
+            }
+
+            try {
+                return $payments->confirmPayment($order, self::FREE_REFERENCE, null);
+            } catch (\Throwable $e) {
+                $this->logFailure('Échec confirmation commande gratuite', $e, ['order_id' => $order->id]);
+                try {
+                    $payments->fail($order);
+                } catch (\Throwable $e2) {
+                    $this->logFailure('Échec libération commande gratuite non confirmée', $e2, ['order_id' => $order->id]);
+                }
+
+                throw new CheckoutRefusedException(self::GENERIC_ERROR);
+            }
+        }, $orders);
+    }
+
+    /** Message de succès du checkout selon le mode (démo : paiement simulé ; gratuit : billets émis). */
+    public static function successMessage(int $orderCount, bool $allFree = false): string
+    {
+        if ($allFree) {
+            return $orderCount > 1
+                ? 'Réservations confirmées. Vos billets sont émis.'
+                : 'Réservation confirmée. Vos billets sont émis.';
+        }
+
         if (self::demoAutoConfirm()) {
             return $orderCount > 1
                 ? 'MODE DÉMO : paiement simulé. Vos commandes sont confirmées automatiquement.'

@@ -31,9 +31,11 @@ class GuestCheckoutController extends Controller
 
         // Vérifications de disponibilité...
         
-        $cartTotal = array_sum(array_column($cart, 'total_price'));
+        // Total recalculé côté serveur (jamais la session) : décide de l'affichage « Gratuit » / choix de paiement
+        $cartTotal = app(CheckoutService::class)->serverCartTotal($cart);
+        $isFree = $cartTotal === 0;
 
-        return view('checkout.guest', compact('cart', 'cartTotal'));
+        return view('checkout.guest', compact('cart', 'cartTotal', 'isFree'));
     }
 
     /**
@@ -48,9 +50,7 @@ class GuestCheckoutController extends Controller
     {
         $service = app(CheckoutService::class);
 
-        Log::info('Début checkout invité (paiement manuel)', [
-            'payment_method' => $request->payment_method,
-        ]);
+        Log::info('Début checkout invité');
 
         try {
             $request->validate([
@@ -59,7 +59,6 @@ class GuestCheckoutController extends Controller
                 'last_name' => 'required|string|max:255',
                 'phone' => 'required|string|min:10|max:20',
                 'terms_accepted' => 'required|accepted',
-                'payment_method' => CheckoutService::paymentMethodRule(),
             ]);
 
             // Vérification du panier
@@ -69,26 +68,39 @@ class GuestCheckoutController extends Controller
             }
 
             $groups = $service->buildEventGroups($cart);
-            $tickets = $service->countTickets($groups);
-            $service->assertWithinOrderLimits((string) $request->email, null, $request->ip(), count($groups), true, $tickets);
+            // payment_method n'est exigé que si le total SERVEUR d'une commande est > 0 (jamais un champ client)
+            if ($service->requiresPaymentMethod($groups)) {
+                $request->validate(['payment_method' => CheckoutService::paymentMethodRule()]);
+            }
+            $paid = $service->assertPendingLimitsForPaidGroups($groups, (string) $request->email, null, $request->ip(), true);
 
             // N-A : lecture (non verrouillante) du compte AVANT la transaction, pour qu'aucune lecture ne
             // fixe l'instantané MySQL avant les verrous de réservation.
             $existing = User::where('email', $request->email)->first();
 
-            // Utilisateur + commandes + stock + billets dans UNE transaction (prix recalculés côté serveur)
-            [$user, $orders] = DB::transaction(function () use ($request, $groups, $service, $existing) {
-                $user = $existing ?? $this->createGuest($request);
+            // Plafonds gratuits comptés puis commande créée sous verrous (concurrence) ; utilisateur + commandes + stock
+            // + billets dans UNE transaction (prix recalculés côté serveur)
+            [$user, $orders] = $service->withFreeOrderLocks($groups, (string) $request->email, $request->ip(), function () use ($request, $groups, $service, $existing) {
+                $service->assertWithinFreeOrderLimits($groups, (string) $request->email, $request->ip());
 
-                return [$user, $this->createOrdersFromGroups($service, $groups, $user, $request)];
+                return DB::transaction(function () use ($request, $groups, $service, $existing) {
+                    $user = $existing ?? $this->createGuest($request);
+
+                    return [$user, $this->createOrdersFromGroups($service, $groups, $user, $request)];
+                });
             });
 
-            $service->recordGuestOrders($request->ip(), count($orders), $tickets);
+            if ($paid['orders'] > 0) {
+                $service->recordGuestOrders($request->ip(), $paid['orders'], $paid['tickets']);
+            }
 
             // Preuve de possession liée à la session (retour/annulation)
             foreach ($orders as $o) {
                 $service->rememberGuestOrder($o);
             }
+
+            // Commandes à 0 FCFA : confirmées via OrderPaymentService APRÈS commit (billets, QR, email).
+            $orders = $service->finalizeFreeOrders($orders);
 
             // Mode démo (désactivé par défaut) : confirmation automatique APRÈS commit, validation et plafonds.
             $orders = $service->autoConfirmDemo($orders);
@@ -115,7 +127,7 @@ class GuestCheckoutController extends Controller
      */
     private function redirectToConfirmation(array $orders)
     {
-        $message = CheckoutService::successMessage(count($orders));
+        $message = CheckoutService::successMessage(count($orders), collect($orders)->every(fn ($o) => $o->isFree()));
         $others = collect($orders)->skip(1)->pluck('order_number')->all();
 
         return redirect()->route('checkout.guest.confirmation', $orders[0]->guest_token)
@@ -132,11 +144,11 @@ class GuestCheckoutController extends Controller
 
         foreach ($groups as $eventId => $group) {
             $orders[] = $service->createOrder($user->id, $eventId, $group, [
-                'payment_method' => $request->payment_method,
+                'payment_method' => $request->input('payment_method'),
                 'billing_email' => $request->email,
                 'billing_phone' => $request->phone,
                 'guest_token' => Str::random(32),
-            ]);
+            ], $request->ip());
         }
 
         return $orders;
@@ -188,6 +200,8 @@ class GuestCheckoutController extends Controller
         return view('checkout.guest-confirmation', [
             'order' => $order,
             'demoSimulatedPayment' => $order->isPaid() && $order->payment_reference === CheckoutService::DEMO_REFERENCE,
+            'isFreeOrder' => $order->isFree(),
+            'ownsOrder' => app(CheckoutService::class)->ownsGuestOrder($order),
             'awaitingPayment' => $order->isAwaitingPayment(),
             'paymentInfo' => CheckoutService::manualPaymentInfo($order->payment_method),
             'paymentDeadline' => $order->paymentDeadline(),

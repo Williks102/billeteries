@@ -23,7 +23,7 @@ Billetterie en ligne pour la Côte d'Ivoire : Laravel 12, PHP 8.3, vues Blade et
 - Les copies de travail isolées des agents vivent sous `.claude/worktrees/` (ignoré par git).
 
 ## 4. Équipe d'agents (`.claude/agents/`, skills dans `.claude/skills/`)
-`architecte`, `securite`, `paiements-stock`, `qa-tests`, `ui-design`, `devops-hygiene`, `relecteur`. Tous sur Sonnet sauf `relecteur` (Opus, plus coûteux). Protocole éprouvé : un développeur (souvent `paiements-stock` pour le backend, `ui-design` pour les vues) → vérification personnelle du chef de projet (tests, routes, absence de fichiers parasites, fusion propre avec `main`) → relecture indépendante (jamais par l'auteur ; lecture seule ; fautes volontaires dans une copie jetable) → corrections regroupées en un passage → PR avec un tableau « avant / après » et les limites écrites honnêtement. Les agents poussent à chaque état vert pour ne rien perdre si le quota coupe : `SendMessage` reprend un agent interrompu.
+`architecte`, `securite`, `paiements-stock`, `qa-tests`, `ui-design`, `devops-hygiene`, `relecteur`. Tous sur Sonnet, `relecteur` compris (passé d'Opus à Sonnet pour économiser le quota ; le repasser sur Opus pour les lots sensibles). Protocole éprouvé : un développeur (souvent `paiements-stock` pour le backend, `ui-design` pour les vues) → vérification personnelle du chef de projet (tests, routes, absence de fichiers parasites, fusion propre avec `main`) → relecture indépendante (jamais par l'auteur ; lecture seule ; fautes volontaires dans une copie jetable) → corrections regroupées en un passage → PR avec un tableau « avant / après » et les limites écrites honnêtement. Les agents poussent à chaque état vert pour ne rien perdre si le quota coupe : `SendMessage` reprend un agent interrompu.
 
 ## 5. Architecture et comportement métier essentiels
 **Paiement** : manuel (virement, Mobile Money, espèces), confirmé par l'admin via `OrderPaymentService::confirmPayment` (seul chemin vers `paid` : verrou, idempotence, billets `sold`, QR après commit). PaiementPro est supprimé. Commandes `pending` avec réservation (48 h connecté, 24 h invité, configurable). Transitions : `Order::STATUS_TRANSITIONS`.
@@ -37,7 +37,7 @@ Billetterie en ligne pour la Côte d'Ivoire : Laravel 12, PHP 8.3, vues Blade et
 
 ## 6. État au moment de la passation
 - Tout est fusionné dans `main` **sauf la PR #38** (création d'événement partie 2 : création par l'admin et duplication) : le propriétaire doit la fusionner. La branche est à jour avec `main` et tout est vert.
-- En attente d'une réponse du propriétaire : (a) chantier **CSP** : lancer l'étape d'observation maintenant (option A) ou le garder pour « avant production » (option B) ; (b) passer le `relecteur` sur Sonnet pour économiser le quota (garder Opus pour les lots sensibles).
+- En attente d'une réponse du propriétaire : (a) chantier **CSP** : lancer l'étape d'observation maintenant (option A) ou le garder pour « avant production » (option B). (Le passage du `relecteur` sur Sonnet est fait.)
 
 ## 7. À faire, dans l'ordre recommandé
 **Avant la mise en production** (hébergement définitif à choisir par le propriétaire) :

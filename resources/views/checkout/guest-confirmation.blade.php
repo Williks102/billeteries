@@ -15,7 +15,10 @@
             {{-- Le message flash de succès est déjà affiché par le layout : un seul message --}}
             <x-checkout-steps :current="3" />
 
-            @if($order->payment_status === 'paid')
+            @if($order->payment_status === 'paid' && !empty($isFreeOrder))
+                {{-- QR affichés seulement à qui a la preuve de session de la commande ; sans elle, seuls les codes des billets figurent dans l'email de confirmation (aucun QR). --}}
+                @include('checkout.partials.free-confirmed', ['showTickets' => !empty($ownsOrder)])
+            @elseif($order->payment_status === 'paid')
             <!-- Header de confirmation -->
             <div class="text-center mb-4">
                 <div class="success-icon mb-3">
@@ -77,7 +80,7 @@
                     
                     <div class="d-flex justify-content-between py-3 fw-bold fs-5 border-top">
                         <span>Total</span>
-                        <span class="text-primary">{{ \App\Helpers\CurrencyHelper::formatPrice($order->total_amount) }}</span>
+                        <span class="text-primary">{{ !empty($isFreeOrder) ? 'Gratuit' : \App\Helpers\CurrencyHelper::formatPrice($order->total_amount) }}</span>
                     </div>
                 </div>
             </div>

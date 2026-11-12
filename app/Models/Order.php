@@ -26,6 +26,7 @@ class Order extends Model
         'guest_token',
         'expires_at',
         'admin_notes',
+        'checkout_ip_hash',
     ];
 
     protected $casts = [
@@ -112,6 +113,12 @@ class Order extends Model
     public function isPaid()
     {
         return $this->payment_status === 'paid';
+    }
+
+    /** Commande gratuite : total serveur à 0 FCFA (confirmée automatiquement, aucun paiement ni commission). */
+    public function isFree(): bool
+    {
+        return (int) $this->total_amount === 0;
     }
 
     /** Commande en attente de paiement (le QR des billets n'est pas encore visible). */

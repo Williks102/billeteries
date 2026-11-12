@@ -368,6 +368,8 @@ class CartCheckoutUiTest extends TestCase
         $cart = $this->cart();
         $cart['k1']['unit_price'] = 0;
         $cart['k1']['total_price'] = 0;
+        // Le checkout affiche le total recalculé côté serveur (commandes gratuites) : le prix en base est aussi à 0
+        DB::table('ticket_types')->update(['price' => 0]);
 
         foreach ([
             $this->withSession(['cart' => $cart])->get(route('cart.show')),

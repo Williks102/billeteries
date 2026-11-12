@@ -54,10 +54,12 @@ class CheckoutController extends Controller
             }
         }
 
-        $cartTotal = array_sum(array_column($cart, 'total_price'));
+        // Total recalculé côté serveur (jamais la session) : décide de l'affichage « Gratuit » / choix de paiement
+        $cartTotal = app(CheckoutService::class)->serverCartTotal($cart);
+        $isFree = $cartTotal === 0;
 
         return view('checkout.show', compact(
-            'cart', 'cartTotal',
+            'cart', 'cartTotal', 'isFree',
             'isDirectBooking', 'timeRemaining'
         ));
     }
@@ -128,11 +130,11 @@ class CheckoutController extends Controller
      */
     public function process(Request $request)
     {
+        // payment_method n'est validé qu'après le calcul du total serveur (voir plus bas) : jamais de champ client pour décider « gratuit »
         $request->validate([
             'billing_email' => 'required|email|max:255',
             'billing_phone' => 'required|string|max:20',
             'terms_accepted' => 'required|accepted',
-            'payment_method' => CheckoutService::paymentMethodRule(),
         ]);
 
         try {
@@ -144,36 +146,44 @@ class CheckoutController extends Controller
                 return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
             }
 
-            Log::info('Début checkout (paiement manuel)', [
+            Log::info('Début checkout', [
                 'user_id' => auth()->id(),
-                'payment_method' => $request->payment_method,
                 'cart_items' => count($cart)
             ]);
 
             $service = app(CheckoutService::class);
 
             // Prix recalculés côté serveur ; commandes, stock et billets dans UNE transaction.
-            // Commandes `pending` avec expires_at = now + payments.manual_reservation_minutes.
+            // Commandes payantes `pending` (expires_at = now + réservation) ; commandes à 0 FCFA confirmées tout de suite.
             $groups = $service->buildEventGroups($cart);
-            $capByIp = $service->shouldCapByIp(Auth::user());
-            $tickets = $service->countTickets($groups);
-            $service->assertWithinOrderLimits((string) $request->billing_email, Auth::id(), $request->ip(), count($groups), $capByIp, $tickets);
-
-            $orders = DB::transaction(function () use ($service, $groups, $request) {
-                $orders = [];
-                foreach ($groups as $eventId => $group) {
-                    $orders[] = $service->createOrder(Auth::id(), $eventId, $group, [
-                        'payment_method' => $request->payment_method,
-                        'billing_email' => $request->billing_email,
-                        'billing_phone' => $request->billing_phone,
-                    ]);
-                }
-                return $orders;
-            });
-
-            if ($capByIp) {
-                $service->recordGuestOrders($request->ip(), count($orders), $tickets);
+            if ($service->requiresPaymentMethod($groups)) {
+                $request->validate(['payment_method' => CheckoutService::paymentMethodRule()]);
             }
+            $capByIp = $service->shouldCapByIp(Auth::user());
+            $paid = $service->assertPendingLimitsForPaidGroups($groups, (string) $request->billing_email, Auth::id(), $request->ip(), $capByIp);
+
+            $orders = $service->withFreeOrderLocks($groups, (string) $request->billing_email, $request->ip(), function () use ($service, $groups, $request) {
+                $service->assertWithinFreeOrderLimits($groups, (string) $request->billing_email, $request->ip(), Auth::id());
+
+                return DB::transaction(function () use ($service, $groups, $request) {
+                    $orders = [];
+                    foreach ($groups as $eventId => $group) {
+                        $orders[] = $service->createOrder(Auth::id(), $eventId, $group, [
+                            'payment_method' => $request->input('payment_method'),
+                            'billing_email' => $request->billing_email,
+                            'billing_phone' => $request->billing_phone,
+                        ], $request->ip());
+                    }
+                    return $orders;
+                });
+            }, Auth::id());
+
+            if ($capByIp && $paid['orders'] > 0) {
+                $service->recordGuestOrders($request->ip(), $paid['orders'], $paid['tickets']);
+            }
+
+            // Commandes à 0 FCFA : confirmées via OrderPaymentService APRÈS commit (billets, QR, email).
+            $orders = $service->finalizeFreeOrders($orders);
 
             // Mode démo (désactivé par défaut) : confirmation automatique APRÈS commit, validation et plafonds.
             $orders = $service->autoConfirmDemo($orders);
@@ -186,12 +196,16 @@ class CheckoutController extends Controller
                 session()->forget(['cart', 'cart_timer']);
             }
 
-            $message = CheckoutService::successMessage(count($orders));
+            $target = $service->confirmationTarget($orders);
+            $others = $service->otherOrdersFlash($orders, $target);
 
-            return redirect()->route('checkout.confirmation', $orders[0])
-                ->with('success', $message)
-                ->with('other_order_numbers', collect($orders)->skip(1)->pluck('order_number')->all());
+            return redirect()->route('checkout.confirmation', $target)
+                ->with('success', $service->messageFor($orders))
+                ->with('other_order_numbers', $others['numbers'])
+                ->with('other_free_orders', $others['free']);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (CheckoutRefusedException $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
         } catch (\Throwable $e) {
@@ -257,6 +271,7 @@ class CheckoutController extends Controller
         return [
             'order' => $order,
             'demoSimulatedPayment' => $order->isPaid() && $order->payment_reference === CheckoutService::DEMO_REFERENCE,
+            'isFreeOrder' => $order->isFree(),
             'awaitingPayment' => $order->isAwaitingPayment(),
             'paymentInfo' => CheckoutService::manualPaymentInfo($order->payment_method),
             'paymentDeadline' => $order->paymentDeadline(),

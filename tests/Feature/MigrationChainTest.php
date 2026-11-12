@@ -26,7 +26,7 @@ class MigrationChainTest extends TestCase
         'events' => ['promoter_id', 'category_id', 'title', 'status', 'management_mode', 'admin_permissions', 'management_reason', 'management_changed_by', 'management_changed_at'],
         'ticket_types' => ['event_id', 'name', 'price', 'quantity_available', 'quantity_sold', 'sale_start_date', 'sale_end_date', 'max_per_order', 'is_active'],
         'tickets' => ['ticket_type_id', 'order_item_id', 'ticket_code', 'qr_code', 'qr_code_path', 'validation_data', 'status', 'seat_number', 'used_at', 'holder_name', 'holder_email', 'holder_phone', 'created_ip', 'sent_at', 'downloaded_at', 'download_count'],
-        'orders' => ['user_id', 'event_id', 'total_amount', 'payment_status', 'payment_method', 'payment_reference', 'order_number', 'guest_token', 'billing_email', 'billing_phone', 'paid_at', 'expires_at', 'admin_notes'],
+        'orders' => ['user_id', 'event_id', 'total_amount', 'payment_status', 'payment_method', 'payment_reference', 'order_number', 'guest_token', 'billing_email', 'billing_phone', 'paid_at', 'expires_at', 'admin_notes', 'checkout_ip_hash'],
         'order_items' => ['order_id', 'ticket_type_id', 'quantity', 'unit_price', 'total_price', 'commission_rate', 'commission_amount', 'net_amount'],
         'order_tickets' => ['order_id', 'ticket_id', 'order_item_id'],
         'commissions' => ['order_id', 'promoter_id', 'gross_amount', 'commission_rate', 'commission_amount', 'net_amount', 'platform_fee', 'payment_processor_fee', 'status', 'paid_at', 'notes', 'paid_by'],

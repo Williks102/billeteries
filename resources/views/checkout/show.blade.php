@@ -44,9 +44,12 @@
                     </div>
                 </section>
 
+                {{-- Total serveur = 0 : aucun choix de paiement, le formulaire n'envoie pas payment_method. --}}
+                @unless($isFree)
                 <section class="parcours-card" aria-label="Mode de paiement">
                     <x-payment-method-cards prefix="pm_" />
                 </section>
+                @endunless
             </div>
 
             <aside class="parcours-aside parcours-card" aria-labelledby="summary-title">
@@ -55,7 +58,7 @@
                     <span>Sous-total</span>
                     <span class="summary-amount">{{ \App\Helpers\CurrencyHelper::formatPrice($cartTotal) }}</span>
                 </div>
-                <x-checkout-submit :total="$cartTotal" :guest="false" terms-id="terms_accepted" button-id="pay-button" />
+                <x-checkout-submit :total="$cartTotal" :guest="false" terms-id="terms_accepted" button-id="pay-button" :free="$isFree" />
             </aside>
         </div>
     </form>

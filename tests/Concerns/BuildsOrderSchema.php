@@ -114,6 +114,7 @@ trait BuildsOrderSchema
             $t->string('billing_email')->default('a@b.c');
             $t->string('billing_phone')->nullable();
             $t->string('guest_token')->nullable();
+            $t->string('checkout_ip_hash', 64)->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('expires_at')->nullable();
             $t->text('admin_notes')->nullable();

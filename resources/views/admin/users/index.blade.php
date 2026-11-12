@@ -17,45 +17,16 @@
     </a>
 </div>
 
-<!-- Statistiques -->
-<div class="row mb-4">
-    <div class="col-md-2 mb-3">
-        <div class="stat-card text-center">
-            <div class="stat-number text-primary">{{ $stats['total'] ?? 0 }}</div>
-            <div class="stat-label">Total</div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="stat-card text-center">
-            <div class="stat-number text-danger">{{ $stats['admins'] ?? 0 }}</div>
-            <div class="stat-label">Admins</div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="stat-card text-center">
-            <div class="stat-number text-warning">{{ $stats['promoteurs'] ?? 0 }}</div>
-            <div class="stat-label">Promoteurs</div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="stat-card text-center">
-            <div class="stat-number text-info">{{ $stats['acheteurs'] ?? 0 }}</div>
-            <div class="stat-label">Acheteurs</div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="stat-card text-center">
-            <div class="stat-number text-success">{{ $stats['verified'] ?? 0 }}</div>
-            <div class="stat-label">Vérifiés</div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="stat-card text-center">
-            <div class="stat-number text-orange">{{ $stats['new_this_month'] ?? 0 }}</div>
-            <div class="stat-label">Ce mois</div>
-        </div>
-    </div>
-</div>
+<x-period-filter :action="route('admin.users.index')" :period="$period" :keep="request()->only(['role', 'search', 'status'])" />
+
+<x-stat-grid label="Chiffres des utilisateurs">
+    <x-stat-card label="Utilisateurs" :value="$stats['total']" hint="Total actuel" />
+    <x-stat-card label="Administrateurs" :value="$stats['admins']" />
+    <x-stat-card label="Promoteurs" :value="$stats['promoteurs']" />
+    <x-stat-card label="Acheteurs" :value="$stats['acheteurs']" />
+    <x-stat-card label="Emails vérifiés" :value="$stats['verified']" />
+    <x-stat-card label="Nouveaux inscrits" :value="$stats['new']" :hint="$period->label" />
+</x-stat-grid>
 
 <!-- Filtres et recherche -->
 <div class="dashboard-card mb-4">
@@ -118,7 +89,7 @@
 <!-- Liste des utilisateurs -->
 <div class="dashboard-card">
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover table-cards">
             <thead class="table-light">
                 <tr>
                     <th width="50">
@@ -140,7 +111,7 @@
                                    value="{{ $user->id }}" 
                                    data-name="{{ $user->name }}">
                         </td>
-                        <td>
+                        <td data-label="Utilisateur">
                             <div class="d-flex align-items-center">
                                 <div class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center me-3">
                                     <i class="fas fa-user text-muted"></i>
@@ -151,12 +122,12 @@
                                 </div>
                             </div>
                         </td>
-                        <td>
+                        <td data-label="Rôle">
                             <span class="badge {{ $user->role === 'admin' ? 'bg-danger' : ($user->role === 'promoteur' ? 'bg-warning' : 'bg-info') }}">
                                 {{ ucfirst($user->role) }}
                             </span>
                         </td>
-                        <td>
+                        <td data-label="Statut email">
                             <div class="d-flex align-items-center">
                                 @if($user->email_verified_at)
                                     <span class="badge bg-success me-2">Vérifié</span>
@@ -174,15 +145,15 @@
                                 @endif
                             </div>
                         </td>
-                        <td>
+                        <td data-label="Téléphone">
                             <span class="text-muted">{{ $user->phone ?: 'N/A' }}</span>
                         </td>
-                        <td>
+                        <td data-label="Inscription">
                             <span class="text-muted">{{ $user->created_at->format('d/m/Y') }}</span>
                             <br>
                             <small class="text-muted">{{ $user->created_at->diffForHumans() }}</small>
                         </td>
-                        <td>
+                        <td data-label="Actions">
                             <div class="btn-group" role="group">
                                 <a href="{{ route('admin.users.show', $user) }}" 
                                    class="btn btn-sm btn-outline-info"

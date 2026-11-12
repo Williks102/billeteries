@@ -24,69 +24,16 @@
         </div>
     </div>
 
-    <!-- Statistiques des commandes -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="stat-icon bg-primary me-3">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <div>
-                            <h4 class="mb-1">{{ $stats['total'] ?? 0 }}</h4>
-                            <p class="text-muted mb-0 small">Total commandes</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="stat-icon bg-success me-3">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div>
-                            <h4 class="mb-1">{{ $stats['paid'] ?? 0 }}</h4>
-                            <p class="text-muted mb-0 small">Payées</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="stat-icon bg-warning me-3">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div>
-                            <h4 class="mb-1">{{ $stats['pending'] ?? 0 }}</h4>
-                            <p class="text-muted mb-0 small">En attente</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="stat-icon bg-info me-3">
-                            <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <div>
-                            <h4 class="mb-1">{{ number_format($stats['total_revenue'] ?? 0) }}</h4>
-                            <p class="text-muted mb-0 small">Revenus (FCFA)</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-period-filter :action="route('admin.orders.index')" :period="$period" :keep="request()->only(['payment_status', 'search', 'event', 'user'])" />
+
+    <x-stat-grid label="Chiffres des commandes de la période">
+        <x-stat-card label="Commandes créées" :value="$summary['orders_created'] ?? null" hint="Tous statuts, créées sur la période" />
+        <x-stat-card label="Commandes payées" :value="$summary['orders_by_status']['paid'] ?? null" hint="Créées sur la période" />
+        <x-stat-card label="En attente de paiement" :value="$summary['orders_awaiting_payment'] ?? null" hint="Créées sur la période" />
+        <x-stat-card label="Échouées" :value="$summary['orders_by_status']['failed'] ?? null" />
+        <x-stat-card label="Remboursées" :value="$summary['orders_by_status']['refunded'] ?? null" />
+        <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$summary['gmv'] ?? null" hint="Commandes payées sur la période" />
+    </x-stat-grid>
 
     <!-- Filtres -->
     <div class="card mb-4">
@@ -162,7 +109,7 @@
         </div>
         
         <div class="card-body p-0">
-            @if($orders->count() > 0)
+            @if($orders->isNotEmpty())
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="bg-light">
@@ -206,9 +153,9 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <span class="fw-bold text-primary">{{ number_format($order->total_amount ?? 0) }} FCFA</span>
-                                        @if($order->orderItems && $order->orderItems->count() > 0)
-                                            <br><small class="text-muted">{{ $order->orderItems->sum('quantity') }} billet(s)</small>
+                                        <span class="fw-bold text-primary">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount ?? 0) }}</span>
+                                        @if($order->tickets_quantity)
+                                            <br><small class="text-muted">{{ $order->tickets_quantity }} billet(s)</small>
                                         @endif
                                     </td>
                                     <td>

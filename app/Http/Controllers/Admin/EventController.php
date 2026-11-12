@@ -14,9 +14,19 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Http\Controllers\Admin\Concerns\ResolvesStatsPeriod;
+use App\Services\Stats\CommissionStats;
+use App\Services\Stats\EventStats;
+use App\Services\Stats\PlatformStats;
+use App\Services\Stats\SalesStats;
+use App\Services\Stats\Scope;
+use App\Services\Stats\TicketStats;
+use App\Support\Stats\DatePeriod;
 
 class EventController extends Controller
 {
+    use ResolvesStatsPeriod;
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -28,7 +38,9 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Event::with(['category', 'promoteur', 'ticketTypes']);
+        $period = $this->statsPeriod($request, 'admin.events.index');
+
+        $query = Event::with(['category', 'promoteur']);
         
         // Filtres
         if ($request->filled('status')) {
@@ -69,26 +81,17 @@ class EventController extends Controller
         // Tri par défaut : plus récents
         $events = $query->latest()->paginate(20);
 
-        // Statistiques pour le dashboard
-        $stats = [
-            'total' => Event::count(),
-            'published' => Event::where('status', 'published')->count(),
-            'pending' => Event::where('status', 'pending')->count(),
-            'draft' => Event::where('status', 'draft')->count(),
-            'rejected' => Event::where('status', 'rejected')->count(),
-            'this_month' => Event::whereMonth('created_at', now()->month)->count(),
-            'total_revenue' => Event::join('orders', 'events.id', '=', 'orders.event_id')
-                ->where('orders.payment_status', 'paid')
-                ->sum('orders.total_amount'),
-            // Nouvelles statistiques hybrides
-            
-        ];
+        // Chiffres : services Stats. Statuts = instantané ; ventes = commandes payées de la période.
+        $stats = app(PlatformStats::class)->events();
+        $periodSales = app(SalesStats::class)->gmv(Scope::admin(), $period);
+        // Ligne par événement : 5 requêtes pour toute la page (toutes dates), aucune requête par ligne.
+        $eventStats = app(EventStats::class)->forEvents($events->pluck('id')->all());
 
         // Données pour les filtres
         $categories = EventCategory::orderBy('name')->get();
         $promoteurs = User::where('role', 'promoteur')->orderBy('name')->get();
 
-        return view('admin.events.index', compact('events', 'stats', 'categories', 'promoteurs'));
+        return view('admin.events.index', compact('events', 'stats', 'period', 'periodSales', 'eventStats', 'categories', 'promoteurs'));
     }
 
     /**
@@ -248,26 +251,30 @@ class EventController extends Controller
     public function show(Event $event)
     {
         try {
-            $event->load(['category', 'promoteur', 'ticketTypes', 'orders.user', 'tickets']);
-            
-            // Statistiques de l'événement
-            $stats = [
-                'total_tickets' => $event->ticketTypes->sum('quantity_available') ?? 0,
-                'sold_tickets' => $event->ticketTypes->sum('quantity_sold') ?? 0,
-                'total_revenue' => $event->totalRevenue() ?? 0,
-                'total_orders' => $event->orders()->count(),
-                'pending_orders' => $event->orders()->where('payment_status', 'pending')->count(),
-                'used_tickets' => $event->tickets()->where('status', 'used')->count(),
-                'available_tickets' => $event->ticketTypes->sum('quantity_available') - $event->ticketTypes->sum('quantity_sold'),
-                'revenue_promoteur' => $event->promoteur && $event->promoteur->commissions()
-                    ->whereHas('order', function($q) use ($event) {
-                        $q->where('event_id', $event->id);
-                    })->sum('net_amount') ?? 0,
+            $event->load(['category', 'promoteur', 'ticketTypes']);
+
+            // Chiffres de l'événement (toutes dates) : services Stats. Promoteur = net après commission.
+            $scope = Scope::event($event->id);
+            $all = DatePeriod::all();
+            $row = app(EventStats::class)->forEvents([$event->id])[$event->id];
+            $tickets = app(TicketStats::class);
+            $stats = $row + [
+                'scanned' => $tickets->scanned($scope),
+                'usage_rate' => $tickets->usageRate($scope),
+                'reserved' => $tickets->reserved($scope),
+                'available' => $tickets->available($scope),
+                'pending_payout' => app(CommissionStats::class)->pendingPayout($scope, $all),
+                'paid_out' => app(CommissionStats::class)->paidOut($scope, $all),
+                'orders_awaiting_payment' => array_sum(array_intersect_key(
+                    app(\App\Services\Stats\OrderStats::class)->countsByStatus($scope, $all),
+                    ['pending' => 1, 'processing' => 1]
+                )),
             ];
 
             // Commandes récentes pour cet événement
             $recentOrders = $event->orders()
-                ->with(['user', 'orderItems.ticketType'])
+                ->with(['user'])
+                ->withSum('orderItems as tickets_quantity', 'quantity')
                 ->latest()
                 ->take(10)
                 ->get();

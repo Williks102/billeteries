@@ -11,9 +11,14 @@ use App\Services\OrderPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Admin\Concerns\ResolvesStatsPeriod;
+use App\Services\Stats\DashboardStats;
+use App\Services\Stats\Scope;
 
 class OrderController extends Controller
 {
+    use ResolvesStatsPeriod;
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -25,8 +30,11 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        // Période lue AVANT le try : une période invalide doit produire une erreur de validation lisible.
+        $period = $this->statsPeriod($request, 'admin.orders.index');
+
         try {
-            $query = Order::with(['user', 'event', 'orderItems.ticketType']);
+            $query = Order::with(['user', 'event'])->withSum('orderItems as tickets_quantity', 'quantity');
 
             // Filtres
             if ($request->filled('payment_status')) {
@@ -74,47 +82,25 @@ class OrderController extends Controller
             // Tri par défaut : plus récentes
             $orders = $query->latest()->paginate(20);
 
-            // Statistiques pour le dashboard - CORRIGÉ
-            $stats = [
-                'total' => Order::count(),
-                'paid' => Order::where('payment_status', 'paid')->count(),
-                'pending' => Order::where('payment_status', 'pending')->count(),
-                'failed' => Order::where('payment_status', 'failed')->count(),
-                'refunded' => Order::where('payment_status', 'refunded')->count(),
-                'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount') ?? 0,
-                'pending_revenue' => Order::where('payment_status', 'pending')->sum('total_amount') ?? 0,
-                'this_month_orders' => Order::whereMonth('created_at', now()->month)->count(),
-                'this_month_revenue' => Order::where('payment_status', 'paid')
-                    ->whereMonth('created_at', now()->month)
-                    ->sum('total_amount') ?? 0, // ✅ CORRIGÉ : Ajout ?? 0 et fermeture correcte
-            ];
+            // Chiffres : services Stats (commandes créées / payées de la période, ventes hors frais)
+            $summary = app(DashboardStats::class)->summary(Scope::admin(), $period);
 
             // Données pour les filtres - Avec protection contre null
             $events = Event::orderBy('title')->get();
             $users = User::where('role', 'acheteur')->orderBy('name')->get();
 
-            return view('admin.orders.index', compact('orders', 'stats', 'events', 'users'));
+            return view('admin.orders.index', compact('orders', 'summary', 'period', 'events', 'users'));
 
         } catch (\Exception $e) {
             $this->logFailure('Erreur admin orders index', $e);
             
-            // Valeurs par défaut en cas d'erreur
+            // En cas d'erreur : aucun chiffre inventé (les cartes affichent « — »)
             $orders = Order::paginate(20);
-            $stats = [
-                'total' => 0,
-                'paid' => 0,
-                'pending' => 0,
-                'failed' => 0,
-                'refunded' => 0,
-                'total_revenue' => 0,
-                'pending_revenue' => 0,
-                'this_month_orders' => 0,
-                'this_month_revenue' => 0,
-            ];
+            $summary = [];
             $events = collect();
             $users = collect();
 
-            return view('admin.orders.index', compact('orders', 'stats', 'events', 'users'))
+            return view('admin.orders.index', compact('orders', 'summary', 'period', 'events', 'users'))
                 ->with('error', 'Erreur lors du chargement des commandes. Veuillez réessayer.');
         }
     }

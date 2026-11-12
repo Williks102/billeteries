@@ -113,108 +113,22 @@
         </div>
     </div>
 
-    <!-- Statistiques -->
-    <div class="row mb-4">
-        @if($user->isPromoteur())
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card stat-card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-primary">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 class="stat-number">{{ $stats['events_count'] ?? 0 }}</h3>
-                            <p class="stat-label">Événements créés</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card stat-card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-success">
-                            <i class="fas fa-ticket-alt"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 class="stat-number">{{ $stats['tickets_sold'] ?? 0 }}</h3>
-                            <p class="stat-label">Billets vendus</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card stat-card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-warning">
-                            <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 class="stat-number">{{ number_format($stats['total_revenue'] ?? 0) }}</h3>
-                            <p class="stat-label">Revenus (FCFA)</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card stat-card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-info">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 class="stat-number">{{ number_format($stats['pending_revenue'] ?? 0) }}</h3>
-                            <p class="stat-label">Revenus en attente</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @else
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card stat-card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-primary">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 class="stat-number">{{ $stats['orders_count'] ?? 0 }}</h3>
-                            <p class="stat-label">Commandes passées</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card stat-card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-success">
-                            <i class="fas fa-coins"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 class="stat-number">{{ number_format($stats['total_spent'] ?? 0) }}</h3>
-                            <p class="stat-label">Total dépensé (FCFA)</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card stat-card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="stat-icon bg-info">
-                            <i class="fas fa-calendar-check"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 class="stat-number">{{ $stats['member_since'] ?? 'N/A' }}</h3>
-                            <p class="stat-label">Membre depuis</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
-    </div>
+    <!-- Statistiques (toutes dates) -->
+    @if($user->isPromoteur())
+        <x-stat-grid cols="3" label="Chiffres du promoteur">
+            <x-stat-card label="Événements créés" :value="$stats['events_count']" />
+            <x-stat-card label="Billets vendus" :value="$stats['tickets_sold']" hint="Payés ou utilisés" />
+            <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$stats['total_sales']" hint="Commandes payées" />
+            <x-stat-card label="Net à verser" unit="FCFA" :value="$stats['pending_revenue']" hint="Commissions en attente de versement" />
+            <x-stat-card label="Net versé" unit="FCFA" :value="$stats['paid_out']" />
+        </x-stat-grid>
+    @else
+        <x-stat-grid cols="3" label="Chiffres de l'acheteur">
+            <x-stat-card label="Commandes passées" :value="$stats['orders_count']" hint="Tous statuts" />
+            <x-stat-card label="Total payé" unit="FCFA" :value="$stats['total_spent']" hint="Commandes payées seulement" />
+            <x-stat-card label="Membre depuis" :value="$stats['member_since']" />
+        </x-stat-grid>
+    @endif
 
     <div class="row">
         <!-- Activité récente -->
@@ -227,7 +141,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    @if($recentActivity && $recentActivity->count() > 0)
+                    @if($recentActivity && $recentActivity->isNotEmpty())
                         <div class="timeline">
                             @foreach($recentActivity as $activity)
                                 <div class="timeline-item">

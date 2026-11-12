@@ -9,6 +9,7 @@ use App\Http\Controllers\Promoteur\ScannerController;
 use App\Models\Event;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\Concerns\StatsFixture;
 use Tests\TestCase;
@@ -19,6 +20,7 @@ use Tests\TestCase;
  * App\Services\Stats, prouvée dans Sales/Ticket/Commission/OrderStatsTest) et la raison de l'écart.
  * Aux lots L3 (admin), L4 (promoteur) et L5 (acheteur/public), l'écran est branché sur les services et
  * l'assertion correspondante doit être retournée vers la valeur CIBLE (ne PAS les supprimer).
+ * L3 FAIT : le dashboard admin (test_admin_dashboard_now_shows_target_values_...) est retourné vers la cible.
  *
  * Aucun contrôleur n'est modifié par ce lot. Les contrôleurs sont appelés directement et la vue renvoyée est
  * lue (getData) sans être rendue.
@@ -39,20 +41,24 @@ class LegacyCharacterizationTest extends TestCase
         $this->buildStatsFixture();
     }
 
-    public function test_admin_dashboard_revenue_counts_whole_history_and_this_month_ignores_the_year(): void
+    /**
+     * L3 : le dashboard admin est branché sur App\Services\Stats\* ; ce test, qui figeait les valeurs FAUSSES
+     * (70 000 / 60 000 / 9 commandes), est retourné vers les valeurs CIBLE. Il ne doit plus jamais repasser « faux ».
+     */
+    public function test_admin_dashboard_now_shows_target_values_instead_of_legacy_wrong_ones(): void
     {
         $this->actingAs($this->makeUser(10, 'admin'));
 
-        $stats = app(AdminController::class)->dashboard()->getData()['stats'];
+        // Toute la période : GMV = 70 000 (6 commandes payées) ; plus de Order::count() (9, tous statuts).
+        $all = app(AdminController::class)->dashboard(Request::create('/admin/dashboard', 'GET', ['period' => 'all']))->getData()['summary'];
+        $this->assertSame(70000, $all['gmv']);
+        $this->assertSame(6, $all['orders_paid']);
 
-        // total_revenue = SUM(total_amount) paid, toutes périodes : 70 000. CIBLE (GMV admin, toutes périodes) : 70 000
-        // (égal ici car plus de frais ; sur une commande historique à +500 l'ancien chiffre diverge de la GMV).
-        $this->assertSame(70000, (int) $stats['total_revenue']);
-        // this_month_revenue = whereMonth(created_at, 11) SANS année : O9 (novembre 2025, 5 000) est cumulée => 60 000.
-        // CIBLE : 55 000 (novembre 2026 seulement : O1 20 000 + O4 15 000 + O5 0 + O7 20 000).
-        $this->assertSame(60000, (int) $stats['this_month_revenue']);
-        // total_orders = Order::count() (tous statuts) : 9. CIBLE : 6 commandes payées (+ pending/failed/refunded à part).
-        $this->assertSame(9, $stats['total_orders']);
+        // Période par défaut = mois civil en cours (novembre 2026) : 55 000 (O1 20 000 + O4 15 000 + O5 0 + O7 20 000).
+        // Ancienne valeur fausse : 60 000 (whereMonth sans année cumulait novembre 2025, O9 5 000).
+        $month = app(AdminController::class)->dashboard(Request::create('/admin/dashboard'))->getData()['summary'];
+        $this->assertSame(55000, $month['gmv']);
+        $this->assertSame(4, $month['orders_paid']);
     }
 
     public function test_promoter_report_revenue_is_inflated_by_the_join_on_order_items(): void

@@ -140,7 +140,7 @@
     
     @stack('styles')
 </head>
-<body>
+<body class="has-bottom-nav">
     @include('partials.demo-banner')
     <div class="admin-wrapper">
         <!-- Sidebar -->
@@ -367,6 +367,16 @@
             @yield('content')
         </main>
     </div>
+
+    @php
+        $bottomNavItems = [
+        ['label' => 'Accueil', 'icon' => 'fa-tachometer-alt', 'route' => 'admin.dashboard', 'active' => 'admin.dashboard'],
+        ['label' => 'Événements', 'icon' => 'fa-calendar-check', 'route' => 'admin.events.index', 'active' => 'admin.events.*'],
+        ['label' => 'Commandes', 'icon' => 'fa-shopping-bag', 'route' => 'admin.orders.index', 'active' => 'admin.orders.*'],
+        ['label' => 'Utilisateurs', 'icon' => 'fa-users', 'route' => 'admin.users.index', 'active' => 'admin.users.*'],
+    ];
+    @endphp
+    <x-bottom-nav :items="$bottomNavItems" />
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

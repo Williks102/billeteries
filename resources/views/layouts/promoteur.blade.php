@@ -177,7 +177,7 @@
     
     @stack('styles')
 </head>
-<body>
+<body class="has-bottom-nav">
     @include('partials.demo-banner')
     <div class="promoteur-wrapper">
         <!-- Mobile Overlay -->
@@ -373,6 +373,16 @@
             </main>
         </div>
     </div>
+
+    @php
+        $bottomNavItems = [
+        ['label' => 'Accueil', 'icon' => 'fa-tachometer-alt', 'route' => 'promoteur.dashboard', 'active' => 'promoteur.dashboard'],
+        ['label' => 'Événements', 'icon' => 'fa-calendar-alt', 'route' => 'promoteur.events.index', 'active' => 'promoteur.events.*'],
+        ['label' => 'Ventes', 'icon' => 'fa-chart-line', 'route' => 'promoteur.sales.index', 'active' => 'promoteur.sales*'],
+        ['label' => 'Profil', 'icon' => 'fa-user-circle', 'route' => 'promoteur.profile.show', 'active' => 'promoteur.profile*'],
+    ];
+    @endphp
+    <x-bottom-nav :items="$bottomNavItems" />
 
     <!-- Logout Form -->
     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">

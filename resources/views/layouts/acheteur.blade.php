@@ -24,7 +24,7 @@
             --black-secondary: #2c3338;
             --gray-light: #f0f0f1;
             --gray-medium: #8c8f94;
-            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: all var(--motion) ease;
         }
 
         * {

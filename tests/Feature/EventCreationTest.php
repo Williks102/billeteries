@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\BuildsOrderSchema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -490,7 +491,7 @@ class EventCreationTest extends TestCase
         ];
     }
 
-    /** @dataProvider badImages */
+    #[DataProvider('badImages')]
     public function test_bad_images_are_refused_and_nothing_is_stored(\Closure $file): void
     {
         $this->store(['image' => $file()])->assertSessionHasErrors('image');

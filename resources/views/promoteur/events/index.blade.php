@@ -219,7 +219,7 @@ use Illuminate\Support\Facades\Storage;
                                 
                                 <form method="POST" action="{{ route('promoteur.events.duplicate', $event) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-outline-dark btn-sm w-100">
+                                    <button type="submit" class="btn btn-outline-dark btn-sm w-100" style="min-height: 44px;">
                                         <i class="fas fa-copy me-1"></i> Dupliquer
                                     </button>
                                 </form>

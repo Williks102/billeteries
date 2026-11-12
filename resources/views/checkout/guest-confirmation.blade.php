@@ -16,7 +16,7 @@
             <x-checkout-steps :current="3" />
 
             @if($order->payment_status === 'paid' && !empty($isFreeOrder))
-                {{-- QR affichés seulement à qui a la preuve de session de la commande ; sinon ils restent dans l'email --}}
+                {{-- QR affichés seulement à qui a la preuve de session de la commande ; sans elle, seuls les codes des billets figurent dans l'email de confirmation (aucun QR). --}}
                 @include('checkout.partials.free-confirmed', ['showTickets' => !empty($ownsOrder)])
             @elseif($order->payment_status === 'paid')
             <!-- Header de confirmation -->

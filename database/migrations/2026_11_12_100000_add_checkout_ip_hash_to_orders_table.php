@@ -16,9 +16,16 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Colonne et index protégés séparément : une exécution interrompue entre les deux se rattrape.
         if (! Schema::hasColumn('orders', 'checkout_ip_hash')) {
             Schema::table('orders', function (Blueprint $table) {
-                $table->string('checkout_ip_hash', 64)->nullable()->index();
+                $table->string('checkout_ip_hash', 64)->nullable();
+            });
+        }
+
+        if (! Schema::hasIndex('orders', ['checkout_ip_hash'])) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->index('checkout_ip_hash');
             });
         }
     }

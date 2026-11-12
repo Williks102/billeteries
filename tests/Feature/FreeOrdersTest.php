@@ -50,7 +50,7 @@ class FreeOrdersTest extends TestCase
     private function cart(TicketType $type, int $qty, int $fakePrice = 0): array
     {
         return ['k' => [
-            'ticket_type_id' => $type->id, 'event_id' => 1, 'quantity' => $qty,
+            'ticket_type_id' => $type->id, 'event_id' => (int) $type->event_id ?: 1, 'quantity' => $qty,
             'ticket_name' => 'Std', 'unit_price' => $fakePrice, 'total_price' => $fakePrice * $qty,
             'event_title' => 'Concert', 'event_date' => '01/01/2027', 'event_venue' => 'Palais', 'event_image' => null,
         ]];
@@ -405,7 +405,7 @@ class FreeOrdersTest extends TestCase
 
         $r = $this->guestPost($this->cart($type, 2));
 
-        $r->assertSessionHas('error', CheckoutService::GENERIC_ERROR);
+        $r->assertSessionHas('error', CheckoutService::FREE_FAILURE_ERROR);
         $order = Order::firstOrFail();
         $this->assertSame('failed', $order->payment_status, 'jamais de commande gratuite en suspens');
         $this->assertSame(0, (int) $type->fresh()->quantity_sold, 'stock rendu');
@@ -479,5 +479,170 @@ class FreeOrdersTest extends TestCase
         $this->assertStringContainsString('Commande gratuite confirmée', $html);
         $this->assertStringNotContainsString('Paiement confirmé', $html);
         $this->assertStringNotContainsStringIgnoringCase('frais', $html);
+    }
+
+    // ===== Multi-événements, tout-ou-rien =====
+
+    /** Type de billet rattaché à un 2e événement. */
+    private function typeOnSecondEvent(int $price): TicketType
+    {
+        DB::table('events')->insert(['id' => 2, 'promoter_id' => 2, 'title' => 'Atelier', 'venue' => 'Salle', 'event_date' => '2027-02-01', 'event_time' => '10:00']);
+        $type = $this->freeType(50, $price);
+        $type->update(['event_id' => 2]);
+
+        return $type->fresh();
+    }
+
+    private function mixedCart(): array
+    {
+        $free = $this->freeType();
+        $paid = $this->typeOnSecondEvent(1000);
+
+        return [$free, $paid, ['a' => $this->cart($free, 1)['k'], 'b' => $this->cart($paid, 1)['k']]];
+    }
+
+    public function test_two_free_events_create_two_confirmed_orders(): void
+    {
+        $a = $this->freeType();
+        $b = $this->typeOnSecondEvent(0);
+
+        $this->guestPost(['a' => $this->cart($a, 1)['k'], 'b' => $this->cart($b, 2)['k']]);
+
+        $this->assertSame(2, Order::where('payment_status', 'paid')->count());
+        $this->assertSame(0, Commission::count());
+        $this->assertSame(1, (int) $a->fresh()->quantity_sold);
+        $this->assertSame(2, (int) $b->fresh()->quantity_sold);
+    }
+
+    public function test_mixed_cart_without_payment_method_is_refused(): void
+    {
+        [$free, $paid, $cart] = $this->mixedCart();
+
+        $this->guestPost($cart)->assertSessionHasErrors('payment_method');
+
+        $this->assertSame(0, Order::count());
+        $this->assertSame(0, (int) $free->fresh()->quantity_sold);
+        $this->assertSame(0, (int) $paid->fresh()->quantity_sold);
+    }
+
+    public function test_mixed_cart_with_payment_method_confirms_free_and_leaves_paid_pending(): void
+    {
+        [$free, $paid, $cart] = $this->mixedCart();
+
+        $r = $this->guestPost($cart, ['payment_method' => 'mobile_money']);
+
+        $freeOrder = Order::where('event_id', 1)->firstOrFail();
+        $paidOrder = Order::where('event_id', 2)->firstOrFail();
+        $this->assertConfirmedFree($freeOrder, 1);
+        $this->assertSame('pending', $paidOrder->payment_status);
+        $this->assertSame('mobile_money', $paidOrder->payment_method);
+        $this->assertSame(1000, (int) $paidOrder->total_amount);
+        $this->assertSame(1, Commission::where('order_id', $paidOrder->id)->count());
+
+        // Redirection vers la commande EN ATTENTE (pas la gratuite), message sans contradiction ni promesse d'email
+        $r->assertRedirect(route('checkout.guest.confirmation', $paidOrder->guest_token));
+        $r->assertSessionHas('success', 'Vos billets gratuits sont émis ; réglez la commande payante ci-dessous.');
+        $this->assertStringNotContainsString('e-mail', (string) session('success'));
+        $this->assertStringNotContainsString('email', (string) session('success'));
+
+        // La page de la commande payante signale la commande gratuite déjà émise, avec un lien vers elle
+        $this->get(route('checkout.guest.confirmation', $paidOrder->guest_token))
+            ->assertOk()->assertSee('Votre commande gratuite #' . $freeOrder->order_number)
+            ->assertSee(route('checkout.guest.confirmation', $freeOrder->guest_token), false);
+    }
+
+    public function test_mixed_connected_cart_redirects_to_the_pending_order(): void
+    {
+        [$free, $paid, $cart] = $this->mixedCart();
+        // L'ordre du panier met la commande payante en second (tri par événement) : la cible est tout de même la pendante
+        $this->userPost(User::find(1), $cart, ['payment_method' => 'cash'])
+            ->assertRedirect(route('checkout.confirmation', Order::where('event_id', 2)->firstOrFail()));
+    }
+
+    public function test_requires_payment_method_uses_contains_not_every(): void
+    {
+        $service = app(CheckoutService::class);
+        $this->assertTrue($service->requiresPaymentMethod([['subtotal' => 0], ['subtotal' => 1000]]));
+        $this->assertTrue($service->requiresPaymentMethod([['subtotal' => 1000], ['subtotal' => 0]]));
+        $this->assertFalse($service->requiresPaymentMethod([['subtotal' => 0], ['subtotal' => 0]]));
+    }
+
+    public function test_free_confirmation_failure_in_a_mixed_cart_releases_everything_then_a_retry_succeeds(): void
+    {
+        [$free, $paid, $cart] = $this->mixedCart();
+        $real = new OrderPaymentService();
+        $failNext = true;
+        $this->partialMock(OrderPaymentService::class, function ($mock) use (&$failNext, $real) {
+            $mock->shouldReceive('confirmPayment')->andReturnUsing(function (...$args) use (&$failNext, $real) {
+                if ($failNext) {
+                    throw new \RuntimeException('panne');
+                }
+
+                return $real->confirmPayment(...$args);
+            });
+        });
+
+        $r = $this->guestPost($cart, ['payment_method' => 'cash']);
+
+        $r->assertSessionHas('error', CheckoutService::FREE_FAILURE_ERROR);
+        $this->assertSame(0, Order::whereIn('payment_status', ['pending', 'processing', 'paid'])->count(), 'aucune commande en suspens');
+        $this->assertSame(0, (int) $free->fresh()->quantity_sold);
+        $this->assertSame(0, (int) $paid->fresh()->quantity_sold, 'stock de la commande payante rendu');
+        $this->assertSame(0, Ticket::whereIn('status', ['reserved', 'sold'])->count());
+        $this->assertNotNull(session('cart'), 'panier conservé');
+
+        // Renvoi : la panne est résolue, une seule paire de commandes (pas de doublon)
+        $failNext = false;
+        $this->guestPost($cart, ['payment_method' => 'cash'], '10.5.5.5');
+        $this->assertSame(1, Order::where('payment_status', 'paid')->count());
+        $this->assertSame(1, Order::where('payment_status', 'pending')->count());
+        $this->assertSame(1, (int) $free->fresh()->quantity_sold);
+        $this->assertSame(1, (int) $paid->fresh()->quantity_sold);
+    }
+
+    // ===== Plafonds complémentaires (M1) =====
+
+    public function test_free_tickets_per_event_per_ip_are_capped(): void
+    {
+        config(['payments.free_tickets_per_event_per_ip_per_day' => 3, 'payments.free_orders_per_ip_per_hour' => 100, 'payments.free_orders_per_email_per_day' => 100]);
+        $type = $this->freeType();
+
+        $this->guestPost($this->cart($type, 2), ['email' => 'e1@example.test']);
+        $this->guestPost($this->cart($type, 1), ['email' => 'e2@example.test']);
+        $r = $this->guestPost($this->cart($type, 1), ['email' => 'e3@example.test']);
+
+        $r->assertSessionHas('error', CheckoutService::FREE_LIMIT_ERROR);
+        $this->assertSame(3, (int) $type->fresh()->quantity_sold, 'aucun stock réservé au-delà du plafond');
+
+        // Autre IP : non limitée
+        $this->guestPost($this->cart($type, 1), ['email' => 'e4@example.test'], '10.7.7.7');
+        $this->assertSame(4, (int) $type->fresh()->quantity_sold);
+    }
+
+    public function test_cancelled_free_orders_do_not_count_toward_the_event_ip_ticket_cap(): void
+    {
+        config(['payments.free_tickets_per_event_per_ip_per_day' => 2, 'payments.free_orders_per_ip_per_hour' => 100, 'payments.free_orders_per_email_per_day' => 100]);
+        $type = $this->freeType();
+
+        $this->guestPost($this->cart($type, 2), ['email' => 'c1@example.test']);
+        app(OrderPaymentService::class)->refund(Order::firstOrFail());
+
+        $this->guestPost($this->cart($type, 2), ['email' => 'c2@example.test']);
+        $this->assertSame(1, Order::where('payment_status', 'paid')->count());
+    }
+
+    public function test_free_orders_per_user_are_capped_even_when_the_email_changes(): void
+    {
+        config(['payments.free_orders_per_user_per_day' => 2, 'payments.free_orders_per_email_per_day' => 100, 'payments.free_orders_per_ip_per_hour' => 100, 'payments.free_tickets_per_event_per_ip_per_day' => 100]);
+        $type = $this->freeType();
+        $user = User::find(1);
+
+        $this->userPost($user, $this->cart($type, 1), ['billing_email' => 'x1@example.test']);
+        $this->userPost($user, $this->cart($type, 1), ['billing_email' => 'x2@example.test']);
+        $r = $this->userPost($user, $this->cart($type, 1), ['billing_email' => 'x3@example.test']);
+
+        $r->assertSessionHas('error', CheckoutService::FREE_LIMIT_ERROR);
+        $this->assertSame(2, Order::count());
+        $this->assertSame(2, (int) $type->fresh()->quantity_sold);
     }
 }

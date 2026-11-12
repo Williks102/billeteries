@@ -163,7 +163,7 @@ class CheckoutController extends Controller
             $paid = $service->assertPendingLimitsForPaidGroups($groups, (string) $request->billing_email, Auth::id(), $request->ip(), $capByIp);
 
             $orders = $service->withFreeOrderLocks($groups, (string) $request->billing_email, $request->ip(), function () use ($service, $groups, $request) {
-                $service->assertWithinFreeOrderLimits($groups, (string) $request->billing_email, $request->ip());
+                $service->assertWithinFreeOrderLimits($groups, (string) $request->billing_email, $request->ip(), Auth::id());
 
                 return DB::transaction(function () use ($service, $groups, $request) {
                     $orders = [];
@@ -176,7 +176,7 @@ class CheckoutController extends Controller
                     }
                     return $orders;
                 });
-            });
+            }, Auth::id());
 
             if ($capByIp && $paid['orders'] > 0) {
                 $service->recordGuestOrders($request->ip(), $paid['orders'], $paid['tickets']);
@@ -196,11 +196,13 @@ class CheckoutController extends Controller
                 session()->forget(['cart', 'cart_timer']);
             }
 
-            $message = CheckoutService::successMessage(count($orders), collect($orders)->every(fn ($o) => $o->isFree()));
+            $target = $service->confirmationTarget($orders);
+            $others = $service->otherOrdersFlash($orders, $target);
 
-            return redirect()->route('checkout.confirmation', $orders[0])
-                ->with('success', $message)
-                ->with('other_order_numbers', collect($orders)->skip(1)->pluck('order_number')->all());
+            return redirect()->route('checkout.confirmation', $target)
+                ->with('success', $service->messageFor($orders))
+                ->with('other_order_numbers', $others['numbers'])
+                ->with('other_free_orders', $others['free']);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;

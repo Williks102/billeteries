@@ -127,11 +127,14 @@ class GuestCheckoutController extends Controller
      */
     private function redirectToConfirmation(array $orders)
     {
-        $message = CheckoutService::successMessage(count($orders), collect($orders)->every(fn ($o) => $o->isFree()));
-        $others = collect($orders)->skip(1)->pluck('order_number')->all();
+        $service = app(CheckoutService::class);
+        $target = $service->confirmationTarget($orders);
+        $others = $service->otherOrdersFlash($orders, $target);
 
-        return redirect()->route('checkout.guest.confirmation', $orders[0]->guest_token)
-            ->with('success', $message)->with('other_order_numbers', $others);
+        return redirect()->route('checkout.guest.confirmation', $target->guest_token)
+            ->with('success', $service->messageFor($orders))
+            ->with('other_order_numbers', $others['numbers'])
+            ->with('other_free_orders', $others['free']);
     }
 
     /**

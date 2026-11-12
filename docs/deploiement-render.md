@@ -164,6 +164,26 @@ Checklist « avant production » :
 - [ ] `composer run check` vert, APP_DEBUG=false, HTTPS forcé, sauvegardes de la base testées.
 - [ ] Mots de passe admin changés, comptes de démo supprimés, DEMO_SEED retiré.
 
+## Billets gratuits
+
+Une commande dont le total calculé par le serveur est 0 FCFA est confirmée automatiquement (billets émis, aucun paiement, aucune commission). Comme elle n'est jamais « en attente », les plafonds `MAX_PENDING_*` ne la limitent pas : des plafonds dédiés, comptés en base de données, s'appliquent (valeurs de `render.yaml`, facultatives, défauts identiques) :
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| FREE_ORDERS_PER_IP_PER_HOUR | 5 | Commandes gratuites par IP (empreinte HMAC stockée, jamais l'IP) sur 1 h |
+| FREE_ORDERS_PER_EMAIL_PER_DAY | 5 | Commandes gratuites par email normalisé (alias `+tag`, points Gmail) sur 24 h |
+| FREE_ORDERS_PER_USER_PER_DAY | 5 | Commandes gratuites par compte connecté sur 24 h, en plus de l'email |
+| FREE_TICKETS_PER_EVENT_PER_IP_PER_DAY | 10 | Billets gratuits par événement et par IP sur 24 h (commandes non annulées) |
+
+Au-delà, le client voit « Limite de réservations gratuites atteinte » et aucun stock n'est réservé. Le nombre de billets par commande reste borné par `MAX_PENDING_TICKETS_PER_BUYER` / `max_per_order`.
+
+**Limites connues (à lire avant production)** :
+- L'email n'est pas vérifié : un invité peut multiplier les adresses ; seuls les plafonds par IP (et par événement et IP) le freinent.
+- Le plafond par IP dépend de `TRUSTED_PROXIES=*` : l'IP est lue dans `X-Forwarded-For`. Avant production, tester une requête avec un `X-Forwarded-For` forgé pour confirmer que l'IP comptée est bien celle fournie par le proxy de Render et non celle du client ; sinon, lister les IP réelles du proxy.
+- Une IP partagée (réseau d'entreprise, mobile CGNAT) partage aussi le quota.
+- Sans captcha, un attaquant disposant de nombreuses IP peut encore épuiser un événement gratuit : surveiller les commandes `free` (`payment_method = 'free'`).
+- Le transport d'email peut être `log` en démonstration : aucun email n'est alors réellement envoyé ; les billets restent visibles sur la page de confirmation (avec la preuve de session pour un invité) et dans l'espace acheteur.
+
 ## Mode démo : paiements simulés
 
 Pour une démonstration où les commandes sont confirmées automatiquement (QR visibles tout de suite), posez **les deux** variables dans Render : `DEMO_AUTO_CONFIRM_PAYMENTS=true` et `DEMO_MODE_ACKNOWLEDGED=true`. Avec une seule des deux, en production, le mode reste désactivé et un message critique est écrit dans les journaux. Un bandeau « MODE DÉMO » s'affiche. Les billets deviennent gratuits : supprimez les deux variables après la démonstration. Pour les commandes déjà confirmées sans QR : `php artisan tickets:generate-qr`.

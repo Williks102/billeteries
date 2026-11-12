@@ -44,6 +44,12 @@ return [
     // Billets par commande gratuite : même plafond que max_pending_tickets_per_buyer / max_per_order.
     'free_orders_per_ip_per_hour' => (int) env('FREE_ORDERS_PER_IP_PER_HOUR', 5),
     'free_orders_per_email_per_day' => (int) env('FREE_ORDERS_PER_EMAIL_PER_DAY', 5),
+    // Compte connecté : plafond par user_id en plus de l'email (changer d'email ne le contourne pas)
+    'free_orders_per_user_per_day' => (int) env('FREE_ORDERS_PER_USER_PER_DAY', 5),
+    // Billets gratuits par ÉVÉNEMENT et par IP sur 24 h (commandes non annulées) : limite l'épuisement du stock.
+    // Les commandes gratuites ne comptent PAS dans le plafond « en attente » de l'événement : elles ne restent jamais
+    // en attente (confirmées tout de suite), ce plafond mesure du stock bloqué en attente de paiement.
+    'free_tickets_per_event_per_ip_per_day' => (int) env('FREE_TICKETS_PER_EVENT_PER_IP_PER_DAY', 10),
 
     // Throttle de l'inscription (POST register) : tentatives par minute et par IP
     'register_throttle_per_minute' => (int) env('REGISTER_THROTTLE_PER_MINUTE', 5),

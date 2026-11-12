@@ -52,6 +52,9 @@ class CheckoutService
     /** Plafond de commandes GRATUITES atteint (IP ou email) : message unique, ne dit pas quel critère a joué. */
     public const FREE_LIMIT_ERROR = 'Limite de réservations gratuites atteinte pour le moment. Réessayez plus tard.';
 
+    /** Échec de finalisation d'une commande gratuite : tout le checkout est annulé (tout-ou-rien). */
+    public const FREE_FAILURE_ERROR = 'Votre réservation n\'a pas pu être finalisée. Aucune commande n\'a été enregistrée et aucune place n\'est retenue : veuillez réessayer.';
+
     /** Référence de paiement et méthode des commandes gratuites (total serveur = 0 FCFA). */
     public const FREE_REFERENCE = 'GRATUIT';
     public const FREE_METHOD = 'free';
@@ -603,7 +606,7 @@ class CheckoutService
      *
      * @throws CheckoutRefusedException
      */
-    public function assertWithinFreeOrderLimits(array $groups, string $email, ?string $ip): void
+    public function assertWithinFreeOrderLimits(array $groups, string $email, ?string $ip, ?int $userId = null): void
     {
         $free = array_filter($groups, fn ($g) => self::isFreeGroup($g));
         if ($free === []) {
@@ -627,7 +630,32 @@ class CheckoutService
             throw new CheckoutRefusedException(self::FREE_LIMIT_ERROR);
         }
 
+        // Compte connecté : plafond par user_id EN PLUS de l'email (changer d'email ne le contourne pas)
+        if ($userId !== null) {
+            $maxUser = max(1, (int) config('payments.free_orders_per_user_per_day', 5));
+            $count = DB::table('orders')->where('payment_method', self::FREE_METHOD)->where('user_id', $userId)
+                ->where('created_at', '>=', now()->subDay())->count();
+            if ($count + $new > $maxUser) {
+                Log::warning('Plafond de commandes gratuites par compte atteint', ['scope' => 'free_user']);
+                throw new CheckoutRefusedException(self::FREE_LIMIT_ERROR);
+            }
+        }
+
         if ($ip !== null) {
+            // Billets gratuits par ÉVÉNEMENT et par IP sur 24 h (commandes non annulées) : limite l'épuisement du stock
+            $maxEvent = max(1, (int) config('payments.free_tickets_per_event_per_ip_per_day', 10));
+            foreach ($free as $eventId => $g) {
+                $taken = (int) DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')
+                    ->where('orders.payment_method', self::FREE_METHOD)->where('orders.checkout_ip_hash', self::ipHash($ip))
+                    ->where('orders.event_id', $eventId)->where('orders.created_at', '>=', now()->subDay())
+                    ->whereNotIn('orders.payment_status', ['failed', 'cancelled', 'expired', 'refunded'])
+                    ->sum('order_items.quantity');
+                if ($taken + $this->countTickets([$g]) > $maxEvent) {
+                    Log::warning('Plafond de billets gratuits par événement et par IP atteint', ['scope' => 'free_event_ip', 'event_id' => $eventId]);
+                    throw new CheckoutRefusedException(self::FREE_LIMIT_ERROR);
+                }
+            }
+
             $maxIp = max(1, (int) config('payments.free_orders_per_ip_per_hour', 5));
             $count = DB::table('orders')->where('payment_method', self::FREE_METHOD)
                 ->where('checkout_ip_hash', self::ipHash($ip))->where('created_at', '>=', now()->subHour())->count();
@@ -648,13 +676,16 @@ class CheckoutService
      * @param  \Closure(): T  $fn
      * @return T
      */
-    public function withFreeOrderLocks(array $groups, string $email, ?string $ip, \Closure $fn)
+    public function withFreeOrderLocks(array $groups, string $email, ?string $ip, \Closure $fn, ?int $userId = null)
     {
         if (!collect($groups)->contains(fn ($g) => self::isFreeGroup($g))) {
             return $fn();
         }
 
         $keys = ['free-orders-lock:email:' . sha1(self::normalizeEmail($email))];
+        if ($userId !== null) {
+            $keys[] = 'free-orders-lock:user:' . $userId;
+        }
         if ($ip !== null) {
             $keys[] = 'free-orders-lock:ip:' . sha1(self::normalizeIp($ip));
         }
@@ -683,7 +714,10 @@ class CheckoutService
     /**
      * APRÈS le commit : confirme chaque commande gratuite via OrderPaymentService::confirmPayment (mêmes verrous,
      * idempotence, billets `sold`, QR après commit, email), référence FREE_REFERENCE. Jamais d'update direct du statut.
-     * En cas d'échec, la commande est libérée (stock rendu, jamais de commande gratuite en suspens) et le checkout est refusé.
+     *
+     * TOUT-OU-RIEN : si une confirmation échoue, TOUTES les commandes créées par ce checkout sont libérées
+     * (pending/processing : fail() = stock rendu ; déjà confirmées gratuites : refund()), le checkout est refusé
+     * et aucune commande n'est laissée en suspens (le panier n'est pas vidé : un renvoi repart de zéro).
      *
      * @param  array<int, Order>  $orders
      * @return array<int, Order>
@@ -693,33 +727,87 @@ class CheckoutService
     {
         $payments = app(OrderPaymentService::class);
 
-        return array_map(function (Order $order) use ($payments) {
+        foreach ($orders as $i => $order) {
             if (!$order->isFree() || $order->payment_method !== self::FREE_METHOD) {
-                return $order;
+                continue;
             }
 
             try {
-                return $payments->confirmPayment($order, self::FREE_REFERENCE, null);
+                $orders[$i] = $payments->confirmPayment($order, self::FREE_REFERENCE, null);
             } catch (\Throwable $e) {
                 $this->logFailure('Échec confirmation commande gratuite', $e, ['order_id' => $order->id]);
-                try {
-                    $payments->fail($order);
-                } catch (\Throwable $e2) {
-                    $this->logFailure('Échec libération commande gratuite non confirmée', $e2, ['order_id' => $order->id]);
-                }
+                $this->releaseAll($orders);
 
-                throw new CheckoutRefusedException(self::GENERIC_ERROR);
+                throw new CheckoutRefusedException(self::FREE_FAILURE_ERROR);
             }
-        }, $orders);
+        }
+
+        return $orders;
     }
 
-    /** Message de succès du checkout selon le mode (démo : paiement simulé ; gratuit : billets émis). */
-    public static function successMessage(int $orderCount, bool $allFree = false): string
+    /** Libère toutes les commandes d'un checkout (via OrderPaymentService, jamais d'update direct). Échecs journalisés. */
+    private function releaseAll(array $orders): void
+    {
+        $payments = app(OrderPaymentService::class);
+        foreach ($orders as $o) {
+            try {
+                $fresh = $o->fresh();
+                if ($fresh === null) {
+                    continue;
+                }
+                if ($fresh->isAwaitingPayment()) {
+                    $payments->fail($fresh);
+                } elseif ($fresh->isPaid()) {
+                    $payments->refund($fresh);
+                }
+            } catch (\Throwable $e) {
+                $this->logFailure('Échec libération commande après échec du checkout', $e, ['order_id' => $o->id]);
+            }
+        }
+    }
+
+    /** Page de destination : la première commande EN ATTENTE s'il y en a une (c'est là que l'acheteur agit), sinon la première. */
+    public function confirmationTarget(array $orders): Order
+    {
+        return collect($orders)->first(fn ($o) => $o->isAwaitingPayment()) ?? $orders[0];
+    }
+
+    /**
+     * Données de flash pour la page de confirmation : autres commandes (numéros) et, si la page cible attend un
+     * paiement, liens vers les commandes gratuites déjà émises.
+     *
+     * @return array{numbers: array<int,string>, free: array<int, array{number:string, url:string}>}
+     */
+    public function otherOrdersFlash(array $orders, Order $target): array
+    {
+        $awaiting = $target->isAwaitingPayment();
+        $others = collect($orders)->reject(fn ($o) => $o->is($target));
+
+        return [
+            'numbers' => $others->reject(fn ($o) => $awaiting && $o->isFree())->pluck('order_number')->values()->all(),
+            'free' => $awaiting
+                ? $others->filter(fn ($o) => $o->isFree() && $o->isPaid())->map(fn ($o) => [
+                    'number' => $o->order_number,
+                    'url' => $o->guest_token ? route('checkout.guest.confirmation', $o->guest_token) : route('checkout.confirmation', $o),
+                ])->values()->all()
+                : [],
+        ];
+    }
+
+    /**
+     * Message de succès du checkout. Aucune promesse d'email (le transport peut être « log »).
+     * Panier mixte : les billets gratuits sont émis, la commande payante reste à régler.
+     */
+    public static function successMessage(int $orderCount, bool $allFree = false, bool $mixedAwaiting = false): string
     {
         if ($allFree) {
             return $orderCount > 1
                 ? 'Réservations confirmées. Vos billets sont émis.'
                 : 'Réservation confirmée. Vos billets sont émis.';
+        }
+
+        if ($mixedAwaiting) {
+            return 'Vos billets gratuits sont émis ; réglez la commande payante ci-dessous.';
         }
 
         if (self::demoAutoConfirm()) {
@@ -731,6 +819,16 @@ class CheckoutService
         return $orderCount > 1
             ? 'Commandes enregistrées. Les instructions de paiement figurent ci-dessous.'
             : 'Commande enregistrée. Les instructions de paiement figurent ci-dessous.';
+    }
+
+    /** Message de succès pour un ensemble de commandes créées (gère le panier mixte). */
+    public function messageFor(array $orders): string
+    {
+        $allFree = collect($orders)->every(fn ($o) => $o->isFree());
+        $mixed = !$allFree && collect($orders)->contains(fn ($o) => $o->isFree() && $o->isPaid())
+            && collect($orders)->contains(fn ($o) => $o->isAwaitingPayment());
+
+        return self::successMessage(count($orders), $allFree, $mixed);
     }
 
     private function createCommission(Order $order): void

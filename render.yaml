@@ -131,6 +131,14 @@ services:
         value: "10"
       - key: MAX_PENDING_TICKETS_PER_IP
         value: "20"
+      - key: FREE_ORDERS_PER_IP_PER_HOUR
+        value: "5"
+      - key: FREE_ORDERS_PER_EMAIL_PER_DAY
+        value: "5"
+      - key: FREE_ORDERS_PER_USER_PER_DAY
+        value: "5"
+      - key: FREE_TICKETS_PER_EVENT_PER_IP_PER_DAY
+        value: "10"
       - key: REGISTER_THROTTLE_PER_MINUTE
         value: "5"
       - key: CHECKOUT_THROTTLE_PER_MINUTE

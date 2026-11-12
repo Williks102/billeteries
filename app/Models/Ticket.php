@@ -49,6 +49,38 @@ class Ticket extends Model
     }
 
     /**
+     * Commande du billet, billets récents (order_item_id) ET anciens (pivot order_tickets seul).
+     * N'ajoute aucune requête si `orderItem.order` / `orders` sont chargés (eager loading des listes).
+     */
+    public function linkedOrder(): ?Order
+    {
+        $order = ($this->order_item_id && $this->orderItem) ? $this->orderItem->order : null;
+
+        return $order ?? ($this->relationLoaded('orders') ? $this->orders->first() : $this->orders()->first());
+    }
+
+    /**
+     * Transitions de statut autorisées pour l'admin (règles historiques du contrôleur, centralisées) :
+     * vendu -> utilisé (commande payée requise), non utilisé -> annulé, annulé -> vendu. Un billet utilisé est figé.
+     *
+     * @return list<string>
+     */
+    public function adminTransitions(): array
+    {
+        return match ($this->status) {
+            'sold' => $this->isIssued() ? ['used', 'cancelled'] : ['cancelled'],
+            'cancelled' => ['sold'],
+            'used' => [],
+            default => ['cancelled'], // available, reserved
+        };
+    }
+
+    public function canTransitionTo(string $to): bool
+    {
+        return in_array($to, $this->adminTransitions(), true);
+    }
+
+    /**
      * Statistiques : billets rattachés aux commandes données (pivot order_tickets OU order_item_id,
      * selon l'ancienneté du billet). $orders : requête Eloquent sur orders.
      */
@@ -88,8 +120,7 @@ class Ticket extends Model
         }
 
         try {
-            $order = ($this->order_item_id && $this->orderItem) ? $this->orderItem->order : null;
-            $order ??= $this->orders()->first();
+            $order = $this->linkedOrder();
 
             return $order !== null && $order->payment_status === 'paid';
         } catch (\Throwable $e) {

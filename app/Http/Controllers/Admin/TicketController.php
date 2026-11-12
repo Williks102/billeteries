@@ -3,320 +3,250 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Ticket;
+use App\Http\Controllers\Admin\Concerns\ResolvesStatsPeriod;
 use App\Models\Event;
-use App\Models\User;
+use App\Models\Order;
+use App\Models\Ticket;
 use App\Models\TicketType;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use App\Services\QRCodeService;
+use App\Services\Stats\Scope;
+use App\Services\Stats\TicketStats;
+use App\Support\Stats\DatePeriod;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class TicketController extends Controller
 {
+    use ResolvesStatsPeriod;
+
     public function __construct()
     {
         $this->middleware('auth');
         $this->middleware('admin');
     }
 
+    /** Statuts de billet filtrables (colonne `status`). */
+    public const STATUSES = ['available', 'reserved', 'sold', 'used', 'cancelled'];
+
+    /** Relations chargées pour retrouver la commande et l'acheteur des billets récents ET anciens (sans N+1). */
+    private const LIST_RELATIONS = ['ticketType.event', 'orderItem.order.user', 'orders.user'];
+
     /**
-     * Liste des tickets (MIGRÉ depuis AdminController::tickets)
+     * Liste des billets : filtres (statut, événement, code, période), cartes de synthèse (TicketStats),
+     * pagination. La période s'applique à la date de vente de la commande liée (comme TicketStats) ;
+     * elle ne s'applique pas aux billets « disponibles » (sans commande).
      */
     public function index(Request $request)
     {
-        $query = Ticket::with(['ticketType.event.promoteur', 'orderTickets.order.user']);
+        $period = $this->statsPeriod($request, 'admin.tickets.index');
+        $filters = $this->validatedFilters($request);
 
-        // Filtres
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('ticket_code', 'like', "%{$search}%")
-                  ->orWhereHas('ticketType.event', function($eq) use ($search) {
-                      $eq->where('title', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('orderTickets.order.user', function($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                  });
-            });
-        }
+        $query = $this->filteredQuery($filters, $period)->with(self::LIST_RELATIONS);
+        $tickets = $query->orderByDesc('tickets.id')->paginate(20)->withQueryString();
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('event')) {
-            $query->whereHas('ticketType.event', function($eq) use ($request) {
-                $eq->where('id', $request->event);
-            });
-        }
-
-        if ($request->filled('promoteur')) {
-            $query->whereHas('ticketType.event.promoteur', function($pq) use ($request) {
-                $pq->where('id', $request->promoteur);
-            });
-        }
-
-        if ($request->filled('date_from')) {
-            $query->where('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
-        }
-
-        if ($request->filled('ticket_type')) {
-            $query->where('ticket_type_id', $request->ticket_type);
-        }
-
-        // Tri par défaut : plus récents
-        $tickets = $query->orderBy('created_at', 'desc')->paginate(20);
-
-        // Statistiques pour le dashboard
-        $stats = [
-            'total' => Ticket::count(),
-            'sold' => Ticket::where('status', 'sold')->count(),
-            'used' => Ticket::where('status', 'used')->count(),
-            'cancelled' => Ticket::where('status', 'cancelled')->count(),
-            'pending' => Ticket::where('status', 'pending')->count(),
-            'this_month' => Ticket::whereMonth('created_at', now()->month)->count(),
-            'usage_rate' => Ticket::where('status', 'sold')->count() > 0 
-                ? round((Ticket::where('status', 'used')->count() / Ticket::where('status', 'sold')->count()) * 100, 1)
-                : 0,
-            'total_value' => Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
-                ->where('tickets.status', 'sold')
-                ->sum('ticket_types.price'),
+        $scope = ! empty($filters['event']) ? Scope::event((int) $filters['event']) : Scope::admin();
+        $stats = app(TicketStats::class);
+        $summary = [
+            'sold' => $stats->sold($scope, $period),
+            'scanned' => $stats->scanned($scope, $period),
+            'usage_rate' => $stats->usageRate($scope, $period),
+            'reserved' => $stats->reserved($scope),
         ];
 
-        // Données pour les filtres
-        $events = Event::orderBy('title')->get();
-        $promoteurs = User::where('role', 'promoteur')->orderBy('name')->get();
-        $ticketTypes = TicketType::with('event')->orderBy('name')->get();
+        $events = Event::orderBy('title')->get(['id', 'title']);
+        $statuses = self::STATUSES;
 
-        return view('admin.tickets.index', compact('tickets', 'stats', 'events', 'promoteurs', 'ticketTypes'));
+        return view('admin.tickets.index', compact('tickets', 'summary', 'period', 'events', 'statuses'));
     }
 
     /**
-     * Affichage détail ticket (MIGRÉ depuis AdminController::showTicket)
+     * Fiche d'un billet : détails, commande liée, historique, QR (billet émis seulement), actions permises.
      */
     public function show(Ticket $ticket)
     {
-        try {
-            $ticket->load([
-                'ticketType.event.promoteur', 
-                'orderTickets.order.user'
-            ]);
+        $ticket->load(['ticketType.event.promoteur', 'orderItem.order.user', 'orders.user']);
 
-            // Informations complémentaires
-            $info = [
-                'order' => $ticket->orderTickets->first()?->order,
-                'buyer' => $ticket->orderTickets->first()?->order?->user,
-                'event' => $ticket->ticketType->event,
-                'promoteur' => $ticket->ticketType->event->promoteur,
-                'price' => $ticket->ticketType->price,
-                'created_ago' => $ticket->created_at->diffForHumans(),
-                'qr_exists' => !empty($ticket->qr_code),
-                'verify_url' => route('tickets.verify', $ticket->ticket_code),
-            ];
+        $order = $ticket->linkedOrder();
+        $event = $ticket->ticketType?->event;
 
-            // Historique d'utilisation
-            $history = collect([
-                [
-                    'action' => 'ticket_created',
-                    'message' => 'Ticket créé',
-                    'date' => $ticket->created_at,
-                    'icon' => 'fas fa-ticket-alt',
-                    'color' => 'primary'
-                ]
-            ]);
-
-            if ($ticket->status === 'used' && $ticket->used_at) {
-                $history->push([
-                    'action' => 'ticket_used',
-                    'message' => 'Ticket utilisé',
-                    'date' => $ticket->used_at,
-                    'icon' => 'fas fa-check-circle',
-                    'color' => 'success'
-                ]);
-            }
-
-            if ($ticket->status === 'cancelled') {
-                $history->push([
-                    'action' => 'ticket_cancelled',
-                    'message' => 'Ticket annulé',
-                    'date' => $ticket->updated_at,
-                    'icon' => 'fas fa-times-circle',
-                    'color' => 'danger'
-                ]);
-            }
-
-            return view('admin.tickets.show', compact('ticket', 'info', 'history'));
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur affichage ticket: ' . $e->getMessage());
-            return redirect()->route('admin.tickets.index')->with('error', 'Erreur lors du chargement');
+        $history = collect([['message' => $ticket->status === 'available' ? 'Billet créé' : 'Billet créé / réservé', 'date' => $ticket->created_at, 'icon' => 'fa-ticket-alt']]);
+        if ($order?->payment_status === 'paid') {
+            $history->push(['message' => 'Vendu (paiement confirmé)', 'date' => $order->paid_at ?? $order->created_at, 'icon' => 'fa-credit-card']);
         }
+        if ($ticket->used_at) {
+            $history->push(['message' => 'Scanné / utilisé', 'date' => $ticket->used_at, 'icon' => 'fa-check-circle']);
+        }
+        if ($ticket->status === 'cancelled') {
+            // Pas de colonne cancelled_at : dernière modification du billet.
+            $history->push(['message' => 'Annulé (date de dernière modification)', 'date' => $ticket->updated_at, 'icon' => 'fa-times-circle']);
+        }
+        $history = $history->sortBy('date')->values();
+
+        $issued = $ticket->isIssued();
+        $qrUri = $issued ? $ticket->qrDataUri() : null;
+        $can = [
+            'mark_used' => $ticket->canTransitionTo('used'),
+            'cancel' => $ticket->canTransitionTo('cancelled'),
+            'reactivate' => $ticket->canTransitionTo('sold') && $ticket->status === 'cancelled',
+            'regenerate_qr' => $issued,
+            'edit' => $ticket->adminTransitions() !== [],
+        ];
+
+        return view('admin.tickets.show', compact('ticket', 'order', 'event', 'history', 'issued', 'qrUri', 'can'));
     }
 
     /**
-     * Formulaire d'édition ticket (limité)
+     * Formulaire d'édition : seul le statut est modifiable, parmi les transitions autorisées.
      */
     public function edit(Ticket $ticket)
     {
-        // Seules certaines propriétés peuvent être modifiées
-        $ticket->load(['ticketType.event', 'orderTickets.order.user']);
-        
-        return view('admin.tickets.edit', compact('ticket'));
+        $ticket->load(['ticketType.event', 'orderItem.order.user', 'orders.user']);
+        $order = $ticket->linkedOrder();
+        $transitions = $ticket->adminTransitions();
+
+        return view('admin.tickets.edit', compact('ticket', 'order', 'transitions'));
     }
 
     /**
-     * Mise à jour ticket (limitée)
+     * Mise à jour : changement de statut selon Ticket::adminTransitions() (mêmes règles que les actions).
      */
     public function update(Request $request, Ticket $ticket)
     {
+        $ticket->load(['orderItem.order', 'orders']);
         $request->validate([
-            'status' => 'required|in:pending,sold,used,cancelled',
-            'admin_notes' => 'nullable|string|max:1000',
+            'status' => ['required', Rule::in(array_merge([$ticket->status], $ticket->adminTransitions()))],
+        ], [
+            'status.in' => "Ce changement de statut n'est pas autorisé pour ce billet.",
         ]);
 
-        try {
-            $oldStatus = $ticket->status;
-            
-            $updateData = [
-                'status' => $request->status,
-                'admin_notes' => $request->admin_notes,
-            ];
-
-            // Si marqué comme utilisé, enregistrer la date
-            if ($request->status === 'used' && $oldStatus !== 'used') {
-                $updateData['used_at'] = now();
-                $updateData['used_by'] = auth()->id();
-            }
-
-            $ticket->update($updateData);
-
-            \Log::info('Ticket modifié par admin', [
-                'admin_id' => auth()->id(),
-                'ticket_id' => $ticket->id,
-                'old_status' => $oldStatus,
-                'new_status' => $ticket->status
-            ]);
-
-            return redirect()->route('admin.tickets.show', $ticket)
-                ->with('success', 'Ticket mis à jour avec succès !');
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur mise à jour ticket: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de la mise à jour')
-                ->withInput();
+        $to = $request->input('status');
+        if ($to === $ticket->status) {
+            return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Aucun changement.');
         }
+
+        if (! $this->applyTransition($ticket, $to)) {
+            return back()->withInput()->with('error', "Ce changement de statut n'est pas autorisé pour ce billet.");
+        }
+
+        return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Ticket mis à jour avec succès !');
     }
 
     /**
-     * Marquer ticket comme utilisé (MIGRÉ depuis AdminController::markTicketUsed)
+     * Marquer ticket comme utilisé : billet vendu d'une commande payée uniquement.
      */
-    public function markUsed(Ticket $ticket)
+    public function markUsed(Request $request, Ticket $ticket)
     {
-        try {
-            if ($ticket->status !== 'sold') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Seuls les tickets vendus peuvent être marqués comme utilisés'
-                ], 400);
-            }
+        $ok = $this->applyTransition($ticket, 'used');
+        $message = $ok ? 'Ticket marqué comme utilisé avec succès' : "Seuls les tickets vendus d'une commande payée peuvent être marqués comme utilisés";
 
-            $ticket->update([
-                'status' => 'used',
-                'used_at' => now(),
-                'used_by' => auth()->id()
-            ]);
-
-            \Log::info('Ticket marqué utilisé par admin', [
-                'admin_id' => auth()->id(),
-                'ticket_id' => $ticket->id
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Ticket marqué comme utilisé avec succès'
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur marquage ticket utilisé: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du marquage'
-            ], 500);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => $ok, 'message' => $message], $ok ? 200 : 400);
         }
+
+        return back()->with($ok ? 'success' : 'error', $message);
     }
 
     /**
-     * Annuler un ticket
+     * Annuler un ticket (sauf s'il est déjà utilisé).
      */
     public function cancel(Ticket $ticket)
     {
-        try {
-            if ($ticket->status === 'used') {
-                return redirect()->back()
-                    ->with('error', 'Un ticket déjà utilisé ne peut pas être annulé');
-            }
-
-            $ticket->update([
-                'status' => 'cancelled',
-                'cancelled_at' => now(),
-                'cancelled_by' => auth()->id()
-            ]);
-
-            \Log::info('Ticket annulé par admin', [
-                'admin_id' => auth()->id(),
-                'ticket_id' => $ticket->id
-            ]);
-
-            return redirect()->back()
-                ->with('success', 'Ticket annulé avec succès !');
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur annulation ticket: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de l\'annulation');
+        if ($ticket->status === 'used') {
+            return back()->with('error', 'Un ticket déjà utilisé ne peut pas être annulé');
         }
+
+        return $this->applyTransition($ticket, 'cancelled')
+            ? back()->with('success', 'Ticket annulé avec succès !')
+            : back()->with('error', "Erreur lors de l'annulation");
     }
 
     /**
-     * Réactiver un ticket annulé
+     * Réactiver un ticket annulé.
      */
     public function reactivate(Ticket $ticket)
     {
-        try {
-            if ($ticket->status !== 'cancelled') {
-                return redirect()->back()
-                    ->with('error', 'Seuls les tickets annulés peuvent être réactivés');
+        if ($ticket->status !== 'cancelled') {
+            return back()->with('error', 'Seuls les tickets annulés peuvent être réactivés');
+        }
+
+        return $this->applyTransition($ticket, 'sold')
+            ? back()->with('success', 'Ticket réactivé avec succès !')
+            : back()->with('error', 'Erreur lors de la réactivation');
+    }
+
+    /**
+     * Applique une transition sous verrou : revérifie le statut courant (ticket relu avec lockForUpdate).
+     * Journalise sans donnée personnelle.
+     */
+    private function applyTransition(Ticket $ticket, string $to): bool
+    {
+        $from = null;
+        $done = DB::transaction(function () use ($ticket, $to, &$from) {
+            $locked = Ticket::whereKey($ticket->id)->lockForUpdate()->first();
+            if ($locked === null) {
+                return false;
+            }
+            $from = $locked->status;
+            if (! $locked->canTransitionTo($to)) {
+                return false;
             }
 
-            $ticket->update([
-                'status' => 'sold',
-                'cancelled_at' => null,
-                'cancelled_by' => null
-            ]);
+            $data = ['status' => $to];
+            if ($to === 'used') {
+                $data['used_at'] = now();
+            }
+            $locked->update($data);
 
-            \Log::info('Ticket réactivé par admin', [
-                'admin_id' => auth()->id(),
-                'ticket_id' => $ticket->id
-            ]);
+            return true;
+        });
 
-            return redirect()->back()
-                ->with('success', 'Ticket réactivé avec succès !');
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur réactivation ticket: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de la réactivation');
+        if ($done) {
+            $ticket->refresh();
+            Log::info('Ticket modifié par admin', ['admin_id' => auth()->id(), 'ticket_id' => $ticket->id, 'old_status' => $from, 'new_status' => $to]);
         }
+
+        return $done;
+    }
+
+    /** Filtres validés de la liste et de l'export ; une valeur invalide revient à la liste avec l'erreur. */
+    private function validatedFilters(Request $request): array
+    {
+        try {
+            return $request->validate([
+                'status' => ['nullable', Rule::in(self::STATUSES)],
+                'event' => ['nullable', 'integer', 'min:1'],
+                'search' => ['nullable', 'string', 'max:100'],
+            ]);
+        } catch (ValidationException $e) {
+            throw $e->redirectTo(route('admin.tickets.index'));
+        }
+    }
+
+    private function filteredQuery(array $filters, ?DatePeriod $period)
+    {
+        $query = Ticket::query();
+
+        if (! empty($filters['status'])) {
+            $query->where('tickets.status', $filters['status']);
+        }
+
+        if (! empty($filters['event'])) {
+            $query->whereIn('tickets.ticket_type_id', TicketType::query()->where('event_id', $filters['event'])->select('id'));
+        }
+
+        if (! empty($filters['search'])) {
+            $like = '%'.addcslashes($filters['search'], '\\%_').'%';
+            $query->where('tickets.ticket_code', 'like', $like);
+        }
+
+        if ($period !== null && $period->isBounded() && ($filters['status'] ?? null) !== 'available') {
+            $query->ofOrders(Order::query()->inPeriod($period));
+        }
+
+        return $query;
     }
 
     /**
@@ -357,56 +287,27 @@ class TicketController extends Controller
         ]);
 
         try {
-            $tickets = Ticket::whereIn('id', $request->tickets)->get();
+            $tickets = Ticket::with(['orderItem.order', 'orders'])->whereIn('id', $request->tickets)->get();
             $count = 0;
+            $to = ['mark_used' => 'used', 'cancel' => 'cancelled', 'reactivate' => 'sold'][$request->action] ?? null;
 
             foreach ($tickets as $ticket) {
-                switch ($request->action) {
-                    case 'mark_used':
-                        if ($ticket->status === 'sold') {
-                            $ticket->update([
-                                'status' => 'used',
-                                'used_at' => now(),
-                                'used_by' => auth()->id()
-                            ]);
+                if ($to !== null) {
+                    // mêmes règles que les actions unitaires (Ticket::adminTransitions)
+                    if ($this->applyTransition($ticket, $to)) {
+                        $count++;
+                    }
+                } elseif ($ticket->isIssued()) {
+                    // regenerate_qr : billets émis uniquement (jamais de QR avant paiement)
+                    try {
+                        $qrBase64 = app(QRCodeService::class)->generateTicketQRBase64($ticket);
+                        if ($qrBase64) {
+                            $ticket->update(['qr_code' => $qrBase64]);
                             $count++;
                         }
-                        break;
-                        
-                    case 'cancel':
-                        if ($ticket->status !== 'used') {
-                            $ticket->update([
-                                'status' => 'cancelled',
-                                'cancelled_at' => now(),
-                                'cancelled_by' => auth()->id()
-                            ]);
-                            $count++;
-                        }
-                        break;
-                        
-                    case 'reactivate':
-                        if ($ticket->status === 'cancelled') {
-                            $ticket->update([
-                                'status' => 'sold',
-                                'cancelled_at' => null,
-                                'cancelled_by' => null
-                            ]);
-                            $count++;
-                        }
-                        break;
-
-                    case 'regenerate_qr':
-                        try {
-                            $qrService = app(QRCodeService::class);
-                            $qrBase64 = $qrService->generateTicketQRBase64($ticket);
-                            if ($qrBase64) {
-                                $ticket->update(['qr_code' => $qrBase64]);
-                                $count++;
-                            }
-                        } catch (\Exception $e) {
-                            \Log::warning('Erreur régénération QR ticket ' . $ticket->id . ': ' . $e->getMessage());
-                        }
-                        break;
+                    } catch (\Exception $e) {
+                        \Log::warning('Erreur régénération QR ticket ' . $ticket->id . ': ' . $e->getMessage());
+                    }
                 }
             }
 
@@ -433,45 +334,27 @@ class TicketController extends Controller
     public function export(Request $request)
     {
         try {
-            $query = Ticket::with(['ticketType.event', 'orderTickets.order.user']);
-
-            // Appliquer les mêmes filtres que l'index
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
-            
-            if ($request->filled('event')) {
-                $query->whereHas('ticketType.event', function($eq) use ($request) {
-                    $eq->where('id', $request->event);
-                });
-            }
-
-            if ($request->filled('date_from')) {
-                $query->where('created_at', '>=', $request->date_from);
-            }
-
-            if ($request->filled('date_to')) {
-                $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
-            }
-
-            $tickets = $query->get();
+            $period = $this->statsPeriod($request, 'admin.tickets.index');
+            $query = $this->filteredQuery($this->validatedFilters($request), $period)->with(self::LIST_RELATIONS);
 
             $csvContent = "Code,Événement,Type,Client,Email,Statut,Prix,Créé le,Utilisé le\n";
-            
-            foreach ($tickets as $ticket) {
-                $order = $ticket->orderTickets->first()?->order;
-                $csvContent .= implode(',', [
-                    $ticket->ticket_code,
-                    '"' . addslashes($ticket->ticketType->event->title ?? 'N/A') . '"',
-                    '"' . addslashes($ticket->ticketType->name ?? 'N/A') . '"',
-                    '"' . addslashes($order?->user->name ?? 'N/A') . '"',
-                    $order?->user->email ?? 'N/A',
-                    $ticket->status,
-                    number_format($ticket->ticketType->price ?? 0, 2),
-                    $ticket->created_at->format('Y-m-d H:i:s'),
-                    $ticket->used_at ? $ticket->used_at->format('Y-m-d H:i:s') : 'N/A'
-                ]) . "\n";
-            }
+
+            $query->orderBy('tickets.id')->chunk(500, function ($tickets) use (&$csvContent) {
+                foreach ($tickets as $ticket) {
+                    $order = $ticket->linkedOrder();
+                    $csvContent .= implode(',', [
+                        $ticket->ticket_code,
+                        '"' . str_replace('"', '""', $ticket->ticketType->event->title ?? 'N/A') . '"',
+                        '"' . str_replace('"', '""', $ticket->ticketType->name ?? 'N/A') . '"',
+                        '"' . str_replace('"', '""', $order?->user?->name ?? 'N/A') . '"',
+                        $order?->user?->email ?? 'N/A',
+                        $ticket->status,
+                        number_format($ticket->ticketType->price ?? 0, 2),
+                        $ticket->created_at->format('Y-m-d H:i:s'),
+                        $ticket->used_at ? $ticket->used_at->format('Y-m-d H:i:s') : 'N/A'
+                    ]) . "\n";
+                }
+            });
 
             return response($csvContent)
                 ->header('Content-Type', 'text/csv')

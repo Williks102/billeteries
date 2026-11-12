@@ -27,8 +27,7 @@ use Tests\TestCase;
  *
  * Non figé (non testable ici) : AnalyticsController (HOUR(), DATE() propres à MySQL), ReportsController::getDailySales
  * (DATE_FORMAT) : SQLite ne les exécute pas, ils ne sont pas réécrits. Admin\TicketController::index (taux
- * d'utilisation « admin tickets ») lève RelationNotFoundException sur main (relation Ticket::orderTickets
- * inexistante) : écran cassé, voir test_admin_tickets_index_is_broken_on_main.
+ * d'utilisation « admin tickets ») : réparé (mission admin-billets), assertion retournée vers la cible.
  */
 #[Group('legacy')]
 class LegacyCharacterizationTest extends TestCase
@@ -124,14 +123,18 @@ class LegacyCharacterizationTest extends TestCase
         $this->assertSame(16.7, (float) $row['usage_rate']);
     }
 
-    public function test_admin_tickets_index_is_broken_on_main(): void
+    public function test_admin_tickets_index_now_shows_target_values(): void
     {
         $this->actingAs($this->makeUser(10, 'admin'));
 
-        // L'écran admin « billets » (usage_rate = used / sold hors used, valeur_billets au prix courant) ne s'affiche
-        // plus : Ticket::orderTickets n'existe pas. Signalé, non corrigé ici (hors périmètre L0).
-        $this->expectException(\Illuminate\Database\Eloquent\RelationNotFoundException::class);
-        app(\App\Http\Controllers\Admin\TicketController::class)->index(\Illuminate\Http\Request::create('/'));
+        // Retourné vers la cible (mission admin-billets) : Ticket::orderTickets n'est plus utilisé, l'écran passe par
+        // Ticket::linkedOrder() (order_item_id + pivot) et TicketStats. Vendus 6 (sold + used), scannés 1, taux 1 / 6 = 16,7 %
+        // sur novembre 2026 (détail : tests/Feature/AdminTicketsTest.php).
+        $data = app(\App\Http\Controllers\Admin\TicketController::class)->index(\Illuminate\Http\Request::create('/'))->getData();
+
+        $this->assertSame(6, $data['summary']['sold']);
+        $this->assertSame(1, $data['summary']['scanned']);
+        $this->assertSame(16.7, $data['summary']['usage_rate']);
     }
 
     private function reportsMainStats(int $promoterId): array

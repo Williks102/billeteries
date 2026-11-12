@@ -19,7 +19,6 @@ class ViewReferencesTest extends TestCase
         'admin.events.audit-history',
         'admin.events.manage-hybrid',
         'admin.events.manage-tickets',
-        'admin.tickets.edit',
         'events.category',
         'events.location',
         'events.recommendations',

@@ -62,38 +62,4 @@ use Illuminate\Support\Facades\Storage;
         </div>
     </div>
     @endif
-    
-    <!-- Conditions et politique -->
-    <div class="detail-card">
-        <div class="detail-title">
-            <i class="fas fa-shield-alt"></i>
-            Conditions d'annulation et remboursement
-        </div>
-        <div class="conditions-text small text-muted">
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="fw-bold text-dark">Annulation par l'organisateur</h6>
-                    <ul class="mb-3">
-                        <li>Remboursement intégral garanti</li>
-                        <li>Notification immédiate par email</li>
-                        <li>Report possible selon disponibilité</li>
-                    </ul>
-                </div>
-                <div class="col-md-6">
-                    <h6 class="fw-bold text-dark">Annulation par l'acheteur</h6>
-                    <ul class="mb-3">
-                        <li>Jusqu'à 48h avant: remboursement 80%</li>
-                        <li>Jusqu'à 24h avant: remboursement 50%</li>
-                        <li>Moins de 24h: aucun remboursement</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="alert alert-info small mb-0">
-                <i class="fas fa-info-circle me-2"></i>
-                En achetant ce billet, vous acceptez les 
-                <a href="{{ route('pages.terms') }}" target="_blank">conditions générales</a> 
-                de ClicBillet CI.
-            </div>
-        </div>
-    </div>
 </div>

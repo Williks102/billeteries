@@ -12,7 +12,7 @@
     
     <!-- Bootstrap & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
     <link rel="stylesheet" href="{{ asset('css/event-images.css') }}">
     <!-- Styles personnalisés -->
@@ -429,8 +429,8 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
                             <a href="#" class="text-white-50 hover-orange fs-4" title="Facebook">
                                 <i class="fab fa-facebook-f"></i>
                             </a>
-                            <a href="#" class="text-white-50 hover-orange fs-4" title="Twitter">
-                                <i class="fab fa-twitter"></i>
+                            <a href="#" class="text-white-50 hover-orange fs-4" title="X">
+                                <i class="fab fa-x-twitter"></i>
                             </a>
                             <a href="#" class="text-white-50 hover-orange fs-4" title="Instagram">
                                 <i class="fab fa-instagram"></i>

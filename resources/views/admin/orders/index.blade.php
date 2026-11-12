@@ -24,7 +24,7 @@
         </div>
     </div>
 
-    <x-period-filter :action="route('admin.orders.index')" :period="$period" :keep="request()->only(['payment_status', 'search', 'event', 'user'])" />
+    <x-period-filter :action="route('admin.orders.index')" :period="$period" :keep="request()->only(['payment_status', 'search', 'event', 'user', 'amount_min', 'amount_max'])" />
 
     <x-stat-grid label="Chiffres des commandes de la période">
         <x-stat-card label="Commandes créées" :value="$summary['orders_created'] ?? null" hint="Tous statuts, créées sur la période" />
@@ -39,6 +39,9 @@
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.orders.index') }}">
+                @foreach(request()->only(['period', 'start_date', 'end_date']) as $k => $v)
+                <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                @endforeach
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label small" for="search">Recherche</label>
@@ -72,22 +75,6 @@
                         </select>
                     </div>
                     
-                    <div class="col-md-2">
-                        <label class="form-label small" for="date_from">Date début</label>
-                        <input id="date_from" type="date" 
-                               name="date_from" 
-                               class="form-control" 
-                               value="{{ request('date_from') }}">
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <label class="form-label small" for="date_to">Date fin</label>
-                        <input id="date_to" type="date" 
-                               name="date_to" 
-                               class="form-control" 
-                               value="{{ request('date_to') }}">
-                    </div>
-                    
                     <div class="col-md-1">
                         <button type="submit" class="btn btn-orange w-100">
                             <i class="fas fa-search"></i>
@@ -105,7 +92,7 @@
                 <i class="fas fa-list me-2 text-primary"></i>
                 Liste des commandes
             </h5>
-            <span class="badge bg-light text-dark">{{ $orders->total() }} résultat(s)</span>
+            <span class="badge bg-light text-dark">{{ $orders->total() }} résultat(s) · commandes créées : {{ $period->label }}</span>
         </div>
         
         <div class="card-body p-0">

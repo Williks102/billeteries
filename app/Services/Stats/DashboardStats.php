@@ -34,7 +34,9 @@ class DashboardStats
             'usage_rate' => $this->tickets->usageRate($scope, $period),
             'platform_revenue' => $this->commissions->platformRevenue($scope, $period),
             'promoter_net' => $this->commissions->promoterNet($scope, $period),
-            'pending_payout' => $this->commissions->pendingPayout($scope, $period),
+            // SOLDE dû aux promoteurs : toutes dates (un solde n'est pas un flux) ; « versé » reste un flux de la période
+            'pending_payout' => $this->commissions->pendingPayout($scope, DatePeriod::all()),
+            'paid_out_total' => $this->commissions->paidOut($scope, DatePeriod::all()),
             'paid_out' => $this->commissions->paidOut($scope, $period),
             'held' => $this->commissions->held($scope, $period),
             'refunds' => $this->orders->refunds($scope, $period),

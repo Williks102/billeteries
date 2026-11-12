@@ -55,6 +55,14 @@ class UserController extends Controller
             }
         }
         
+        // Période : inscriptions dans la période affichée (cartes ET liste)
+        if ($period->start !== null) {
+            $query->where('created_at', '>=', $period->startForDb());
+        }
+        if ($period->end !== null) {
+            $query->where('created_at', '<=', $period->endForDb());
+        }
+
         $users = $query->latest()
                       ->paginate(20)
                       ->appends($request->query());

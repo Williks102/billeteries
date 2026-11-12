@@ -57,7 +57,8 @@ class AdminScreensTest extends TestCase
         $this->assertSame($this->fcfa(55000), $this->card($html, 'ventes-billets-hors-frais'));
         $this->assertSame($this->fcfa(55000), $this->card($html, 'encaisse'));
         $this->assertSame($this->fcfa(3300), $this->card($html, 'commission-plateforme'));
-        $this->assertSame($this->fcfa(37600), $this->card($html, 'net-promoteurs-a-verser'));
+        // SOLDE toutes dates (indépendant de la période) : commissions pending de commandes payées = O1 18 800 + O7 18 800 + O8 9 400 + O9 4 700 = 51 700
+        $this->assertSame($this->fcfa(51700), $this->card($html, 'net-promoteurs-a-verser-total-toutes-dates'));
         $this->assertSame($this->fcfa(14100), $this->card($html, 'net-promoteurs-verse'));
         $this->assertSame('4', $this->card($html, 'commandes-payees'));
         $this->assertSame('1', $this->card($html, 'en-attente-de-paiement'));
@@ -149,13 +150,14 @@ class AdminScreensTest extends TestCase
         $html = $this->admin()->get(route('admin.commissions'))->assertOk()->getContent();
 
         $this->assertSame($this->fcfa(3300), $this->card($html, 'commission-plateforme'));
-        $this->assertSame($this->fcfa(37600), $this->card($html, 'net-promoteurs-a-verser'));
+        // SOLDE toutes dates (indépendant de la période) : commissions pending de commandes payées = O1 18 800 + O7 18 800 + O8 9 400 + O9 4 700 = 51 700
+        $this->assertSame($this->fcfa(51700), $this->card($html, 'net-promoteurs-a-verser-total-toutes-dates'));
         $this->assertSame($this->fcfa(14100), $this->card($html, 'net-promoteurs-verse'));
         $this->assertSame($this->fcfa(600), $this->card($html, 'commissions-suspendues'));
 
         $oct = $this->admin()->get(route('admin.commissions', ['period' => 'last_month']))->getContent();
         $this->assertSame($this->fcfa(600), $this->card($oct, 'commission-plateforme'));
-        $this->assertSame($this->fcfa(9400), $this->card($oct, 'net-promoteurs-a-verser'));
+        $this->assertSame($this->fcfa(51700), $this->card($oct, 'net-promoteurs-a-verser-total-toutes-dates'), 'le solde ne dépend pas de la période');
         $this->assertSame($this->fcfa(0), $this->card($oct, 'net-promoteurs-verse'));
     }
 
@@ -174,7 +176,7 @@ class AdminScreensTest extends TestCase
         $financial = $this->admin()->get(route('admin.reports.financial'))->assertOk()->getContent();
         $this->assertSame($this->fcfa(55000), $this->card($financial, 'ventes-billets-hors-frais'));
         $this->assertSame($this->fcfa(3300), $this->card($financial, 'commission-plateforme'));
-        $this->assertSame($this->fcfa(37600), $this->card($financial, 'net-promoteurs-a-verser'));
+        $this->assertSame($this->fcfa(51700), $this->card($financial, 'net-promoteurs-a-verser-total-toutes-dates'));
         $this->assertSame($this->fcfa(14100), $this->card($financial, 'net-promoteurs-verse'));
 
         $finOct = $this->admin()->get(route('admin.reports.financial', ['period' => 'last_month']))->getContent();
@@ -229,6 +231,115 @@ class AdminScreensTest extends TestCase
         $this->assertSame($this->fcfa(32900), $this->card($promoter, 'net-a-verser'));
         $this->assertSame($this->fcfa(14100), $this->card($promoter, 'net-verse'));
         $this->assertSame('7', $this->card($promoter, 'billets-vendus'));
+    }
+
+    // ---------- I1 : solde à verser et paiement en lot ----------
+
+    public function test_pending_payout_balance_is_independent_of_the_period(): void
+    {
+        foreach (['admin.dashboard', 'admin.revenues', 'admin.reports.financial', 'admin.commissions', 'admin.reports.index'] as $route) {
+            foreach ([[], ['period' => 'last_month'], ['period' => 'today'], ['period' => 'all']] as $params) {
+                $html = $this->admin()->get(route($route, $params))->assertOk()->getContent();
+                $this->assertSame($this->fcfa(51700), $this->card($html, 'net-promoteurs-a-verser-total-toutes-dates'), $route.json_encode($params));
+            }
+        }
+        // « versé » reste un flux : 14 100 en novembre, 0 en octobre ; total versé rappelé en indice
+        $nov = $this->admin()->get(route('admin.commissions'))->getContent();
+        $this->assertSame($this->fcfa(14100), $this->card($nov, 'net-promoteurs-verse'));
+        $this->assertStringContainsString('Total versé', $nov);
+        $this->assertSame($this->fcfa(0), $this->card($this->admin()->get(route('admin.commissions', ['period' => 'last_month']))->getContent(), 'net-promoteurs-verse'));
+    }
+
+    private function listedCommissionIds(string $html): array
+    {
+        preg_match_all('/COM-0*(\d+)/', $html, $m);
+
+        return array_values(array_unique(array_map('intval', $m[1])));
+    }
+
+    public function test_commissions_default_list_shows_every_pending_commission_whatever_its_date_and_it_is_selectable(): void
+    {
+        // ids : O1=1 O3=2 (held) O4=3 (paid) O6=4 (cancelled) O7=5 O8=6 (octobre) O9=7 (novembre 2025) ; pending = 1, 5, 6, 7
+        $nov = $this->admin()->get(route('admin.commissions'))->assertOk()->getContent();
+        $ids = $this->listedCommissionIds($nov);
+        sort($ids);
+        $this->assertSame([1, 2, 3, 4, 5, 6, 7], $ids);
+
+        // période = octobre : les pending d'autres mois restent listées (paiement en lot), les autres statuts de novembre disparaissent
+        $oct = $this->admin()->get(route('admin.commissions', ['period' => 'last_month']))->assertOk()->getContent();
+        $ids = $this->listedCommissionIds($oct);
+        sort($ids);
+        $this->assertSame([1, 5, 6, 7], $ids, 'pending toutes dates ; held/paid/cancelled filtrés par la période');
+        // la commission pending d'un mois précédent (id 6) est sélectionnable pour le paiement en lot
+        $this->assertMatchesRegularExpression('/class="form-check-input commission-checkbox"[^>]*value="6"\s+data-status="pending"/s', $oct);
+
+        // filtre « en attente de versement » : toutes dates, quelle que soit la période
+        $pending = $this->admin()->get(route('admin.commissions', ['status' => 'pending', 'period' => 'today']))->getContent();
+        $ids = $this->listedCommissionIds($pending);
+        sort($ids);
+        $this->assertSame([1, 5, 6, 7], $ids);
+        $this->assertStringContainsString(route('admin.commissions', ['status' => 'pending']), html_entity_decode($pending));
+
+        // un statut non pending reste borné par la période
+        $this->assertSame([3], $this->listedCommissionIds($this->admin()->get(route('admin.commissions', ['status' => 'paid']))->getContent()));
+        $this->assertSame([], $this->listedCommissionIds($this->admin()->get(route('admin.commissions', ['status' => 'held', 'period' => 'last_month']))->getContent()));
+    }
+
+    public function test_commission_rows_show_the_total_net_paid_out_per_promoter(): void
+    {
+        $html = str_replace(CurrencyHelper::NBSP, ' ', strip_tags($this->admin()->get(route('admin.commissions'))->getContent()));
+
+        // P (O4 versé) : 14 100 ; P2 : 0 ; une seule requête groupée (cf. test de requêtes constant)
+        $this->assertSame(6, preg_match_all('/Net versé \(total\) : 14 100 FCFA/', $html), '6 lignes de P (commissions 1, 2, 3, 4, 6, 7)');
+        $this->assertSame(1, preg_match_all('/Net versé \(total\) : 0 FCFA/', $html), '1 ligne de P2 (commission 5)');
+    }
+
+    // ---------- I2 : la période s'applique aux listes ----------
+
+    public function test_orders_list_follows_the_period_and_has_a_single_date_filter(): void
+    {
+        $nov = $this->admin()->get(route('admin.orders.index'))->assertOk()->assertSee('commandes créées : Ce mois-ci')->getContent();
+        foreach (['O1', 'O2', 'O3', 'O4', 'O5', 'O6', 'O7'] as $o) {
+            $this->assertStringContainsString('ORD-STATS-'.$o, $nov);
+        }
+        $this->assertStringNotContainsString('ORD-STATS-O8', $nov);
+        $this->assertStringNotContainsString('ORD-STATS-O9', $nov);
+        $this->assertStringNotContainsString('name="date_from"', $nov);
+        $this->assertStringNotContainsString('name="date_to"', $nov);
+
+        $oct = $this->admin()->get(route('admin.orders.index', ['period' => 'last_month']))->getContent();
+        $this->assertStringContainsString('ORD-STATS-O8', $oct);
+        $this->assertStringNotContainsString('ORD-STATS-O1', $oct);
+
+        // les autres paramètres survivent d'un formulaire à l'autre (champs cachés)
+        $kept = $this->admin()->get(route('admin.orders.index', ['period' => '7d', 'search' => 'ORD', 'payment_status' => 'paid']))->getContent();
+        $this->assertMatchesRegularExpression('/name="period" value="7d"/', $kept);
+        $this->assertMatchesRegularExpression('/name="search" value="ORD"/', $kept);
+        $this->assertMatchesRegularExpression('/name="payment_status" value="paid"/', $kept);
+    }
+
+    public function test_events_and_users_lists_follow_the_period_and_say_so(): void
+    {
+        $this->assertStringContainsString('Période : Ce mois-ci', $this->admin()->get(route('admin.events.index'))->getContent());
+        $this->admin()->get(route('admin.events.index'))->assertSee('Festival P2');
+        $this->admin()->get(route('admin.events.index', ['period' => 'last_month']))->assertDontSee('Festival P2');
+
+        $users = $this->admin()->get(route('admin.users.index'))->assertOk()->assertSee('utilisateurs inscrits sur la période')->assertSee('p2@example.test')->assertDontSee('b2@example.test');
+        $this->admin()->get(route('admin.users.index', ['period' => 'last_month']))->assertDontSee('p2@example.test');
+    }
+
+    public function test_registration_period_includes_the_very_last_second_of_the_month(): void
+    {
+        DB::table('users')->insert([
+            ['name' => 'Dernier', 'email' => 'last@example.test', 'role' => 'acheteur', 'created_at' => '2026-11-30 23:59:59'],
+            ['name' => 'Suivant', 'email' => 'next@example.test', 'role' => 'acheteur', 'created_at' => '2026-12-01 00:00:00'],
+            ['name' => 'Veille', 'email' => 'prev@example.test', 'role' => 'acheteur', 'created_at' => '2026-10-31 23:59:59'],
+        ]);
+
+        $html = $this->admin()->get(route('admin.users.index'))->assertOk()->assertSee('last@example.test')->assertDontSee('next@example.test')->assertDontSee('prev@example.test')->getContent();
+        $this->assertSame('2', $this->card($html, 'nouveaux-inscrits'));   // P2 (4 nov) + « Dernier »
+        $report = $this->admin()->get(route('admin.reports.users'))->getContent();
+        $this->assertSame('2', $this->card($report, 'nouveaux-utilisateurs'));
     }
 
     // ---------- accès et période invalide ----------

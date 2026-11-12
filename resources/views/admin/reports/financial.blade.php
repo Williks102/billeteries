@@ -17,8 +17,8 @@
         <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$summary['gmv']" hint="Commandes payées" />
         <x-stat-card label="Encaissé" unit="FCFA" :value="$summary['collected']" hint="Total payé par les clients" />
         <x-stat-card label="Commission plateforme" unit="FCFA" :value="$summary['platform_revenue']" hint="Revenu de la plateforme" />
-        <x-stat-card label="Net promoteurs à verser" unit="FCFA" :value="$summary['pending_payout']" hint="Commissions en attente" />
-        <x-stat-card label="Net promoteurs versé" unit="FCFA" :value="$summary['paid_out']" hint="Commissions marquées payées" />
+        <x-stat-card label="Net promoteurs à verser (total, toutes dates)" unit="FCFA" :value="$summary['pending_payout']" hint="Solde dû, indépendant de la période" />
+        <x-stat-card label="Net promoteurs versé" unit="FCFA" :value="$summary['paid_out']" :hint="'Sur la période. Total versé : '.\App\Helpers\CurrencyHelper::formatFCFA($summary['paid_out_total'])" />
         <x-stat-card label="Commissions suspendues" unit="FCFA" :value="$summary['held']['commission']" hint="Commandes remboursées : hors revenus" />
     </x-stat-grid>
 

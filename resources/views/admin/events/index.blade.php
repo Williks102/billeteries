@@ -9,7 +9,7 @@
     <div class="row align-items-center mb-4">
         <div class="col">
             <h1 class="h3 mb-0">🎫 Gestion des Événements</h1>
-            <p class="text-muted mb-0">{{ $events->total() }} événement(s) au total</p>
+            <p class="text-muted mb-0">{{ $events->total() }} événement(s) créé(s) · Période : {{ $period->label }}</p>
         </div>
         <div class="col-auto">
             <div class="btn-group" role="group">
@@ -44,6 +44,9 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.events.index') }}" class="row g-3">
+                @foreach(request()->only(['period', 'start_date', 'end_date']) as $k => $v)
+                <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                @endforeach
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold text-muted" for="search">RECHERCHE</label>
                     <input id="search" type="text" class="form-control" name="search" value="{{ request('search') }}" 

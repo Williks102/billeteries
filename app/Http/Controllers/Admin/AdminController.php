@@ -111,14 +111,19 @@ class AdminController extends Controller
             $query->where('promoter_id', $request->promoter);
         }
 
-        // Période unifiée : commissions créées dans la période affichée
-        if ($period->start !== null) {
-            $query->where('created_at', '>=', $period->startForDb());
-        }
-        if ($period->end !== null) {
-            $query->where('created_at', '<=', $period->endForDb());
-        }
-
+        // Période unifiée sur la liste. Exception voulue (paiement en lot, comme sur main) : les commissions
+        // EN ATTENTE de versement apparaissent TOUTES, quelle que soit leur date ; la période filtre les autres statuts.
+        $query->where(function ($q) use ($period) {
+            $q->where('status', 'pending');
+            $q->orWhere(function ($other) use ($period) {
+                if ($period->start !== null) {
+                    $other->where('created_at', '>=', $period->startForDb());
+                }
+                if ($period->end !== null) {
+                    $other->where('created_at', '<=', $period->endForDb());
+                }
+            });
+        });
         $commissions = $query->latest()->paginate(20)->withQueryString();
 
         // Données pour les filtres
@@ -127,8 +132,9 @@ class AdminController extends Controller
         // Chiffres : services Stats (commandes payées de la période ; suspendues à part)
         $stats = [
             'platform_revenue' => $this->commissionStats->platformRevenue($scope, $period),
-            'pending_payout' => $this->commissionStats->pendingPayout($scope, $period),
+            'pending_payout' => $this->commissionStats->pendingPayout($scope, DatePeriod::all()),
             'paid_out' => $this->commissionStats->paidOut($scope, $period),
+            'paid_out_total' => $this->commissionStats->paidOut($scope, DatePeriod::all()),
             'held' => $this->commissionStats->held($scope, $period),
         ];
 

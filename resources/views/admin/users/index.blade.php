@@ -19,6 +19,8 @@
 
 <x-period-filter :action="route('admin.users.index')" :period="$period" :keep="request()->only(['role', 'search', 'status'])" />
 
+<p class="period-active">Liste : utilisateurs inscrits sur la période <strong>{{ $period->label }}</strong> ({{ $users->total() }} résultat(s)). Les totaux des cartes sont actuels.</p>
+
 <x-stat-grid label="Chiffres des utilisateurs">
     <x-stat-card label="Utilisateurs" :value="$stats['total']" hint="Total actuel" />
     <x-stat-card label="Administrateurs" :value="$stats['admins']" />
@@ -31,6 +33,9 @@
 <!-- Filtres et recherche -->
 <div class="dashboard-card mb-4">
     <form method="GET" action="{{ route('admin.users.index') }}" class="row g-3">
+        @foreach(request()->only(['period', 'start_date', 'end_date']) as $k => $v)
+        <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+        @endforeach
         <div class="col-md-3">
             <label class="form-label">Recherche</label>
             <input type="text" class="form-control" name="search" 

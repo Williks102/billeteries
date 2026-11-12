@@ -63,13 +63,8 @@ class OrderController extends Controller
                 $query->where('user_id', $request->user);
             }
 
-            if ($request->filled('date_from')) {
-                $query->where('created_at', '>=', $request->date_from);
-            }
-
-            if ($request->filled('date_to')) {
-                $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
-            }
+            // Une seule période (DatePeriod) pour les cartes ET la liste : commandes créées dans la période
+            $query->inPeriod($period, 'created');
 
             if ($request->filled('amount_min')) {
                 $query->where('total_amount', '>=', $request->amount_min);
@@ -80,7 +75,7 @@ class OrderController extends Controller
             }
 
             // Tri par défaut : plus récentes
-            $orders = $query->latest()->paginate(20);
+            $orders = $query->latest()->paginate(20)->withQueryString();
 
             // Chiffres : services Stats (commandes créées / payées de la période, ventes hors frais)
             $summary = app(DashboardStats::class)->summary(Scope::admin(), $period);

@@ -79,7 +79,15 @@ class EventController extends Controller
         }
 
         // Tri par défaut : plus récents
-        $events = $query->latest()->paginate(20);
+        // Période : événements créés dans la période affichée (cartes ET liste)
+        if ($period->start !== null) {
+            $query->where('events.created_at', '>=', $period->startForDb());
+        }
+        if ($period->end !== null) {
+            $query->where('events.created_at', '<=', $period->endForDb());
+        }
+
+        $events = $query->latest()->paginate(20)->withQueryString();
 
         // Chiffres : services Stats. Statuts = instantané ; ventes = commandes payées de la période.
         $stats = app(PlatformStats::class)->events();

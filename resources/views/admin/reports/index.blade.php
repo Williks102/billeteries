@@ -18,7 +18,7 @@
         <x-stat-card label="Commandes payées" :value="$summary['orders_paid']" :hint="$period->label" />
         <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$summary['gmv']" :hint="$period->label" />
         <x-stat-card label="Commission plateforme" unit="FCFA" :value="$summary['platform_revenue']" :hint="$period->label" />
-        <x-stat-card label="Net promoteurs à verser" unit="FCFA" :value="$summary['pending_payout']" :hint="$period->label" />
+        <x-stat-card label="Net promoteurs à verser (total, toutes dates)" unit="FCFA" :value="$summary['pending_payout']" hint="Solde dû, indépendant de la période" />
     </x-stat-grid>
 
     <div class="list-group">

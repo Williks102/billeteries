@@ -9,7 +9,7 @@
     <div class="row align-items-center mb-4">
         <div class="col">
             <h1 class="h3 mb-0">💰 Gestion des Commissions</h1>
-            <p class="text-muted mb-0">{{ $commissions->total() }} commission(s) créée(s) sur la période</p>
+            <p class="text-muted mb-0">{{ $commissions->total() }} commission(s) : toutes les commissions en attente de versement (toutes dates) + les autres statuts créés sur la période <strong>{{ $period->label }}</strong></p>
         </div>
         <div class="col-12 col-md-auto mt-2 mt-md-0">
             <div class="btn-group" role="group">
@@ -33,10 +33,16 @@
 
     <x-period-filter :action="route('admin.commissions')" :period="$period" :keep="request()->only(['promoter', 'status'])" />
 
+    <p class="mb-3">
+        <a href="{{ route('admin.commissions', ['status' => 'pending']) }}" class="btn btn-outline-warning">
+            <i class="fas fa-clock me-1" aria-hidden="true"></i> En attente de versement (toutes dates)
+        </a>
+    </p>
+
     <x-stat-grid label="Commissions de la période">
         <x-stat-card label="Commission plateforme" unit="FCFA" :value="$stats['platform_revenue']" hint="Commandes payées de la période" />
-        <x-stat-card label="Net promoteurs à verser" unit="FCFA" :value="$stats['pending_payout']" hint="Commissions en attente de versement" />
-        <x-stat-card label="Net promoteurs versé" unit="FCFA" :value="$stats['paid_out']" hint="Commissions marquées payées" />
+        <x-stat-card label="Net promoteurs à verser (total, toutes dates)" unit="FCFA" :value="$stats['pending_payout']" hint="Solde dû, indépendant de la période" />
+        <x-stat-card label="Net promoteurs versé" unit="FCFA" :value="$stats['paid_out']" :hint="'Sur la période. Total versé : '.\App\Helpers\CurrencyHelper::formatFCFA($stats['paid_out_total'])" />
         <x-stat-card label="Commissions suspendues" unit="FCFA" :value="$stats['held']['commission']" hint="Commandes remboursées : hors revenus" />
     </x-stat-grid>
 

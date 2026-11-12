@@ -18,7 +18,7 @@
         <x-stat-card label="Encaissé" unit="FCFA" :value="$summary['collected']" hint="Total payé par les clients" />
         <x-stat-card label="Commission plateforme" unit="FCFA" :value="$summary['platform_revenue']" hint="Revenu de la plateforme" />
         <x-stat-card label="Net promoteurs (à verser + versé)" unit="FCFA" :value="$summary['promoter_net']" />
-        <x-stat-card label="Net promoteurs à verser" unit="FCFA" :value="$summary['pending_payout']" />
+        <x-stat-card label="Net promoteurs à verser (total, toutes dates)" unit="FCFA" :value="$summary['pending_payout']" hint="Solde dû, indépendant de la période" />
         <x-stat-card label="Commandes payées" :value="$summary['orders_paid']" />
     </x-stat-grid>
 

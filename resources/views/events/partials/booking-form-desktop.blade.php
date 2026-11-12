@@ -88,6 +88,12 @@
                 <i class="fas fa-shopping-cart me-2" aria-hidden="true"></i>
                 Ajouter au panier
             </button>
+            @php $cartItems = array_sum(array_column((array) session('cart', []), 'quantity')); @endphp
+            @if($cartItems > 0)
+                <a href="{{ route('cart.show') }}" class="view-cart-link d-flex align-items-center justify-content-center gap-2 mt-3 fw-semibold" style="min-height:44px" data-view-cart>
+                    <i class="fas fa-shopping-cart" aria-hidden="true"></i> Voir mon panier ({{ $cartItems }})
+                </a>
+            @endif
             
             <!-- Informations de sécurité -->
             <div class="mt-3 text-center">

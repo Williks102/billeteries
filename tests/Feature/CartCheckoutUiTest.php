@@ -462,5 +462,34 @@ class CartCheckoutUiTest extends TestCase
         $this->post(route('checkout.direct'), ['event_id' => 1, 'tickets' => [$type->id => 9999]])->assertSessionHasErrors();
         $this->assertNull(session('direct_booking'));
     }
+
+    // ===== Retour arrière après « Ajouter au panier » =====
+
+    public function test_back_navigation_restores_a_clean_event_page(): void
+    {
+        $js = $this->src('public/js/bfcache-reset.js');
+        $this->assertStringContainsString("addEventListener('pageshow'", $js);
+        $this->assertStringContainsString('event.persisted', $js);
+        $this->assertStringContainsString('location.reload()', $js);
+
+        $this->ticketType(10);
+        $this->get(route('events.show', 1))->assertOk()->assertSee('js/bfcache-reset.js', false);
+    }
+
+    public function test_view_cart_link_and_header_cart_icon_appear_only_with_a_non_empty_cart(): void
+    {
+        $this->ticketType(10);
+
+        $empty = $this->get(route('events.show', 1))->assertOk()->getContent();
+        $this->assertStringNotContainsString('data-view-cart', $empty);
+        $this->assertStringNotContainsString('<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-orange cart-badge"', $empty);
+        $this->assertStringContainsString('aria-label="Mon panier"', $empty, "l'icône panier du bandeau mobile existe même vide");
+
+        $full = $this->withSession(['cart' => $this->cart()])->get(route('events.show', 1))->assertOk()->getContent();
+        $this->assertGreaterThanOrEqual(2, substr_count($full, 'data-view-cart'), 'lien dans la feuille mobile ET le formulaire desktop');
+        $this->assertStringContainsString('Voir mon panier (2)', $full);
+        $this->assertStringContainsString('rounded-pill bg-orange cart-badge">2<', $full, 'compteur du bandeau mobile');
+        $this->assertStringContainsString(route('cart.show'), $full);
+    }
 }
 

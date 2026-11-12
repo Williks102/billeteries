@@ -107,7 +107,10 @@
 
 @section('content')
 <!-- Hero Section -->
-<section class="event-hero{{ $event->hasImage() ? '' : ' event-hero--compact' }}">
+<section class="event-hero{{ $event->hasImage() ? ' event-hero--image' : ' event-hero--compact' }}">
+    @if($event->hasImage())
+    <img src="{{ \Illuminate\Support\Facades\Storage::url($event->image) }}" alt="" class="event-hero__image" fetchpriority="high">
+    @endif
     <div class="container">
         <div class="hero-content">
             <h1 class="event-title">{{ $event->title }}</h1>

@@ -276,8 +276,8 @@
 @push('styles')
 <style>
     :root {
-        --primary-orange: #FF6B35;
-        --secondary-orange: #ff8c61;
+        --primary-orange: var(--brand);
+        --secondary-orange: var(--brand-decor);
         --success: #28a745;
         --info: #17a2b8;
         --warning: #ffc107;

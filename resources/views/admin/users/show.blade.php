@@ -337,7 +337,7 @@
 .user-avatar-lg {
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, #FF6B35, #ff8c61);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -354,7 +354,7 @@
 }
 
 .badge-promoteur {
-    background: linear-gradient(135deg, #FF6B35, #ff8c61);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
     color: white;
 }
 

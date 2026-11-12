@@ -75,7 +75,7 @@ use Illuminate\Support\Facades\Storage;
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ number_format($stats['total_spent'] ?? 0) }}</h4>
+                            <h4 class="mb-0">{{ \App\Helpers\CurrencyHelper::formatNumber($stats['total_spent'] ?? 0) }}</h4>
                             <small>FCFA dépensés</small>
                         </div>
                         <i class="fas fa-coins fa-2x opacity-75"></i>
@@ -191,7 +191,7 @@ use Illuminate\Support\Facades\Storage;
                                 
                                 <!-- Prix et statuts -->
                                 <div class="col-md-2 text-center">
-                                    <h4 class="text-primary mb-1">{{ number_format($order->total_amount) }}</h4>
+                                    <h4 class="text-primary mb-1">{{ \App\Helpers\CurrencyHelper::formatNumber($order->total_amount) }}</h4>
                                     <small class="text-muted">FCFA</small>
                                     
                                     <div class="mt-2">

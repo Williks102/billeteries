@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
     
     .form-control:focus, .form-select:focus {
         border-color: var(--primary-orange);
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.25);
     }
     
     .image-preview {
@@ -67,8 +67,8 @@ use Illuminate\Support\Facades\Storage;
     }
     
     .info-box {
-        background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(255,107,53,0.05));
-        border: 1px solid rgba(255,107,53,0.2);
+        background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.1), rgba(var(--brand-rgb), 0.05));
+        border: 1px solid rgba(var(--brand-rgb), 0.2);
         border-radius: 12px;
         padding: 1.5rem;
         margin-bottom: 2rem;
@@ -351,7 +351,7 @@ use Illuminate\Support\Facades\Storage;
                     <!-- Image actuelle -->
                     @if($event->image)
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Image actuelle</label>
+                            <label class="form-label fw-semibold" for="image">Image actuelle</label>
                             <div class="current-image-container">
                                 <img src="{{ Storage::url($event->image) }}" 
                                      alt="Image actuelle" 

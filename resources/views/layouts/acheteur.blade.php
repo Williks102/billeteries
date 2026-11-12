@@ -12,10 +12,12 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
+    <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
+
     <style>
         :root {
-            --primary-orange: #FF6B35;
-            --primary-dark: #E55A2B;
+            --primary-orange: var(--brand);
+            --primary-dark: var(--brand-hover);
             --acheteur-primary: #2563eb;
             --acheteur-secondary: #1d4ed8;
             --black-primary: #1d2327;
@@ -34,7 +36,7 @@
 
         body {
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, sans-serif;
+            font-family: var(--font-sans);
             background: var(--gray-light);
             color: #3c434a;
             overflow-x: hidden;
@@ -118,7 +120,7 @@
         }
 
         .sidebar-toggle:hover {
-            background: rgba(255, 107, 53, 0.1);
+            background: rgba(var(--brand-rgb), 0.1);
             color: var(--primary-orange);
         }
 
@@ -146,13 +148,13 @@
         }
 
         .sidebar-menu > li > a:hover {
-            background: rgba(255, 107, 53, 0.08);
+            background: rgba(var(--brand-rgb), 0.08);
             color: white;
             border-left-color: var(--primary-orange);
         }
 
         .sidebar-menu > li > a.active {
-            background: rgba(255, 107, 53, 0.15);
+            background: rgba(var(--brand-rgb), 0.15);
             color: white;
             border-left-color: var(--primary-orange);
         }
@@ -201,7 +203,7 @@
 
         .sidebar-submenu a:hover,
         .sidebar-submenu a.active {
-            background: rgba(255, 107, 53, 0.08);
+            background: rgba(var(--brand-rgb), 0.08);
             color: white;
         }
 
@@ -336,7 +338,7 @@
 
         .acheteur-content {
             flex: 1;
-            padding: calc(var(--topbar-height) + 30px) 30px 30px;
+            padding: calc(var(--topbar-height) + var(--gutter)) var(--gutter) var(--gutter);
             background: var(--gray-light);
         }
 
@@ -375,13 +377,13 @@
             }
 
             .acheteur-content {
-                padding: calc(var(--topbar-height) + 20px) 15px 20px;
+                padding: calc(var(--topbar-height) + var(--gutter)) var(--gutter) var(--gutter);
             }
         }
 
         @media (max-width: 576px) {
             .acheteur-content {
-                padding: calc(var(--topbar-height) + 15px) 10px 15px;
+                padding: calc(var(--topbar-height) + var(--gutter)) var(--gutter) var(--gutter);
             }
         }
 

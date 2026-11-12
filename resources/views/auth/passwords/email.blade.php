@@ -10,6 +10,7 @@
     <title>Mot de passe oublié - ClicBillet CI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
     
     <style>
         body { 
@@ -27,7 +28,7 @@
             margin: auto;
         }
         .auth-header {
-            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            background: linear-gradient(45deg, var(--brand), var(--brand-decor));
             color: white;
             padding: 30px;
             text-align: center;
@@ -35,7 +36,7 @@
         .auth-body { padding: 30px; }
         .form-control { border-radius: 10px; padding: 12px 15px; }
         .btn-primary {
-            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            background: linear-gradient(45deg, var(--brand), var(--brand-decor));
             border: none;
             border-radius: 10px;
             padding: 12px 30px;
@@ -44,11 +45,11 @@
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+            box-shadow: 0 5px 15px rgba(var(--brand-rgb), 0.4);
         }
         .back-link { text-align: center; margin-top: 20px; }
         .back-link a { color: #666; text-decoration: none; }
-        .back-link a:hover { color: #FF6B35; }
+        .back-link a:hover { color: var(--brand); }
     </style>
 </head>
 <body>

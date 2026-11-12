@@ -12,10 +12,12 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
+    <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
+
     <style>
         :root {
-            --primary-orange: #FF6B35;
-            --primary-dark: #E55A2B;
+            --primary-orange: var(--brand);
+            --primary-dark: var(--brand-hover);
             --black-primary: #1d2327;
             --black-secondary: #2c3338;
             --gray-light: #f0f0f1;
@@ -31,7 +33,7 @@
 
         body {
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, sans-serif;
+            font-family: var(--font-sans);
             background: var(--gray-light);
             color: #3c434a;
         }
@@ -387,7 +389,7 @@
         .admin-main {
             margin-left: var(--sidebar-width);
             margin-top: var(--topbar-height);
-            padding: 20px;
+            padding: var(--gutter);
             min-height: calc(100vh - var(--topbar-height));
             transition: margin-left 0.2s ease-in-out;
             width: calc(100% - var(--sidebar-width));
@@ -461,7 +463,7 @@
             .admin-main {
                 margin-left: 0;
                 width: 100%;
-                padding: 15px;
+                padding: var(--gutter);
             }
             
             .mobile-toggle {

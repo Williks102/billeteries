@@ -7,11 +7,12 @@
     <title>Connexion - ClicBillet CI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
     <style>
         :root {
-            --primary-orange: #FF6B35;
-            --orange-light: #ff8c61;
-            --orange-dark: #e55a2b;
+            --primary-orange: var(--brand);
+            --orange-light: var(--brand-decor);
+            --orange-dark: var(--brand-hover);
         }
         
         * {
@@ -21,7 +22,7 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: var(--font-sans);
             background: #f8fafc;
             min-height: 100vh;
             display: flex;
@@ -59,30 +60,30 @@
             font-weight: 400;
         }
         
-        .form-floating {
+        .auth-field {
             margin-bottom: 1rem;
         }
         
-        .form-floating > .form-control {
+        .auth-field > .form-control {
             border: 1px solid #d1d5db;
             border-radius: 8px;
-            padding: 1rem 0.75rem 0.25rem;
-            height: 58px;
+            padding: 0.5rem 0.75rem;
+            min-height: 44px;
             font-size: 1rem;
             transition: all 0.15s ease-in-out;
             background: #fff;
         }
         
-        .form-floating > .form-control:focus {
+        .auth-field > .form-control:focus {
             border-color: var(--primary-orange);
-            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.1);
             outline: none;
         }
         
-        .form-floating > label {
-            color: #6b7280;
-            font-weight: 400;
-            padding: 1rem 0.75rem;
+        .auth-field > .form-label {
+            color: var(--ink);
+            font-weight: 500;
+            padding: 0;
         }
         
         .form-check {
@@ -95,7 +96,7 @@
         }
         
         .form-check-input:focus {
-            box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+            box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.25);
         }
         
         .form-check-label {
@@ -119,7 +120,7 @@
         .btn-primary:hover {
             background: var(--orange-dark);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+            box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.4);
         }
         
         .btn-primary:active {
@@ -185,13 +186,13 @@
     margin: 20px 0;
 }
 .auth-links a { 
-    color: #FF6B35; 
+    color: var(--brand); 
     text-decoration: none; 
     font-weight: 500;
     transition: all 0.3s ease;
 }
 .auth-links a:hover { 
-    color: #e55a2b; 
+    color: var(--brand-hover); 
     text-decoration: underline;
 }
 .forgot-password-link {
@@ -243,7 +244,7 @@
 
         <!-- Messages d'erreur -->
         @if ($errors->any())
-            <div class="alert alert-danger">
+            <div class="alert alert-danger" role="alert">
                 <ul class="mb-0">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
@@ -263,8 +264,9 @@
         <form method="POST" action="{{ route('login') }}">
             @csrf
             
-            <div class="form-floating">
-                <input type="email" 
+            <div class="auth-field ">
+                <label for="email" class="form-label">Adresse email</label>
+                <input type="email" inputmode="email" autocapitalize="none" spellcheck="false" 
                        class="form-control @error('email') is-invalid @enderror" 
                        id="email" 
                        name="email" 
@@ -272,19 +274,21 @@
                        value="{{ old('email') }}" 
                        required 
                        autocomplete="email" 
-                       autofocus>
-                <label for="email">Adresse email</label>
+                       autofocus
+                       aria-describedby="@error('email') email-error @enderror" @error('email') aria-invalid="true" @enderror>
+                <x-field-error name="email" />
             </div>
 
-            <div class="form-floating">
+            <div class="auth-field ">
+                <label for="password" class="form-label">Mot de passe</label>
                 <input type="password" 
                        class="form-control @error('password') is-invalid @enderror" 
                        id="password" 
-                       name="password" 
-                       placeholder="Mot de passe"
+                       name="password"
                        required 
-                       autocomplete="current-password">
-                <label for="password">Mot de passe</label>
+                       autocomplete="current-password"
+                       aria-describedby="@error('password') password-error @enderror" @error('password') aria-invalid="true" @enderror>
+                <x-field-error name="password" />
             </div>
 
             <div class="form-check">

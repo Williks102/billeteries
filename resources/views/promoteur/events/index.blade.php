@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Storage;
     .event-image {
         height: 200px;
         object-fit: cover;
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
     }
     
     .event-stats {
@@ -45,7 +45,7 @@ use Illuminate\Support\Facades\Storage;
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
     }
 </style>
 @endpush
@@ -57,7 +57,7 @@ use Illuminate\Support\Facades\Storage;
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="h2" style="color: #FF6B35;">
+                    <h1 class="h2" style="color: var(--brand);">
                         <i class="fas fa-calendar me-2"></i>
                         Mes Événements
                     </h1>
@@ -90,9 +90,9 @@ use Illuminate\Support\Facades\Storage;
     @if(isset($events) && $events->count() > 0)
         <div class="row mb-4">
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid #FF6B35;">
+                <div class="card text-center" style="border-left: 4px solid var(--brand);">
                     <div class="card-body">
-                        <h3 class="fw-bold" style="color: #FF6B35;">{{ $events->total() ?? $events->count() }}</h3>
+                        <h3 class="fw-bold" style="color: var(--brand);">{{ $events->total() ?? $events->count() }}</h3>
                         <p class="text-muted mb-0">Total Événements</p>
                     </div>
                 </div>
@@ -129,16 +129,16 @@ use Illuminate\Support\Facades\Storage;
         <div class="card-body">
             <form method="GET" action="{{ route('promoteur.events.index') }}" class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label">Statut</label>
-                    <select name="status" class="form-select">
+                    <label class="form-label" for="status">Statut</label>
+                    <select id="status" name="status" class="form-select">
                         <option value="">Tous les statuts</option>
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Brouillon</option>
                         <option value="published" {{ request('status') === 'published' ? 'selected' : '' }}>Publié</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Catégorie</label>
-                    <select name="category" class="form-select">
+                    <label class="form-label" for="category">Catégorie</label>
+                    <select id="category" name="category" class="form-select">
                         <option value="">Toutes les catégories</option>
                         @if(isset($categories))
                             @foreach($categories as $category)
@@ -150,8 +150,8 @@ use Illuminate\Support\Facades\Storage;
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Recherche</label>
-                    <input type="text" name="search" class="form-control" 
+                    <label class="form-label" for="search">Recherche</label>
+                    <input id="search" type="text" name="search" class="form-control" 
                            placeholder="Nom de l'événement..." value="{{ request('search') }}">
                 </div>
                 <div class="col-md-3">
@@ -219,7 +219,7 @@ use Illuminate\Support\Facades\Storage;
                                         <small class="text-muted">Vendus</small>
                                     </div>
                                     <div class="col-4 stat-item">
-                                        <div class="fw-bold" style="color: #FF6B35;">{{ number_format($event->totalRevenue()) }}</div>
+                                        <div class="fw-bold" style="color: var(--brand);">{{ number_format($event->totalRevenue()) }}</div>
                                         <small class="text-muted">FCFA</small>
                                     </div>
                                 </div>

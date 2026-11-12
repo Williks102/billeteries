@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Storage;
                     </nav>
 
                     <h1 class="h2 mb-1" style="color: 
-#FF6B35;">
+var(--brand);">
                         <i class="fas fa-ticket-alt me-2"></i>
                         Gestion des billets
                     </h1>
@@ -123,8 +123,8 @@ use Illuminate\Support\Facades\Storage;
                                             <!-- Prix -->
                                             <td>
                                                 <span class="fw-bold" style="color: 
-#FF6B35;">
-                                                    {{ number_format($ticketType->price) }} FCFA
+var(--brand);">
+                                                    {{ \App\Helpers\CurrencyHelper::formatFCFA($ticketType->price) }}
                                                 </span>
                                             </td>
 
@@ -134,6 +134,7 @@ use Illuminate\Support\Facades\Storage;
                                                     <div class="me-2">
                                                         <div class="fw-semibold">{{ $ticketType->remainingTickets() }} / {{ $ticketType->quantity_available }}</div>
                                                         <small class="text-muted">{{ $ticketType->quantity_sold }} vendus</small>
+                                                        <div class="mt-1"><x-ticket-availability-badge :remaining="$ticketType->remainingTickets()" /></div>
                                                     </div>
                                                     <div style="width: 60px;">
                                                         <div class="progress" style="height: 6px;">
@@ -267,9 +268,9 @@ use Illuminate\Support\Facades\Storage;
                     </div>
                     <div class="col-md-3">
                         <div class="card border-0 text-white" style="background-color: 
-#FF6B35;">
+var(--brand);">
                             <div class="card-body text-center">
-                                <h3 class="mb-1">{{ number_format($ticketTypes->sum(function($t) { return $t->quantity_sold * $t->price; })) }} F</h3>
+                                <h3 class="mb-1">{{ \App\Helpers\CurrencyHelper::formatFCFA($ticketTypes->sum(function($t) { return $t->quantity_sold * $t->price; })) }}</h3>
                                 <p class="mb-0 small">Revenus générés</p>
                             </div>
                         </div>
@@ -352,17 +353,17 @@ use Illuminate\Support\Facades\Storage;
 <style>
     .btn-orange {
         background-color: 
-#FF6B35;
+var(--brand);
         border-color: 
-#FF6B35;
+var(--brand);
         color: white;
     }
 
     .btn-orange:hover {
         background-color: 
-#E55A2B;
+var(--brand-hover);
         border-color: 
-#E55A2B;
+var(--brand-hover);
         color: white;
     }
 

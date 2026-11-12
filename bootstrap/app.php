@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SetLayoutMiddleware::class);
         
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        $middleware->append(\App\Http\Middleware\NoStoreAuthPages::class);
 
         // N2 : proxys de confiance pilotés par l'environnement. DÉFAUT = aucun (comportement inchangé).
         // Avec `php artisan config:cache`, .env n'est plus lu à l'exécution : définir ces variables
@@ -36,5 +37,19 @@ return Application::configure(basePath: dirname(__DIR__))
         
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // 419 (jeton CSRF invalide : session expirée, cookie absent, vieille page) : au lieu de la page d'erreur,
+        // retour au formulaire avec un message clair. Le contenu saisi est conservé, jamais les mots de passe.
+        // (Laravel convertit TokenMismatchException en HttpException 419 avant d'appeler ces fonctions.)
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
+            if ($e->getStatusCode() !== 419 || $request->expectsJson()) {
+                return null; // autres erreurs et réponse JSON : comportement par défaut
+            }
+
+            $message = 'Votre session a expiré. Rechargez la page puis réessayez ; si le problème continue, vérifiez que les cookies sont autorisés.';
+            $target = $request->routeIs('logout') ? route('login') : (url()->previous() ?: route('login'));
+
+            return redirect($target)
+                ->withInput($request->except(['_token', 'password', 'password_confirmation', 'current_password', 'new_password', 'new_password_confirmation']))
+                ->withErrors(['session' => $message]);
+        });
     })->create();

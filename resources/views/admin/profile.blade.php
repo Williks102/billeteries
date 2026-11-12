@@ -178,11 +178,11 @@
                             </div>
                         </div>
                         
-                        <div class="d-flex gap-2 mt-4">
+                        <div class="action-bar">
                             <button type="submit" class="btn btn-orange">
                                 <i class="fas fa-save me-2"></i>Enregistrer les modifications
                             </button>
-                            <button type="reset" class="btn btn-outline-secondary">
+                            <button type="reset" class="btn btn-outline-secondary action-bar__cancel">
                                 <i class="fas fa-undo me-2"></i>Annuler
                             </button>
                         </div>
@@ -307,7 +307,7 @@
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #FF6B35;
+        background: var(--brand);
         border: 2px solid white;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
@@ -316,7 +316,7 @@
         background: #f8f9fa;
         padding: 12px 16px;
         border-radius: 8px;
-        border-left: 3px solid #FF6B35;
+        border-left: 3px solid var(--brand);
     }
     
     .card {
@@ -338,8 +338,8 @@
     }
     
     .form-control:focus {
-        border-color: #FF6B35;
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        border-color: var(--brand);
+        box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.25);
     }
     
     .btn {
@@ -351,7 +351,7 @@
     
     .btn-orange:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        box-shadow: 0 5px 15px rgba(var(--brand-rgb), 0.4);
     }
 </style>
 @endpush

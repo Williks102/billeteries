@@ -102,7 +102,7 @@
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-end">
+                        <div class="action-bar">
                             <button type="submit" class="btn btn-acheteur">
                                 <i class="fas fa-save me-2"></i>Enregistrer les modifications
                             </button>

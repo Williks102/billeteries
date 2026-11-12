@@ -12,10 +12,12 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
+    <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
+
     <style>
         :root {
-            --primary-orange: #FF6B35;
-            --primary-dark: #E55A2B;
+            --primary-orange: var(--brand);
+            --primary-dark: var(--brand-hover);
             --black-primary: #1d2327;
             --black-secondary: #2c3338;
             --gray-light: #f0f0f1;
@@ -31,7 +33,7 @@
 
         body {
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, sans-serif;
+            font-family: var(--font-sans);
             background: var(--gray-light);
             color: #3c434a;
         }
@@ -135,7 +137,7 @@
 
         .sidebar-menu > li > a.active {
             color: var(--primary-orange);
-            background: rgba(255, 107, 53, 0.1);
+            background: rgba(var(--brand-rgb), 0.1);
             border-left-color: var(--primary-orange);
         }
 
@@ -193,7 +195,7 @@
 
         .sidebar-submenu li a.active {
             color: var(--primary-orange);
-            background: rgba(255, 107, 53, 0.1);
+            background: rgba(var(--brand-rgb), 0.1);
             border-left-color: var(--primary-orange);
         }
 
@@ -330,13 +332,15 @@
         .promoteur-main {
             margin-left: var(--sidebar-width);
             flex: 1;
+            min-width: 0; /* un enfant flex ne doit pas dépasser la fenêtre (sinon défilement horizontal à 390 px) */
+            max-width: 100%;
             min-height: 100vh;
             transition: margin-left 0.3s ease-in-out;
         }
 
         .promoteur-content {
             margin-top: var(--topbar-height);
-            padding: 30px;
+            padding: var(--gutter);
             min-height: calc(100vh - var(--topbar-height));
         }
 
@@ -426,7 +430,7 @@
             
             /* Padding réduit sur mobile */
             .promoteur-content {
-                padding: 15px;
+                padding: var(--gutter);
             }
             
             .promoteur-topbar {
@@ -448,7 +452,7 @@
         /* Très petits écrans */
         @media (max-width: 480px) {
             .promoteur-content {
-                padding: 10px;
+                padding: var(--gutter);
             }
             
             .promoteur-topbar {

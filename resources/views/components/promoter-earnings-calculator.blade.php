@@ -9,7 +9,7 @@
 @endphp
 
 <div class="earnings-calculator card border-success">
-    <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #FF6B35 0%, #1a1a1a 100%);">
+    <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, var(--brand) 0%, #1a1a1a 100%);">
         <h6 class="mb-0">
             <i class="fas fa-calculator me-2"></i>
             💰 Calculateur de vos gains
@@ -79,7 +79,7 @@
                 </div>
                 
                 <!-- Projections mensuelles -->
-                <div class="monthly-projection p-3 mt-3" style="background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(26, 26, 26, 0.05) 100%); border-radius: 10px;">
+                <div class="monthly-projection p-3 mt-3" style="background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.1) 0%, rgba(26, 26, 26, 0.05) 100%); border-radius: 10px;">
                     <h6 class="text-primary mb-2">📈 Projections mensuelles :</h6>
                     <div class="row">
                         <div class="col-6">
@@ -119,7 +119,7 @@
 }
 
 .bg-orange {
-    background-color: #FF6B35 !important;
+    background-color: var(--brand) !important;
 }
 
 .metric-box {
@@ -135,7 +135,7 @@
 }
 
 .monthly-projection {
-    border: 2px dashed #FF6B35;
+    border: 2px dashed var(--brand);
 }
 </style>
 

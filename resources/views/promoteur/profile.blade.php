@@ -8,7 +8,7 @@
         border-radius: 15px;
         padding: 2rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         margin-bottom: 2rem;
         transition: transform 0.3s ease;
     }
@@ -18,7 +18,7 @@
     }
     
     .profile-header {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border-radius: 15px;
         padding: 2rem;
         color: white;
@@ -50,7 +50,7 @@
     }
     
     .btn-orange {
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border: none;
         color: white;
         padding: 0.75rem 2rem;
@@ -60,14 +60,14 @@
     }
     
     .btn-orange:hover {
-        background: linear-gradient(135deg, #E55A2B, #D4491F);
+        background: linear-gradient(135deg, var(--brand-hover), #D4491F);
         color: white;
         transform: translateY(-2px);
     }
     
     .form-control:focus, .form-select:focus {
-        border-color: #FF6B35;
-        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        border-color: var(--brand);
+        box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.25);
     }
     
     .badge-role {
@@ -80,7 +80,7 @@
     }
     
     .activity-item {
-        border-left: 3px solid #FF6B35;
+        border-left: 3px solid var(--brand);
         padding-left: 1rem;
         margin-bottom: 1rem;
         padding-bottom: 1rem;
@@ -149,7 +149,7 @@
             <div class="profile-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h5 class="fw-bold mb-0">
-                        <i class="fas fa-user-edit me-2" style="color: #FF6B35;"></i>
+                        <i class="fas fa-user-edit me-2" style="color: var(--brand);"></i>
                         Informations Personnelles
                     </h5>
                     <button class="btn btn-outline-secondary btn-sm" onclick="toggleEdit()">
@@ -163,43 +163,43 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Nom complet</label>
-                            <input type="text" name="name" class="form-control" 
+                            <label class="form-label" for="name">Nom complet</label>
+                            <input id="name" type="text" name="name" class="form-control" 
                                    value="{{ $user->name }}" readonly id="nameInput">
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" 
+                            <label class="form-label" for="email">Email</label>
+                            <input id="email" type="email" name="email" class="form-control" 
                                    value="{{ $user->email }}" readonly id="emailInput">
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Téléphone</label>
-                            <input type="tel" name="phone" class="form-control" 
+                            <label class="form-label" for="phone">Téléphone</label>
+                            <input id="phone" type="tel" name="phone" class="form-control" 
                                    value="{{ $user->phone }}" readonly id="phoneInput"
                                    placeholder="Ex: +225 07 08 09 10 11">
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Date d'inscription</label>
-                            <input type="text" class="form-control" 
+                            <label class="form-label" for="created_at_display">Date d'inscription</label>
+                            <input type="text" id="created_at_display" class="form-control" 
                                    value="{{ $user->created_at->format('d/m/Y') }}" readonly>
                         </div>
                         
                         <div class="col-12 mb-3">
-                            <label class="form-label">Biographie / Présentation</label>
+                            <label class="form-label" for="bioInput">Biographie / Présentation</label>
                             <textarea name="bio" class="form-control" rows="4" readonly id="bioInput"
                                       placeholder="Présentez-vous et décrivez votre activité d'organisateur d'événements...">{{ $user->bio ?? '' }}</textarea>
                         </div>
                     </div>
                     
-                    <div class="text-end d-none" id="saveButtons">
-                        <button type="button" class="btn btn-secondary me-2" onclick="cancelEdit()">
-                            Annuler
-                        </button>
+                    <div class="action-bar d-none" id="saveButtons">
                         <button type="submit" class="btn btn-orange">
                             <i class="fas fa-save me-2"></i>Sauvegarder
+                        </button>
+                        <button type="button" class="btn btn-secondary action-bar__cancel" onclick="cancelEdit()">
+                            Annuler
                         </button>
                     </div>
                 </form>
@@ -208,7 +208,7 @@
             <!-- Sécurité -->
             <div class="profile-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-shield-alt me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-shield-alt me-2" style="color: var(--brand);"></i>
                     Sécurité du Compte
                 </h5>
                 
@@ -255,7 +255,7 @@
             <!-- Activité récente -->
             <div class="profile-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-clock me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-clock me-2" style="color: var(--brand);"></i>
                     Activité Récente
                 </h5>
                 
@@ -295,7 +295,7 @@
             <!-- Liens utiles -->
             <div class="profile-card">
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-link me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-link me-2" style="color: var(--brand);"></i>
                     Liens Utiles
                 </h5>
                 
@@ -344,16 +344,16 @@
                 @method('PATCH')
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Mot de passe actuel</label>
-                        <input type="password" name="current_password" class="form-control" required>
+                        <label class="form-label" for="current_password">Mot de passe actuel</label>
+                        <input id="current_password" type="password" name="current_password" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nouveau mot de passe</label>
-                        <input type="password" name="password" class="form-control" required minlength="8">
+                        <label class="form-label" for="password">Nouveau mot de passe</label>
+                        <input id="password" type="password" name="password" class="form-control" required minlength="8">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Confirmer le nouveau mot de passe</label>
-                        <input type="password" name="password_confirmation" class="form-control" required>
+                        <label class="form-label" for="password_confirmation">Confirmer le nouveau mot de passe</label>
+                        <input id="password_confirmation" type="password" name="password_confirmation" class="form-control" required>
                     </div>
                 </div>
                 <div class="modal-footer">

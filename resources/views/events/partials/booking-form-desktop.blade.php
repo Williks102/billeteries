@@ -23,7 +23,7 @@
                         <div class="ticket-description">{{ $ticketType->description }}</div>
                         @endif
                     </div>
-                    <div class="ticket-price">{{ number_format($ticketType->price) }} FCFA</div>
+                    <div class="ticket-price">{{ \App\Helpers\CurrencyHelper::formatFCFA($ticketType->price) }}</div>
                 </div>
                 
                 <div class="quantity-selector">
@@ -51,10 +51,9 @@
                 </div>
                 
                 <div class="mt-2">
+                    <x-ticket-availability-badge :remaining="$ticketType->quantity_available - $ticketType->quantity_sold" class="me-2" />
                     <small class="text-muted">
-                        <i class="fas fa-users me-1"></i>
-                        {{ $ticketType->quantity_available - $ticketType->quantity_sold }} restant(s)
-                        <i class="fas fa-shopping-cart ms-2 me-1"></i>
+                        <i class="fas fa-shopping-cart me-1" aria-hidden="true"></i>
                         Max {{ \App\Services\CheckoutService::maxTicketsPerOrder($ticketType->max_per_order) }}/commande
                     </small>
                 </div>

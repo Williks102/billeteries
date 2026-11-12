@@ -9,7 +9,7 @@
         </h3>
         @if($event->ticketTypes->count() > 0)
             <div class="booking-preview">
-                <span>À partir de {{ number_format($event->ticketTypes->min('price')) }} FCFA</span>
+                <span>À partir de {{ \App\Helpers\CurrencyHelper::formatFCFA($event->ticketTypes->min('price')) }}</span>
             </div>
         @endif
     </div>
@@ -109,19 +109,14 @@
                                 @endif
                             </div>
                             <div class="ticket-price">
-                                {{ number_format($ticketType->price) }} FCFA
+                                {{ \App\Helpers\CurrencyHelper::formatFCFA($ticketType->price) }}
                             </div>
                         </div>
                         
                         @if($isAvailable)
                             <div class="ticket-controls">
-                                <div class="stock-info {{ $available <= 10 ? 'limited' : '' }}">
-                                    <i class="fas fa-{{ $available > 10 ? 'check-circle' : 'exclamation-triangle' }} me-1"></i>
-                                    @if($available <= 10)
-                                        Plus que {{ $available }} places
-                                    @else
-                                        Disponible
-                                    @endif
+                                <div class="stock-info">
+                                    <x-ticket-availability-badge :remaining="$available" />
                                 </div>
                                 <div class="quantity-controls">
                                     <button class="qty-btn" onclick="updateQuantity('{{ $ticketType->id }}', -1)">
@@ -135,12 +130,11 @@
                             </div>
                         @else
                             <div class="ticket-controls">
-                                <div class="stock-info sold-out">
-                                    <i class="fas fa-times-circle me-1"></i>
+                                <div class="stock-info">
                                     @if($available <= 0)
-                                        Épuisé
+                                        <x-ticket-availability-badge :remaining="0" />
                                     @else
-                                        Vente fermée
+                                        <span class="badge-state badge-state--neutral"><i class="fas fa-lock" aria-hidden="true"></i>Vente fermée</span>
                                     @endif
                                 </div>
                             </div>
@@ -185,7 +179,7 @@
 }
 
 .booking-header {
-    background: linear-gradient(135deg, #FF6B35, #E55A2B);
+    background: linear-gradient(135deg, var(--brand), var(--brand-hover));
     color: white;
     padding: 1.5rem;
     text-align: center;
@@ -211,7 +205,7 @@
 
 .btn-open-modal {
     width: 100%;
-    background: linear-gradient(135deg, #FF6B35, #E55A2B);
+    background: linear-gradient(135deg, var(--brand), var(--brand-hover));
     border: none;
     color: white;
     padding: 1rem 1.5rem;
@@ -228,7 +222,7 @@
 
 .btn-open-modal:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255,107,53,0.3);
+    box-shadow: 0 8px 25px rgba(var(--brand-rgb), 0.3);
 }
 
 .quick-info {
@@ -353,7 +347,7 @@
     border-radius: 8px;
     overflow: hidden;
     flex-shrink: 0;
-    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -409,13 +403,13 @@
 }
 
 .ticket-type:hover:not(.unavailable) {
-    border-color: #ff6b35;
-    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
+    border-color: var(--brand);
+    box-shadow: 0 2px 8px rgba(var(--brand-rgb), 0.1);
 }
 
 .ticket-type.selected {
-    border-color: #ff6b35;
-    background: rgba(255, 107, 53, 0.05);
+    border-color: var(--brand);
+    background: rgba(var(--brand-rgb), 0.05);
 }
 
 .ticket-type.unavailable {
@@ -444,7 +438,7 @@
 
 .ticket-price {
     font-weight: bold;
-    color: #ff6b35;
+    color: var(--brand);
     font-size: 1.1rem;
     white-space: nowrap;
 }
@@ -492,9 +486,9 @@
 }
 
 .qty-btn:hover:not(:disabled) {
-    border-color: #ff6b35;
-    color: #ff6b35;
-    background: rgba(255, 107, 53, 0.05);
+    border-color: var(--brand);
+    color: var(--brand);
+    background: rgba(var(--brand-rgb), 0.05);
 }
 
 .qty-btn:disabled {
@@ -544,12 +538,12 @@
 .total-price {
     font-size: 1.3rem;
     font-weight: bold;
-    color: #ff6b35;
+    color: var(--brand);
 }
 
 .add-to-cart-btn {
     width: 100%;
-    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
     color: white;
     border: none;
     padding: 16px;
@@ -566,7 +560,7 @@
 
 .add-to-cart-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+    box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.4);
 }
 
 .add-to-cart-btn:disabled {

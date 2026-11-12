@@ -248,18 +248,16 @@
                         </div>
 
                         <!-- Boutons d'action -->
-                        <div class="d-flex justify-content-between mt-4">
-                            <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                        <div class="action-bar action-bar--split">
+                            <button type="submit" name="action" value="save_and_notify" class="btn btn-success">
+                                <i class="fas fa-user-check me-2"></i>Créer et notifier
+                            </button>
+                            <button type="submit" name="action" value="save" class="btn btn-outline-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary action-bar__cancel" onclick="history.back()">
                                 <i class="fas fa-times me-2"></i>Annuler
                             </button>
-                            <div>
-                                <button type="submit" name="action" value="save" class="btn btn-outline-primary me-2">
-                                    <i class="fas fa-save me-2"></i>Enregistrer
-                                </button>
-                                <button type="submit" name="action" value="save_and_notify" class="btn btn-success">
-                                    <i class="fas fa-user-check me-2"></i>Créer et notifier
-                                </button>
-                            </div>
                         </div>
                     </form>
                 </div>

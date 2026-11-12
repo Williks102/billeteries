@@ -75,10 +75,10 @@
                                 <div class="col-md-2 text-end">
                                     <div class="price-info">
                                         <div class="unit-price text-muted">
-                                            {{ number_format($item['unit_price']) }} FCFA/unité
+                                            {{ \App\Helpers\CurrencyHelper::formatFCFA($item['unit_price']) }}/unité
                                         </div>
                                         <div class="total-price">
-                                            <strong>{{ number_format($item['total_price']) }} FCFA</strong>
+                                            <strong>{{ \App\Helpers\CurrencyHelper::formatFCFA($item['total_price']) }}</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -174,12 +174,12 @@
                             <div class="order-summary">
                                 <div class="d-flex justify-content-between mb-2">
                                 <span>Sous-total</span>
-                                <span>{{ number_format($cartTotal) }} FCFA</span>
+                                <span>{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</span>
                                 </div>
 <hr>
 <div class="d-flex justify-content-between mb-3">
     <strong>Total à payer</strong>
-    <strong class="text-orange">{{ number_format($cartTotal) }} FCFA</strong>
+    <strong class="text-orange">{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</strong>
 </div>
                         </div>
 
@@ -250,7 +250,7 @@
 }
 
 .step.active .step-number {
-    background: #ff6b35;
+    background: var(--brand);
     color: white;
 }
 

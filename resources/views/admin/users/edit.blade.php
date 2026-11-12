@@ -243,14 +243,14 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="d-flex justify-content-end gap-2">
-                                    <a href="{{ route('admin.users.show', $user) }}" 
-                                       class="btn btn-outline-secondary">
-                                        <i class="fas fa-times me-2"></i>Annuler
-                                    </a>
+                                <div class="action-bar mt-0">
                                     <button type="submit" class="btn btn-orange">
                                         <i class="fas fa-save me-2"></i>Enregistrer les modifications
                                     </button>
+                                    <a href="{{ route('admin.users.show', $user) }}" 
+                                       class="btn btn-outline-secondary action-bar__cancel">
+                                        <i class="fas fa-times me-2"></i>Annuler
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -368,7 +368,7 @@
 .user-avatar {
     width: 50px;
     height: 50px;
-    background: linear-gradient(135deg, #FF6B35, #ff8c61);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -380,8 +380,8 @@
 
 /* Cartes d'information sur les rôles */
 .role-info-card {
-    background: linear-gradient(135deg, rgba(255, 107, 53, 0.05), rgba(255, 140, 97, 0.05));
-    border: 1px solid rgba(255, 107, 53, 0.1);
+    background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.05), rgba(255, 140, 97, 0.05));
+    border: 1px solid rgba(var(--brand-rgb), 0.1);
     border-radius: 12px;
     padding: 20px;
     transition: all 0.3s ease;
@@ -410,7 +410,7 @@
 }
 
 .role-icon.promoteur {
-    background: linear-gradient(135deg, #FF6B35, #ff8c61);
+    background: linear-gradient(135deg, var(--brand), var(--brand-decor));
 }
 
 .role-icon.acheteur {

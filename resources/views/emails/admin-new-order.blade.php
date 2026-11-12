@@ -36,12 +36,12 @@
         </div>
         
         <div class="total-row">
-            Montant total : {{ number_format($order->total_amount) }} FCFA
+            Montant total : {{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}
         </div>
         
         @if($order->commission)
             <div class="order-item">
-                <strong>Commission plateforme :</strong> {{ number_format($order->commission->commission_amount) }} FCFA
+                <strong>Commission plateforme :</strong> {{ \App\Helpers\CurrencyHelper::formatFCFA($order->commission->commission_amount) }}
             </div>
         @endif
     </div>

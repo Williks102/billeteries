@@ -6,8 +6,8 @@
 <style>
 /* ===== VARIABLES CSS ===== */
 :root {
-    --primary-orange: #FF6B35;
-    --primary-dark: #E55A2B;
+    --primary-orange: var(--brand);
+    --primary-dark: var(--brand-hover);
     --success-color: #28a745;
     --danger-color: #dc3545;
     --warning-color: #ffc107;
@@ -22,7 +22,7 @@
 /* ===== LAYOUT DE BASE ===== */
 .cart-container {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    min-height: calc(100vh - 100px);
+    min-height: 0;
     padding: 2rem 0;
 }
 
@@ -230,12 +230,12 @@
     border-radius: 12px;
     padding: 12px 24px;
     transition: var(--transition-smooth);
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    box-shadow: 0 4px 15px rgba(var(--brand-rgb), 0.3);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+    box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.4);
     color: white !important;
 }
 
@@ -632,14 +632,15 @@
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .cart-container {
-        margin-top: 80px;
-        padding: 0 15px;
-        padding-bottom: 100px; /* Espace pour le bouton flottant */
+        margin-top: var(--space-4);
+        padding: 0 var(--gutter) var(--space-6);
     }
+    .cart-container:not(:has(.empty-cart)) { padding-bottom: 100px; /* Espace pour le bouton flottant */ }
     
     .cart-card, .total-summary {
         display: none; /* Cacher le contenu desktop */
     }
+    .cart-card:has(.empty-cart) { display: block; } /* le message de panier vide reste visible sur mobile */
     
     .cart-header {
         padding: 1.5rem;
@@ -673,7 +674,7 @@
         padding: 1rem;
         font-size: 1.1rem;
         font-weight: 600;
-        box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+        box-shadow: 0 4px 20px rgba(var(--brand-rgb), 0.4);
         z-index: 1000;
         display: flex;
         align-items: center;
@@ -811,7 +812,7 @@
                                 </div>
 
                                 <div class="col-md-2 text-center">
-                                    <div class="price-info">{{ number_format($item['unit_price']) }} FCFA</div>
+                                    <div class="price-info">{{ \App\Helpers\CurrencyHelper::formatFCFA($item['unit_price']) }}</div>
                                 </div>
 
                                 <div class="col-md-2 text-center">
@@ -827,7 +828,7 @@
                                 </div>
 
                                 <div class="col-md-2 text-center">
-                                    <div class="price-info mb-2">{{ number_format($item['total_price']) }} FCFA</div>
+                                    <div class="price-info mb-2">{{ \App\Helpers\CurrencyHelper::formatFCFA($item['total_price']) }}</div>
                                     <button class="btn btn-outline-danger btn-sm" onclick="removeFromCart('{{ $key }}')">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
@@ -857,11 +858,11 @@
 
                     <div class="summary-row">
                         <span>Sous-total</span>
-                     <span>{{ number_format($cartTotal) }} FCFA</span>
+                     <span>{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</span>
                     </div>
                     <div class="summary-row">
                 <span><strong>Total</strong></span>
-                <span><strong>{{ number_format($cartTotal) }} FCFA</strong></span>
+                <span><strong>{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</strong></span>
                         </div>
                     {{-- Boutons de checkout selon le statut --}}
                     <div class="d-grid mt-4">
@@ -935,7 +936,7 @@
 <button class="mobile-cart-button d-lg-none" onclick="openMobileCartModal()">
     <i class="fas fa-shopping-cart me-2"></i>
     Mon Panier ({{ $cartCount }})
-    <span class="ms-2">{{ number_format($cartTotal) }} FCFA</span>
+    <span class="ms-2">{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</span>
 </button>
 @endif
 
@@ -1017,7 +1018,7 @@
                         </div>
                         
                         <div class="mobile-item-actions">
-                            <div class="mobile-price">{{ number_format($item['total_price']) }} FCFA</div>
+                            <div class="mobile-price">{{ \App\Helpers\CurrencyHelper::formatFCFA($item['total_price']) }}</div>
                             <button class="btn btn-link text-danger p-0 ms-2" 
                                     onclick="removeFromCart('{{ $key }}')"
                                     title="Supprimer">
@@ -1047,11 +1048,11 @@
         <div class="mobile-summary">
             <div class="mobile-summary-row">
     <span>Sous-total</span>
-    <span id="mobileSubtotal">{{ number_format($cartTotal) }} FCFA</span>
+    <span id="mobileSubtotal">{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</span>
 </div>
 <div class="mobile-summary-row">
     <span><strong>Total</strong></span>
-    <span><strong id="mobileTotal">{{ number_format($cartTotal) }} FCFA</strong></span>
+    <span><strong id="mobileTotal">{{ \App\Helpers\CurrencyHelper::formatFCFA($cartTotal) }}</strong></span>
 </div>
         </div>
         

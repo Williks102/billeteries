@@ -61,7 +61,7 @@ use Illuminate\Support\Facades\Storage;
                 <div class="col-lg-4 col-md-6">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" name="search" class="form-control" 
+                        <input type="text" name="search" aria-label="Rechercher un événement" class="form-control" 
                                placeholder="Rechercher un événement..." 
                                value="{{ request('search') }}">
                     </div>
@@ -69,7 +69,7 @@ use Illuminate\Support\Facades\Storage;
 
                 <!-- Filtre par catégorie -->
                 <div class="col-lg-2 col-md-6">
-                    <select name="category" class="form-select">
+                    <select name="category" aria-label="Catégorie" class="form-select">
                         <option value="all">Toutes les catégories</option>
                         @foreach($categories as $category)
                             <option value="{{ $category->slug }}" 
@@ -82,7 +82,7 @@ use Illuminate\Support\Facades\Storage;
 
                 <!-- Filtre par date -->
                 <div class="col-lg-2 col-md-6">
-                    <select name="date_filter" class="form-select">
+                    <select name="date_filter" aria-label="Date" class="form-select">
                         <option value="">Toutes les dates</option>
                         <option value="today" {{ request('date_filter') == 'today' ? 'selected' : '' }}>
                             Aujourd'hui
@@ -101,7 +101,7 @@ use Illuminate\Support\Facades\Storage;
 
                 <!-- Tri -->
                 <div class="col-lg-2 col-md-6">
-                    <select name="sort" class="form-select">
+                    <select name="sort" aria-label="Trier par" class="form-select">
                         <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>
                             Plus récents
                         </option>
@@ -236,10 +236,10 @@ use Illuminate\Support\Facades\Storage;
                                                 $maxPrice = $event->ticketTypes->max('price');
                                             @endphp
                                             @if($minPrice == $maxPrice)
-                                                <span class="h6 text-primary mb-0">{{ number_format($minPrice, 0, ',', ' ') }} FCFA</span>
+                                                <span class="h6 text-primary mb-0">{{ \App\Helpers\CurrencyHelper::formatFCFA($minPrice) }}</span>
                                             @else
                                                 <span class="h6 text-primary mb-0">
-                                                    {{ number_format($minPrice, 0, ',', ' ') }} - {{ number_format($maxPrice, 0, ',', ' ') }} FCFA
+                                                    {{ \App\Helpers\CurrencyHelper::formatNumber($minPrice) }} - {{ \App\Helpers\CurrencyHelper::formatFCFA($maxPrice) }}
                                                 </span>
                                             @endif
                                         </div>
@@ -300,7 +300,7 @@ use Illuminate\Support\Facades\Storage;
                                             $minPrice = $event->ticketTypes->min('price');
                                         @endphp
                                         <div class="h6 text-primary mb-2">
-                                            À partir de {{ number_format($minPrice, 0, ',', ' ') }} FCFA
+                                            À partir de {{ \App\Helpers\CurrencyHelper::formatFCFA($minPrice) }}
                                         </div>
                                     @endif
                                     <a href="{{ route('events.show', $event) }}" class="btn btn-primary btn-sm">

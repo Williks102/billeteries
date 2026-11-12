@@ -15,8 +15,8 @@
     <!-- Styles personnalisés -->
     <style>
         :root {
-            --primary-orange: #FF6B35;
-            --secondary-orange: #FF8C42;
+            --primary-orange: var(--brand);
+            --secondary-orange: var(--brand-decor);
             --dark-gray: #2C3E50;
             --light-gray: #F8F9FA;
             --border-color: #E9ECEF;
@@ -55,7 +55,7 @@
         }
         
         .nav-link:hover {
-            background-color: rgba(255, 107, 53, 0.1);
+            background-color: rgba(var(--brand-rgb), 0.1);
             color: var(--primary-orange) !important;
         }
         

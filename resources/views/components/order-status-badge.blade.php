@@ -1,14 +1,14 @@
 @props(['order'])
-{{-- Badge de statut de paiement d'une commande (libellé + couleur, lisible sans la couleur seule). --}}
+{{-- Badge de statut de paiement d'une commande (libellé + icône + couleur : jamais la couleur seule). Jetons : public/css/charte.css (.badge-state--*). --}}
 @php
-    [$label, $class] = match($order->payment_status) {
-        'paid' => ['Payée', 'bg-success'],
-        'pending', 'processing' => ['En attente de paiement', 'bg-warning text-dark'],
-        'failed' => ['Échec du paiement', 'bg-danger'],
-        'cancelled' => ['Annulée', 'bg-secondary'],
-        'expired' => ['Expirée', 'bg-secondary'],
-        'refunded' => ['Remboursée', 'bg-info text-dark'],
-        default => ['Statut inconnu', 'bg-secondary'],
+    [$label, $variant, $icon] = match($order->payment_status) {
+        'paid' => ['Payée', 'paid', 'fa-check-circle'],
+        'pending', 'processing' => ['En attente de paiement', 'pending', 'fa-clock'],
+        'failed' => ['Échec du paiement', 'failed', 'fa-times-circle'],
+        'cancelled' => ['Annulée', 'neutral', 'fa-ban'],
+        'expired' => ['Expirée', 'neutral', 'fa-hourglass-end'],
+        'refunded' => ['Remboursée', 'refunded', 'fa-undo'],
+        default => ['Statut inconnu', 'neutral', 'fa-question-circle'],
     };
 @endphp
-<span {{ $attributes->merge(['class' => 'badge ' . $class]) }}>{{ $label }}</span>
+<span {{ $attributes->merge(['class' => 'badge-state badge-state--' . $variant]) }}><i class="fas {{ $icon }}" aria-hidden="true"></i>{{ $label }}</span>

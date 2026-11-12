@@ -31,7 +31,9 @@
                             <input type="email" id="email" name="email" class="form-control" required autocomplete="email"
                                    aria-describedby="test-email-result">
                         </div>
-                        <button type="submit" class="btn btn-primary">Envoyer le test</button>
+                        <div class="action-bar mt-0">
+                            <button type="submit" class="btn btn-primary">Envoyer le test</button>
+                        </div>
                         <div id="test-email-result" class="mt-3" role="status" aria-live="polite"></div>
                     </form>
                 </div>

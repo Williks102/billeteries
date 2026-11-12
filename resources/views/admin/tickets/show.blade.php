@@ -425,7 +425,7 @@
         padding: 8px 12px;
         border-radius: 6px;
         font-size: 1.1rem;
-        color: #FF6B35;
+        color: var(--brand);
         font-weight: 600;
         border: 1px solid #e9ecef;
     }
@@ -446,7 +446,7 @@
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #FF6B35, #fd7e14);
+        background: linear-gradient(135deg, var(--brand), #fd7e14);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -501,7 +501,7 @@
         background: #f8f9fa;
         padding: 15px;
         border-radius: 8px;
-        border-left: 3px solid #FF6B35;
+        border-left: 3px solid var(--brand);
     }
     
     .timeline-title {

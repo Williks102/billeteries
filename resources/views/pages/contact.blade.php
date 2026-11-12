@@ -67,9 +67,11 @@
                             @enderror
                         </div>
                         
-                        <button type="submit" class="btn btn-orange btn-lg">
-                            <i class="fas fa-paper-plane me-2"></i>Envoyer le message
-                        </button>
+                        <div class="action-bar mt-0">
+                            <button type="submit" class="btn btn-orange btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Envoyer le message
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>

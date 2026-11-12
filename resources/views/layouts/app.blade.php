@@ -13,24 +13,27 @@
     <!-- Bootstrap & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
     <link rel="stylesheet" href="{{ asset('css/event-images.css') }}">
     <!-- Styles personnalisés -->
     <style>
         :root {
-            --primary-orange: #FF6B35;
-            --secondary-orange: #ff8c61;
+            --primary-orange: var(--brand);
+            --secondary-orange: var(--brand-decor);
             --dark-blue: #1a237e;
             --light-gray: #f8f9fa;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--font-sans);
             line-height: 1.6;
         }
         
         /* Styles pour le contenu principal */
+        body { min-height: 100vh; display: flex; flex-direction: column; }
         .main-content {
-            min-height: calc(100vh - 200px);
+            flex: 1 0 auto;
+            min-height: 0;
         }
         
         /* Styles pour les pages d'administration */
@@ -90,7 +93,7 @@
         
         .btn-orange:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+            box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.3);
             color: white;
         }
         
@@ -113,7 +116,7 @@
 
 .footer-link:hover {
     color: var(--primary-orange) !important;
-    background: rgba(255, 107, 53, 0.1);
+    background: rgba(var(--brand-rgb), 0.1);
     padding-left: 12px;
     transform: translateX(4px);
 }
@@ -143,7 +146,7 @@
 
 .hover-orange:hover {
     color: var(--primary-orange) !important;
-    background: rgba(255, 107, 53, 0.1);
+    background: rgba(var(--brand-rgb), 0.1);
     transform: translateY(-2px);
 }
 
@@ -202,7 +205,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
         /* Responsive */
         @media (max-width: 768px) {
             .main-content {
-                padding: 1rem 0;
+                padding: var(--space-4) 0;
             }
         }
 
@@ -411,7 +414,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
             <div class="col-lg-4 col-md-6 mb-4">
                 <div class="mb-4">
                     <h5 class="fw-bold mb-3">
-                        <i class="fas fa-ticket-alt me-2" style="color: #FF6B35;"></i>
+                        <i class="fas fa-ticket-alt me-2" style="color: var(--brand);"></i>
                         ClicBillet CI
                     </h5>
                     <p class="mb-3 footer-description">
@@ -446,7 +449,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
             {{-- Événements par catégorie (dynamique) --}}
             <div class="col-lg-2 col-md-6 mb-4">
                 <h6 class="fw-bold mb-3">
-                    <i class="fas fa-calendar me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-calendar me-2" style="color: var(--brand);"></i>
                     Événements
                 </h6>
                 <ul class="list-unstyled">
@@ -491,7 +494,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
             {{-- Pages d'aide (dynamique) --}}
             <div class="col-lg-2 col-md-6 mb-4">
                 <h6 class="fw-bold mb-3">
-                    <i class="fas fa-question-circle me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-question-circle me-2" style="color: var(--brand);"></i>
                     Aide & Support
                 </h6>
                 <ul class="list-unstyled">
@@ -539,7 +542,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
             {{-- Organisateurs & Promoteurs --}}
             <div class="col-lg-2 col-md-6 mb-4">
                 <h6 class="fw-bold mb-3">
-                    <i class="fas fa-users me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-users me-2" style="color: var(--brand);"></i>
                     Organisateurs
                 </h6>
                 <ul class="list-unstyled">
@@ -591,7 +594,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
             {{-- Pages légales (dynamique) --}}
             <div class="col-lg-2 col-md-6 mb-4">
                 <h6 class="fw-bold mb-3">
-                    <i class="fas fa-balance-scale me-2" style="color: #FF6B35;"></i>
+                    <i class="fas fa-balance-scale me-2" style="color: var(--brand);"></i>
                     Légal
                 </h6>
                 <ul class="list-unstyled">

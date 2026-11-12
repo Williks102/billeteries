@@ -19,7 +19,7 @@
     }
     
     .stat-card h4 {
-        color: #FF6B35;
+        color: var(--brand);
         font-weight: bold;
         margin-bottom: 0;
     }
@@ -40,7 +40,7 @@
     }
     
     .card-orange {
-        border-left: 4px solid #FF6B35;
+        border-left: 4px solid var(--brand);
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
@@ -99,7 +99,7 @@
     .quick-action-icon {
         width: 60px;
         height: 60px;
-        background: linear-gradient(135deg, #FF6B35, #E55A2B);
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -114,7 +114,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h2 class="fw-bold" style="color: #FF6B35;">Tableau de Bord Promoteur</h2>
+        <h2 class="fw-bold" style="color: var(--brand);">Tableau de Bord Promoteur</h2>
         <p class="text-muted">Bonjour {{ auth()->user()->name }}, voici un aperçu de vos activités</p>
     </div>
     <div>
@@ -129,7 +129,7 @@
     <div class="col-md-3">
         <div class="stat-card text-center">
             <div class="mb-2">
-                <i class="fas fa-calendar-alt fa-2x" style="color: #FF6B35;"></i>
+                <i class="fas fa-calendar-alt fa-2x" style="color: var(--brand);"></i>
             </div>
             <h4>{{ $stats['total_events'] ?? 0 }}</h4>
             <p class="text-muted mb-0">Événements créés</p>
@@ -142,7 +142,7 @@
     <div class="col-md-3">
         <div class="stat-card text-center">
             <div class="mb-2">
-                <i class="fas fa-ticket-alt fa-2x" style="color: #FF6B35;"></i>
+                <i class="fas fa-ticket-alt fa-2x" style="color: var(--brand);"></i>
             </div>
             <h4>{{ $stats['total_tickets_sold'] ?? 0 }}</h4>
             <p class="text-muted mb-0">Billets vendus</p>
@@ -155,9 +155,9 @@
     <div class="col-md-3">
         <div class="stat-card text-center">
             <div class="mb-2">
-                <i class="fas fa-euro-sign fa-2x" style="color: #FF6B35;"></i>
+                <i class="fas fa-euro-sign fa-2x" style="color: var(--brand);"></i>
             </div>
-            <h4>{{ number_format($stats['total_revenue'] ?? 0) }} F</h4>
+            <h4>{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['total_revenue'] ?? 0) }}</h4>
             <p class="text-muted mb-0">Revenus générés</p>
             <small class="text-success">
                 <i class="fas fa-arrow-up"></i> +{{ $stats['revenue_growth'] ?? 0 }}%
@@ -168,9 +168,9 @@
     <div class="col-md-3">
         <div class="stat-card text-center">
             <div class="mb-2">
-                <i class="fas fa-chart-line fa-2x" style="color: #FF6B35;"></i>
+                <i class="fas fa-chart-line fa-2x" style="color: var(--brand);"></i>
             </div>
-            <h4>{{ number_format($stats['monthly_revenue'] ?? 0) }} F</h4>
+            <h4>{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['monthly_revenue'] ?? 0) }}</h4>
             <p class="text-muted mb-0">Revenus ce mois</p>
             <small class="text-info">
                 <i class="fas fa-calendar me-1"></i>{{ date('F Y') }}
@@ -182,7 +182,7 @@
 <!-- Actions rapides -->
 <div class="row mb-4">
     <div class="col-12">
-        <h5 class="mb-3"><i class="fas fa-bolt me-2" style="color: #FF6B35;"></i>Actions Rapides</h5>
+        <h5 class="mb-3"><i class="fas fa-bolt me-2" style="color: var(--brand);"></i>Actions Rapides</h5>
     </div>
     <div class="col-md-3">
         <a href="{{ route('promoteur.events.create') }}" class="quick-action">
@@ -226,7 +226,7 @@
     <!-- Mes événements récents -->
     <div class="col-md-8">
         <div class="card card-orange">
-            <div class="card-header" style="background: linear-gradient(135deg, #FF6B35, #E55A2B); color: white;">
+            <div class="card-header" style="background: linear-gradient(135deg, var(--brand), var(--brand-hover)); color: white;">
                 <h6 class="mb-0">
                     <i class="fas fa-calendar-alt me-2"></i>
                     Mes Événements Récents
@@ -301,7 +301,7 @@
             </div>
             <div class="card-body">
                 <div class="text-center">
-                    <h4 style="color: #28a745;">{{ number_format($stats['monthly_revenue'] ?? 0) }} FCFA</h4>
+                    <h4 style="color: #28a745;">{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['monthly_revenue'] ?? 0) }}</h4>
                     <p class="text-muted mb-2">Revenus de {{ date('F Y') }}</p>
                     <small class="text-success">
                         <i class="fas fa-arrow-up"></i> +{{ $stats['monthly_growth'] ?? 0 }}% vs mois dernier

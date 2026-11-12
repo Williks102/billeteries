@@ -5,100 +5,19 @@
 use Illuminate\Support\Facades\Storage;
 @endphp
 <div class="event-details">
-    <!-- Description principale -->
     @if($event->description)
-    <div class="detail-card">
-        <div class="detail-title">
-            <i class="fas fa-info-circle"></i>
-            Description de l'événement
-        </div>
-        <div class="event-description" style="line-height: 1.6;">
+    <section class="detail-section" aria-labelledby="about-title-desktop">
+        <h2 class="detail-section__title" id="about-title-desktop">À propos</h2>
+        <div class="event-description">
             {!! nl2br(e($event->description)) !!}
         </div>
-    </div>
+    </section>
     @endif
-    
-    <!-- Informations détaillées -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="detail-card">
-                <div class="detail-title">
-                    <i class="fas fa-clock"></i>
-                    Horaires et durée
-                </div>
-                <div class="info-list">
-                    <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">Début:</span>
-                        <span class="fw-bold">{{ $event->event_time?->format('H:i') ?? '20h00' }}</span>
-                    </div>
-                    @if($event->end_time)
-                    <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">Fin:</span>
-                        <span class="fw-bold">{{ $event->end_time?->format('H:i') }}</span>
-                    </div>
-                    @endif
-                    <div class="d-flex justify-content-between py-2">
-                        <span class="text-muted">Durée estimée:</span>
-                        <span class="fw-bold">{{ $event->duration ?? '2-3 heures' }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="detail-card">
-                <div class="detail-title">
-                    <i class="fas fa-map-marker-alt"></i>
-                    Lieu et accès
-                </div>
-                <div class="info-list">
-                    <div class="py-2 border-bottom">
-                        <div class="fw-bold">{{ $event->venue }}</div>
-                        @if($event->address)
-                        <div class="text-muted small">{{ $event->address }}</div>
-                        @endif
-                    </div>
-                    <div class="py-2">
-                        <div class="text-muted small">
-                            <i class="fas fa-car me-2"></i>Parking disponible
-                            <br>
-                            <i class="fas fa-bus me-2"></i>Accessible en transport en commun
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Organisateur -->
-    <div class="detail-card">
-        <div class="detail-title">
-            <i class="fas fa-user-tie"></i>
-            Organisé par {{ $event->promoteur->name ?? 'ClicBillet CI' }}
-        </div>
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <p class="mb-2">
-                    Organisateur professionnel d'événements en Côte d'Ivoire. 
-                    Découvrez nos autres événements et restez informés des prochaines dates.
-                </p>
-                <div class="organizer-stats">
-                    <span class="badge bg-light text-dark me-2">
-                        <i class="fas fa-calendar-check me-1"></i>{{ rand(5, 20) }} événements organisés
-                    </span>
-                    <span class="badge bg-light text-dark">
-                        <i class="fas fa-star me-1"></i>{{ rand(40, 48)/10 }}/5 avis clients
-                    </span>
-                </div>
-            </div>
-            <div class="col-md-4 text-center">
-                <button class="btn btn-outline-primary">
-                    <i class="fas fa-eye me-2"></i>Voir tous leurs événements
-                </button>
-            </div>
-        </div>
-    </div>
-    
+
+    <x-event-tickets-list :event="$event" suffix="desktop" />
+    <x-event-practical-info :event="$event" suffix="desktop" />
+    <x-event-share :event="$event" />
+
     <!-- Événements similaires - Version desktop -->
     @if($similarEvents && $similarEvents->isNotEmpty())
     <div class="detail-card">

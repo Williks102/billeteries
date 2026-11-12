@@ -106,6 +106,37 @@ class TicketType extends Model
             && ($event->event_date === null || $event->event_date->toDateString() >= now()->toDateString());
     }
 
+    /**
+     * État de vente affiché au public : available | sold_out | not_started | ended | closed.
+     * Réutilise les règles existantes (stock public, fenêtre de vente, événement qui accepte des ventes).
+     */
+    public function saleStatus(?Event $event = null): string
+    {
+        if ($event !== null) {
+            $this->setRelation('event', $event);
+        }
+
+        return match (true) {
+            ! $this->is_active => 'closed',
+            $this->publicRemaining() <= 0 => 'sold_out',
+            $this->sale_start_date !== null && ! $this->isSaleStarted() => 'not_started',
+            ($this->sale_end_date !== null && $this->isSaleEnded()) || ! $this->eventAcceptsSales() => 'ended',
+            default => 'available',
+        };
+    }
+
+    /** Libellé public de l'état de vente. */
+    public function saleStatusLabel(?Event $event = null): string
+    {
+        return match ($this->saleStatus($event)) {
+            'sold_out' => 'Épuisé',
+            'not_started' => 'Vente pas encore ouverte',
+            'ended' => 'Vente terminée',
+            'closed' => 'Vente fermée',
+            default => 'Disponible',
+        };
+    }
+
     public function isSaleActive()
     {
         return now()->between($this->sale_start_date, $this->sale_end_date);

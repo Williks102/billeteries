@@ -31,3 +31,27 @@
     body.has-bottom-nav .buy-bar { bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px)); padding-bottom: var(--space-3); }
     body.has-bottom-nav:has(.buy-bar) { padding-bottom: calc(var(--bottom-nav-height) + var(--touch-min) + var(--space-6) + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* Bandeau : dégradé orange / bleu nuit ; icônes claires pour le contraste. Sans image : hauteur selon le contenu. */
+.event-hero { position: relative; min-height: 300px; background: linear-gradient(135deg, var(--brand), #1a237e); margin-bottom: var(--space-6); }
+.event-hero--compact { min-height: 0; }
+.event-hero--compact .hero-content { padding: var(--space-6) 0; }
+.event-hero .info-item i { color: #fff; width: 16px; text-align: center; }
+
+/* Lien dans une ligne d'information (Itinéraire) : cible tactile de 44 px */
+.info-row__link { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); font-weight: 600; color: var(--brand); text-decoration: underline; }
+.info-row__link:hover { color: var(--brand-hover); }
+
+/* Liste des billets */
+.ticket-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.ticket-list__item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.ticket-list__main { min-width: 0; flex: 1 1 160px; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.ticket-list__name { font-weight: 600; color: var(--ink); }
+.ticket-list__desc { color: var(--ink-muted); font-size: .9rem; }
+.ticket-list__side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
+.ticket-list__price { font-weight: 700; color: var(--ink); }
+
+/* Partage */
+.share-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.share-actions__btn { flex: 1 1 130px; min-height: var(--touch-min); display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.share-actions__btn[hidden] { display: none; }

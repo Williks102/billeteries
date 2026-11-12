@@ -1,43 +1,22 @@
 {{-- resources/views/events/partials/booking-form-mobile.blade.php --}}
 
 {{-- Bouton d'ouverture du modal --}}
-<div class="booking-section">
-    <div class="booking-header">
-        <h3>
-            <i class="fas fa-ticket-alt me-2"></i>
-            Réservation
-        </h3>
-    </div>
-    
-    <div class="booking-form">
-        @if($event->ticketTypes->isNotEmpty())
-            <button type="button" 
-                    class="btn-open-modal" 
-                    onclick="openTicketModal()"
-                    data-event-id="{{ $event->id }}">
-                <i class="fas fa-ticket-alt me-2"></i>
-                Choisir mes billets
-            </button>
-            
-            {{-- Résumé rapide des options --}}
-            <div class="quick-info mt-3">
-                <div class="info-row">
-                    <i class="fas fa-tags me-2"></i>
-                    <span>{{ $event->ticketTypesCount() }} type{{ $event->ticketTypesCount() > 1 ? 's' : '' }} de billet{{ $event->ticketTypesCount() > 1 ? 's' : '' }}</span>
-                </div>
-                <div class="info-row">
-                    <i class="fas fa-clock me-2"></i>
-                    <span>Réservation immédiate</span>
-                </div>
-            </div>
-        @else
-            <div class="no-tickets text-center py-4">
-                <i class="fas fa-exclamation-circle fa-2x text-muted mb-2"></i>
-                <h6 class="text-muted">Aucun billet disponible</h6>
-                <p class="text-muted small">La vente n'a pas encore commencé.</p>
-            </div>
-        @endif
-    </div>
+<div class="booking-open">
+    @if($event->ticketTypes->isNotEmpty())
+        <button type="button"
+                class="btn-open-modal"
+                onclick="openTicketModal()"
+                data-event-id="{{ $event->id }}">
+            <i class="fas fa-ticket-alt me-2" aria-hidden="true"></i>
+            Choisir mes billets
+        </button>
+    @else
+        <div class="no-tickets text-center py-4">
+            <i class="fas fa-exclamation-circle fa-2x text-muted mb-2" aria-hidden="true"></i>
+            <h6 class="text-muted">Aucun billet disponible</h6>
+            <p class="text-muted small">La vente n'a pas encore commencé.</p>
+        </div>
+    @endif
 </div>
 
 {{-- Modal Backdrop --}}
@@ -162,39 +141,7 @@
     box-sizing: border-box;
 }
 
-/* Section booking simplifiée */
-.booking-section {
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    margin-bottom: 2rem;
-    overflow: hidden;
-}
-
-.booking-header {
-    background: linear-gradient(135deg, var(--brand), var(--brand-hover));
-    color: white;
-    padding: 1.5rem;
-    text-align: center;
-}
-
-.booking-header h3 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.3rem;
-    font-weight: 600;
-}
-
-.booking-preview {
-    background: rgba(255,255,255,0.2);
-    border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    display: inline-block;
-}
-
-.booking-form {
-    padding: 1.5rem;
-}
+.booking-open { margin: var(--space-4) 0; }
 
 .btn-open-modal {
     width: 100%;
@@ -216,19 +163,6 @@
 .btn-open-modal:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(var(--brand-rgb), 0.3);
-}
-
-.quick-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.info-row {
-    display: flex;
-    align-items: center;
-    color: #6c757d;
-    font-size: 0.9rem;
 }
 
 /* No tickets state */

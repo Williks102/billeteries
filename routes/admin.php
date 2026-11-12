@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminController;
-use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\OrderController;
@@ -30,25 +29,6 @@ Route::patch('profile', [AdminController::class, 'updateProfile'])->name('profil
 Route::prefix('finances')->name('finances.')->group(function () {
     Route::patch('commissions/{commission}/status', [AdminController::class, 'updateCommissionStatus'])->name('commissions.update-status');
     Route::post('commissions/bulk-pay', [AdminController::class, 'bulkPayCommissions'])->name('commissions.bulk-pay');
-});
-
-// ===== Analytics =====
-Route::get('analytics', [AdminController::class, 'analytics'])->name('analytics');
-Route::prefix('analytics')->name('analytics.')->group(function () {
-    Route::get('data', [AdminController::class, 'analyticsData'])->name('data');
-    Route::post('filter', [AdminController::class, 'analyticsFilter'])->name('filter');
-    Route::get('export', [AdminController::class, 'analyticsExport'])->name('export');
-
-    Route::controller(AnalyticsController::class)->group(function () {
-        Route::get('realtime', 'realtime')->name('realtime');
-        Route::get('events/{event}', 'event')->name('events.show');
-        Route::get('promoters/{promoter}', 'promoter')->name('promoters.show');
-        Route::post('compare', 'compare')->name('compare');
-        Route::get('cart-abandonment', 'cartAbandonment')->name('cart-abandonment');
-        Route::get('sales-heatmap', 'salesHeatmap')->name('sales-heatmap');
-        Route::get('cohort', 'cohort')->name('cohort');
-        Route::get('predictions', 'predictions')->name('predictions');
-    });
 });
 
 // ===== Rapports =====
@@ -89,11 +69,8 @@ Route::get('intervention-dashboard', [EventController::class, 'interventionDashb
 Route::get('api/intervention-events', [EventController::class, 'getInterventionEvents'])->name('api.intervention-events');
 Route::controller(EventController::class)->prefix('events/{event}')->name('events.')->group(function () {
     Route::patch('status', 'updateStatus')->name('update-status');
-    Route::get('manage-tickets', 'manageTickets')->name('manage-tickets');
-    Route::post('store-tickets', 'storeTickets')->name('store-tickets');
     Route::post('quick-publish', 'quickPublish')->name('quick-publish');
     Route::post('quick-unpublish', 'quickUnpublish')->name('quick-unpublish');
-    Route::get('audit-history', 'auditHistory')->name('audit-history');
     Route::post('restore-promoter-control', 'restorePromoterControl')->name('restore-promoter-control');
 });
 Route::resource('events', EventController::class);

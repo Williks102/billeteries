@@ -101,66 +101,6 @@ class TicketVerificationController extends Controller
     }
 
     /**
-     * Vue publique - LECTURE SEULE
-     * Affiche uniquement la validité sans informations sensibles
-     * Route: GET /verify-ticket/{ticketCode}
-     */
-    public function publicVerify($ticketCode)
-    {
-        Log::info('Vérification publique (vue limitée)', [
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
-
-        try {
-            $ticket = Ticket::where('ticket_code', strtoupper(trim($ticketCode)))
-                ->with(['ticketType.event'])
-                ->first();
-
-            if (!$ticket) {
-                return view('tickets.public-verify', [
-                    'ticket' => null,
-                    'error' => 'Billet non trouvé',
-                    'ticket_code' => $ticketCode
-                ]);
-            }
-
-            // Informations publiques limitées (sans données personnelles)
-            $publicInfo = [
-                'is_valid' => $ticket->status === 'sold' || $ticket->status === 'used',
-                'status' => $ticket->status,
-                'status_message' => $this->getPublicStatusMessage($ticket),
-                'event' => [
-                    'title' => $ticket->ticketType->event->title,
-                    'date' => $ticket->ticketType->event->event_date->format('d/m/Y'),
-                    'time' => $ticket->ticketType->event->event_time->format('H:i'),
-                    'venue' => $ticket->ticketType->event->venue ?? 'Lieu à définir',
-                    'address' => $ticket->ticketType->event->address ?? null,
-                    'location' => $ticket->ticketType->event->venue ?? 'Lieu à définir',
-                    'category' => $ticket->ticketType->event->category->name ?? null
-                ],
-                'ticket_type' => $ticket->ticketType->name,
-                // PAS d'informations personnelles ici
-            ];
-
-            return view('tickets.public-verify', [
-                'ticket' => $ticket,
-                'info' => $publicInfo,
-                'error' => null
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Erreur vérification publique limitée (' . get_class($e) . ')');
-            
-            return view('tickets.public-verify', [
-                'ticket' => null,
-                'error' => 'Erreur lors de la vérification',
-                'ticket_code' => $ticketCode
-            ]);
-        }
-    }
-
-    /**
      * Vue authentifiée - CONTRÔLE COMPLET
      * Pour les promoteurs/admins avec actions de scan
      * Route: GET /scanner/verify/{ticketCode}
@@ -613,20 +553,6 @@ class TicketVerificationController extends Controller
             'cancelled' => 'Billet annulé',
             'available' => 'Billet disponible (non vendu)',
             default => 'Statut inconnu: ' . $ticket->status
-        };
-    }
-
-    /**
-     * Message de statut pour vue publique (limité)
-     */
-    private function getPublicStatusMessage($ticket)
-    {
-        return match($ticket->status) {
-            'sold' => 'Billet valide',
-            'used' => 'Billet utilisé',
-            'cancelled' => 'Billet annulé',
-            'available' => 'Billet non vendu',
-            default => 'Statut: ' . $ticket->status
         };
     }
 

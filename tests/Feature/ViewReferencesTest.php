@@ -16,15 +16,6 @@ use Tests\TestCase;
 class ViewReferencesTest extends TestCase
 {
     private const KNOWN_MISSING = [
-        'admin.events.audit-history',
-        'admin.events.manage-hybrid',
-        'admin.events.manage-tickets',
-        'events.category',
-        'events.location',
-        'events.recommendations',
-        'events.search',
-        'events.trending',
-        'tickets.public-verify',
     ];
 
     public function test_every_view_called_by_a_controller_exists(): void

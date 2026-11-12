@@ -1,0 +1,60 @@
+# Passation du projet Billetterie
+
+Document de reprise pour démarrer une nouvelle conversation sans relire l'ancienne (la relecture d'un long historique coûte du quota). Il ne contient **aucun secret** : seulement des noms de variables. À lire avec `docs/agents/decisions.md` (décisions du propriétaire, source de vérité) et `docs/agents/BOARD.md` (journal des missions).
+
+## 1. Le projet en deux phrases
+Billetterie en ligne pour la Côte d'Ivoire : Laravel 12, PHP 8.3, vues Blade et Bootstrap 5.3. Rôles : acheteur, promoteur (organisateur), admin. Dépôt `williks102/billeteries`, public. Démo sur Render (Docker, offre gratuite) avec une base TiDB Cloud (compatible MySQL, TLS). Guide de déploiement : `docs/deploiement-render.md`.
+
+## 2. Le propriétaire et la façon de travailler
+- Français, réponses **concises**, travaille **depuis un téléphone** (renvoie des captures d'écran : elles ont révélé les défauts les plus réels). Premier projet « vibe code » : expliquer simplement, sans jargon inutile.
+- **Un chantier à la fois**, une branche `claude/<mission>` et une PR par mission. **Il relit et fusionne lui-même les PR** ; on ne commite jamais sur `main`.
+- Il accepte les recommandations par défaut (« ok pour tes recommandations ») : ne poser une question que pour une vraie décision.
+- **Quota limité** : il a déjà atteint la limite d'usage. Préférer des lots serrés, regrouper les corrections, ne lancer la relecture indépendante que sur les lots sensibles (argent, stock, sécurité, données personnelles).
+- **Pas de GitHub Actions** (compte bloqué par la facturation) : les contrôles sont locaux : `composer run check` et le hook `.githooks/pre-push`.
+
+## 3. Règles du dépôt (à respecter)
+- Contrôle avant toute PR : `composer run check` (**pas** `composer check`) puis `php artisan route:list`. Il enchaîne `test:routes`, `test:payments`, `test:stats`, `test:deploy`. État connu : tout vert (236 + 250 + 268 + 54 tests sur la dernière branche, 200 routes).
+- **Aucun secret dans le dépôt** (public) : ni mot de passe, ni clé d'application, ni adresse de base, ni e-mail personnel. Les secrets vont dans les variables d'environnement de Render. Les variables attendues sont listées dans `.env.example` et `render.yaml` (les valeurs sensibles sont `sync: false`).
+- Convention de routes « resource » : `RoutingConventionsTest`, `ViewReferencesTest` (`KNOWN_MISSING` est vide : il ne doit pas regrossir), `DeadCodeRemovalTest` (chaque route pointe vers une méthode existante, chaque `route('nom')` des vues existe).
+- Aucune mention « frais de service » dans les vues (`NoServiceFeeTest`). Les frais de service sont supprimés : seule la **commission** (6 % par défaut, `payments.default_commission_rate`) rémunère la plateforme.
+- Mobile d'abord (390 px), cibles tactiles ≥ 44 px, champs ≥ 16 px, aucun défilement horizontal, couleurs et espacements par les jetons de `public/css/charte.css`.
+- Les vues n'ont ni requête ni calcul : les chiffres viennent des services `app/Services/Stats/*` (garde-fous par tests).
+- Pas de force-push (refusé par l'environnement) : fusionner `main` dans la branche et résoudre les conflits (presque toujours dans `docs/agents/BOARD.md` ou `composer.json` : garder les deux côtés). Les PR se fusionnent avec « Squash and merge » quand une branche a un commit intermédiaire.
+- Les copies de travail isolées des agents vivent sous `.claude/worktrees/` (ignoré par git).
+
+## 4. Équipe d'agents (`.claude/agents/`, skills dans `.claude/skills/`)
+`architecte`, `securite`, `paiements-stock`, `qa-tests`, `ui-design`, `devops-hygiene`, `relecteur`. Tous sur Sonnet sauf `relecteur` (Opus, plus coûteux). Protocole éprouvé : un développeur (souvent `paiements-stock` pour le backend, `ui-design` pour les vues) → vérification personnelle du chef de projet (tests, routes, absence de fichiers parasites, fusion propre avec `main`) → relecture indépendante (jamais par l'auteur ; lecture seule ; fautes volontaires dans une copie jetable) → corrections regroupées en un passage → PR avec un tableau « avant / après » et les limites écrites honnêtement. Les agents poussent à chaque état vert pour ne rien perdre si le quota coupe : `SendMessage` reprend un agent interrompu.
+
+## 5. Architecture et comportement métier essentiels
+**Paiement** : manuel (virement, Mobile Money, espèces), confirmé par l'admin via `OrderPaymentService::confirmPayment` (seul chemin vers `paid` : verrou, idempotence, billets `sold`, QR après commit). PaiementPro est supprimé. Commandes `pending` avec réservation (48 h connecté, 24 h invité, configurable). Transitions : `Order::STATUS_TRANSITIONS`.
+**Commandes gratuites** (total serveur = 0) : confirmées automatiquement (référence `GRATUIT`, aucune commission), sans choix de paiement. Plafonds dédiés par IP (empreinte HMAC), e-mail, compte et événement : variables `FREE_ORDERS_*`, `FREE_TICKETS_*`. Limite connue : e-mail non vérifié.
+**Stock** : réservation avec `lockForUpdate`, plafonds de commandes en attente par acheteur, IP et événement, preuve de session invité (`guest_token`). Une vente exige un événement publié et non passé (`TicketType::eventAcceptsSales`). Le checkout crée les lignes `tickets` à la réservation (pas de pré-génération).
+**QR** : généré en local (bacon-qr-code + GD, data-URI en base), visible **seulement après paiement confirmé**. `php artisan tickets:generate-qr` rattrape les commandes déjà payées.
+**Mode démo** : `DEMO_AUTO_CONFIRM_PAYMENTS=true` **et** `DEMO_MODE_ACKNOWLEDGED=true` (les deux, sinon ignoré en production) confirment les commandes automatiquement avec un bandeau « MODE DÉMO ». À retirer après la démo. `DEMO_SEED=true` crée le compte admin au premier démarrage (puis le remettre à `false`).
+**Création d'événement** : formulaire unique (`events/_form.blade.php`), `StoreEventRequest`, `CreateEventAction`, `PublishEventAction` + `Event::publicationChecklist()` (publier exige : billet valide, date future, période de vente cohérente, **image**). « Publier » incomplet → brouillon + liste des manques. Fin de vente par défaut = début de l'événement ; changer la date recale les fins de vente (`RealignSalePeriodsAction`). L'admin crée pour un promoteur choisi ; duplication via `DuplicateEventAction` (copie toujours en brouillon, ventes à zéro).
+**Statistiques** : source unique `app/Services/Stats/*` + `app/Support/Stats/DatePeriod` (mois civil par défaut, fuseau Africa/Abidjan, fin incluse) + composants `x-stat-card` / `x-stat-grid` / `x-period-filter`. Définitions : revenu plateforme = commission ; revenu promoteur = net des commandes payées ; billet vendu = `sold` + `used` d'une commande payée ; « net à recevoir » = solde toutes dates (pas un flux) ; valeurs non calculables = « — ». Admin, promoteur, acheteur, public et exports sont migrés ; les exports CSV passent par `CsvExport` et `CsvSafe::cell` (anti-injection de formules). Jeu de test de référence : `tests/Concerns/StatsFixture.php`.
+**Interface** : `public/css/charte.css` (jetons, espaces, `.action-bar`, badges d'état, barres de navigation). Police Inter embarquée. Barre de navigation unifiée sur les 4 layouts.
+
+## 6. État au moment de la passation
+- Tout est fusionné dans `main` **sauf la PR #38** (création d'événement partie 2 : création par l'admin et duplication) : le propriétaire doit la fusionner. La branche est à jour avec `main` et tout est vert.
+- En attente d'une réponse du propriétaire : (a) chantier **CSP** : lancer l'étape d'observation maintenant (option A) ou le garder pour « avant production » (option B) ; (b) passer le `relecteur` sur Sonnet pour économiser le quota (garder Opus pour les lots sensibles).
+
+## 7. À faire, dans l'ordre recommandé
+**Avant la mise en production** (hébergement définitif à choisir par le propriétaire) :
+1. **Vérification d'e-mail** (ou captcha) : inscriptions et surtout billets gratuits.
+2. **Journal d'activité** (qui a confirmé un paiement, remboursé, changé un prix ou un statut) : la table `event_audit_logs` et son modèle existent déjà, volontairement conservés.
+3. **CSP stricte** : la politique actuelle autorise `'unsafe-inline'` pour les scripts (26 vues avec un bloc `<script>`, 91 attributs `onclick`/équivalents dans 32 vues, 51 vues avec `<style>`). Plan : jeton (nonce) par page + mode « rapport seulement », déplacer le JavaScript dans des fichiers, héberger jQuery et Chart.js, puis activer ; les styles en dernier.
+4. **Test sur la vraie base MySQL** : `composer run test:mysql` sur une base jetable dont le nom finit par `_test` (concurrence sur les derniers billets, plafonds, verrous). Tout a tourné sous SQLite jusqu'ici.
+5. **Réglages de production** : `APP_ENV=production`, `APP_DEBUG=false`, **nouvelle** `APP_KEY` (celle de la démo a transité en clair dans une conversation : à régénérer), `SESSION_SECURE_COOKIE=true`, `TRUSTED_PROXIES` à définir selon l'hébergeur et à tester avec un en-tête `X-Forwarded-For` falsifié (le plafond par IP en dépend ; derrière un CDN il bloquerait tout le monde).
+6. **Images persistantes** : le disque de Render est éphémère (images et avatars perdus à chaque déploiement). Prévoir un stockage durable (bucket compatible S3, ou disque persistant de l'hébergeur définitif).
+7. **Contenu juridique** : CGU, mentions légales, politique de remboursement et d'annulation à fournir par le propriétaire (placeholder `[À COMPLÉTER PAR L'ORGANISATEUR…]`).
+
+**Autres chantiers** : barre de navigation en bas sur mobile ; messages de validation en français (les formulaires affichent des clés brutes `validation.required`) ; mobile pour les écrans non vus (listes admin, formulaires longs).
+
+**Petites dettes connues** : `maatwebsite/excel` reste dans `composer.json` sans usage ; commandes Artisan `DiagnoseTicketsCommand` et `ProjectCleanupCommand` utilisent une relation inexistante (`orderTickets`) ; routes vers des méthodes absentes (favoris acheteur, extras de catégories admin, `cart.extend.timer`, `cart.status`, `admin.categories.export`) listées dans `DeadCodeRemovalTest` ; vue d'authentification qui appelle `verification.resend` (route absente) ; l'admin ne peut pas modifier les billets après la création d'un événement et son formulaire d'édition (617 lignes) n'est pas refondu ; prix décimal du formulaire promoteur converti en 0 ; sauvegarde de la base (`mysqldump` absent de l'image, mot de passe en argument) ; `OPTIMIZE TABLE` refusé par TiDB ; calculateur de gains de commission inutilisé (testé par `DefaultCommissionRateTest`) ; `layouts/acheteurii.blade.php` non référencé ; cloche de notifications retirée du promoteur (aucune fonction derrière) ; fil d'Ariane promoteur affiche « Dashboard » partout.
+
+## 8. Pour démarrer la prochaine conversation
+1. Lire ce fichier, `docs/agents/decisions.md` et les dernières lignes de `docs/agents/BOARD.md`.
+2. `git fetch` puis partir de `origin/main` pour toute nouvelle branche `claude/<mission>`.
+3. Demander au propriétaire la décision en attente (§6) et s'il a fusionné la #38.
+4. Pour chaque mission : développeur → `composer run check` + `php artisan route:list` → relecture si lot sensible → PR avec limites honnêtes → le propriétaire fusionne.

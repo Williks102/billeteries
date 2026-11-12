@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Promoteur;
 
+use App\Http\Controllers\Admin\Concerns\ResolvesStatsPeriod;
 use App\Http\Controllers\Controller;
+use App\Services\Stats\PromoterStats;
+use App\Services\Stats\Scope;
+use App\Services\Stats\TicketStats;
 use App\Models\Ticket;
 use App\Models\Event;
 use Illuminate\Http\Request;
@@ -12,6 +16,13 @@ use Carbon\Carbon;
 
 class ScannerController extends Controller
 {
+    use ResolvesStatsPeriod;
+
+    public function __construct(
+        private readonly TicketStats $tickets,
+        private readonly PromoterStats $promoterStats,
+    ) {}
+
     /**
      * Page principale du scanner QR
      */
@@ -157,87 +168,34 @@ class ScannerController extends Controller
     }
 
     /**
-     * Statistiques du scanner
+     * Statistiques d'utilisation des billets du promoteur connecté.
+     * Vendu = sold + used d'une commande payée de la période ; taux d'utilisation = scannés / vendus.
      */
-    public function stats()
+    public function stats(Request $request)
     {
-        $promoteurId = Auth::id();
-        
-        // Statistiques générales - CORRIGÉ
-        $totalScans = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                $query->where('promoter_id', $promoteurId);
-            })
-            ->where('status', 'used')
-            ->count();
+        $period = $this->statsPeriod($request, 'promoteur.scanner.stats');
+        $promoterId = (int) Auth::id();
+        $scope = Scope::promoter($promoterId);
 
-        $todayScans = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                $query->where('promoter_id', $promoteurId);
-            })
-            ->where('status', 'used')
-            ->whereDate('updated_at', today())
-            ->count();
+        $summary = [
+            'sold' => $this->tickets->sold($scope, $period),
+            'scanned' => $this->tickets->scanned($scope, $period),
+            'usage_rate' => $this->tickets->usageRate($scope, $period),
+        ];
 
-        $weekScans = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                $query->where('promoter_id', $promoteurId);
-            })
-            ->where('status', 'used')
-            ->where('updated_at', '>=', now()->subDays(7))
-            ->count();
+        $usage = $this->promoterStats->usageByEvent($promoterId, $period);
+        $eventStats = Event::where('promoter_id', $promoterId)->orderBy('title')->get(['id', 'title'])
+            ->map(fn ($event) => [
+                'title' => $event->title,
+                'sold' => $usage[$event->id]['sold'] ?? 0,
+                'scanned' => $usage[$event->id]['scanned'] ?? 0,
+                'usage_rate' => $usage[$event->id]['usage_rate'] ?? null,
+            ])
+            ->sortByDesc('sold')->values();
 
-        $monthScans = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                $query->where('promoter_id', $promoteurId);
-            })
-            ->where('status', 'used')
-            ->where('updated_at', '>=', now()->subMonth())
-            ->count();
-
-        // Statistiques par événement
-        $eventStats = Event::where('promoter_id', $promoteurId)
-            ->with(['ticketTypes.tickets'])
-            ->get()
-            ->map(function($event) {
-                $allTickets = $event->ticketTypes->flatMap->tickets;
-                $totalTickets = $allTickets->count();
-                $usedTickets = $allTickets->where('status', 'used')->count();
-                $soldTickets = $allTickets->where('status', 'sold')->count();
-                
-                return [
-                    'event' => $event,
-                    'total_tickets' => $totalTickets,
-                    'used_tickets' => $usedTickets,
-                    'sold_tickets' => $soldTickets,
-                    'unused_sold' => $soldTickets, // Vendus mais pas encore utilisés
-                    'usage_rate' => $soldTickets > 0 ? round(($usedTickets / $soldTickets) * 100, 1) : 0
-                ];
-            })
-            ->sortByDesc('total_tickets');
-
-        // Graphique des scans par jour (7 derniers jours) - CORRIGÉ
-        $dailyScans = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            $count = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                    $query->where('promoter_id', $promoteurId);
-                })
-                ->where('status', 'used')
-                ->whereDate('updated_at', $date)
-                ->count();
-                
-            $dailyScans[] = [
-                'date' => $date->format('d/m'),
-                'count' => $count
-            ];
-        }
-
-        return view('promoteur.scanner.stats', compact(
-            'totalScans',
-            'todayScans', 
-            'weekScans',
-            'monthScans',
-            'eventStats',
-            'dailyScans'
-        ));
+        return view('promoteur.scanner.stats', compact('period', 'summary', 'eventStats'));
     }
+
 
     /**
      * Scans récents

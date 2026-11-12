@@ -118,101 +118,50 @@ class Event extends Model
         return $this->event_date < now()->toDateString();
     }
 
-    /**
- * Méthodes existantes mais améliorées pour éviter les erreurs
- */
-public function totalRevenue()
-{
-    try {
-        return $this->orders()
-            ->where('payment_status', 'paid')
-            ->sum('total_amount') ?? 0;
-    } catch (\Exception $e) {
-        \Log::error('Erreur calcul revenue pour event ' . $this->id . ': ' . $e->getMessage());
-        return 0;
-    }
-}
+    /*
+     * Statistiques : délèguent aux services App\Services\Stats (définitions uniques, voir docs/agents/decisions.md).
+     * Signatures publiques conservées (appelées par les vues admin).
+     */
 
-public function getTicketsSoldCount()
-{
-    try {
-        return $this->tickets()
-            ->whereIn('status', ['sold', 'used'])
-            ->count() ?? 0;
-    } catch (\Exception $e) {
-        \Log::error('Erreur calcul tickets vendus pour event ' . $this->id . ': ' . $e->getMessage());
-        return 0;
+    /** Ventes (GMV, hors frais) de l'événement, toutes dates : somme des lignes des commandes payées. */
+    public function totalRevenue()
+    {
+        return app(\App\Services\Stats\SalesStats::class)->gmv(\App\Services\Stats\Scope::event($this->id), \App\Support\Stats\DatePeriod::all());
     }
-}
 
-   
+    /** Billets vendus = sold + used d'une commande payée. */
+    public function getTicketsSoldCount()
+    {
+        return app(\App\Services\Stats\TicketStats::class)->sold(\App\Services\Stats\Scope::event($this->id));
+    }
+
+    /** Places disponibles = capacité - vendus (les réservations non payées restent disponibles). */
     public function availableTicketsCount()
     {
-        return $this->totalTicketsAvailable() - $this->totalTicketsSold();
+        return app(\App\Services\Stats\TicketStats::class)->available(\App\Services\Stats\Scope::event($this->id)) ?? 0;
     }
 
+    /** Commandes PAYÉES de l'événement. */
     public function getOrdersCount()
-{
-    try {
-        return $this->orders()
-            ->where('payment_status', 'paid')
-            ->count() ?? 0;
-    } catch (\Exception $e) {
-        \Log::error('Erreur calcul commandes pour event ' . $this->id . ': ' . $e->getMessage());
-        return 0;
+    {
+        return app(\App\Services\Stats\SalesStats::class)->paidOrdersCount(\App\Services\Stats\Scope::event($this->id), \App\Support\Stats\DatePeriod::all());
     }
-}
+
+    /** Capacité = somme des quantités mises en vente. */
     public function totalTicketsAvailable()
-{
-    try {
-        return $this->ticketTypes()
-            ->sum('quantity_available') ?? 0;
-    } catch (\Exception $e) {
-        \Log::error('Erreur calcul tickets disponibles pour event ' . $this->id . ': ' . $e->getMessage());
-        return 0;
+    {
+        return app(\App\Services\Stats\TicketStats::class)->capacity(\App\Services\Stats\Scope::event($this->id)) ?? 0;
     }
-}
 
-    
-public function getProgressPercentage()
-{
-    try {
-        $total = $this->totalTicketsAvailable();
-        $sold = $this->getTicketsSoldCount();
-        
-        return $total > 0 ? round(($sold / $total) * 100, 2) : 0;
-    } catch (\Exception $e) {
-        \Log::error('Erreur calcul pourcentage pour event ' . $this->id . ': ' . $e->getMessage());
-        return 0;
+    /** Taux de remplissage (%) = vendus / capacité, 1 décimale (0 sans capacité). */
+    public function getProgressPercentage()
+    {
+        return app(\App\Services\Stats\TicketStats::class)->fillRate(\App\Services\Stats\Scope::event($this->id)) ?? 0;
     }
-}
-    /**
- * Méthode manquante : getCommissionEarned()
- */
-public function getCommissionEarned()
-{
-    try {
-        // ✅ OPTION 1: Via les commandes liées à cet événement
-        return \App\Models\Commission::whereHas('order', function($query) {
-                $query->where('event_id', $this->id);
-            })
-            ->where('status', 'paid')
-            ->sum('commission_amount') ?? 0;
-            
-    } catch (\Exception $e) {
-        \Log::error('Erreur calcul commission pour event ' . $this->id . ': ' . $e->getMessage());
-        
-        // ✅ OPTION 2: Fallback - Calcul basé sur le total des commandes
-        try {
-            $totalRevenue = $this->totalRevenue();
-            $commissionRate = 0.05; // 5% par défaut, ajustez selon vos règles
-            return $totalRevenue * $commissionRate;
-            
-        } catch (\Exception $e2) {
-            return 0;
-        }
-    }
-}
 
-    
+    /** Commission de la plateforme sur les commandes payées de l'événement, toutes dates. */
+    public function getCommissionEarned()
+    {
+        return app(\App\Services\Stats\CommissionStats::class)->platformRevenue(\App\Services\Stats\Scope::event($this->id), \App\Support\Stats\DatePeriod::all());
+    }
 }

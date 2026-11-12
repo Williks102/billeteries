@@ -57,6 +57,21 @@ class CurrencyHelper
     }
 
     /**
+     * Formate un taux en pourcentage, une décimale, virgule française ; « — » quand il n'est pas calculable (null).
+     *
+     * @param float|int|null $rate
+     * @return string (ex: "4,1 %")
+     */
+    public static function formatPercent($rate)
+    {
+        if (is_null($rate)) {
+            return '—';
+        }
+
+        return number_format((float) $rate, 1, ',', self::NBSP) . self::NBSP . '%';
+    }
+
+    /**
      * Calcule un pourcentage d'un montant
      * 
      * @param int $amount

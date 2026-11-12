@@ -185,7 +185,7 @@ use Illuminate\Support\Facades\Storage;
                     <div class="col-md-6">
                         <div class="mb-2">
                             <i class="fas fa-tag me-2"></i>
-                            {{ $event->category->name }}
+                            {{ $event->category?->name ?? "Sans catégorie" }}
                         </div>
                         <div class="mb-2">
                             <i class="fas fa-clock me-2"></i>
@@ -198,7 +198,7 @@ use Illuminate\Support\Facades\Storage;
             <div class="col-lg-4 text-lg-end">
                 <div class="d-flex flex-column gap-2">
                    @if($event->status === 'draft')
-    @if($event->ticketTypes->where('is_active', true)->count() > 0)
+    @if($stats['has_active_tickets'])
         <form action="{{ route('promoteur.events.publish', $event) }}" method="POST" class="d-inline">
             @csrf
             <button type="submit" class="btn btn-success btn-lg" 
@@ -232,45 +232,17 @@ use Illuminate\Support\Facades\Storage;
 <div class="row">
     <!-- Contenu principal -->
     <div class="col-lg-8">
-        <!-- Statistiques principales -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <div class="progress-circle" style="background: linear-gradient(135deg, var(--brand), var(--brand-hover));">
-                        {{ number_format(($stats['tickets_sold'] / max($event->totalTicketsAvailable(), 1)) * 100, 0) }}%
-                    </div>
-                    <h5 style="color: var(--brand);">{{ $stats['tickets_sold'] }}</h5>
-                    <p class="text-muted mb-0">Billets vendus</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <div class="progress-circle" style="background: linear-gradient(135deg, #28a745, #20c997);">
-                        <i class="fas fa-euro-sign"></i>
-                    </div>
-                    <h5 class="text-success">{{ number_format($stats['total_revenue']) }} F</h5>
-                    <p class="text-muted mb-0">Revenus</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <div class="progress-circle" style="background: linear-gradient(135deg, #007bff, #0056b3);">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                    <h5 class="text-primary">{{ $stats['orders_count'] }}</h5>
-                    <p class="text-muted mb-0">Commandes</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <div class="progress-circle" style="background: linear-gradient(135deg, #6c757d, #495057);">
-                        {{ $event->totalTicketsAvailable() - $stats['tickets_sold'] }}
-                    </div>
-                    <h5 class="text-secondary">Restants</h5>
-                    <p class="text-muted mb-0">Billets</p>
-                </div>
-            </div>
-        </div>
+        <!-- Statistiques principales (cumul depuis la création) -->
+        <x-stat-grid label="Chiffres de l'événement" class="mb-4">
+            <x-stat-card label="Billets vendus" :value="$stats['sold']" hint="Payés ou utilisés" />
+            <x-stat-card label="Remplissage (instantané)" unit="%" :value="$stats['fill_rate']" :hint="'Capacité : '.$stats['capacity'].' places'" />
+            <x-stat-card label="Réservés" :value="$stats['reserved']" hint="En attente de paiement, pas vendus" />
+            <x-stat-card label="Places disponibles" :value="$stats['available']" hint="Capacité moins billets vendus" />
+            <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$stats['gmv']" hint="Commandes payées, toutes dates" />
+            <x-stat-card label="Commandes payées" :value="$stats['orders_paid']" />
+            <x-stat-card label="Net à recevoir (total, toutes dates)" unit="FCFA" :value="$stats['pending_payout']" hint="Solde dû, indépendant de toute période" />
+            <x-stat-card label="Versé" unit="FCFA" :value="$stats['paid_out']" hint="Déjà versé pour cet événement" />
+        </x-stat-grid>
         
         <!-- Description -->
         <div class="info-card">
@@ -307,14 +279,11 @@ use Illuminate\Support\Facades\Storage;
                             <p class="text-muted small mb-0">{{ $ticketType->description }}</p>
                         </div>
                         <div class="col-md-2">
-                            <strong style="color: var(--brand);">{{ number_format($ticketType->price) }} F</strong>
+                            <strong style="color: var(--brand);">{{ \App\Helpers\CurrencyHelper::formatFCFA($ticketType->price) }}</strong>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center">
-                                <div class="fw-bold">{{ $ticketType->quantity_sold }} / {{ $ticketType->quantity_available }}</div>
-                                <div class="progress mt-1" style="height: 6px;">
-                                    <div class="progress-bar" style="background: var(--brand); width: {{ ($ticketType->quantity_sold / max($ticketType->quantity_available, 1)) * 100 }}%"></div>
-                                </div>
+                                <div class="fw-bold">{{ $stats['sold_by_type'][$ticketType->id] ?? 0 }} / {{ $ticketType->quantity_available }} vendus</div>
                             </div>
                         </div>
                         <div class="col-md-3 text-end">
@@ -336,18 +305,6 @@ use Illuminate\Support\Facades\Storage;
             @endforelse
         </div>
         
-        <!-- Graphique des ventes -->
-        @if($stats['tickets_sold'] > 0)
-        <div class="info-card">
-            <h5 class="mb-3">
-                <i class="fas fa-chart-line me-2" style="color: var(--brand);"></i>
-                Évolution des Ventes
-            </h5>
-            <div class="chart-container">
-                <canvas id="salesChart"></canvas>
-            </div>
-        </div>
-        @endif
     </div>
     
     <!-- Sidebar -->
@@ -417,7 +374,7 @@ use Illuminate\Support\Facades\Storage;
 </div>
 
 <!-- Commandes récentes -->
-@if($recentOrders && $recentOrders->count() > 0)
+@if($recentOrders->isNotEmpty())
 <div class="orders-table mt-4">
     <div class="table-header">
         <h6 class="mb-0">
@@ -426,7 +383,7 @@ use Illuminate\Support\Facades\Storage;
         </h6>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover mb-0 table-cards">
             <thead class="table-light">
                 <tr>
                     <th>Client</th>
@@ -434,22 +391,16 @@ use Illuminate\Support\Facades\Storage;
                     <th>Billets</th>
                     <th>Montant</th>
                     <th>Date</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($recentOrders as $order)
                 <tr>
-                    <td>{{ $order->user->name }}</td>
-                    <td>{{ $order->billing_email }}</td>
-                    <td>{{ $order->orderItems->sum('quantity') }}</td>
-                    <td class="fw-bold" style="color: var(--brand);">{{ number_format($order->total_amount) }} F</td>
-                    <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
-                    <td>
-                        <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-black">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                    </td>
+                    <td data-label="Client">{{ $order->user?->name ?? $order->billing_email }}</td>
+                    <td data-label="Email">{{ \App\Helpers\PrivacyHelper::maskEmail($order->billing_email) }}</td>
+                    <td data-label="Billets">{{ $order->tickets_quantity }}</td>
+                    <td data-label="Montant" class="fw-bold" style="color: var(--brand);">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</td>
+                    <td data-label="Date">{{ $order->created_at->format('d/m/Y H:i') }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -460,7 +411,6 @@ use Illuminate\Support\Facades\Storage;
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     function publishEvent() {
         if (confirm('Êtes-vous sûr de vouloir publier cet événement ? Il sera visible par le public.')) {
@@ -485,47 +435,5 @@ use Illuminate\Support\Facades\Storage;
             });
         }
     }
-    
-    // Graphique des ventes (si des données existent)
-    @if($stats['tickets_sold'] > 0)
-    document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        
-        // Données simulées - à remplacer par de vraies données
-        const salesData = {
-            labels: ['Il y a 7j', 'Il y a 6j', 'Il y a 5j', 'Il y a 4j', 'Il y a 3j', 'Il y a 2j', 'Hier'],
-            datasets: [{
-                label: 'Billets vendus',
-                data: [2, 5, 8, 12, 15, 18, {{ $stats['tickets_sold'] }}],
-                borderColor: '#C2410C',
-                backgroundColor: 'rgba(194, 65, 12, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        };
-        
-        new Chart(ctx, {
-            type: 'line',
-            data: salesData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        }
-                    }
-                }
-            }
-        });
-    });
-    @endif
 </script>
 @endpush

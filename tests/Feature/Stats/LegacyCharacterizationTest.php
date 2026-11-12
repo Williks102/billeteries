@@ -8,7 +8,6 @@ use App\Http\Controllers\Promoteur\ReportsController;
 use App\Http\Controllers\Promoteur\ScannerController;
 use App\Models\Event;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\Concerns\StatsFixture;
@@ -20,6 +19,7 @@ use Tests\TestCase;
  * App\Services\Stats, prouvée dans Sales/Ticket/Commission/OrderStatsTest) et la raison de l'écart.
  * Aux lots L3 (admin), L4 (promoteur) et L5 (acheteur/public), l'écran est branché sur les services et
  * l'assertion correspondante doit être retournée vers la valeur CIBLE (ne PAS les supprimer).
+ * L4 FAIT : les écrans promoteur (dashboard, rapports, scanner, événement) sont retournés vers la cible.
  * L3 FAIT : le dashboard admin (test_admin_dashboard_now_shows_target_values_...) est retourné vers la cible.
  *
  * Aucun contrôleur n'est modifié par ce lot. Les contrôleurs sont appelés directement et la vue renvoyée est
@@ -60,67 +60,73 @@ class LegacyCharacterizationTest extends TestCase
         $this->assertSame(4, $month['orders_paid']);
     }
 
-    public function test_promoter_report_revenue_is_inflated_by_the_join_on_order_items(): void
+    /**
+     * L4 : rapport promoteur branché sur PromoterStats. Ce test, qui figeait les valeurs FAUSSES (JOIN order_items
+     * + SUM(orders.total_amount) : 50 000, panier 16 667, billets 4, commissions tous statuts 3 300), est retourné
+     * vers la CIBLE. Il ne doit plus jamais repasser « faux ».
+     */
+    public function test_promoter_report_now_shows_target_values_instead_of_the_duplicating_join(): void
     {
-        $stats = $this->reportsMainStats(self::P);
+        $this->actingAs(User::find(self::P));
+        $stats = app(ReportsController::class)->index(Request::create('/promoteur/reports'))->getData()['stats'];
 
-        // total_revenue = SUM(orders.total_amount) après JOIN order_items : O4 (2 lignes) comptée 2 fois => 50 000.
-        // CIBLE : 35 000 (GMV de P en novembre = O1 20 000 + O4 15 000 + O5 0).
-        $this->assertSame(50000, (int) $stats['total_revenue']);
-        $this->assertSame(50000, (int) $stats['period_revenue']);
-        // Panier moyen = revenu gonflé / commandes : 50 000 / 3. CIBLE : 11 667 (35 000 / 3).
-        $this->assertEqualsWithDelta(16666.67, $stats['average_order'], 0.01);
-        // Billets vendus = tickets.status = 'sold' créés dans la période : le billet scanné (used) disparaît => 4.
-        // CIBLE : 5 (sold + used d'une commande payée : O1 2, O4 2, O5 1).
-        $this->assertSame(4, $stats['tickets_sold']);
-        // total_orders (DISTINCT) est correct : 3 (identique à la cible).
-        $this->assertSame(3, $stats['total_orders']);
-        // total_commissions = commissions de TOUS statuts créées dans la période (pending, paid, held, cancelled) :
-        // 1 200 + 600 (held) + 900 + 600 (cancelled) = 3 300. CIBLE : 2 100 (O1 1 200 + O4 900 ; held à part, cancelled exclue).
-        $this->assertSame(3300, (int) $stats['total_commissions']);
+        // Ventes = GMV de novembre : O1 20 000 + O4 15 000 (2 lignes, comptée UNE fois) + O5 0 = 35 000 (avant : 50 000).
+        $this->assertSame(35000, $stats['gmv']);
+        // Panier moyen = 35 000 / 3 = 11 667 (avant : 16 667 = 50 000 / 3).
+        $this->assertSame(11667, $stats['average_basket']);
+        // Billets vendus = sold + used d'une commande payée : O1 2, O4 2, O5 1 = 5 (avant : 4, `sold` seulement).
+        $this->assertSame(5, $stats['tickets_sold']);
+        $this->assertSame(3, $stats['orders_paid']);
+        // Commission = commandes payées seulement (pending + paid) : O1 1 200 + O4 900 = 2 100 (avant : 3 300, tous statuts).
+        $this->assertSame(2100, $stats['platform_revenue']);
     }
 
-    public function test_promoter_dashboard_counts_every_non_available_ticket_and_only_paid_out_net(): void
+    /**
+     * L4 : dashboard promoteur branché sur PromoterStats (avant : 10 billets « != available », revenu = net `paid` seul 14 100).
+     */
+    public function test_promoter_dashboard_now_shows_target_values(): void
     {
         $this->actingAs(User::find(self::P));
 
-        $stats = app(PromoteurController::class)->dashboard()->getData()['stats'];
+        $summary = app(PromoteurController::class)->dashboard(Request::create('/promoteur/dashboard', 'GET', ['period' => 'all']))->getData()['summary'];
 
-        // total_tickets_sold = status != 'available' : sold + used + reserved + cancelled = 10.
-        // CIBLE : 7 (sold + used de commandes payées de P, toutes périodes : O1 2, O4 2, O5 1, O8 1, O9 1).
-        $this->assertSame(10, $stats['total_tickets_sold']);
-        // total_revenue = net des commissions au statut `paid` seulement : 14 100 (O4). CIBLE : 47 000
-        // (net de toutes les commandes payées : 14 100 versé + 32 900 en attente de versement).
-        $this->assertSame(14100, (int) $stats['total_revenue']);
+        // Billets vendus (toutes dates) = sold + used de commandes payées de P : O1 2, O4 2, O5 1, O8 1, O9 1 = 7 (avant : 10).
+        $this->assertSame(7, $summary['tickets_sold']);
+        // Revenu net de P = 47 000 : à recevoir 32 900 (O1 18 800 + O8 9 400 + O9 4 700) + versé 14 100 (O4). Avant : 14 100.
+        $this->assertSame(47000, $summary['promoter_net']);
+        $this->assertSame(32900, $summary['pending_payout']);
+        $this->assertSame(14100, $summary['paid_out']);
     }
 
     public function test_event_ticket_counts_and_commission_earned(): void
     {
         $event = Event::find(1);
 
-        // getTicketsSoldCount = sold + used SANS vérifier la commande : 7 (= cible ici, aucun billet vendu hors commande payée).
         $this->assertSame(7, $event->getTicketsSoldCount());
-        // quantity_sold (page publique, admin événements) inclut la réservation non payée O2 : 8. CIBLE : 7 (décision :
-        // réservations non payées = disponibles, remplissage = billets vendus seulement).
+        // quantity_sold reste un COMPTEUR DE STOCK (réservation O2 incluse : 8) ; il n'est plus affiché côté promoteur
+        // (écrans : 7 vendus = sold + used d'une commande payée, voir PromoteurScreensTest). Colonne inchangée.
         $this->assertSame(8, (int) $event->ticketTypes()->sum('quantity_sold'));
-        // getProgressPercentage : 7 / 170 arrondi à 2 décimales = 4.12. CIBLE : 4.1 (TicketStats::fillRate, 1 décimale).
-        $this->assertSame(4.12, (float) $event->getProgressPercentage());
-        // getCommissionEarned = commissions au statut `paid` : 900 (O4 seule). CIBLE : 3 000 (CommissionStats::platformRevenue
-        // de E, commandes payées pending + paid : 1 200 + 900 + 600 + 300).
-        $this->assertSame(900, (int) $event->getCommissionEarned());
+        // L4 : getProgressPercentage délègue à TicketStats::fillRate (7 / 170 = 4,1 ; avant : 4.12).
+        $this->assertSame(4.1, (float) $event->getProgressPercentage());
+        // L4 : getCommissionEarned délègue à CommissionStats::platformRevenue de E, commandes payées pending + paid,
+        // toutes dates : 1 200 + 900 + 600 + 300 = 3 000 (avant : 900, statut `paid` seul).
+        $this->assertSame(3000, (int) $event->getCommissionEarned());
     }
 
-    public function test_usage_rate_excludes_used_tickets_from_the_denominator(): void
+    /**
+     * L4 : taux d'utilisation du scanner = scannés / (sold + used d'une commande payée). Toute la période, événement E :
+     * 1 scanné / 7 vendus (O1 2 dont 1 used, O4 2, O5 1, O8 1, O9 1) = 14,3 % (avant : 1 / 6 = 16,7 %, `used` hors dénominateur).
+     */
+    public function test_usage_rate_now_counts_used_tickets_in_the_denominator(): void
     {
         $this->actingAs(User::find(self::P));
 
-        $row = app(ScannerController::class)->stats()->getData()['eventStats']->first();
+        $data = app(ScannerController::class)->stats(Request::create('/promoteur/scanner/stats', 'GET', ['period' => 'all']))->getData();
 
-        // sold_tickets compte `sold` SANS `used` : 6 ; usage_rate = 1 / 6 = 16.7 %.
-        // CIBLE : 1 / 7 = 14.3 % (TicketStats::usageRate : scannés / (sold + used)).
-        $this->assertSame(6, $row['sold_tickets']);
-        $this->assertSame(1, $row['used_tickets']);
-        $this->assertSame(16.7, (float) $row['usage_rate']);
+        $this->assertSame(7, $data['summary']['sold']);
+        $this->assertSame(1, $data['summary']['scanned']);
+        $this->assertSame(14.3, (float) $data['summary']['usage_rate']);
+        $this->assertSame(14.3, (float) $data['eventStats']->first()['usage_rate']);
     }
 
     public function test_admin_tickets_index_now_shows_target_values(): void
@@ -135,18 +141,5 @@ class LegacyCharacterizationTest extends TestCase
         $this->assertSame(6, $data['summary']['sold']);
         $this->assertSame(1, $data['summary']['scanned']);
         $this->assertSame(16.7, $data['summary']['usage_rate']);
-    }
-
-    private function reportsMainStats(int $promoterId): array
-    {
-        $method = new \ReflectionMethod(ReportsController::class, 'getMainStats');
-        $method->setAccessible(true);
-
-        return $method->invoke(
-            app(ReportsController::class),
-            $promoterId,
-            Carbon::parse('2026-11-01 00:00:00'),
-            Carbon::parse('2026-11-30 23:59:59'),
-        );
     }
 }

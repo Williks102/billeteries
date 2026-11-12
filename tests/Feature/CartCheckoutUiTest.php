@@ -396,4 +396,69 @@ class CartCheckoutUiTest extends TestCase
             $this->assertDoesNotMatchRegularExpression('/<img(?![^>]*\bsrc=)[^>]*>/i', $res->getContent());
         }
     }
+
+    // ===== Correctifs de la relecture et de l'audit de sécurité =====
+
+    public function test_existing_event_image_is_displayed_from_the_public_disk(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Support\Facades\Storage::disk('public')->put('events/ok.jpg', 'x');
+        $cart = $this->cart();
+        $cart['k1']['event_image'] = 'events/ok.jpg';
+
+        $this->withSession(['cart' => $cart])->get(route('cart.show'))->assertOk()->assertSee('events/ok.jpg', false);
+        $this->actingAs(User::find(1))->withSession(['cart' => $cart])->get(route('checkout.show'))
+            ->assertOk()->assertSee('events/ok.jpg', false);
+    }
+
+    public function test_adding_to_the_cart_drops_an_abandoned_direct_booking(): void
+    {
+        $abandoned = $this->ticketType(10);
+        $wanted = $this->ticketType(10);
+        $this->post(route('checkout.direct'), ['event_id' => 1, 'tickets' => [$abandoned->id => 3]])->assertRedirect();
+        $this->assertNotNull(session('direct_booking'));
+
+        $this->postJson(route('cart.add'), ['ticket_type_id' => $wanted->id, 'quantity' => 1]);
+
+        $this->assertNull(session('direct_booking'), 'la réservation directe abandonnée ne doit pas masquer le panier');
+        $res = $this->get(route('checkout.guest.show'))->assertOk();
+        $this->assertStringContainsString(\App\Helpers\CurrencyHelper::formatFCFA(1000), $res->getContent());
+        $this->assertStringNotContainsString(\App\Helpers\CurrencyHelper::formatFCFA(3000), $res->getContent());
+    }
+
+    public function test_direct_booking_refuses_tickets_of_unpublished_cancelled_or_past_events(): void
+    {
+        $type = $this->ticketType(10);
+
+        foreach ([['status' => 'draft'], ['status' => 'cancelled'], ['event_date' => now()->subDay()->toDateString()]] as $change) {
+            DB::table('events')->where('id', 1)->update(array_merge(['status' => 'published', 'event_date' => now()->addWeek()->toDateString()], $change));
+            $this->post(route('checkout.direct'), ['event_id' => 1, 'tickets' => [$type->id => 1]])->assertSessionHas('error');
+            $this->assertNull(session('direct_booking'), json_encode($change));
+            $this->assertSame(0, $type->fresh()->quantity_sold);
+        }
+
+        DB::table('events')->where('id', 1)->update(['status' => 'published', 'event_date' => now()->addWeek()->toDateString()]);
+        $this->post(route('checkout.direct'), ['event_id' => 1, 'tickets' => [$type->id => 1]])->assertRedirect(route('checkout.guest.show'));
+    }
+
+    public function test_stock_reservation_itself_refuses_a_ticket_of_an_unpublished_event(): void
+    {
+        $type = $this->ticketType(10);
+        DB::table('events')->where('id', 1)->update(['status' => 'draft']);
+
+        $this->assertFalse($type->fresh()->reserveTickets(1), 'défense en profondeur : le verrou de stock revérifie la vente');
+        $this->assertSame(0, $type->fresh()->quantity_sold);
+    }
+
+    public function test_direct_booking_rejects_a_ticket_of_another_event_and_invalid_quantities(): void
+    {
+        $type = $this->ticketType(10);
+        DB::table('events')->insert(['id' => 2, 'promoter_id' => 1, 'title' => 'Autre', 'status' => 'published', 'event_date' => now()->addWeek()->toDateString()]);
+
+        $this->post(route('checkout.direct'), ['event_id' => 2, 'tickets' => [$type->id => 1]])->assertSessionHas('error');
+        $this->post(route('checkout.direct'), ['event_id' => 1, 'tickets' => [$type->id => -3]])->assertSessionHasErrors();
+        $this->post(route('checkout.direct'), ['event_id' => 1, 'tickets' => [$type->id => 9999]])->assertSessionHasErrors();
+        $this->assertNull(session('direct_booking'));
+    }
 }
+

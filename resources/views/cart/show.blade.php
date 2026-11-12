@@ -34,8 +34,8 @@
                 <div id="cart-lines">
                     @foreach($cart as $key => $item)
                         <article class="cart-line" data-cart-key="{{ $key }}" data-unit-price="{{ (int) $item['unit_price'] }}" data-name="{{ $item['ticket_name'] }}">
-                            @if(!empty($item['event_image']) && \Illuminate\Support\Facades\Storage::exists($item['event_image']))
-                                <img src="{{ Storage::url($item['event_image']) }}" alt="" class="order-line__img" width="56" height="56" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'order-line__img'}))">
+                            @if(!empty($item['event_image']) && \Illuminate\Support\Facades\Storage::disk('public')->exists($item['event_image']))
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($item['event_image']) }}" alt="" class="order-line__img" width="56" height="56" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'order-line__img'}))">
                             @else
                                 <span class="order-line__img" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
                             @endif

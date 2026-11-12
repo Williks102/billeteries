@@ -81,9 +81,23 @@ class TicketType extends Model
      */
     public function isAvailable()
     {
-        return $this->is_active && 
+        return $this->is_active &&
+               $this->eventAcceptsSales() &&
                $this->remainingTickets() > 0 &&
                now()->between($this->sale_start_date, $this->sale_end_date);
+    }
+
+    /**
+     * Un billet n'est vendable que pour un événement publié et pas encore passé (sécurité : un identifiant
+     * de billet deviné ne doit pas permettre de réserver du stock d'un brouillon, d'un événement annulé ou passé).
+     */
+    public function eventAcceptsSales(): bool
+    {
+        $event = $this->event;
+
+        return $event !== null
+            && $event->status === 'published'
+            && ($event->event_date === null || $event->event_date->toDateString() >= now()->toDateString());
     }
 
     public function isSaleActive()

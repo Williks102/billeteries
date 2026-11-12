@@ -324,16 +324,16 @@ use Illuminate\Support\Facades\Storage;
                     
                     <div class="row text-center">
                         <div class="col-6 mb-2">
-                            <div class="fw-bold text-primary">{{ $event->ticketTypes->count() }}</div>
+                            <div class="fw-bold text-primary">{{ $event->ticket_types_count }}</div>
                             <small class="text-muted">Types de billets</small>
                         </div>
                         <div class="col-6 mb-2">
-                            <div class="fw-bold text-success">{{ $event->getTicketsSoldCount() }}</div>
+                            <div class="fw-bold text-success">{{ $stats['sold'] }} / {{ $stats['capacity'] }}</div>
                             <small class="text-muted">Billets vendus</small>
                         </div>
                         <div class="col-12">
-                            <div class="fw-bold" style="color: var(--brand);">{{ number_format($event->totalRevenue()) }} F</div>
-                            <small class="text-muted">Revenus</small>
+                            <div class="fw-bold" style="color: var(--brand);">{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['gmv']) }}</div>
+                            <small class="text-muted">Ventes (total, hors frais)</small>
                         </div>
                     </div>
                 </div>

@@ -86,43 +86,12 @@ use Illuminate\Support\Facades\Storage;
         </div>
     @endif
 
-    <!-- Statistiques rapides -->
-    @if(isset($events) && $events->count() > 0)
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid var(--brand);">
-                    <div class="card-body">
-                        <h3 class="fw-bold" style="color: var(--brand);">{{ $events->total() ?? $events->count() }}</h3>
-                        <p class="text-muted mb-0">Total Événements</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid #28a745;">
-                    <div class="card-body">
-                        <h3 class="fw-bold text-success">{{ $events->where('status', 'published')->count() }}</h3>
-                        <p class="text-muted mb-0">Publiés</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid #ffc107;">
-                    <div class="card-body">
-                        <h3 class="fw-bold text-warning">{{ $events->where('status', 'draft')->count() }}</h3>
-                        <p class="text-muted mb-0">Brouillons</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid #17a2b8;">
-                    <div class="card-body">
-                        <h3 class="fw-bold text-info">{{ $events->where('event_date', '>=', now())->count() }}</h3>
-                        <p class="text-muted mb-0">À venir</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
+    <!-- Statistiques rapides (état actuel de tous mes événements, indépendant des filtres) -->
+    <x-stat-grid cols="3" label="Mes événements">
+        <x-stat-card label="Événements créés" :value="$counts['total']" />
+        <x-stat-card label="Événements publiés" :value="$counts['published']" />
+        <x-stat-card label="Brouillons" :value="$counts['draft']" />
+    </x-stat-grid>
 
     <!-- Filtres -->
     <div class="card filter-card mb-4">
@@ -173,7 +142,7 @@ use Illuminate\Support\Facades\Storage;
 
     <!-- Liste des événements -->
     <div class="row">
-        @if(isset($events) && $events->count() > 0)
+        @if(isset($events) && $events->isNotEmpty())
             @foreach($events as $event)
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="card event-card h-100">
@@ -207,20 +176,25 @@ use Illuminate\Support\Facades\Storage;
                                 {{ $event->category->name ?? 'Sans catégorie' }}
                             </p>
                             
-                            <!-- Statistiques de l'événement -->
+                            <!-- Statistiques de l'événement (cumul depuis la création) -->
+                            @php $fig = $eventStats[$event->id] ?? ['sold' => 0, 'capacity' => 0, 'fill_rate' => null, 'gmv' => 0]; @endphp
                             <div class="event-stats">
-                                <div class="row">
-                                    <div class="col-4 stat-item">
-                                        <div class="fw-bold text-primary">{{ $event->ticketTypes->count() }}</div>
-                                        <small class="text-muted">Billets</small>
+                                <div class="row g-2 text-center">
+                                    <div class="col-6 stat-item">
+                                        <div class="fw-bold text-primary">{{ $event->ticket_types_count }}</div>
+                                        <small class="text-muted">Types de billets</small>
                                     </div>
-                                    <div class="col-4 stat-item">
-                                        <div class="fw-bold text-success">{{ $event->getTicketsSoldCount() }}</div>
-                                        <small class="text-muted">Vendus</small>
+                                    <div class="col-6 stat-item">
+                                        <div class="fw-bold text-success">{{ $fig['sold'] }} / {{ $fig['capacity'] }}</div>
+                                        <small class="text-muted">Billets vendus</small>
                                     </div>
-                                    <div class="col-4 stat-item">
-                                        <div class="fw-bold" style="color: var(--brand);">{{ number_format($event->totalRevenue()) }}</div>
-                                        <small class="text-muted">FCFA</small>
+                                    <div class="col-6 stat-item">
+                                        <div class="fw-bold">{{ \App\Helpers\CurrencyHelper::formatPercent($fig['fill_rate']) }}</div>
+                                        <small class="text-muted">Taux de remplissage</small>
+                                    </div>
+                                    <div class="col-6 stat-item">
+                                        <div class="fw-bold" style="color: var(--brand);">{{ \App\Helpers\CurrencyHelper::formatFCFA($fig['gmv']) }}</div>
+                                        <small class="text-muted">Ventes (total)</small>
                                     </div>
                                 </div>
                             </div>

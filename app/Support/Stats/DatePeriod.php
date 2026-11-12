@@ -113,6 +113,23 @@ final class DatePeriod
         return self::preset($period, $now);
     }
 
+    /**
+     * Période précédente de MÊME durée, accolée au début de celle-ci (ex. 30 jours => les 30 jours d'avant).
+     * Null pour « Toute la période » (non bornée) : la croissance n'est alors pas calculable.
+     */
+    public function previous(): ?self
+    {
+        if (! $this->isBounded()) {
+            return null;
+        }
+
+        $days = (int) round($this->start->startOfDay()->diffInDays($this->end->startOfDay())) + 1;
+        $end = $this->start->subDay()->endOfDay();
+        $start = $end->subDays($days - 1)->startOfDay();
+
+        return new self('previous', $start, $end, 'Du '.$start->format('d/m/Y').' au '.$end->format('d/m/Y'));
+    }
+
     public function isBounded(): bool
     {
         return $this->start !== null && $this->end !== null;

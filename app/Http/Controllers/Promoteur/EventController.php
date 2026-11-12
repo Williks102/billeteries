@@ -7,12 +7,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\{Event, EventCategory};
+use App\Services\Stats\CommissionStats;
+use App\Services\Stats\PromoterStats;
+use App\Services\Stats\Scope;
+use App\Services\Stats\TicketStats;
+use App\Support\Stats\DatePeriod;
 use Carbon\Carbon;
 
 class EventController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly PromoterStats $promoterStats,
+        private readonly TicketStats $ticketStats,
+        private readonly CommissionStats $commissionStats,
+    ) {
         $this->middleware('auth');
         $this->middleware('promoteur');
     }
@@ -23,7 +31,7 @@ class EventController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Auth::user()->events()->with(['category', 'ticketTypes']);
+            $query = Auth::user()->events()->with('category')->withCount('ticketTypes');
             
             if ($request->filled('status')) {
                 $query->where('status', $request->status);
@@ -40,15 +48,22 @@ class EventController extends Controller
             $events = $query->latest()->paginate(12);
             $categories = EventCategory::all();
 
-            return view('promoteur.events.index', compact('events', 'categories'));
+            // Chiffres cumulés (toutes dates) de la page : 5 requêtes, jamais une par événement
+            $eventStats = $this->promoterStats->eventsFigures($events->pluck('id')->all());
+
+            $counts = $this->promoterStats->eventCounts((int) Auth::id(), DatePeriod::all());
+
+            return view('promoteur.events.index', compact('events', 'categories', 'eventStats', 'counts'));
             
         } catch (\Exception $e) {
             \Log::error('Erreur dans promoteur.events.index: ' . $e->getMessage());
             
             $events = collect();
             $categories = collect();
+            $eventStats = [];
+            $counts = ['total' => 0, 'published' => 0, 'draft' => 0, 'created' => 0];
             
-            return view('promoteur.events.index', compact('events', 'categories'))
+            return view('promoteur.events.index', compact('events', 'categories', 'eventStats', 'counts'))
                 ->with('error', 'Erreur lors du chargement des événements');
         }
     }
@@ -120,19 +135,25 @@ class EventController extends Controller
         try {
             abort_if($event->promoter_id !== Auth::id(), 403);
 
-            $event->load(['category', 'ticketTypes', 'orders.user']);
-            
-            $stats = [
-                'total_revenue' => $event->totalRevenue(),
-                'tickets_sold' => $event->getTicketsSoldCount(),
-                'tickets_available' => $event->totalTicketsAvailable(),
-                'orders_count' => $event->getOrdersCount(),
-                'progress_percentage' => $event->getProgressPercentage(),
+            $event->load(['category', 'ticketTypes']);
+
+            // Chiffres cumulés de l'événement (toutes dates) : mêmes définitions que le tableau de bord
+            $figures = $this->promoterStats->eventsFigures([$event->id])[$event->id];
+            $scope = Scope::event($event->id);
+            $all = DatePeriod::all();
+            $stats = $figures + [
+                'reserved' => $this->ticketStats->reserved($scope),
+                'available' => $this->ticketStats->available($scope),
+                'pending_payout' => $this->commissionStats->pendingPayout($scope, $all),
+                'paid_out' => $this->commissionStats->paidOut($scope, $all),
+                'sold_by_type' => $this->promoterStats->soldByTicketType($event->id),
+                'has_active_tickets' => $event->ticketTypes->contains('is_active', true),
             ];
 
             $recentOrders = $event->orders()
                 ->where('payment_status', 'paid')
                 ->with('user')
+                ->withSum('orderItems as tickets_quantity', 'quantity')
                 ->latest()
                 ->limit(10)
                 ->get();
@@ -156,7 +177,10 @@ class EventController extends Controller
         
         try {
             $categories = EventCategory::all();
-            return view('promoteur.events.edit', compact('event', 'categories'));
+            $stats = $this->promoterStats->eventsFigures([$event->id])[$event->id];
+            $event->loadCount('ticketTypes');
+
+            return view('promoteur.events.edit', compact('event', 'categories', 'stats'));
             
         } catch (\Exception $e) {
             \Log::error('Erreur lors de l\'affichage du formulaire d\'édition: ' . $e->getMessage());

@@ -6,7 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Actions\Events\CreateEventAction;
+use App\Actions\Events\PublishEventAction;
+use App\Http\Requests\StoreEventRequest;
+use App\Http\Requests\UpdateEventRequest;
 use App\Models\{Event, EventCategory};
+use App\Support\Events\EventFormDefaults;
+use App\Support\Events\SalePeriod;
 use App\Services\Stats\CommissionStats;
 use App\Services\Stats\PromoterStats;
 use App\Services\Stats\Scope;
@@ -69,62 +75,47 @@ class EventController extends Controller
     }
 
     /**
-     * Formulaire création événement
+     * Formulaire unique de création (événement + billets)
      */
     public function create()
     {
         $categories = EventCategory::all();
-        return view('promoteur.events.create', compact('categories'));
+        $defaults = EventFormDefaults::values();
+
+        return view('promoteur.events.create', compact('categories', 'defaults'));
     }
 
     /**
-     * Sauvegarde événement
+     * Sauvegarde événement + billets en une seule requête (brouillon, ou publication si la checklist le permet)
      */
-    public function store(Request $request)
+    public function store(StoreEventRequest $request, CreateEventAction $createEvent)
     {
-        $request->validate([
-            'title' => 'required', 
-            'description' => 'required',
-            'category_id' => 'required|exists:event_categories,id',
-            'venue' => 'required', 
-            'address' => 'required',
-            'event_date' => 'required|date|after:today',
-            'event_time' => 'required|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i|after:event_time',
-            'image' => 'nullable|image|max:2048',
-            'terms_conditions' => 'nullable|string',
-        ]);
-
         try {
-            $imagePath = $request->hasFile('image')
-                ? $request->file('image')->store('events', 'public')
-                : null;
+            $result = $createEvent->execute(
+                $request->eventData(),
+                $request->ticketsData(),
+                $request->file('image'),
+                (int) Auth::id(),
+                $request->wantsPublication()
+            );
+        } catch (\Throwable $e) {
+            \Log::error('Erreur création événement', ['exception' => get_class($e), 'message' => $e->getMessage()]);
 
-            $event = Event::create([
-                'promoter_id' => Auth::id(),
-                'category_id' => $request->category_id,
-                'title' => $request->title,
-                'description' => $request->description,
-                'venue' => $request->venue,
-                'address' => $request->address,
-                'event_date' => $request->event_date,
-                'event_time' => Carbon::createFromFormat('Y-m-d H:i', $request->event_date . ' ' . $request->event_time),
-                'end_time' => $request->end_time ? Carbon::createFromFormat('Y-m-d H:i', $request->event_date . ' ' . $request->end_time) : null,
-                'status' => 'draft',
-                'image' => $imagePath,
-                'terms_conditions' => $request->terms_conditions,
-            ]);
-
-            return redirect()->route('promoteur.events.tickets.index', $event)
-                ->with('success', 'Événement créé. Configurez les billets.');
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur création événement: ' . $e->getMessage());
-            
             return back()
                 ->withInput()
                 ->with('error', 'Erreur lors de la création de l\'événement');
         }
+
+        $redirect = redirect()->route('promoteur.events.show', $result->event);
+
+        if ($result->published) {
+            return $redirect->with('success', 'Événement créé et publié.');
+        }
+        if ($result->publicationRefused()) {
+            return $redirect->with('warning', 'Événement enregistré en brouillon, il n\'est pas publié : '.implode(' ', $result->checklist['blocking']));
+        }
+
+        return $redirect->with('success', 'Brouillon enregistré. Vérifiez la liste ci-dessous avant de publier.');
     }
 
     /**
@@ -149,6 +140,7 @@ class EventController extends Controller
                 'sold_by_type' => $this->promoterStats->soldByTicketType((int) Auth::id(), $event->id),
                 'has_active_tickets' => $event->ticketTypes->contains('is_active', true),
             ];
+            $checklist = $event->publicationChecklist();
 
             $recentOrders = $event->orders()
                 ->where('payment_status', 'paid')
@@ -158,7 +150,7 @@ class EventController extends Controller
                 ->limit(10)
                 ->get();
                 
-            return view('promoteur.events.show', compact('event', 'stats', 'recentOrders'));
+            return view('promoteur.events.show', compact('event', 'stats', 'recentOrders', 'checklist'));
             
         } catch (\Exception $e) {
             \Log::error('Erreur dans promoteur.events.show: ' . $e->getMessage());
@@ -191,48 +183,24 @@ class EventController extends Controller
     }
 
     /**
-     * Mettre à jour un événement existant
+     * Mettre à jour un événement existant (autorisation : UpdateEventRequest)
      */
-    public function update(Request $request, Event $event)
+    public function update(UpdateEventRequest $request, Event $event)
     {
-        abort_if($event->promoter_id !== Auth::id(), 403, 'Vous n\'êtes pas autorisé à modifier cet événement');
-
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category_id' => 'required|exists:event_categories,id',
-            'venue' => 'required|string|max:255',
-            'address' => 'required|string',
-            'event_date' => 'required|date',
-            'event_time' => 'required|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i|after:event_time',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'terms_conditions' => 'nullable|string',
-        ]);
-
         try {
-            $imagePath = $event->image;
-            
+            $data = $request->eventData();
+            $data['event_time'] = SalePeriod::eventStart($data['event_date'], $data['event_time']);
+            $data['end_time'] = ! empty($data['end_time']) ? SalePeriod::eventStart($data['event_date'], $data['end_time']) : null;
+
             if ($request->hasFile('image')) {
                 if ($event->image && Storage::disk('public')->exists($event->image)) {
                     Storage::disk('public')->delete($event->image);
                 }
-                
-                $imagePath = $request->file('image')->store('events', 'public');
+
+                $data['image'] = $request->file('image')->store('events', 'public');
             }
 
-            $event->update([
-                'category_id' => $request->category_id,
-                'title' => $request->title,
-                'description' => $request->description,
-                'venue' => $request->venue,
-                'address' => $request->address,
-                'event_date' => $request->event_date,
-                'event_time' => Carbon::createFromFormat('Y-m-d H:i', $request->event_date . ' ' . $request->event_time),
-                'end_time' => $request->end_time ? Carbon::createFromFormat('Y-m-d H:i', $request->event_date . ' ' . $request->end_time) : null,
-                'image' => $imagePath,
-                'terms_conditions' => $request->terms_conditions,
-            ]);
+            $event->update($data);
 
             return redirect()->route('promoteur.events.show', $event)
                 ->with('success', 'Événement mis à jour avec succès !');
@@ -281,15 +249,16 @@ class EventController extends Controller
     /**
      * Publier un événement
      */
-    public function publish(Event $event)
+    public function publish(Event $event, PublishEventAction $publishEvent)
     {
         abort_if($event->promoter_id !== Auth::id(), 403);
 
-        if ($event->ticketTypes()->where('is_active', true)->count() === 0) {
-            return back()->with('error', 'Ajoutez au moins un billet avant publication.');
+        $result = $publishEvent->execute($event);
+
+        if (! $result->checklist['can_publish']) {
+            return back()->with('error', 'Publication impossible : '.implode(' ', $result->checklist['blocking']));
         }
 
-        $event->update(['status' => 'published']);
         return back()->with('success', 'Événement publié.');
     }
 

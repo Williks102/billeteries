@@ -12,7 +12,7 @@
         $blocks = old('ticket_types');
         if (! is_array($blocks) || $blocks === []) {
             $blocks = [0 => [
-                'quantity_available' => 100, 'max_per_order' => 5,
+                'quantity_available' => 100, 'max_per_order' => 10,
                 'sale_start_date' => $today, 'sale_end_date' => $eventDate,
             ]];
         }
@@ -72,7 +72,7 @@
                 'prefix' => 'ticket_types[__INDEX__]',
                 'errKey' => '__none__.',
                 'uid' => 'tt-__INDEX__',
-                'values' => ['quantity_available' => 100, 'max_per_order' => 5, 'sale_start_date' => $today, 'sale_end_date' => $eventDate],
+                'values' => ['quantity_available' => 100, 'max_per_order' => 10, 'sale_start_date' => $today, 'sale_end_date' => $eventDate],
                 'event' => $event,
                 'isCreate' => true,
                 'minQuantity' => 1,

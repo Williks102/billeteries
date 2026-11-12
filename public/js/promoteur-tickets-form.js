@@ -60,7 +60,8 @@
     }
 
     function isPristine(block) {
-        return !block.querySelector('input[name$="[name]"], input[name="name"]').value && !field(block, 'price').value;
+        var name = block.querySelector('input[name$="[name]"], input[name="name"]').value;
+        return (!name || name === 'Standard') && !field(block, 'price').value;
     }
 
     function applyPreset(button) {
@@ -84,7 +85,7 @@
 
     form.addEventListener('click', function (e) {
         var remove = e.target.closest('[data-remove-block]');
-        if (remove && blocks().length > 1 && window.confirm('Supprimer ce type de billet ?')) {
+        if (remove && blocks().length > 1) {
             remove.closest('[data-ticket-block]').remove();
             renumber();
         }

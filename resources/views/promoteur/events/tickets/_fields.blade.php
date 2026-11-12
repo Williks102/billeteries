@@ -8,11 +8,14 @@
       $event    événement (date maximale de fin de vente)
       $isCreate bool : contraintes de dates côté navigateur (min = aujourd'hui)
       $minQuantity quantité minimale (billets déjà vendus en édition)
+      $inline   bool : formulaire unique de création d'événement (max par commande, dates de vente et description
+                dans un volet « Options du billet », dates facultatives : vides = vente ouverte maintenant, fermée au début de l'événement)
 --}}
 @php
     $field = fn (string $f) => $prefix === '' ? $f : $prefix.'['.$f.']';
     $eventDate = $event->event_date ? $event->event_date->format('Y-m-d') : '';
     $minQuantity = $minQuantity ?? 1;
+    $inline = $inline ?? false;
 @endphp
 <fieldset class="tt-block" data-ticket-block>
     <legend class="tt-block-title">
@@ -28,7 +31,7 @@
     <div class="row g-3">
         <div class="col-12 col-sm-6">
             <label class="form-label" for="{{ $uid }}-name">Nom du billet <span class="text-danger" aria-hidden="true">*</span></label>
-            <input type="text" id="{{ $uid }}-name" name="{{ $field('name') }}" required maxlength="255"
+            <input type="text" id="{{ $uid }}-name" name="{{ $field('name') }}" {{ $inline ? '' : 'required' }} maxlength="255"
                    value="{{ $values['name'] ?? '' }}" autocomplete="off" enterkeyhint="next"
                    class="form-control @error($errKey.'name') is-invalid @enderror"
                    placeholder="Ex : Standard, VIP, Early Bird"
@@ -40,7 +43,7 @@
 
         <div class="col-12 col-sm-6">
             <label class="form-label" for="{{ $uid }}-price">Prix (FCFA) <span class="text-danger" aria-hidden="true">*</span></label>
-            <input type="number" id="{{ $uid }}-price" name="{{ $field('price') }}" required min="0" step="1"
+            <input type="number" id="{{ $uid }}-price" name="{{ $field('price') }}" {{ $inline ? '' : 'required' }} min="0" step="1"
                    inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="next"
                    value="{{ $values['price'] ?? '' }}" data-field="price"
                    class="form-control @error($errKey.'price') is-invalid @enderror"
@@ -51,20 +54,9 @@
             @enderror
         </div>
 
-        <div class="col-12">
-            <label class="form-label" for="{{ $uid }}-description">Description <span class="text-muted small">(facultatif)</span></label>
-            <textarea id="{{ $uid }}-description" name="{{ $field('description') }}" rows="2" maxlength="500" autocomplete="off"
-                      class="form-control @error($errKey.'description') is-invalid @enderror"
-                      placeholder="Ce que comprend ce billet"
-                      @error($errKey.'description') aria-invalid="true" aria-describedby="{{ $uid }}-description-error" @enderror>{{ $values['description'] ?? '' }}</textarea>
-            @error($errKey.'description')
-                <div id="{{ $uid }}-description-error" class="invalid-feedback d-block" role="alert">{{ $message }}</div>
-            @enderror
-        </div>
-
         <div class="col-12 col-sm-6">
             <label class="form-label" for="{{ $uid }}-quantity">Quantité disponible <span class="text-danger" aria-hidden="true">*</span></label>
-            <input type="number" id="{{ $uid }}-quantity" name="{{ $field('quantity_available') }}" required min="{{ $minQuantity }}" step="1"
+            <input type="number" id="{{ $uid }}-quantity" name="{{ $field('quantity_available') }}" {{ $inline ? '' : 'required' }} min="{{ $minQuantity }}" step="1"
                    inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="next"
                    value="{{ $values['quantity_available'] ?? '' }}" data-field="quantity"
                    class="form-control @error($errKey.'quantity_available') is-invalid @enderror"
@@ -80,9 +72,15 @@
             @enderror
         </div>
 
+        @if ($inline)
+        <div class="col-12">
+        <details class="tt-adv" @if ($errors->has($errKey.'max_per_order') || $errors->has($errKey.'sale_start_date') || $errors->has($errKey.'sale_end_date') || $errors->has($errKey.'description')) open @endif>
+        <summary>Options du billet <span class="text-muted small">(max par commande, dates de vente, description)</span></summary>
+        <div class="row g-3 mt-0">
+        @endif
         <div class="col-12 col-sm-6">
-            <label class="form-label" for="{{ $uid }}-max">Maximum par commande <span class="text-danger" aria-hidden="true">*</span></label>
-            <input type="number" id="{{ $uid }}-max" name="{{ $field('max_per_order') }}" required min="1" max="20" step="1"
+            <label class="form-label" for="{{ $uid }}-max">Maximum par commande @unless ($inline)<span class="text-danger" aria-hidden="true">*</span>@endunless</label>
+            <input type="number" id="{{ $uid }}-max" name="{{ $field('max_per_order') }}" {{ $inline ? '' : 'required' }} min="1" max="20" step="1"
                    inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="next"
                    value="{{ $values['max_per_order'] ?? '' }}" data-field="max_per_order"
                    class="form-control @error($errKey.'max_per_order') is-invalid @enderror"
@@ -95,10 +93,10 @@
         </div>
 
         <div class="col-12 col-sm-6">
-            <label class="form-label" for="{{ $uid }}-start">Début de la vente <span class="text-danger" aria-hidden="true">*</span></label>
-            <input type="date" id="{{ $uid }}-start" name="{{ $field('sale_start_date') }}" required autocomplete="off"
+            <label class="form-label" for="{{ $uid }}-start">Début de la vente @if ($inline)<span class="text-muted small">(vide : maintenant)</span>@else<span class="text-danger" aria-hidden="true">*</span>@endif</label>
+            <input type="date" id="{{ $uid }}-start" name="{{ $field('sale_start_date') }}" {{ $inline ? '' : 'required' }} autocomplete="off"
                    value="{{ $values['sale_start_date'] ?? '' }}" data-field="start"
-                   @if ($isCreate) min="{{ now()->format('Y-m-d') }}" @endif
+                   @if ($isCreate && ! $inline) min="{{ now()->format('Y-m-d') }}" @endif
                    class="form-control @error($errKey.'sale_start_date') is-invalid @enderror"
                    @error($errKey.'sale_start_date') aria-invalid="true" aria-describedby="{{ $uid }}-start-error" @enderror>
             @error($errKey.'sale_start_date')
@@ -107,16 +105,32 @@
         </div>
 
         <div class="col-12 col-sm-6">
-            <label class="form-label" for="{{ $uid }}-end">Fin de la vente <span class="text-danger" aria-hidden="true">*</span></label>
-            <input type="date" id="{{ $uid }}-end" name="{{ $field('sale_end_date') }}" required autocomplete="off"
+            <label class="form-label" for="{{ $uid }}-end">Fin de la vente @if ($inline)<span class="text-muted small">(vide : début de l'événement)</span>@else<span class="text-danger" aria-hidden="true">*</span>@endif</label>
+            <input type="date" id="{{ $uid }}-end" name="{{ $field('sale_end_date') }}" {{ $inline ? '' : 'required' }} autocomplete="off"
                    value="{{ $values['sale_end_date'] ?? '' }}" data-field="end"
-                   @if ($isCreate && $eventDate !== '') max="{{ $eventDate }}" @endif
+                   @if ($isCreate && ! $inline && $eventDate !== '') max="{{ $eventDate }}" @endif
                    class="form-control @error($errKey.'sale_end_date') is-invalid @enderror"
                    @error($errKey.'sale_end_date') aria-invalid="true" aria-describedby="{{ $uid }}-end-error" @enderror>
             @error($errKey.'sale_end_date')
                 <div id="{{ $uid }}-end-error" class="invalid-feedback d-block" role="alert">{{ $message }}</div>
             @enderror
         </div>
+        <div class="col-12">
+            <label class="form-label" for="{{ $uid }}-description">Description <span class="text-muted small">(facultatif)</span></label>
+            <textarea id="{{ $uid }}-description" name="{{ $field('description') }}" rows="2" maxlength="500" autocomplete="off"
+                      class="form-control @error($errKey.'description') is-invalid @enderror"
+                      placeholder="Ce que comprend ce billet"
+                      @error($errKey.'description') aria-invalid="true" aria-describedby="{{ $uid }}-description-error" @enderror>{{ $values['description'] ?? '' }}</textarea>
+            @error($errKey.'description')
+                <div id="{{ $uid }}-description-error" class="invalid-feedback d-block" role="alert">{{ $message }}</div>
+            @enderror
+        </div>
+
+        @if ($inline)
+        </div>
+        </details>
+        </div>
+        @endif
     </div>
 
     <div class="tt-revenue" aria-live="polite">

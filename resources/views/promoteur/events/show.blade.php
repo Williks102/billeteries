@@ -197,21 +197,7 @@ use Illuminate\Support\Facades\Storage;
             
             <div class="col-lg-4 text-lg-end">
                 <div class="d-flex flex-column gap-2">
-                   @if($event->status === 'draft')
-    @if($stats['has_active_tickets'])
-        <form action="{{ route('promoteur.events.publish', $event) }}" method="POST" class="d-inline">
-            @csrf
-            <button type="submit" class="btn btn-success btn-lg" 
-                    onclick="return confirm('Êtes-vous sûr de vouloir publier cet événement ? Il sera visible par le public.')">
-                <i class="fas fa-paper-plane me-2"></i>Publier l'événement
-            </button>
-        </form>
-    @else
-        <a href="{{ route('promoteur.events.tickets.create', $event) }}" class="btn btn-warning btn-lg">
-            <i class="fas fa-exclamation-triangle me-2"></i>Configurer les billets d'abord
-        </a>
-    @endif
-@elseif($event->status === 'published')
+                   @if($event->status === 'published')
     <form action="{{ route('promoteur.events.unpublish', $event) }}" method="POST" class="d-inline">
         @csrf
         <button type="submit" class="btn btn-secondary btn-lg" 
@@ -227,6 +213,10 @@ use Illuminate\Support\Facades\Storage;
             </div>
         </div>
     </div>
+</div>
+
+<div class="container">
+    <x-promoteur.publication-checklist :checklist="$checklist" :event="$event" />
 </div>
 
 <div class="row">
@@ -410,30 +400,3 @@ use Illuminate\Support\Facades\Storage;
 @endif
 @endsection
 
-@push('scripts')
-<script>
-    function publishEvent() {
-        if (confirm('Êtes-vous sûr de vouloir publier cet événement ? Il sera visible par le public.')) {
-            fetch('{{ route("promoteur.events.publish", $event) }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Erreur lors de la publication : ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Une erreur est survenue lors de la publication.');
-            });
-        }
-    }
-</script>
-@endpush

@@ -139,7 +139,7 @@
                     <li class="breadcrumb-item">
                         <a href="{{ route('promoteur.events.index') }}" class="text-decoration-none">Événements</a>
                     </li>
-                    <li class="breadcrumb-item active">Créer un événement</li>
+                    <li class="breadcrumb-item active" aria-current="page">Créer un événement</li>
                 </ol>
             </nav>
             

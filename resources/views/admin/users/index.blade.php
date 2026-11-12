@@ -3,7 +3,7 @@
 @section('title', 'Gestion des Utilisateurs')
 
 @section('breadcrumb')
-<li class="breadcrumb-item active">Utilisateurs</li>
+<li class="breadcrumb-item active" aria-current="page">Utilisateurs</li>
 @endsection
 
 @section('content')

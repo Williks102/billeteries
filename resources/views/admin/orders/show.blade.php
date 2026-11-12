@@ -7,7 +7,7 @@
     <li class="breadcrumb-item">
         <a href="{{ route('admin.orders.index') }}">Commandes</a>
     </li>
-    <li class="breadcrumb-item active">Commande #{{ $order->order_number ?? $order->id }}</li>
+    <li class="breadcrumb-item active" aria-current="page">Commande #{{ $order->order_number ?? $order->id }}</li>
 @endsection
 
 @section('content')

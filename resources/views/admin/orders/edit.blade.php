@@ -5,7 +5,7 @@
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.orders.index') }}">Commandes</a></li>
     <li class="breadcrumb-item"><a href="{{ route('admin.orders.show', $order) }}">{{ $order->order_number }}</a></li>
-    <li class="breadcrumb-item active">Modifier</li>
+    <li class="breadcrumb-item active" aria-current="page">Modifier</li>
 @endsection
 
 @section('content')

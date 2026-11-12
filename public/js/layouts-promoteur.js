@@ -34,6 +34,14 @@
             }
         }
         
+        // Etat annoncé du bouton de menu (lecteurs d'écran)
+        function setToggleState(open) {
+            const btn = document.querySelector('.mobile-toggle');
+            if (!btn) return;
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+        }
+
         // Ouvrir sidebar mobile
         function openMobileSidebar() {
             const sidebar = document.getElementById('promoteurSidebar');
@@ -42,6 +50,7 @@
             sidebar.classList.add('mobile-visible');
             overlay.classList.add('active');
             document.body.style.overflow = 'hidden';
+            setToggleState(true);
         }
         
         // Fermer sidebar mobile
@@ -52,6 +61,7 @@
             sidebar.classList.remove('mobile-visible');
             overlay.classList.remove('active');
             document.body.style.overflow = '';
+            setToggleState(false);
         }
         
         // Toggle submenu

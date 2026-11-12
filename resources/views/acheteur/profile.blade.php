@@ -4,7 +4,7 @@
 @section('title', 'Mon Profil - ClicBillet CI')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active">Mon Profil</li>
+    <li class="breadcrumb-item active" aria-current="page">Mon Profil</li>
 @endsection
 
 @section('content')

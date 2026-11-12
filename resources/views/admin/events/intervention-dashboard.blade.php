@@ -4,7 +4,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.events.index') }}">Événements</a></li>
-    <li class="breadcrumb-item active">À surveiller</li>
+    <li class="breadcrumb-item active" aria-current="page">À surveiller</li>
 @endsection
 
 @section('content')

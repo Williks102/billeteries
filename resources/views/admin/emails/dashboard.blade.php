@@ -3,7 +3,7 @@
 @section('title', 'Emails')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active">Emails</li>
+    <li class="breadcrumb-item active" aria-current="page">Emails</li>
 @endsection
 
 @section('content')

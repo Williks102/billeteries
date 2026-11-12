@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
     <li class="breadcrumb-item">
         <a href="{{ route('acheteur.orders.index') }}">Mes Commandes</a>
     </li>
-    <li class="breadcrumb-item active">Commande #{{ $order->order_number ?? $order->id }}</li>
+    <li class="breadcrumb-item active" aria-current="page">Commande #{{ $order->order_number ?? $order->id }}</li>
 @endsection
 
 @section('content')

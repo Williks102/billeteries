@@ -6,7 +6,7 @@
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.users.index') }}">Utilisateurs</a></li>
     <li class="breadcrumb-item"><a href="{{ route('admin.users.show', $user) }}">{{ $user->name }}</a></li>
-    <li class="breadcrumb-item active">Modifier</li>
+    <li class="breadcrumb-item active" aria-current="page">Modifier</li>
 @endsection
 
 @section('content')

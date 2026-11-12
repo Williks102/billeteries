@@ -4,7 +4,7 @@
 @section('title', 'Gestion des commandes - ClicBillet CI')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active">Commandes</li>
+    <li class="breadcrumb-item active" aria-current="page">Commandes</li>
 @endsection
 
 @section('content')

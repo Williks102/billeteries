@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
                             <li class="breadcrumb-item"><a href="{{ route('promoteur.dashboard') }}">Dashboard</a></li>
                             <li class="breadcrumb-item"><a href="{{ route('promoteur.events.index') }}">Événements</a></li>
                             <li class="breadcrumb-item"><a href="{{ route('promoteur.events.show', $event) }}">{{ $event->title }}</a></li>
-                            <li class="breadcrumb-item active">Billets</li>
+                            <li class="breadcrumb-item active" aria-current="page">Billets</li>
                         </ol>
                     </nav>
                     

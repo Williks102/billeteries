@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
 
     <style>
+        /* Barre du haut, menu latéral, tiroir mobile, gouttières et jetons : public/css/charte.css (section « Barres de navigation »).
+           Ici seulement ce qui est propre à l'espace promoteur. */
         :root {
             --primary-orange: var(--brand);
             --primary-dark: var(--brand-hover);
@@ -22,9 +24,6 @@
             --black-secondary: #2c3338;
             --gray-light: #f0f0f1;
             --gray-medium: #8c8f94;
-            --sidebar-width: 280px;
-            --sidebar-mini-width: 60px;
-            --topbar-height: 60px;
         }
 
         * {
@@ -38,127 +37,24 @@
             color: #3c434a;
         }
 
-        /* ========================= LAYOUT STRUCTURE ========================= */
         .promoteur-wrapper {
             display: flex;
             min-height: 100vh;
         }
 
-        /* ========================= SIDEBAR ========================= */
+        /* ========================= SIDEBAR (propre au promoteur) ========================= */
         .promoteur-sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--black-primary);
-            color: #c3c4c7;
-            transition: transform 0.3s ease-in-out;
-            z-index: 1050;
-            overflow-x: hidden;
-            overflow-y: auto;
-            transform: translateX(0);
+            transition: width var(--motion) ease-in-out, transform var(--motion) ease-in-out;
         }
 
-        /* Sidebar Header */
-        .sidebar-header {
-            padding: 0;
-            height: var(--topbar-height);
-            background: var(--black-secondary);
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid #3c3f44;
-        }
-
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            color: #ffffff;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 1.1rem;
-            flex: 1;
-            transition: padding 0.2s ease-in-out;
-        }
-
-        .sidebar-brand i {
-            color: var(--primary-orange);
-            margin-right: 10px;
-            font-size: 1.3rem;
-        }
-
-        .sidebar-brand-text {
-            transition: opacity 0.2s ease-in-out;
-        }
-
-        .sidebar-toggle {
-            background: none;
-            border: none;
-            color: #c3c4c7;
-            padding: 10px;
-            margin-right: 10px;
-            cursor: pointer;
-            transition: transform 0.2s ease-in-out;
-        }
-
-        .sidebar-toggle:hover {
-            color: white;
-            transform: scale(1.1);
-        }
-
-        /* Menu Items */
         .sidebar-menu {
-            list-style: none;
-            padding: 10px 0;
-            margin: 0;
-        }
-
-        .sidebar-menu > li {
-            margin: 0;
-        }
-
-        .sidebar-menu > li > a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: #c3c4c7;
-            text-decoration: none;
-            transition: all 0.2s ease-in-out;
-            border-left: 3px solid transparent;
-            position: relative;
-        }
-
-        .sidebar-menu > li > a:hover {
-            color: #ffffff;
-            background: rgba(255,255,255,0.05);
-            border-left-color: var(--primary-orange);
-        }
-
-        .sidebar-menu > li > a.active {
-            color: var(--primary-orange);
-            background: rgba(var(--brand-rgb), 0.1);
-            border-left-color: var(--primary-orange);
-        }
-
-        .sidebar-menu > li > a i {
-            width: 20px;
-            text-align: center;
-            margin-right: 12px;
-            font-size: 1.1rem;
-        }
-
-        .sidebar-menu-text {
-            transition: opacity 0.2s ease-in-out;
+            padding: var(--space-2) 0;
         }
 
         .menu-chevron {
-            font-size: 0.8rem;
-            transition: transform 0.2s ease-in-out;
-            margin-left: auto;
+            transition: transform var(--motion) ease-in-out;
         }
 
-        /* Submenu */
         .submenu-parent.open > a .menu-chevron {
             transform: rotate(180deg);
         }
@@ -170,296 +66,60 @@
             background: #23282d;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease-in-out;
+            transition: max-height var(--motion) ease-in-out;
         }
 
         .sidebar-submenu.open {
             max-height: 500px;
         }
 
-        .sidebar-submenu li a {
-            display: block;
-            padding: 10px 20px 10px 52px;
-            color: #a7aaad;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: all 0.2s ease-in-out;
-            border-left: 3px solid transparent;
-        }
-
-        .sidebar-submenu li a:hover {
-            color: #ffffff;
-            background: rgba(255,255,255,0.05);
-            border-left-color: var(--primary-orange);
-        }
-
-        .sidebar-submenu li a.active {
-            color: var(--primary-orange);
-            background: rgba(var(--brand-rgb), 0.1);
-            border-left-color: var(--primary-orange);
-        }
-
-        /* ========================= TOPBAR ========================= */
-        .promoteur-topbar {
-            position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
-            right: 0;
-            height: var(--topbar-height);
-            background: #ffffff;
-            border-bottom: 1px solid #dcdcde;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            transition: left 0.3s ease-in-out;
-            z-index: 1040;
-        }
-
-        .topbar-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .mobile-toggle {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            color: var(--black-primary);
-            cursor: pointer;
-            padding: 8px;
-        }
-
-        .mobile-toggle:hover {
-            color: var(--primary-orange);
-        }
-
-        .topbar-breadcrumb {
-            display: flex;
-            align-items: center;
-            color: var(--gray-medium);
-            font-size: 0.9rem;
-        }
-
-        .topbar-breadcrumb i {
-            margin: 0 8px;
-            font-size: 0.8rem;
-        }
-
-        .topbar-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .notifications {
-            position: relative;
-            cursor: pointer;
-            padding: 8px;
-            color: var(--gray-medium);
-            transition: color 0.2s;
-        }
-
-        .notifications:hover {
-            color: var(--primary-orange);
-        }
-
-        .notification-count {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: var(--primary-orange);
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 6px;
-            transition: background 0.2s;
-        }
-
-        .user-menu:hover {
-            background: var(--gray-light);
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--primary-orange);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-
-        .user-info {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .user-name {
-            font-weight: 500;
-            font-size: 0.9rem;
-            color: var(--black-primary);
-            line-height: 1.2;
-        }
-
-        .user-role {
-            font-size: 0.8rem;
-            color: var(--gray-medium);
-            line-height: 1.2;
-        }
-
-        /* ========================= MAIN CONTENT ========================= */
+        /* ========================= CONTENU ========================= */
         .promoteur-main {
             margin-left: var(--sidebar-width);
             flex: 1;
             min-width: 0; /* un enfant flex ne doit pas dépasser la fenêtre (sinon défilement horizontal à 390 px) */
             max-width: 100%;
             min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
+            transition: margin-left var(--motion) ease-in-out;
         }
 
         .promoteur-content {
-            margin-top: var(--topbar-height);
-            padding: var(--gutter);
             min-height: calc(100vh - var(--topbar-height));
         }
 
-        /* ========================= MOBILE OVERLAY ========================= */
-        .mobile-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1040;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
+        /* Menu réduit : le contenu et la barre suivent la largeur réelle du menu (jeton de la charte) */
+        .promoteur-sidebar.mini ~ .promoteur-main { margin-left: var(--sidebar-mini-width); }
+        .promoteur-sidebar.mini ~ .promoteur-main .promoteur-topbar { left: var(--sidebar-mini-width); }
 
-        .mobile-overlay.active {
-            display: block;
-            opacity: 1;
-        }
-
-        /* ========================= RESPONSIVE DESIGN ========================= */
-        
-        /* Tablettes */
         @media (max-width: 1024px) {
-            .promoteur-sidebar {
-                width: var(--sidebar-mini-width);
-            }
-            
-            .sidebar-brand-text,
-            .sidebar-menu-text,
-            .menu-chevron {
-                opacity: 0;
-            }
-            
-            .sidebar-submenu {
-                display: none;
-            }
-            
-            .promoteur-topbar {
-                left: var(--sidebar-mini-width);
-            }
-            
-            .promoteur-main {
-                margin-left: var(--sidebar-mini-width);
-            }
+            .promoteur-main { margin-left: var(--sidebar-mini-width); }
         }
 
-        /* Mobile - Corrections importantes */
         @media (max-width: 768px) {
-            /* Sidebar cachée par défaut sur mobile */
             .promoteur-sidebar {
                 transform: translateX(-100%);
-                width: var(--sidebar-width);
             }
-            
-            /* Sidebar visible quand active */
+
             .promoteur-sidebar.mobile-visible {
                 transform: translateX(0);
+                box-shadow: 0 0 20px rgba(0,0,0,0.5);
             }
-            
-            /* Topbar occupe toute la largeur */
-            .promoteur-topbar {
-                left: 0;
-            }
-            
-            /* Main content sans marge */
-            .promoteur-main {
+
+            .promoteur-main,
+            .promoteur-sidebar.mini ~ .promoteur-main {
                 margin-left: 0;
             }
-            
-            /* Bouton mobile toggle visible */
-            .mobile-toggle {
-                display: block;
+
+            .promoteur-sidebar.mini ~ .promoteur-main .promoteur-topbar {
+                left: 0;
             }
-            
-            /* Masquer breadcrumb sur mobile */
-            .topbar-breadcrumb {
-                display: none;
-            }
-            
-            /* Masquer info utilisateur sur très petits écrans */
-            .user-info {
-                display: none;
-            }
-            
-            /* Padding réduit sur mobile */
-            .promoteur-content {
-                padding: var(--gutter);
-            }
-            
-            .promoteur-topbar {
-                padding: 0 15px;
-            }
-            
-            /* Menu full width sur mobile */
-            .sidebar-brand-text,
-            .sidebar-menu-text,
-            .menu-chevron {
-                opacity: 1;
-            }
-            
+
+            /* Le tiroir est plein : sous-menus ouverts visibles */
             .sidebar-submenu {
                 display: block;
             }
-        }
 
-        /* Très petits écrans */
-        @media (max-width: 480px) {
-            .promoteur-content {
-                padding: var(--gutter);
-            }
-            
-            .promoteur-topbar {
-                padding: 0 10px;
-            }
-            
-            .topbar-right .notifications {
+            .topbar-breadcrumb {
                 display: none;
             }
         }
@@ -489,7 +149,6 @@
             color: white;
         }
 
-        /* Cards */
         .dashboard-card {
             background: white;
             border-radius: 8px;
@@ -507,47 +166,13 @@
             border-top: 3px solid var(--primary-orange);
         }
 
-        /* Alerts */
         .alert {
             border-radius: 6px;
             border-width: 1px;
             margin-bottom: 20px;
         }
 
-        /* Tooltip pour mini sidebar */
-        .sidebar-tooltip {
-            position: absolute;
-            left: calc(100% + 10px);
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--black-secondary);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 1060;
-        }
-
-        .sidebar-tooltip::before {
-            content: '';
-            position: absolute;
-            right: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            border: 5px solid transparent;
-            border-right-color: var(--black-secondary);
-        }
-
-        @media (min-width: 1025px) {
-            .promoteur-sidebar.mini .sidebar-menu > li > a:hover .sidebar-tooltip {
-                opacity: 1;
-            }
-        }
-        
+        .topbar-user-menu { gap: var(--space-2); padding: 0 var(--space-2); min-width: auto; width: auto; }
     </style>
     
     @stack('styles')
@@ -556,18 +181,18 @@
     @include('partials.demo-banner')
     <div class="promoteur-wrapper">
         <!-- Mobile Overlay -->
-        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()" aria-hidden="true"></div>
         
         <!-- Sidebar -->
-        <nav class="promoteur-sidebar" id="promoteurSidebar">
+        <nav class="promoteur-sidebar" id="promoteurSidebar" aria-label="Menu promoteur">
             <!-- Sidebar Header -->
             <div class="sidebar-header">
                 <a href="{{ route('promoteur.dashboard') }}" class="sidebar-brand">
                     <i class="fas fa-ticket-alt"></i>
                     <span class="sidebar-brand-text">Espace Promoteur</span>
                 </a>
-                <button class="sidebar-toggle d-none d-lg-block" onclick="toggleSidebar()">
-                    <i class="fas fa-chevron-left"></i>
+                <button type="button" class="sidebar-toggle d-none d-lg-block" onclick="toggleSidebar()" aria-label="Réduire ou déployer le menu">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
             </div>
 
@@ -668,33 +293,38 @@
             <!-- Top Bar -->
             <header class="promoteur-topbar">
                 <div class="topbar-left">
-                    <button class="mobile-toggle" onclick="toggleMobileSidebar()">
-                        <i class="fas fa-bars"></i>
+                    <button type="button" class="mobile-toggle" onclick="toggleMobileSidebar()" aria-label="Ouvrir le menu" aria-controls="promoteurSidebar" aria-expanded="false">
+                        <i class="fas fa-bars" aria-hidden="true"></i>
                     </button>
-                    
-                    <nav class="topbar-breadcrumb">
-                        <i class="fas fa-home"></i>
-                        <i class="fas fa-chevron-right"></i>
-                        @yield('breadcrumb', 'Dashboard')
+
+                    <nav class="topbar-breadcrumb" aria-label="Fil d'Ariane">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{{ route('promoteur.dashboard') }}" class="topbar-home" aria-label="Accueil de l'espace promoteur">
+                                    <i class="fas fa-home" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                            <li class="breadcrumb-item active" aria-current="page">@yield('breadcrumb', 'Dashboard')</li>
+                        </ol>
                     </nav>
                 </div>
 
                 <div class="topbar-right">
-                    <div class="notifications" onclick="showNotifications()">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-count">3</span>
-                    </div>
+                    <button type="button" class="topbar-icon-btn notifications" onclick="showNotifications()" aria-label="Notifications, 3 non lues">
+                        <i class="fas fa-bell" aria-hidden="true"></i>
+                        <span class="notification-count" aria-hidden="true">3</span>
+                    </button>
 
-                    <div class="user-menu" onclick="toggleUserMenu()">
-                        <div class="user-avatar">
-                            {{ substr(auth()->user()->name, 0, 1) }}
-                        </div>
-                        <div class="user-info">
-                            <div class="user-name">{{ auth()->user()->name }}</div>
-                            <div class="user-role">Promoteur</div>
-                        </div>
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
+                    <button type="button" class="topbar-avatar-btn topbar-user-menu" onclick="toggleUserMenu()" aria-label="Menu du compte de {{ auth()->user()->name }}">
+                        <span class="user-avatar" aria-hidden="true">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                        <span class="user-info">
+                            <span class="user-details">
+                                <span class="user-name">{{ auth()->user()->name }}</span>
+                                <span class="user-role">Promoteur</span>
+                            </span>
+                        </span>
+                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                    </button>
                 </div>
             </header>
 

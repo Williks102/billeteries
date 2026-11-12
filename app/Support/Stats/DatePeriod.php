@@ -113,6 +113,55 @@ final class DatePeriod
         return self::preset($period, $now);
     }
 
+    /**
+     * Période de comparaison pour la croissance (décision chef de projet : on compare ce qui s'est ÉCOULÉ à une
+     * période équivalente) :
+     *  - « Ce mois-ci » : du 1er à aujourd'hui, comparé au même nombre de jours du mois précédent (borné à sa longueur) ;
+     *  - « Mois dernier » : mois civil complet précédent ;
+     *  - autre période encore en cours (7 j, 30 j, année, dates dont la fin est future) : la partie écoulée est
+     *    comparée à la période de même durée juste avant son début ;
+     *  - période entièrement écoulée : période de même durée juste avant ;
+     *  - « Toute la période » (non bornée) ou période entièrement future : null.
+     */
+    public function previous(?CarbonInterface $now = null): ?self
+    {
+        if (! $this->isBounded()) {
+            return null;
+        }
+
+        if ($this->key === 'last_month') {
+            $start = $this->start->subMonthNoOverflow()->startOfMonth();
+
+            return self::comparison($start, $start->endOfMonth());
+        }
+
+        $today = self::today($now)->startOfDay();
+        $lastDay = $this->end->startOfDay()->greaterThan($today) ? $today : $this->end->startOfDay();
+        if ($lastDay->lessThan($this->start->startOfDay())) {
+            return null;
+        }
+        $days = (int) round($this->start->startOfDay()->diffInDays($lastDay)) + 1;
+
+        if ($this->key === 'this_month') {
+            $start = $this->start->subMonthNoOverflow()->startOfMonth();
+            $days = min($days, $start->daysInMonth);
+
+            return self::comparison($start, $start->addDays($days - 1));
+        }
+
+        $end = $this->start->subDay()->startOfDay();
+
+        return self::comparison($end->subDays($days - 1), $end);
+    }
+
+    private static function comparison(CarbonImmutable $start, CarbonImmutable $end): self
+    {
+        $start = $start->startOfDay();
+        $end = $end->endOfDay();
+
+        return new self('previous', $start, $end, 'Du '.$start->format('d/m/Y').' au '.$end->format('d/m/Y'));
+    }
+
     public function isBounded(): bool
     {
         return $this->start !== null && $this->end !== null;

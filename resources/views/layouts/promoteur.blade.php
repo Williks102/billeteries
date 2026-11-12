@@ -248,8 +248,8 @@
                     <ul class="sidebar-submenu {{ request()->routeIs('promoteur.sales*') ? 'open' : '' }}" id="submenu-sales">
                         <li><a href="{{ route('promoteur.sales.index') }}" class="{{ request()->routeIs('promoteur.sales.index') ? 'active' : '' }}">Toutes mes ventes</a></li>
                         <li><a href="{{ route('promoteur.sales.index', ['period' => 'today']) }}">Aujourd'hui</a></li>
-                        <li><a href="{{ route('promoteur.sales.index', ['period' => 'week']) }}">Cette semaine</a></li>
-                        <li><a href="{{ route('promoteur.sales.index', ['period' => 'month']) }}">Ce mois</a></li>
+                        <li><a href="{{ route('promoteur.sales.index', ['period' => '7d']) }}">7 derniers jours</a></li>
+                        <li><a href="{{ route('promoteur.sales.index', ['period' => 'this_month']) }}">Ce mois</a></li>
                     </ul>
                 </li>
 

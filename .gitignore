@@ -58,3 +58,6 @@ Thumbs.db
 *.backup
 *.old
 /database/*.sqlite
+
+# Copies de travail isolées des agents
+.claude/worktrees/

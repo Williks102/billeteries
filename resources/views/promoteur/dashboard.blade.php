@@ -1,330 +1,109 @@
 @extends('layouts.promoteur')
-@section('title', 'Scanner de Billets - ClicBillet CI')
-
-@push('styles')
-<style>
-    .stat-card {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 1.5rem;
-        border-left: 1px solid #f1eeed81;
-        transition: transform 0.3s ease;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(0,0,0,0.15);
-    }
-    
-    .stat-card h4 {
-        color: var(--brand);
-        font-weight: bold;
-        margin-bottom: 0;
-    }
-    
-    .btn-black {
-        background-color: #000;
-        border-color: #000;
-        color: white;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-black:hover {
-        background-color: #333;
-        border-color: #333;
-        color: white;
-        transform: translateY(-2px);
-    }
-    
-    .card-orange {
-        border-left: 4px solid var(--brand);
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    .event-card {
-        transition: transform 0.3s ease;
-        border-radius: 15px;
-        overflow: hidden;
-    }
-    
-    .event-card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .status-active {
-        background: linear-gradient(135deg, #28a745, #20c997);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 15px;
-        font-size: 0.75rem;
-    }
-    
-    .status-draft {
-        background: linear-gradient(135deg, #ffc107, #fd7e14);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 15px;
-        font-size: 0.75rem;
-    }
-    
-    .status-finished {
-        background: linear-gradient(135deg, #6c757d, #495057);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 15px;
-        font-size: 0.75rem;
-    }
-    
-    .quick-action {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-        text-decoration: none;
-        color: inherit;
-    }
-    
-    .quick-action:hover {
-        transform: translateY(-5px);
-        color: inherit;
-        box-shadow: 0 8px 15px rgba(0,0,0,0.15);
-    }
-    
-    .quick-action-icon {
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.5rem;
-        margin: 0 auto 1rem;
-    }
-</style>
-@endpush
+@section('title', 'Tableau de bord')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="fw-bold" style="color: var(--brand);">Tableau de Bord Promoteur</h2>
-        <p class="text-muted">Bonjour {{ auth()->user()->name }}, voici un aperçu de vos activités</p>
-    </div>
-    <div>
-        <a href="{{ route('promoteur.events.create') }}" class="btn btn-black btn-lg">
-            <i class="fas fa-plus me-2"></i>Créer un Événement
+<div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1" style="color: var(--brand);">Tableau de bord</h1>
+            <p class="text-muted mb-0">Bonjour {{ auth()->user()->name }}, voici l'activité de vos événements.</p>
+        </div>
+        <a href="{{ route('promoteur.events.create') }}" class="btn btn-dark btn-lg" style="min-height:44px">
+            <i class="fas fa-plus me-2" aria-hidden="true"></i>Créer un événement
         </a>
     </div>
-</div>
 
-<!-- Statistiques principales -->
-<div class="row">
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <div class="mb-2">
-                <i class="fas fa-calendar-alt fa-2x" style="color: var(--brand);"></i>
-            </div>
-            <h4>{{ $stats['total_events'] ?? 0 }}</h4>
-            <p class="text-muted mb-0">Événements créés</p>
-            <small class="text-success">
-                <i class="fas fa-arrow-up"></i> {{ $stats['events_this_month'] ?? 0 }} ce mois
-            </small>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <div class="mb-2">
-                <i class="fas fa-ticket-alt fa-2x" style="color: var(--brand);"></i>
-            </div>
-            <h4>{{ $stats['total_tickets_sold'] ?? 0 }}</h4>
-            <p class="text-muted mb-0">Billets vendus</p>
-            <small class="text-info">
-                {{ $stats['tickets_this_week'] ?? 0 }} cette semaine
-            </small>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <div class="mb-2">
-                <i class="fas fa-euro-sign fa-2x" style="color: var(--brand);"></i>
-            </div>
-            <h4>{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['total_revenue'] ?? 0) }}</h4>
-            <p class="text-muted mb-0">Revenus générés</p>
-            <small class="text-success">
-                <i class="fas fa-arrow-up"></i> +{{ $stats['revenue_growth'] ?? 0 }}%
-            </small>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="stat-card text-center">
-            <div class="mb-2">
-                <i class="fas fa-chart-line fa-2x" style="color: var(--brand);"></i>
-            </div>
-            <h4>{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['monthly_revenue'] ?? 0) }}</h4>
-            <p class="text-muted mb-0">Revenus ce mois</p>
-            <small class="text-info">
-                <i class="fas fa-calendar me-1"></i>{{ date('F Y') }}
-            </small>
-        </div>
-    </div>
-</div>
+    <x-period-filter :action="route('promoteur.dashboard')" :period="$period" />
 
-<!-- Actions rapides -->
-<div class="row mb-4">
-    <div class="col-12">
-        <h5 class="mb-3"><i class="fas fa-bolt me-2" style="color: var(--brand);"></i>Actions Rapides</h5>
-    </div>
-    <div class="col-md-3">
-        <a href="{{ route('promoteur.events.create') }}" class="quick-action">
-            <div class="quick-action-icon">
-                <i class="fas fa-plus"></i>
-            </div>
-            <h6>Nouvel Événement</h6>
-            <p class="small text-muted mb-0">Créer un nouvel événement</p>
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a href="{{ route('promoteur.scanner.index') }}" class="quick-action">
-            <div class="quick-action-icon">
-                <i class="fas fa-qrcode"></i>
-            </div>
-            <h6>Scanner QR</h6>
-            <p class="small text-muted mb-0">Valider les billets</p>
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a href="{{ route('promoteur.sales.index') }}" class="quick-action">
-            <div class="quick-action-icon">
-                <i class="fas fa-chart-line"></i>
-            </div>
-            <h6>Voir les Ventes</h6>
-            <p class="small text-muted mb-0">Analyses détaillées</p>
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a href="{{ route('promoteur.reports.index') }}" class="quick-action">
-            <div class="quick-action-icon">
-                <i class="fas fa-file-alt"></i>
-            </div>
-            <h6>Rapports</h6>
-            <p class="small text-muted mb-0">Exporter les données</p>
-        </a>
-    </div>
-</div>
+    <h2 class="h5 mt-3">Ventes : {{ $period->label }}</h2>
+    <x-stat-grid label="Ventes de la période">
+        <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$summary['gmv']" :delta="$summary['growth']['rate']"
+            :hint="$summary['growth']['rate'] !== null ? 'Comparé à la période équivalente ('.$summary['growth']['previous_label'].')' : 'Commandes payées ; évolution non calculable'" />
+        <x-stat-card label="Revenu net (après commission)" unit="FCFA" :value="$summary['promoter_net']" hint="Ce qui vous revient sur la période" />
+        <x-stat-card label="Net à recevoir (total, toutes dates)" unit="FCFA" :value="$summary['pending_payout']" hint="Solde dû, indépendant de la période" />
+        <x-stat-card label="Versé" unit="FCFA" :value="$summary['paid_out']" hint="Versé aux promoteurs pour des ventes de la période" />
+        <x-stat-card label="Commission plateforme" unit="FCFA" :value="$summary['platform_revenue']" hint="Prélevée sur la période" />
+        <x-stat-card label="Commandes payées" :value="$summary['orders_paid']" />
+        <x-stat-card label="Panier moyen" unit="FCFA" :value="$summary['average_basket']" hint="Ventes / commandes payées" />
+        <x-stat-card label="Billets vendus" :value="$summary['tickets_sold']" hint="Payés ou utilisés" />
+        <x-stat-card label="Taux d'utilisation" unit="%" :value="$summary['usage_rate']" hint="Scannés / vendus" />
+    </x-stat-grid>
 
-<div class="row">
-    <!-- Mes événements récents -->
-    <div class="col-md-8">
-        <div class="card card-orange">
-            <div class="card-header" style="background: linear-gradient(135deg, var(--brand), var(--brand-hover)); color: white;">
-                <h6 class="mb-0">
-                    <i class="fas fa-calendar-alt me-2"></i>
-                    Mes Événements Récents
-                </h6>
-            </div>
-            <div class="card-body">
-                @forelse($recentEvents ?? [] as $event)
-                <div class="d-flex justify-content-between align-items-center border-bottom py-3">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">{{ $event->title }}</h6>
-                        <div class="small text-muted">
-                            <i class="fas fa-calendar me-1"></i>{{ $event->event_date->format('d/m/Y') }}
-                            <i class="fas fa-map-marker-alt ms-3 me-1"></i>{{ $event->venue }}
+    <h2 class="h5">Mes événements (état actuel)</h2>
+    <x-stat-grid cols="3" label="Mes événements">
+        <x-stat-card label="Événements créés" :value="$summary['events']['total']" :hint="$summary['events']['created'].' créés sur la période'" />
+        <x-stat-card label="Événements publiés" :value="$summary['events']['published']" />
+        <x-stat-card label="Réservés" :value="$summary['tickets_reserved']" hint="Commandes en attente de paiement, pas encore vendus" />
+        <x-stat-card label="Remplissage (instantané)" unit="%" :value="$summary['fill_rate']" hint="Vendus / capacité, toutes dates" />
+        <x-stat-card label="Places disponibles" :value="$summary['tickets_available']" hint="Capacité moins billets vendus" />
+    </x-stat-grid>
+
+    <div class="row g-4 mt-1">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent"><h2 class="h5 mb-0">Mes événements récents</h2></div>
+                <div class="card-body">
+                    @forelse($recentEvents as $event)
+                        @php $fig = $eventStats[$event->id] ?? null; @endphp
+                        <div class="d-flex flex-wrap justify-content-between gap-2 border-bottom py-3">
+                            <div class="min-w-0" style="min-width:0">
+                                <div class="fw-semibold text-break">{{ $event->title }}</div>
+                                <div class="small text-muted">
+                                    {{ $event->event_date ? $event->event_date->format('d/m/Y') : 'Date non définie' }}
+                                    @if($event->venue) · {{ $event->venue }} @endif
+                                </div>
+                                <div class="small">
+                                    {{ $fig['sold'] ?? 0 }} / {{ $fig['capacity'] ?? 0 }} billets vendus
+                                    ({{ \App\Helpers\CurrencyHelper::formatPercent($fig['fill_rate'] ?? null) }})
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-{{ $event->status === 'published' ? 'success' : 'secondary' }}">{{ $event->status === 'published' ? 'Publié' : ucfirst($event->status) }}</span>
+                                <a href="{{ route('promoteur.events.show', $event) }}" class="btn btn-outline-dark btn-sm d-inline-flex align-items-center justify-content-center" style="min-width:44px;min-height:44px" aria-label="Voir {{ $event->title }}"><i class="fas fa-eye" aria-hidden="true"></i></a>
+                            </div>
                         </div>
-                        <div class="small">
-                            <i class="fas fa-ticket-alt me-1"></i>
-                            {{ $event->tickets_sold ?? 0 }} / {{ $event->max_capacity }} billets
-                        </div>
-                    </div>
-                    <div class="text-end">
-                        @switch($event->status)
-                            @case('published')
-                                <span class="status-active">Actif</span>
-                                @break
-                            @case('draft')
-                                <span class="status-draft">Brouillon</span>
-                                @break
-                            @case('finished')
-                                <span class="status-finished">Terminé</span>
-                                @break
-                        @endswitch
-                        <div class="mt-2">
-                            <a href="{{ route('promoteur.events.show', $event) }}" class="btn btn-sm btn-black me-1">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="{{ route('promoteur.events.edit', $event) }}" class="btn btn-sm btn-outline-dark">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                        </div>
-                    </div>
+                    @empty
+                        <p class="text-muted mb-2">Aucun événement créé.</p>
+                        <a href="{{ route('promoteur.events.create') }}" class="btn btn-dark" style="min-height:44px">Créer un événement</a>
+                    @endforelse
                 </div>
-                @empty
-                <div class="text-center py-4">
-                    <i class="fas fa-calendar-plus fa-3x text-muted mb-3"></i>
-                    <h6>Aucun événement créé</h6>
-                    <p class="text-muted">Commencez par créer votre premier événement</p>
-                    <a href="{{ route('promoteur.events.create') }}" class="btn btn-black">
-                        <i class="fas fa-plus me-2"></i>Créer un événement
-                    </a>
-                </div>
-                @endforelse
+                @if($recentEvents->isNotEmpty())
+                    <div class="card-footer bg-transparent">
+                        <a href="{{ route('promoteur.events.index') }}" class="btn btn-outline-dark" style="min-height:44px">Voir tous mes événements</a>
+                    </div>
+                @endif
             </div>
-            @if(count($recentEvents ?? []) > 0)
-            <div class="card-footer bg-light">
-                <a href="{{ route('promoteur.events.index') }}" class="btn btn-outline-dark">
-                    <i class="fas fa-list me-2"></i>Voir tous mes événements
-                </a>
-            </div>
-            @endif
         </div>
-    </div>
-    
-    <!-- Statistiques latérales -->
-    <div class="col-md-4">
-        <!-- Ventes du mois -->
-        <div class="card card-orange mb-3">
-            <div class="card-header" style="background: linear-gradient(135deg, #28a745, #20c997); color: white;">
-                <h6 class="mb-0">
-                    <i class="fas fa-chart-line me-2"></i>
-                    Ventes du Mois
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="text-center">
-                    <h4 style="color: #28a745;">{{ \App\Helpers\CurrencyHelper::formatFCFA($stats['monthly_revenue'] ?? 0) }}</h4>
-                    <p class="text-muted mb-2">Revenus de {{ date('F Y') }}</p>
-                    <small class="text-success">
-                        <i class="fas fa-arrow-up"></i> +{{ $stats['monthly_growth'] ?? 0 }}% vs mois dernier
-                    </small>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent"><h2 class="h5 mb-0">Dernières commandes payées : {{ $period->label }}</h2></div>
+                <div class="card-body p-0">
+                    @if($recentOrders->isNotEmpty())
+                        <div class="table-responsive">
+                            <table class="table mb-0 table-cards">
+                                <thead><tr><th>Commande</th><th>Événement</th><th>Montant</th></tr></thead>
+                                <tbody>
+                                @foreach($recentOrders as $order)
+                                    <tr>
+                                        <td data-label="Commande">{{ $order->order_number }}</td>
+                                        <td data-label="Événement" class="text-break">{{ $order->event?->title }}</td>
+                                        <td data-label="Montant" class="fw-semibold text-nowrap">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-muted p-3 mb-0">Aucune commande payée sur cette période.</p>
+                    @endif
                 </div>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-6">
-                        <strong>{{ $stats['monthly_tickets'] ?? 0 }}</strong>
-                        <div class="small text-muted">Billets</div>
-                    </div>
-                    <div class="col-6">
-                        <strong>{{ $stats['monthly_orders'] ?? 0 }}</strong>
-                        <div class="small text-muted">Commandes</div>
-                    </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{{ route('promoteur.sales.index', request()->only(['period', 'start_date', 'end_date'])) }}" class="btn btn-outline-dark" style="min-height:44px">Voir les ventes</a>
+                    <a href="{{ route('promoteur.reports.index') }}" class="btn btn-outline-dark" style="min-height:44px">Rapports</a>
                 </div>
             </div>
         </div>
-    
     </div>
 </div>
 @endsection
-
-@push('scripts')
-<script src="{{ asset('js/promoteur-dashboard.js') }}" defer></script>
-@endpush

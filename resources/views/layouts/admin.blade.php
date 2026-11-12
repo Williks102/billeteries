@@ -319,7 +319,7 @@
                         <li><a class="dropdown-item" href="{{ route('admin.profile') }}">
                             <i class="fas fa-user me-2"></i>Mon profil
                         </a></li>
-                        <li><a class="dropdown-item" href="#">
+                        <li><a class="dropdown-item" href="{{ route('admin.settings.index') }}">
                             <i class="fas fa-cog me-2"></i>Paramètres
                         </a></li>
                         <li><hr class="dropdown-divider"></li>

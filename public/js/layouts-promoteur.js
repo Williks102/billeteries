@@ -147,17 +147,6 @@
             }
         }
         
-        // ========================= USER MENU =========================
-        function toggleUserMenu() {
-            // TODO: Implémenter dropdown utilisateur
-            console.log('Toggle user menu');
-        }
-        
-        function showNotifications() {
-            // TODO: Implémenter panneau notifications
-            console.log('Show notifications');
-        }
-        
         // ========================= INITIALIZATION =========================
         document.addEventListener('DOMContentLoaded', function() {
             // Restaurer l'état de la sidebar depuis localStorage

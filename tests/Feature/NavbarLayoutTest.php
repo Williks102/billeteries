@@ -207,4 +207,32 @@ class NavbarLayoutTest extends TestCase
         $this->get(route('pages.legal'))
             ->assertOk()->assertSee('navbar-toggler', false)->assertSee('aria-label="Ouvrir le menu"', false);
     }
+
+    public function test_promoteur_account_menu_is_a_real_dropdown_with_logout_and_no_fake_notifications(): void
+    {
+        $src = file_get_contents(dirname(__DIR__, 2).'/resources/views/layouts/promoteur.blade.php');
+        $js = file_get_contents(dirname(__DIR__, 2).'/public/js/layouts-promoteur.js');
+
+        $this->assertStringContainsString('data-bs-toggle="dropdown"', $src, 'le menu du compte se déplie (Bootstrap)');
+        $this->assertStringContainsString('aria-expanded="false"', $src);
+        $this->assertStringContainsString("route('promoteur.profile.show')", $src);
+        $this->assertStringContainsString("route('logout')", $src);
+        $this->assertMatchesRegularExpression('/<form[^>]*route\(\'logout\'\)[^>]*>\s*@csrf/s', $src, 'la déconnexion est un POST avec jeton CSRF');
+        $this->assertStringContainsString('bootstrap.bundle', $src, 'le script Bootstrap des menus déroulants est chargé');
+
+        // Anciennes coquilles vides : des onclick qui ne faisaient que console.log, et un faux compteur « 3 non lues ».
+        $this->assertStringNotContainsString('toggleUserMenu', $src.$js);
+        $this->assertStringNotContainsString('showNotifications', $src.$js);
+        $this->assertStringNotContainsString('3 non lues', $src);
+        $this->assertStringNotContainsString("console.log('Toggle user menu')", $js);
+    }
+
+    public function test_no_account_menu_entry_points_to_a_dead_anchor(): void
+    {
+        foreach (['admin', 'promoteur', 'acheteur'] as $layout) {
+            $src = file_get_contents(dirname(__DIR__, 2)."/resources/views/layouts/{$layout}.blade.php");
+            $this->assertDoesNotMatchRegularExpression('/class="dropdown-item"\s+href="#"/', $src, "layouts/{$layout} : entrée de menu du compte sans destination");
+        }
+    }
 }
+

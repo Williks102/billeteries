@@ -310,21 +310,36 @@
                 </div>
 
                 <div class="topbar-right">
-                    <button type="button" class="topbar-icon-btn notifications" onclick="showNotifications()" aria-label="Notifications, 3 non lues">
-                        <i class="fas fa-bell" aria-hidden="true"></i>
-                        <span class="notification-count" aria-hidden="true">3</span>
-                    </button>
-
-                    <button type="button" class="topbar-avatar-btn topbar-user-menu" onclick="toggleUserMenu()" aria-label="Menu du compte de {{ auth()->user()->name }}">
-                        <span class="user-avatar" aria-hidden="true">{{ substr(auth()->user()->name, 0, 1) }}</span>
-                        <span class="user-info">
-                            <span class="user-details">
-                                <span class="user-name">{{ auth()->user()->name }}</span>
-                                <span class="user-role">Promoteur</span>
+                    <!-- Menu du compte : Bootstrap dropdown (comme l'admin), fermeture au clic extérieur et à Échap -->
+                    <div class="dropdown">
+                        <button type="button" class="topbar-avatar-btn topbar-user-menu" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Menu du compte de {{ auth()->user()->name }}">
+                            <span class="user-avatar" aria-hidden="true">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                            <span class="user-info">
+                                <span class="user-details">
+                                    <span class="user-name">{{ auth()->user()->name }}</span>
+                                    <span class="user-role">Promoteur</span>
+                                </span>
                             </span>
-                        </span>
-                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                    </button>
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ route('promoteur.profile.show') }}">
+                                <i class="fas fa-user me-2" aria-hidden="true"></i>Mon profil
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('home') }}">
+                                <i class="fas fa-globe me-2" aria-hidden="true"></i>Voir le site
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Déconnexion
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </header>
 

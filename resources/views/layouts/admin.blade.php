@@ -670,15 +670,6 @@
                     </a>
                 </li>
 
-                <!-- Analytics -->
-                <li>
-                    <a href="{{ route('admin.analytics') }}" class="{{ request()->routeIs('admin.analytics') ? 'active' : '' }}">
-                        <i class="fas fa-chart-bar"></i>
-                        <span class="sidebar-menu-text">Analytics</span>
-                        <span class="sidebar-tooltip">Analytics</span>
-                    </a>
-                </li>
-
                 <!-- Paramètres -->
                 <li class="submenu-parent {{ request()->routeIs('admin.settings.*') ? 'open' : '' }}">
                     <a href="#" data-action="toggle-submenu" data-menu="settings" class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">

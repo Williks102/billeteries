@@ -168,92 +168,6 @@ class EventController extends Controller
     }
 
     /**
-     * Sauvegarde événement avec mode de gestion hybride
-     */
-    public function storeWithMode(Request $request)
-    {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category_id' => 'required|exists:event_categories,id',
-            'promoter_id' => 'required|exists:users,id',
-            'event_date' => 'required|date|after:today',
-            'event_time' => 'required',
-            'venue' => 'required|string|max:255',
-            'address' => 'nullable|string',
-            'status' => 'required|in:draft,pending,published,rejected',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'max_capacity' => 'nullable|integer|min:1',
-            
-            // Nouveaux champs hybrides
-            'management_mode' => 'required|in:promoter,admin,collaborative',
-            'admin_permissions' => 'nullable|array',
-            'management_reason' => 'nullable|string',
-            'configure_tickets_now' => 'boolean',
-            
-            // Billets (si configurés immédiatement)
-            'ticket_types' => 'nullable|array',
-            'ticket_types.*.name' => 'required_with:ticket_types|string|max:255',
-            'ticket_types.*.price' => 'required_with:ticket_types|numeric|min:0',
-            'ticket_types.*.quantity_available' => 'required_with:ticket_types|integer|min:1',
-            'ticket_types.*.sale_start_date' => 'required_with:ticket_types|date|after_or_equal:today',
-            'ticket_types.*.sale_end_date' => 'required_with:ticket_types|date|after:sale_start_date',
-            'ticket_types.*.max_per_order' => 'required_with:ticket_types|integer|min:1|max:20',
-        ]);
-
-        try {
-            $data = $request->only([
-                'title', 'description', 'category_id', 'promoter_id', 
-                'event_date', 'event_time', 'venue', 'address', 'status', 'max_capacity',
-                'management_mode', 'admin_permissions', 'management_reason'
-            ]);
-
-            // Gestion de l'image
-            if ($request->hasFile('image')) {
-                $data['image'] = $request->file('image')->store('events', 'public');
-            }
-
-            // Traçabilité du changement de mode
-            if ($data['management_mode'] !== 'promoter') {
-                $data['management_changed_by'] = auth()->id();
-                $data['management_changed_at'] = now();
-            }
-
-            $event = Event::create($data);
-
-            // Créer les billets si demandé
-            if ($request->configure_tickets_now && $request->ticket_types) {
-                $this->createTicketTypes($event, $request->ticket_types);
-                
-                $event->logAction('tickets_created', [
-                    'description' => 'Billets créés par admin lors de la création',
-                    'ticket_count' => count($request->ticket_types)
-                ]);
-            }
-
-            // Log de création
-            $event->logAction('created', [
-                'description' => "Événement créé en mode {$data['management_mode']}"
-            ]);
-
-            $successMessage = "Événement '{$event->title}' créé avec succès";
-            if ($request->configure_tickets_now) {
-                $successMessage .= " avec " . count($request->ticket_types ?? []) . " types de billets";
-            }
-
-            return redirect()->route('admin.events.manage-hybrid', $event)
-                ->with('success', $successMessage);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur création événement hybride: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de la création de l\'événement')
-                ->withInput();
-        }
-    }
-
-    /**
      * Affichage détail événement standard
      */
     public function show(Event $event)
@@ -293,31 +207,6 @@ class EventController extends Controller
             Log::error('Erreur affichage événement: ' . $e->getMessage());
             return redirect()->route('admin.events.index')->with('error', 'Erreur lors du chargement');
         }
-    }
-
-    /**
-     * Interface de gestion hybride
-     */
-    public function manageHybrid(Event $event)
-    {
-        $event->load(['category', 'promoteur', 'ticketTypes', 'managementChanger']);
-        
-        $stats = [
-            'total_tickets' => $event->ticketTypes->sum('quantity_available') ?? 0,
-            'sold_tickets' => $event->ticketTypes->sum('quantity_sold') ?? 0,
-            'total_revenue' => $event->totalRevenue() ?? 0,
-            'available_tickets' => $event->ticketTypes->sum('quantity_available') - $event->ticketTypes->sum('quantity_sold'),
-        ];
-
-        $managementHistory = $event->getManagementHistory();
-        $needsIntervention = $event->needsAdminIntervention();
-
-        return view('admin.events.manage-hybrid', compact(
-            'event', 
-            'stats', 
-            'managementHistory', 
-            'needsIntervention'
-        ));
     }
 
     /**
@@ -542,129 +431,6 @@ class EventController extends Controller
     }
 
     /**
-     * Changer le mode de gestion d'un événement
-     */
-    public function changeManagementMode(Request $request, Event $event)
-    {
-        $request->validate([
-            'management_mode' => 'required|in:promoter,admin,collaborative',
-            'admin_permissions' => 'nullable|array',
-            'reason' => 'required|string|max:500',
-            'notify_promoter' => 'boolean',
-            'create_tickets_immediately' => 'boolean'
-        ]);
-
-        try {
-            switch ($request->management_mode) {
-                case 'admin':
-                    $event->enableAdminMode($request->reason);
-                    $message = 'Mode admin activé - Vous avez maintenant le contrôle complet';
-                    break;
-                    
-                case 'collaborative':
-                    $event->enableCollaborativeMode(
-                        $request->admin_permissions ?? [], 
-                        $request->reason
-                    );
-                    $message = 'Mode collaboratif activé';
-                    break;
-                    
-                case 'promoter':
-                    $event->restorePromoterMode($request->reason);
-                    $message = 'Contrôle rendu au promoteur';
-                    break;
-            }
-
-            // Préparer les redirections
-            $redirects = [
-                'redirect_manage' => route('admin.events.manage-hybrid', $event),
-                'redirect_create_tickets' => route('admin.events.manage-tickets', $event)
-            ];
-
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => $message,
-                    ...$redirects
-                ]);
-            }
-
-            return redirect()->back()->with('success', $message);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur changement mode gestion: ' . $e->getMessage());
-            
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Erreur lors du changement de mode'
-                ], 500);
-            }
-            
-            return redirect()->back()->with('error', 'Erreur lors du changement de mode');
-        }
-    }
-
-    /**
-     * Interface de gestion des billets pour admin
-     */
-    public function manageTickets(Event $event)
-    {
-        // Vérifier les permissions
-        if (!$event->adminHasPermission('create_tickets') && !$event->adminHasPermission('edit_tickets')) {
-            abort(403, 'Vous n\'avez pas la permission de gérer les billets de cet événement');
-        }
-
-        $event->load(['ticketTypes' => function($query) {
-            $query->orderBy('price', 'asc');
-        }]);
-
-        return view('admin.events.manage-tickets', compact('event'));
-    }
-
-    /**
-     * Sauvegarder les billets créés par admin
-     */
-    public function storeTickets(Request $request, Event $event)
-    {
-        // Vérifier les permissions
-        if (!$event->adminHasPermission('create_tickets')) {
-            abort(403, 'Vous n\'avez pas la permission de créer des billets');
-        }
-
-        $request->validate([
-            'ticket_types' => 'required|array|min:1',
-            'ticket_types.*.name' => 'required|string|max:255',
-            'ticket_types.*.description' => 'nullable|string|max:500',
-            'ticket_types.*.price' => 'required|numeric|min:0',
-            'ticket_types.*.quantity_available' => 'required|integer|min:1',
-            'ticket_types.*.sale_start_date' => 'required|date|after_or_equal:today',
-            'ticket_types.*.sale_end_date' => 'required|date|after:sale_start_date',
-            'ticket_types.*.max_per_order' => 'required|integer|min:1|max:20',
-        ]);
-
-        try {
-            $createdTickets = $this->createTicketTypes($event, $request->ticket_types);
-
-            // Log de l'action
-            $event->logAction('tickets_created', [
-                'description' => 'Types de billets créés par administrateur',
-                'ticket_count' => count($createdTickets),
-                'new_values' => $request->ticket_types
-            ]);
-
-            return redirect()->route('admin.events.manage-hybrid', $event)
-                ->with('success', count($createdTickets) . ' types de billets créés avec succès');
-
-        } catch (\Exception $e) {
-            Log::error('Erreur création billets par admin: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Erreur lors de la création des billets')
-                ->withInput();
-        }
-    }
-
-    /**
      * Tableau de bord des événements nécessitant une intervention
      */
     public function interventionDashboard()
@@ -688,18 +454,6 @@ class EventController extends Controller
             ->paginate(20);
 
         return view('admin.events.intervention-dashboard', compact('eventsNeedingIntervention'));
-    }
-
-    /**
-     * Historique détaillé d'un événement
-     */
-    public function auditHistory(Event $event)
-    {
-        $auditLogs = $event->auditLogs()
-            ->with('user')
-            ->paginate(50);
-
-        return view('admin.events.audit-history', compact('event', 'auditLogs'));
     }
 
     /**
@@ -774,33 +528,6 @@ class EventController extends Controller
 
     // ==================== MÉTHODES UTILITAIRES ====================
 
-    /**
-     * Créer les types de billets
-     */
-    private function createTicketTypes(Event $event, array $ticketTypesData): array
-    {
-        $createdTickets = [];
-
-        foreach ($ticketTypesData as $typeData) {
-            $ticket = TicketType::create([
-                'event_id' => $event->id,
-                'name' => $typeData['name'],
-                'description' => $typeData['description'] ?? '',
-                'price' => $typeData['price'],
-                'quantity_available' => $typeData['quantity_available'],
-                'quantity_sold' => 0,
-                'sale_start_date' => Carbon::parse($typeData['sale_start_date']),
-                'sale_end_date' => Carbon::parse($typeData['sale_end_date'] . ' 23:59:59'),
-                'max_per_order' => $typeData['max_per_order'],
-                'is_active' => true,
-            ]);
-
-            $createdTickets[] = $ticket;
-        }
-
-        return $createdTickets;
-    }
-
     
     
     /**
@@ -821,27 +548,6 @@ class EventController extends Controller
         } catch (\Exception $e) {
             Log::error('Erreur notification promoteur: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Obtenir les statistiques d'intervention pour un événement
-     */
-    private function getEventInterventionStats(Event $event): array
-    {
-        return [
-            'total_interventions' => $event->auditLogs()
-                ->whereIn('action', ['admin_takeover', 'management_mode_changed'])
-                ->count(),
-            'last_intervention' => $event->auditLogs()
-                ->whereIn('action', ['admin_takeover', 'management_mode_changed'])
-                ->latest()
-                ->first(),
-            'current_mode_duration' => $event->management_changed_at 
-                ? $event->management_changed_at->diffForHumans() 
-                : 'Mode initial',
-            'is_currently_admin_managed' => $event->management_mode === 'admin',
-            'needs_intervention' => $this->eventNeedsIntervention($event)
-        ];
     }
 
     /**

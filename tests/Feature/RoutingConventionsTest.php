@@ -17,7 +17,6 @@ class RoutingConventionsTest extends TestCase
     /** DETTE CONNUE : routes dont la méthode de contrôleur n'existe pas. */
     private const MISSING_ACTIONS = [
         'acheteur.favorites', 'acheteur.favorites.add', 'acheteur.favorites.remove',
-        'admin.api.intervention-events',
         'admin.categories.export', 'admin.categories.reorder', 'admin.categories.duplicate',
         'admin.categories.merge', 'admin.categories.toggle-status',
         'cart.extend.timer', 'cart.status',
@@ -25,7 +24,7 @@ class RoutingConventionsTest extends TestCase
 
     /** DETTE CONNUE : noms de route utilisés dans le code mais non déclarés. */
     private const UNKNOWN_NAMES = [
-        'admin.events.manage-hybrid', 'checkout.payment-method', 'checkout.resend-code', 'contact',
+        'checkout.payment-method', 'checkout.resend-code', 'contact',
         'orders.show', 'pages.show', 'verification.resend',
     ];
 

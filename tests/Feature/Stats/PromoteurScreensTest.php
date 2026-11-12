@@ -17,7 +17,7 @@ use Tests\TestCase;
  * commission 2 100 (1 200 + 900), revenu net 32 900 (18 800 + 14 100), versé 14 100 (O4).
  * SOLDE « net à recevoir » toutes dates : O1 18 800 + O8 9 400 + O9 4 700 = 32 900 (indépendant de la période).
  * Réservés 1 (O2), capacité 170, vendus (toutes dates) 7 => 4,1 % et 163 disponibles.
- * Croissance : période précédente de même durée (2 au 31 octobre, 30 jours) = O8 10 000 => +250,0 %.
+ * Croissance : le 15 novembre, 1-15 nov. comparé à 1-15 oct. (jours écoulés, même nombre de jours du mois précédent).
  * Ni O2 (en attente), O3 (remboursée), O6 (échouée), O8 (octobre), O9 (2025), ni O7 (P2) n'entrent dans ces chiffres.
  */
 class PromoteurScreensTest extends TestCase
@@ -72,13 +72,13 @@ class PromoteurScreensTest extends TestCase
         $this->assertSame('5', $this->card($html, 'billets-vendus'));
         $this->assertSame('20,0 %', $this->card($html, 'taux-dutilisation'));
         $this->assertSame('1', $this->card($html, 'reserves'));
-        $this->assertSame('4,1 %', $this->card($html, 'taux-de-remplissage'));
+        $this->assertSame('4,1 %', $this->card($html, 'remplissage-instantane'));
         $this->assertSame('163', $this->card($html, 'places-disponibles'));
         $this->assertSame('1', $this->card($html, 'evenements-crees'));
 
-        // croissance réelle (+250,0 % vs 2-31 octobre), avec la période comparée affichée ; rien d'inventé
-        $this->assertStringContainsString('+250,0', $this->text($html));
-        $this->assertStringContainsString('Du 02/10/2026 au 31/10/2026', $this->text($html));
+        // croissance : le 15 novembre on compare 1-15 nov. au 1-15 oct. (aucune vente payée : O8 est du 20) => non calculable, aucune flèche
+        $this->assertStringNotContainsString('kpi-card__delta', $html);
+        $this->assertStringContainsString('évolution non calculable', $html);
         $this->assertStringNotContainsStringIgnoringCase('conversion', $html);
     }
 
@@ -116,13 +116,80 @@ class PromoteurScreensTest extends TestCase
 
     public function test_negative_growth_never_shows_an_up_arrow(): void
     {
-        DB::table('orders')->where('id', $this->o['O8'])->update(['total_amount' => 100000]);
+        DB::table('orders')->where('id', $this->o['O8'])->update(['total_amount' => 100000, 'paid_at' => '2026-10-05 10:00:00']);
         DB::table('order_items')->where('order_id', $this->o['O8'])->update(['total_price' => 100000]);
 
         $html = $this->p()->get(route('promoteur.dashboard'))->getContent();
 
         $this->assertStringContainsString('kpi-card__delta--down', $html);
         $this->assertStringNotContainsString('fa-arrow-trend-up', $html);
+    }
+
+    public function test_growth_compares_elapsed_days_to_the_same_days_of_previous_month(): void
+    {
+        // O8 déplacée au 5 octobre (10 000) : 1-15 nov. = 35 000 contre 1-15 oct. = 10 000 => +250,0 %
+        DB::table('orders')->where('id', $this->o['O8'])->update(['paid_at' => '2026-10-05 10:00:00']);
+
+        $html = $this->p()->get(route('promoteur.dashboard'))->getContent();
+
+        $this->assertStringContainsString('kpi-card__delta--up', $html);
+        $this->assertStringContainsString('+250,0', $this->text($html));
+        $this->assertStringContainsString('Du 01/10/2026 au 15/10/2026', $this->text($html));
+    }
+
+    public function test_a_sale_paid_in_november_but_created_in_october_counts_in_november(): void
+    {
+        // date de vente = paid_at (et non created_at) AU NIVEAU DES ÉCRANS : créée le 28/10, payée le 14/11
+        $id = DB::table('orders')->insertGetId([
+            'user_id' => self::BUYER, 'event_id' => 1, 'total_amount' => 7000, 'payment_status' => 'paid', 'payment_method' => 'bank_transfer',
+            'order_number' => 'ORD-LATE', 'billing_email' => 'x@example.test', 'paid_at' => '2026-11-14 10:00:00',
+            'created_at' => '2026-10-28 09:00:00', 'updated_at' => '2026-11-14 10:00:00',
+        ]);
+        DB::table('order_items')->insert(['order_id' => $id, 'ticket_type_id' => 1, 'quantity' => 1, 'unit_price' => 7000, 'total_price' => 7000, 'created_at' => now(), 'updated_at' => now()]);
+
+        $nov = $this->p()->get(route('promoteur.sales.index'))->getContent();
+        $this->assertSame($this->fcfa(42000), $this->card($nov, 'ventes-billets-hors-frais'));
+        $this->assertStringContainsString('ORD-LATE', $nov);
+
+        $oct = $this->p()->get(route('promoteur.sales.index', ['period' => 'last_month']))->getContent();
+        $this->assertSame($this->fcfa(10000), $this->card($oct, 'ventes-billets-hors-frais'));
+        $this->assertStringNotContainsString('ORD-LATE', $oct);
+    }
+
+    public function test_buyer_email_is_masked_in_the_sales_list(): void
+    {
+        DB::table('orders')->where('id', $this->o['O1'])->update(['user_id' => 999, 'billing_email' => 'jean.dupont@example.test']);
+
+        $html = $this->p()->get(route('promoteur.sales.index'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('jean.dupont@example.test', $html);
+        $this->assertStringContainsString(\App\Helpers\PrivacyHelper::maskEmail('jean.dupont@example.test'), $html);
+    }
+
+    public function test_an_empty_fill_rate_is_a_dash_never_zero_percent(): void
+    {
+        $this->makeUser(5, 'promoteur');
+        DB::table('events')->insert(['id' => 5, 'promoter_id' => 5, 'title' => 'Sans billets', 'venue' => 'X', 'event_date' => '2027-01-01', 'event_time' => '18:00', 'created_at' => '2026-11-02 08:00:00', 'updated_at' => '2026-11-02 08:00:00']);
+        $p5 = fn (string $url) => $this->actingAs(User::find(5))->get($url)->assertOk()->getContent();
+
+        $this->assertSame('—', $this->card($p5(route('promoteur.dashboard')), 'remplissage-instantane'));
+        foreach ([route('promoteur.events.index'), route('promoteur.reports.events'), route('promoteur.events.show', 5)] as $url) {
+            $html = $p5($url);
+            $this->assertStringNotContainsString('0,0 %', preg_replace('/\s+/u', ' ', $this->text($html)), $url);
+        }
+        $this->assertStringContainsString('—', $this->text($p5(route('promoteur.reports.events'))));
+    }
+
+    public function test_stats_helpers_do_not_depend_on_the_caller_to_check_ownership(): void
+    {
+        $stats = app(\App\Services\Stats\PromoterStats::class);
+
+        // P2 interroge l'événement 1 (de P) : rien n'est renvoyé
+        $this->assertSame([], $stats->eventsFigures(self::P2, [1]));
+        $this->assertSame([], $stats->soldByTicketType(self::P2, 1));
+        $this->assertArrayNotHasKey(1, $stats->usageByEvent(self::P2, \App\Support\Stats\DatePeriod::all()));
+        $this->assertArrayHasKey(1, $stats->usageByEvent(self::P, \App\Support\Stats\DatePeriod::all()));
+        $this->assertSame([1 => 4, 2 => 2, 3 => 1], $stats->soldByTicketType(self::P, 1));
     }
 
     // ---------- ventes ----------
@@ -242,7 +309,7 @@ class PromoteurScreensTest extends TestCase
 
         $show = $this->p()->get(route('promoteur.events.show', 1))->assertOk()->getContent();
         $this->assertSame('7', $this->card($show, 'billets-vendus'));
-        $this->assertSame('4,1 %', $this->card($show, 'taux-de-remplissage'));
+        $this->assertSame('4,1 %', $this->card($show, 'remplissage-instantane'));
         $this->assertSame('1', $this->card($show, 'reserves'));
         $this->assertSame('163', $this->card($show, 'places-disponibles'));
         $this->assertSame($this->fcfa(50000), $this->card($show, 'ventes-billets-hors-frais'));

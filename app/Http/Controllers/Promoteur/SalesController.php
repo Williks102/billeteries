@@ -31,7 +31,7 @@ class SalesController extends Controller
         // Par événement : ventes de la période, et remplissage cumulé (toutes dates) pour la barre de progression
         $events = collect($this->stats->eventsReport($promoterId, $period))
             ->filter(fn ($e) => $e['gmv'] > 0 || $e['sold'] > 0)->values();
-        $fillRates = collect($this->stats->eventsFigures($events->pluck('id')->all()))->map(fn ($f) => $f['fill_rate']);
+        $fillRates = collect($this->stats->eventsFigures($promoterId, $events->pluck('id')->all()))->map(fn ($f) => $f['fill_rate']);
 
         return view('promoteur.sales.index', compact('period', 'summary', 'orders', 'dailySales', 'events', 'fillRates'));
     }

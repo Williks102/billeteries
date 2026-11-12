@@ -235,7 +235,7 @@ use Illuminate\Support\Facades\Storage;
         <!-- Statistiques principales (cumul depuis la création) -->
         <x-stat-grid label="Chiffres de l'événement" class="mb-4">
             <x-stat-card label="Billets vendus" :value="$stats['sold']" hint="Payés ou utilisés" />
-            <x-stat-card label="Taux de remplissage" unit="%" :value="$stats['fill_rate']" :hint="'Capacité : '.$stats['capacity'].' places'" />
+            <x-stat-card label="Remplissage (instantané)" unit="%" :value="$stats['fill_rate']" :hint="'Capacité : '.$stats['capacity'].' places'" />
             <x-stat-card label="Réservés" :value="$stats['reserved']" hint="En attente de paiement, pas vendus" />
             <x-stat-card label="Places disponibles" :value="$stats['available']" hint="Capacité moins billets vendus" />
             <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$stats['gmv']" hint="Commandes payées, toutes dates" />
@@ -397,7 +397,7 @@ use Illuminate\Support\Facades\Storage;
                 @foreach($recentOrders as $order)
                 <tr>
                     <td data-label="Client">{{ $order->user?->name ?? $order->billing_email }}</td>
-                    <td data-label="Email">{{ $order->billing_email }}</td>
+                    <td data-label="Email">{{ \App\Helpers\PrivacyHelper::maskEmail($order->billing_email) }}</td>
                     <td data-label="Billets">{{ $order->tickets_quantity }}</td>
                     <td data-label="Montant" class="fw-bold" style="color: var(--brand);">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</td>
                     <td data-label="Date">{{ $order->created_at->format('d/m/Y H:i') }}</td>

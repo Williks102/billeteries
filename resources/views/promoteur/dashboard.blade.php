@@ -18,10 +18,10 @@
     <h2 class="h5 mt-3">Ventes : {{ $period->label }}</h2>
     <x-stat-grid label="Ventes de la période">
         <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$summary['gmv']" :delta="$summary['growth']['rate']"
-            :hint="$summary['growth']['rate'] !== null ? 'Par rapport à la période précédente de même durée ('.$summary['growth']['previous_label'].')' : 'Commandes payées ; évolution non calculable'" />
+            :hint="$summary['growth']['rate'] !== null ? 'Comparé à la période équivalente ('.$summary['growth']['previous_label'].')' : 'Commandes payées ; évolution non calculable'" />
         <x-stat-card label="Revenu net (après commission)" unit="FCFA" :value="$summary['promoter_net']" hint="Ce qui vous revient sur la période" />
         <x-stat-card label="Net à recevoir (total, toutes dates)" unit="FCFA" :value="$summary['pending_payout']" hint="Solde dû, indépendant de la période" />
-        <x-stat-card label="Versé" unit="FCFA" :value="$summary['paid_out']" hint="Versé sur la période" />
+        <x-stat-card label="Versé" unit="FCFA" :value="$summary['paid_out']" hint="Versé aux promoteurs pour des ventes de la période" />
         <x-stat-card label="Commission plateforme" unit="FCFA" :value="$summary['platform_revenue']" hint="Prélevée sur la période" />
         <x-stat-card label="Commandes payées" :value="$summary['orders_paid']" />
         <x-stat-card label="Panier moyen" unit="FCFA" :value="$summary['average_basket']" hint="Ventes / commandes payées" />
@@ -34,7 +34,7 @@
         <x-stat-card label="Événements créés" :value="$summary['events']['total']" :hint="$summary['events']['created'].' créés sur la période'" />
         <x-stat-card label="Événements publiés" :value="$summary['events']['published']" />
         <x-stat-card label="Réservés" :value="$summary['tickets_reserved']" hint="Commandes en attente de paiement, pas encore vendus" />
-        <x-stat-card label="Taux de remplissage" unit="%" :value="$summary['fill_rate']" hint="Vendus / capacité, toutes dates" />
+        <x-stat-card label="Remplissage (instantané)" unit="%" :value="$summary['fill_rate']" hint="Vendus / capacité, toutes dates" />
         <x-stat-card label="Places disponibles" :value="$summary['tickets_available']" hint="Capacité moins billets vendus" />
     </x-stat-grid>
 

@@ -28,7 +28,7 @@ class PromoteurController extends Controller
         $recentOrders = $this->stats->recentPaidOrders($promoterId, $period, 5);
 
         $recentEvents = Auth::user()->events()->with('category')->latest()->take(5)->get();
-        $eventStats = $this->stats->eventsFigures($recentEvents->pluck('id')->all());
+        $eventStats = $this->stats->eventsFigures($promoterId, $recentEvents->pluck('id')->all());
 
         return view('promoteur.dashboard', compact('period', 'summary', 'recentOrders', 'recentEvents', 'eventStats'));
     }

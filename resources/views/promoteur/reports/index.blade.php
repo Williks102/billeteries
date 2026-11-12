@@ -21,14 +21,14 @@
 
     <x-stat-grid label="Chiffres de la période">
         <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$stats['gmv']" :delta="$stats['growth']['rate']"
-            :hint="$stats['growth']['rate'] !== null ? 'Par rapport à la période précédente de même durée' : 'Commandes payées ; évolution non calculable'" />
+            :hint="$stats['growth']['rate'] !== null ? 'Comparé à la période équivalente ('.$stats['growth']['previous_label'].')' : 'Commandes payées ; évolution non calculable'" />
         <x-stat-card label="Commandes payées" :value="$stats['orders_paid']" />
         <x-stat-card label="Panier moyen" unit="FCFA" :value="$stats['average_basket']" hint="Ventes / commandes payées" />
         <x-stat-card label="Billets vendus" :value="$stats['tickets_sold']" hint="Payés ou utilisés" />
         <x-stat-card label="Commission plateforme" unit="FCFA" :value="$stats['platform_revenue']" hint="Prélevée sur la période" />
         <x-stat-card label="Revenu net (après commission)" unit="FCFA" :value="$stats['promoter_net']" />
         <x-stat-card label="Net à recevoir (total, toutes dates)" unit="FCFA" :value="$stats['pending_payout']" hint="Solde dû, indépendant de la période" />
-        <x-stat-card label="Versé" unit="FCFA" :value="$stats['paid_out']" hint="Versé sur la période" />
+        <x-stat-card label="Versé" unit="FCFA" :value="$stats['paid_out']" hint="Versé aux promoteurs pour des ventes de la période" />
         <x-stat-card label="Événements" :value="$stats['events']['total']" :hint="$stats['events']['published'].' publiés'" />
     </x-stat-grid>
 
@@ -37,7 +37,7 @@
         @if(count($data['events']) > 0)
             <div class="table-responsive">
                 <table class="table table-cards align-middle">
-                    <thead><tr><th>Événement</th><th>Ventes</th><th>Commandes payées</th><th>Billets vendus</th><th>Taux de remplissage</th></tr></thead>
+                    <thead><tr><th>Événement</th><th>Ventes</th><th>Commandes payées</th><th>Billets vendus</th><th>Remplissage (ventes de la période)</th></tr></thead>
                     <tbody>
                     @foreach($data['events'] as $row)
                         <tr>
@@ -45,7 +45,7 @@
                             <td data-label="Ventes" class="fw-semibold text-nowrap">{{ \App\Helpers\CurrencyHelper::formatFCFA($row['gmv']) }}</td>
                             <td data-label="Commandes payées">{{ $row['orders_paid'] }}</td>
                             <td data-label="Billets vendus">{{ $row['sold'] }}</td>
-                            <td data-label="Taux de remplissage">{{ \App\Helpers\CurrencyHelper::formatPercent($row['fill_rate']) }}</td>
+                            <td data-label="Remplissage (ventes de la période)">{{ \App\Helpers\CurrencyHelper::formatPercent($row['fill_rate']) }}</td>
                         </tr>
                     @endforeach
                     </tbody>

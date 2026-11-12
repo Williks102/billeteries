@@ -165,23 +165,31 @@ class PromoterStats
     /**
      * Chiffres cumulés (toutes dates) d'une page d'événements du promoteur : vendus, capacité, remplissage,
      * commandes payées, ventes, net. Cinq requêtes pour toute la page. Les identifiants viennent du contrôleur
-     * (événements déjà restreints au promoteur connecté).
+     * Les identifiants sont FILTRÉS sur les événements du promoteur : un événement d'un autre promoteur est ignoré
+     * (zéros), quel que soit l'appelant.
      *
      * @param  list<int>  $eventIds
      * @return array<int, array{sold: int, capacity: int, fill_rate: ?float, orders_paid: int, orders_total: int, gmv: int, promoter_net: int}>
      */
-    public function eventsFigures(array $eventIds): array
+    public function eventsFigures(int $promoterId, array $eventIds): array
     {
-        return $this->events->forEvents(array_map('intval', $eventIds));
+        $owned = $eventIds === [] ? [] : DB::table('events')->where('promoter_id', $promoterId)
+            ->whereIn('id', array_map('intval', $eventIds))->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return $this->events->forEvents($owned);
     }
 
     /**
-     * Billets vendus (sold + used d'une commande payée) par type de billet d'un événement, toutes dates. Une requête.
+     * Billets vendus (sold + used d'une commande payée) par type de billet d'un événement DU PROMOTEUR (sinon vide), toutes dates.
      *
      * @return array<int, int> ticket_type_id => vendus
      */
-    public function soldByTicketType(int $eventId): array
+    public function soldByTicketType(int $promoterId, int $eventId): array
     {
+        if (! DB::table('events')->where('id', $eventId)->where('promoter_id', $promoterId)->exists()) {
+            return [];
+        }
+
         return Ticket::query()
             ->ofOrders(Order::query()->paid()->forScope(Scope::event($eventId)))
             ->whereIn('tickets.status', ['sold', 'used'])

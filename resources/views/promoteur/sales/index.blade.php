@@ -18,13 +18,13 @@
 
     <x-stat-grid label="Ventes de la période">
         <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$summary['gmv']" :delta="$summary['growth']['rate']"
-            :hint="$summary['growth']['rate'] !== null ? 'Par rapport à la période précédente de même durée' : 'Commandes payées ; évolution non calculable'" />
+            :hint="$summary['growth']['rate'] !== null ? 'Comparé à la période équivalente ('.$summary['growth']['previous_label'].')' : 'Commandes payées ; évolution non calculable'" />
         <x-stat-card label="Billets vendus" :value="$summary['tickets_sold']" hint="Payés ou utilisés" />
         <x-stat-card label="Commandes payées" :value="$summary['orders_paid']" />
         <x-stat-card label="Panier moyen" unit="FCFA" :value="$summary['average_basket']" hint="Ventes / commandes payées" />
         <x-stat-card label="Revenu net (après commission)" unit="FCFA" :value="$summary['promoter_net']" />
         <x-stat-card label="Net à recevoir (total, toutes dates)" unit="FCFA" :value="$summary['pending_payout']" hint="Solde dû, indépendant de la période" />
-        <x-stat-card label="Versé" unit="FCFA" :value="$summary['paid_out']" hint="Versé sur la période" />
+        <x-stat-card label="Versé" unit="FCFA" :value="$summary['paid_out']" hint="Versé aux promoteurs pour des ventes de la période" />
         <x-stat-card label="Réservés" :value="$summary['tickets_reserved']" hint="En attente de paiement, pas vendus" />
     </x-stat-grid>
 
@@ -67,7 +67,7 @@
     @if($events->isNotEmpty())
         <div class="table-responsive">
             <table class="table table-cards align-middle">
-                <thead><tr><th>Événement</th><th>Ventes</th><th>Billets vendus</th><th>Commandes payées</th><th>Taux de remplissage (total)</th></tr></thead>
+                <thead><tr><th>Événement</th><th>Ventes</th><th>Billets vendus</th><th>Commandes payées</th><th>Remplissage (instantané)</th></tr></thead>
                 <tbody>
                 @foreach($events as $row)
                     <tr>
@@ -75,7 +75,7 @@
                         <td data-label="Ventes" class="fw-semibold text-nowrap">{{ \App\Helpers\CurrencyHelper::formatFCFA($row['gmv']) }}</td>
                         <td data-label="Billets vendus">{{ $row['sold'] }}</td>
                         <td data-label="Commandes payées">{{ $row['orders_paid'] }}</td>
-                        <td data-label="Taux de remplissage (total)">{{ \App\Helpers\CurrencyHelper::formatPercent($fillRates[$row['id']] ?? null) }}</td>
+                        <td data-label="Remplissage (instantané)">{{ \App\Helpers\CurrencyHelper::formatPercent($fillRates[$row['id']] ?? null) }}</td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -94,7 +94,7 @@
                 @foreach($orders as $order)
                     <tr>
                         <td data-label="Commande">{{ $order->order_number }}</td>
-                        <td data-label="Client" class="text-break">{{ $order->user?->name ?? $order->billing_email }}</td>
+                        <td data-label="Client" class="text-break">{{ $order->user?->name ?? \App\Helpers\PrivacyHelper::maskEmail($order->billing_email) }}</td>
                         <td data-label="Événement" class="text-break">{{ $order->event?->title }}</td>
                         <td data-label="Billets">{{ $order->tickets_quantity }}</td>
                         <td data-label="Montant" class="fw-semibold text-nowrap">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</td>

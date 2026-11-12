@@ -49,7 +49,7 @@ class EventController extends Controller
             $categories = EventCategory::all();
 
             // Chiffres cumulés (toutes dates) de la page : 5 requêtes, jamais une par événement
-            $eventStats = $this->promoterStats->eventsFigures($events->pluck('id')->all());
+            $eventStats = $this->promoterStats->eventsFigures((int) Auth::id(), $events->pluck('id')->all());
 
             $counts = $this->promoterStats->eventCounts((int) Auth::id(), DatePeriod::all());
 
@@ -138,7 +138,7 @@ class EventController extends Controller
             $event->load(['category', 'ticketTypes']);
 
             // Chiffres cumulés de l'événement (toutes dates) : mêmes définitions que le tableau de bord
-            $figures = $this->promoterStats->eventsFigures([$event->id])[$event->id];
+            $figures = $this->promoterStats->eventsFigures((int) Auth::id(), [$event->id])[$event->id];
             $scope = Scope::event($event->id);
             $all = DatePeriod::all();
             $stats = $figures + [
@@ -146,7 +146,7 @@ class EventController extends Controller
                 'available' => $this->ticketStats->available($scope),
                 'pending_payout' => $this->commissionStats->pendingPayout($scope, $all),
                 'paid_out' => $this->commissionStats->paidOut($scope, $all),
-                'sold_by_type' => $this->promoterStats->soldByTicketType($event->id),
+                'sold_by_type' => $this->promoterStats->soldByTicketType((int) Auth::id(), $event->id),
                 'has_active_tickets' => $event->ticketTypes->contains('is_active', true),
             ];
 
@@ -177,7 +177,7 @@ class EventController extends Controller
         
         try {
             $categories = EventCategory::all();
-            $stats = $this->promoterStats->eventsFigures([$event->id])[$event->id];
+            $stats = $this->promoterStats->eventsFigures((int) Auth::id(), [$event->id])[$event->id];
             $event->loadCount('ticketTypes');
 
             return view('promoteur.events.edit', compact('event', 'categories', 'stats'));

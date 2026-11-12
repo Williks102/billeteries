@@ -190,7 +190,7 @@ use Illuminate\Support\Facades\Storage;
                                     </div>
                                     <div class="col-6 stat-item">
                                         <div class="fw-bold">{{ \App\Helpers\CurrencyHelper::formatPercent($fig['fill_rate']) }}</div>
-                                        <small class="text-muted">Taux de remplissage</small>
+                                        <small class="text-muted">Remplissage (instantané)</small>
                                     </div>
                                     <div class="col-6 stat-item">
                                         <div class="fw-bold" style="color: var(--brand);">{{ \App\Helpers\CurrencyHelper::formatFCFA($fig['gmv']) }}</div>

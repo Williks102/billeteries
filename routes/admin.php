@@ -66,7 +66,6 @@ Route::resource('users', UserController::class);
 Route::post('events/bulk-action', [EventController::class, 'bulkAction'])->name('events.bulk-action');
 Route::get('events-export', [EventController::class, 'export'])->name('events.export');
 Route::get('intervention-dashboard', [EventController::class, 'interventionDashboard'])->name('intervention-dashboard');
-Route::get('api/intervention-events', [EventController::class, 'getInterventionEvents'])->name('api.intervention-events');
 Route::controller(EventController::class)->prefix('events/{event}')->name('events.')->group(function () {
     Route::patch('status', 'updateStatus')->name('update-status');
     Route::post('quick-publish', 'quickPublish')->name('quick-publish');

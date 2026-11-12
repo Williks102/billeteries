@@ -17,7 +17,6 @@ class RoutingConventionsTest extends TestCase
     /** DETTE CONNUE : routes dont la méthode de contrôleur n'existe pas. */
     private const MISSING_ACTIONS = [
         'acheteur.favorites', 'acheteur.favorites.add', 'acheteur.favorites.remove',
-        'admin.api.intervention-events',
         'admin.categories.export', 'admin.categories.reorder', 'admin.categories.duplicate',
         'admin.categories.merge', 'admin.categories.toggle-status',
         'cart.extend.timer', 'cart.status',

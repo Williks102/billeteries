@@ -14,7 +14,6 @@ class ActionBarsTest extends TestCase
     private const MIGRATED = [
         'acheteur/profile.blade.php' => 1,
         'admin/emails/dashboard.blade.php' => 1,
-        'admin/events/create.blade.php' => 2,
         'admin/orders/edit.blade.php' => 2,
         'admin/profile.blade.php' => 1,
         'admin/users/create.blade.php' => 2,
@@ -116,7 +115,7 @@ class ActionBarsTest extends TestCase
         $this->assertStringContainsString('onclick="history.back()"', $src);
         $this->assertStringContainsString('action-bar action-bar--split', $src);
 
-        $events = $this->view('admin/events/create.blade.php');
+        $events = $this->view('events/_form.blade.php'); // le formulaire admin de création délègue au partial partagé
         $this->assertStringContainsString('name="action" value="draft"', $events);
         $this->assertStringContainsString('name="action" value="publish"', $events);
     }

@@ -9,7 +9,15 @@
 
 @section('content')
 <div class="admin-page">
-    <x-admin.page-header :title="$event->title" subtitle="Détail de l'événement et chiffres (toutes dates)" :back="route('admin.events.index')" backLabel="Événements" />
+    <x-admin.page-header :title="$event->title" subtitle="Détail de l'événement et chiffres (toutes dates)" :back="route('admin.events.index')" backLabel="Événements">
+        <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-outline-primary"><i class="fas fa-edit" aria-hidden="true"></i> Modifier</a>
+        <form action="{{ route('admin.events.duplicate', $event) }}" method="POST" class="d-inline">
+            @csrf
+            <button type="submit" class="btn btn-outline-secondary" style="min-height: 44px;"><i class="fas fa-copy" aria-hidden="true"></i> Dupliquer</button>
+        </form>
+    </x-admin.page-header>
+
+    <x-admin.publication-checklist :checklist="$checklist" :event="$event" />
 
     <div class="card p-3 mb-4">
         <h2 class="h5 mb-3">Informations générales</h2>

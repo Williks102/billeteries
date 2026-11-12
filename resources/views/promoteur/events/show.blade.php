@@ -209,6 +209,12 @@ use Illuminate\Support\Facades\Storage;
                     <a href="{{ route('promoteur.events.edit', $event) }}" class="btn btn-black btn-lg">
                         <i class="fas fa-edit me-2"></i>Modifier
                     </a>
+                    <form action="{{ route('promoteur.events.duplicate', $event) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-dark btn-lg w-100">
+                            <i class="fas fa-copy me-2"></i>Dupliquer
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

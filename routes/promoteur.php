@@ -20,6 +20,7 @@ Route::get('dashboard', [PromoteurController::class, 'dashboard'])->name('dashbo
 // Événements : ressource complète + publication
 Route::post('events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
 Route::post('events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');
+Route::post('events/{event}/duplicate', [EventController::class, 'duplicate'])->name('events.duplicate');
 Route::resource('events', EventController::class);
 
 // Types de billets : ressource imbriquée /events/{event}/tickets/{ticketType}

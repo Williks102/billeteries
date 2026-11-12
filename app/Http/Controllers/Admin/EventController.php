@@ -3,10 +3,18 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Events\CreateEventAction;
+use App\Actions\Events\DuplicateEventAction;
+use App\Actions\Events\PublishEventAction;
+use App\Actions\Events\RealignSalePeriodsAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AdminStoreEventRequest;
+use App\Http\Requests\AdminUpdateEventRequest;
+use App\Support\Events\EventFormDefaults;
+use App\Support\Events\SalePeriod;
+use Illuminate\Support\Facades\DB;
 use App\Models\Event;
 use App\Models\EventCategory;
-use App\Models\EventAuditLog;
 use App\Models\TicketType;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -59,68 +67,48 @@ class EventController extends Controller
     }
 
     /**
-     * Formulaire de création événement standard
+     * Formulaire unique de création (événement + billets) pour un promoteur choisi
      */
     public function create()
     {
         $categories = EventCategory::orderBy('name')->get();
         $promoteurs = User::where('role', 'promoteur')->orderBy('name')->get();
+        $defaults = EventFormDefaults::values();
 
-        return view('admin.events.create', compact('categories', 'promoteurs'));
+        return view('admin.events.create', compact('categories', 'promoteurs', 'defaults'));
     }
 
-
-
     /**
-     * Sauvegarde nouvel événement standard
+     * Création pour le promoteur choisi : mêmes règles et même Action que le promoteur (brouillon, ou publication si
+     * la checklist le permet). Le statut et le mode de gestion ne sont pas des champs de création
+     * (statut = brouillon ; management_mode = valeur par défaut de la base).
      */
-    public function store(Request $request)
+    public function store(AdminStoreEventRequest $request, CreateEventAction $createEvent)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category_id' => 'required|exists:event_categories,id',
-            'promoter_id' => 'required|exists:users,id',
-            'event_date' => 'required|date|after:today',
-            'event_time' => 'required',
-            'venue' => 'required|string|max:255',
-            'address' => 'nullable|string',
-            'status' => 'required|in:draft,pending,published,rejected',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'max_capacity' => 'nullable|integer|min:1',
-        ]);
-
         try {
-            $data = $request->only([
-                'title', 'description', 'category_id', 'promoter_id', 
-                'event_date', 'event_time', 'venue', 'address', 'status', 'max_capacity'
-            ]);
+            $result = $createEvent->execute(
+                $request->eventData(),
+                $request->ticketsData(),
+                $request->file('image'),
+                $request->promoterId(),
+                $request->wantsPublication()
+            );
+        } catch (\Throwable $e) {
+            Log::error('Erreur création événement (admin)', ['exception' => get_class($e), 'admin_id' => Auth::id()]);
 
-            // Mode promoteur par défaut
-            $data['management_mode'] = 'promoter';
-
-            // Gestion de l'image
-            if ($request->hasFile('image')) {
-                $data['image'] = $request->file('image')->store('events', 'public');
-            }
-
-            $event = Event::create($data);
-
-            // Log de l'action
-            $event->logAction('created', [
-                'description' => 'Événement créé par admin en mode standard'
-            ]);
-
-            return redirect()->route('admin.events.index')
-                ->with('success', "Événement '{$event->title}' créé avec succès !");
-
-        } catch (\Exception $e) {
-            Log::error('Erreur création événement: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de la création de l\'événement')
-                ->withInput();
+            return back()->withInput()->with('error', 'Erreur lors de la création de l\'événement');
         }
+
+        $redirect = redirect()->route('admin.events.show', $result->event);
+
+        if ($result->published) {
+            return $redirect->with('success', 'Événement créé et publié.');
+        }
+        if ($result->publicationRefused()) {
+            return $redirect->with('warning', 'Événement enregistré en brouillon, il n\'est pas publié : '.implode(' ', $result->checklist['blocking']));
+        }
+
+        return $redirect->with('success', 'Brouillon enregistré. Vérifiez la liste ci-dessous avant de publier.');
     }
 
     /**
@@ -157,7 +145,9 @@ class EventController extends Controller
                 ->take(10)
                 ->get();
 
-            return view('admin.events.show', compact('event', 'stats', 'recentOrders'));
+            $checklist = $event->publicationChecklist();
+
+            return view('admin.events.show', compact('event', 'stats', 'recentOrders', 'checklist'));
 
         } catch (\Exception $e) {
             Log::error('Erreur affichage événement: ' . $e->getMessage());
@@ -184,56 +174,69 @@ class EventController extends Controller
     }
 
     /**
-     * Mise à jour événement
+     * Mise à jour événement (règles d'UpdateEventRequest + promoteur + statut). La publication passe par la checklist ;
+     * un changement de date recale les fins de vente (RealignSalePeriodsAction).
      */
-    public function update(Request $request, Event $event)
+    public function update(AdminUpdateEventRequest $request, Event $event, RealignSalePeriodsAction $realign, PublishEventAction $publish)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category_id' => 'required|exists:event_categories,id',
-            'promoter_id' => 'required|exists:users,id',
-            'event_date' => 'required|date',
-            'event_time' => 'required',
-            'venue' => 'required|string|max:255',
-            'address' => 'nullable|string',
-            'status' => 'required|in:draft,pending,published,rejected',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'max_capacity' => 'nullable|integer|min:1',
-        ]);
-
         try {
-            $oldValues = $event->only(['title', 'status', 'event_date', 'venue']);
-            
-            $data = $request->only([
-                'title', 'description', 'category_id', 'promoter_id', 
-                'event_date', 'event_time', 'venue', 'address', 'status', 'max_capacity'
-            ]);
+            $data = $request->eventData();
+            $data['event_time'] = SalePeriod::eventStart($data['event_date'], $data['event_time']);
+            $data['end_time'] = ! empty($data['end_time']) ? SalePeriod::eventStart($data['event_date'], $data['end_time']) : null;
+            $data['promoter_id'] = (int) $request->validated()['promoter_id'];
 
-            // Gestion de l'image
+            $newImage = null;
+            $oldImage = $event->image;
             if ($request->hasFile('image')) {
-                // Supprimer l'ancienne image
-                if ($event->image) {
-                    Storage::disk('public')->delete($event->image);
-                }
-                $data['image'] = $request->file('image')->store('events', 'public');
+                $newImage = $request->file('image')->store('events', 'public');
+                $data['image'] = $newImage;
             }
 
-            $event->update($data);
+            $wanted = $request->validated()['status'];
+            $oldStart = $event->startsAt();
+            $realigned = ['realigned' => 0, 'inconsistent' => 0];
 
-            // Log des modifications
-            $event->logAction('updated', [
-                'description' => 'Événement modifié par admin',
-                'old_values' => $oldValues,
-                'new_values' => $data
-            ]);
+            try {
+                DB::transaction(function () use ($event, $data, $wanted, $oldStart, $realign, &$realigned) {
+                    // La publication n'est jamais appliquée ici : PublishEventAction (checklist) après l'enregistrement.
+                    $event->update($data + ['status' => $wanted === 'published' ? ($event->status === 'published' ? 'published' : 'draft') : $wanted]);
+                    $newStart = $event->fresh()->startsAt();
+                    if ($oldStart && $newStart && ! $oldStart->equalTo($newStart)) {
+                        $realigned = $realign->execute($event, $oldStart, $newStart);
+                    }
+                });
+            } catch (\Throwable $e) {
+                if ($newImage) {
+                    Storage::disk('public')->delete($newImage);
+                }
+                throw $e;
+            }
 
-            return redirect()->route('admin.events.index')
-                ->with('success', "Événement '{$event->title}' mis à jour avec succès !");
+            if ($newImage && $oldImage) {
+                Storage::disk('public')->delete($oldImage);
+            }
 
-        } catch (\Exception $e) {
-            Log::error('Erreur mise à jour événement: ' . $e->getMessage());
-            
+            $message = "Événement '{$event->title}' mis à jour avec succès !";
+            $level = 'success';
+            if ($wanted === 'published' && $event->status !== 'published') {
+                $result = $publish->execute($event);
+                if (! $result->published) {
+                    $level = 'warning';
+                    $message .= ' Il n\'est pas publié : '.implode(' ', $result->checklist['blocking']);
+                }
+            }
+            if ($realigned['realigned'] > 0) {
+                $message .= " Fins de vente recalées pour {$realigned['realigned']} billet(s).";
+            }
+            if ($realigned['inconsistent'] > 0) {
+                $message .= " {$realigned['inconsistent']} billet(s) ont une période de vente incohérente : vérifiez-les.";
+            }
+
+            return redirect()->route('admin.events.index')->with($level, $message);
+
+        } catch (\Throwable $e) {
+            Log::error('Erreur mise à jour événement (admin)', ['exception' => get_class($e), 'event_id' => $event->id]);
+
             return redirect()->back()
                 ->with('error', 'Erreur lors de la mise à jour')
                 ->withInput();
@@ -286,23 +289,27 @@ class EventController extends Controller
     }
 
     /**
-     * Mise à jour rapide du statut
+     * Mise à jour rapide du statut. `published` passe par la checklist (PublishEventAction) : refus 422 avec les raisons.
      */
-    public function updateStatus(Request $request, Event $event)
+    public function updateStatus(Request $request, Event $event, PublishEventAction $publish)
     {
         $request->validate([
-            'status' => 'required|in:draft,pending,published,rejected'
+            'status' => 'required|in:draft,published,cancelled'
         ]);
 
         try {
-            $oldStatus = $event->status;
-            $event->update(['status' => $request->status]);
-
-            $event->logAction('updated', [
-                'description' => 'Statut modifié par admin',
-                'old_values' => ['status' => $oldStatus],
-                'new_values' => ['status' => $request->status]
-            ]);
+            if ($request->status === 'published') {
+                $result = $publish->execute($event);
+                if (! $result->checklist['can_publish']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Publication impossible : '.implode(' ', $result->checklist['blocking']),
+                        'reasons' => array_values($result->checklist['blocking']),
+                    ], 422);
+                }
+            } else {
+                $event->update(['status' => $request->status]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -325,7 +332,7 @@ class EventController extends Controller
     public function bulkAction(Request $request)
     {
         $request->validate([
-            'action' => 'required|in:publish,reject,delete,take_control',
+            'action' => 'required|in:publish,delete',
             'events' => 'required|array',
             'events.*' => 'exists:events,id'
         ]);
@@ -333,19 +340,18 @@ class EventController extends Controller
         try {
             $events = Event::whereIn('id', $request->events)->get();
             $count = 0;
+            $refused = [];
 
             foreach ($events as $event) {
                 switch ($request->action) {
                     case 'publish':
-                        $event->update(['status' => 'published']);
-                        $event->logAction('updated', ['description' => 'Publié via action groupée']);
-                        $count++;
-                        break;
-                        
-                    case 'reject':
-                        $event->update(['status' => 'rejected']);
-                        $event->logAction('updated', ['description' => 'Rejeté via action groupée']);
-                        $count++;
+                        // Même checklist que partout : un événement incomplet n'est pas publié (et n'est pas compté).
+                        $result = app(PublishEventAction::class)->execute($event);
+                        if ($result->published) {
+                            $count++;
+                        } else {
+                            $refused[] = $event->title.' : '.(string) (array_values($result->checklist['blocking'])[0] ?? 'publication impossible');
+                        }
                         break;
                         
                     case 'delete':
@@ -358,10 +364,6 @@ class EventController extends Controller
                         }
                         break;
                         
-                    case 'take_control':
-                        $event->enableAdminMode('Prise de contrôle via action groupée');
-                        $count++;
-                        break;
                 }
             }
 
@@ -371,9 +373,17 @@ class EventController extends Controller
                 'events_affected' => $count
             ]);
 
+            $message = "{$count} événement(s) traité(s) avec succès !";
+            if ($refused !== []) {
+                $shown = array_slice($refused, 0, 5);
+                $more = count($refused) - count($shown);
+                $message .= ' Non publié(s) : '.implode(' ; ', $shown).($more > 0 ? " et {$more} autre(s)" : '').'.';
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => "{$count} événement(s) traité(s) avec succès !"
+                'message' => $message,
+                'refused' => $refused,
             ]);
 
         } catch (\Exception $e) {
@@ -506,165 +516,66 @@ class EventController extends Controller
     }
 
     /**
-     * Publication rapide
+     * Publication rapide : même checklist que le promoteur (PublishEventAction). Refus = liste des raisons
+     * (JSON 422 pour l'appel AJAX, message d'erreur sinon), jamais une erreur 500.
      */
-    public function quickPublish(Event $event)
+    public function quickPublish(Request $request, Event $event, PublishEventAction $publish)
     {
         try {
-            $event->update(['status' => 'published']);
-            $event->logAction('published', ['description' => 'Publication rapide par admin']);
+            $result = $publish->execute($event);
+        } catch (\Throwable $e) {
+            Log::error('Erreur publication rapide', ['exception' => get_class($e), 'event_id' => $event->id]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Événement publié avec succès'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la publication'
-            ], 500);
+            return $this->quickResponse($request, false, 'Erreur lors de la publication', 500);
         }
+
+        if (! $result->checklist['can_publish']) {
+            return $this->quickResponse($request, false, 'Publication impossible : '.implode(' ', $result->checklist['blocking']), 422, array_values($result->checklist['blocking']));
+        }
+
+        return $this->quickResponse($request, true, 'Événement publié avec succès');
     }
 
     /**
      * Dépublication rapide
      */
-    public function quickUnpublish(Event $event)
+    public function quickUnpublish(Request $request, Event $event)
     {
         try {
             $event->update(['status' => 'draft']);
-            $event->logAction('unpublished', ['description' => 'Dépublication rapide par admin']);
+        } catch (\Throwable $e) {
+            Log::error('Erreur dépublication rapide', ['exception' => get_class($e), 'event_id' => $event->id]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Événement dépublié avec succès'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la dépublication'
-            ], 500);
+            return $this->quickResponse($request, false, 'Erreur lors de la dépublication', 500);
         }
+
+        return $this->quickResponse($request, true, 'Événement dépublié avec succès');
     }
 
     /**
-     * Statistiques de gestion hybride
+     * Duplique un événement (de n'importe quel promoteur, qui reste son propriétaire) en brouillon, puis ouvre l'édition.
      */
-    public function hybridStats()
+    public function duplicate(Event $event, DuplicateEventAction $duplicate)
     {
-        $stats = [
-            'interventions_last_month' => EventAuditLog::where('action', 'admin_takeover')
-                ->where('created_at', '>=', now()->subMonth())
-                ->count(),
-            'events_by_mode' => Event::selectRaw('management_mode, COUNT(*) as count')
-                ->groupBy('management_mode')
-                ->pluck('count', 'management_mode'),
-            'active_interventions' => Event::where('management_mode', 'admin')->count(),
-            'collaborative_events' => Event::where('management_mode', 'collaborative')->count(),
-        ];
-
-        return response()->json($stats);
-    }
-
-    // ==================== MÉTHODES UTILITAIRES ====================
-
-    
-    
-    /**
-     * Notifier le promoteur d'un changement de mode
-     */
-    private function notifyPromoterOfModeChange(Event $event, string $oldMode, string $newMode, string $reason)
-    {
-        // TODO: Implémenter la notification email/SMS
         try {
-            // Mail::to($event->promoteur->email)->send(new ManagementModeChanged($event, $oldMode, $newMode, $reason));
-            Log::info('Notification promoteur changement mode', [
-                'event_id' => $event->id,
-                'promoter_id' => $event->promoter_id,
-                'old_mode' => $oldMode,
-                'new_mode' => $newMode,
-                'reason' => $reason
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Erreur notification promoteur: ' . $e->getMessage());
+            $copy = $duplicate->execute($event);
+        } catch (\Throwable $e) {
+            Log::error('Erreur duplication événement (admin)', ['exception' => get_class($e), 'event_id' => $event->id]);
+
+            return back()->with('error', 'Erreur lors de la duplication de l\'événement');
         }
+
+        return redirect()->route('admin.events.edit', $copy)
+            ->with('success', 'Brouillon créé : choisissez la nouvelle date.');
     }
 
-    /**
-     * Valider les permissions pour une action
-     */
-    private function validateAdminPermission(Event $event, string $permission): bool
+    private function quickResponse(Request $request, bool $success, string $message, int $status = 200, array $reasons = [])
     {
-        // Super admin peut tout faire
-        if (auth()->user()->isAdmin() && auth()->user()->email === 'admin@clicbillet.ci') {
-            return true;
+        if ($request->expectsJson()) {
+            return response()->json(['success' => $success, 'message' => $message, 'reasons' => $reasons], $status);
         }
 
-        // Vérifier selon le mode de gestion
-        switch ($event->management_mode) {
-            case 'admin':
-                return true; // Admin a tous les droits
-                
-            case 'collaborative':
-                return in_array($permission, $event->admin_permissions ?? []);
-                
-            case 'promoter':
-                return false; // Aucun droit admin en mode promoteur seul
-                
-            default:
-                return false;
-        }
+        return back()->with($success ? 'success' : 'error', $message);
     }
 
-    
-    
-
-    /**
-     * Obtenir la priorité d'un événement
-     */
-    private function getEventPriority(Event $event): string
-    {
-        if ($event->status === 'published' && $event->ticketTypes->count() === 0) {
-            return 'critique';
-        }
-
-        if ($event->event_date <= now()->addDays(2)) {
-            return 'urgent';
-        }
-
-        return 'normal';
-    }
-
-    /**
-     * Restaurer le mode promoteur avec notification
-     */
-    public function restorePromoterControl(Request $request, Event $event)
-    {
-        $request->validate([
-            'reason' => 'required|string|max:500',
-            'notify_promoter' => 'boolean'
-        ]);
-
-        try {
-            $oldMode = $event->management_mode;
-            $event->restorePromoterMode($request->reason);
-
-            if ($request->notify_promoter) {
-                $this->notifyPromoterOfModeChange($event, $oldMode, 'promoter', $request->reason);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Contrôle rendu au promoteur avec succès'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur restauration contrôle promoteur: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la restauration du contrôle'
-            ], 500);
-        }
-    }
 }

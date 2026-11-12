@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Actions\Events\CreateEventAction;
+use App\Actions\Events\DuplicateEventAction;
 use App\Actions\Events\PublishEventAction;
 use App\Actions\Events\RealignSalePeriodsAction;
 use Illuminate\Support\Facades\DB;
@@ -292,36 +293,21 @@ class EventController extends Controller
     }
 
     /**
-     * Dupliquer un événement
+     * Dupliquer un événement : copie en brouillon (DuplicateEventAction), puis ouverture en édition pour choisir la date
      */
-    public function duplicate(Event $event)
+    public function duplicate(Event $event, DuplicateEventAction $duplicate)
     {
         abort_if($event->promoter_id !== Auth::id(), 403);
 
         try {
-            $newEvent = $event->replicate();
-            $newEvent->title = $event->title . ' (Copie)';
-            $newEvent->status = 'draft';
-            $newEvent->event_date = now()->addDays(7);
-            $newEvent->created_at = now();
-            $newEvent->updated_at = now();
-            $newEvent->save();
+            $copy = $duplicate->execute($event);
+        } catch (\Throwable $e) {
+            \Log::error('Erreur duplication événement', ['exception' => get_class($e), 'event_id' => $event->id]);
 
-            foreach ($event->ticketTypes as $ticketType) {
-                $newTicketType = $ticketType->replicate();
-                $newTicketType->event_id = $newEvent->id;
-                $newTicketType->quantity_sold = 0;
-                $newTicketType->save();
-            }
-
-            return redirect()->route('promoteur.events.edit', $newEvent)
-                ->with('success', 'Événement dupliqué avec succès ! Vous pouvez maintenant le modifier.');
-                
-        } catch (\Exception $e) {
-            \Log::error('Erreur lors de la duplication de l\'événement: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de la duplication de l\'événement');
+            return back()->with('error', 'Erreur lors de la duplication de l\'événement');
         }
+
+        return redirect()->route('promoteur.events.edit', $copy)
+            ->with('success', 'Brouillon créé : choisissez la nouvelle date.');
     }
 }

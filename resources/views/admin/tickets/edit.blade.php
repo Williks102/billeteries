@@ -41,7 +41,7 @@
                 <div class="card-header"><h2 class="h5 mb-0">Statut du billet</h2></div>
                 <div class="card-body">
                     @if($transitions === [])
-                        <p class="mb-3">Un billet utilisé ne peut plus être modifié.</p>
+                        <p class="mb-3">Aucun changement de statut possible : un billet utilisé est figé, et un billet annulé d'une commande non payée/remboursée ne peut pas être réactivé.</p>
                         <div class="action-bar mt-0">
                             <a href="{{ route('admin.tickets.show', $ticket) }}" class="btn btn-primary">Retour au billet</a>
                         </div>

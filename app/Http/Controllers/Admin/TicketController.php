@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Admin\Concerns\ResolvesStatsPeriod;
+use App\Helpers\PrivacyHelper;
 use App\Models\Event;
+use App\Support\CsvSafe;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
@@ -174,7 +176,7 @@ class TicketController extends Controller
 
         return $this->applyTransition($ticket, 'sold')
             ? back()->with('success', 'Ticket réactivé avec succès !')
-            : back()->with('error', 'Erreur lors de la réactivation');
+            : back()->with('error', 'Billet d\'une commande non payée/remboursée : réactivation impossible');
     }
 
     /**
@@ -282,7 +284,7 @@ class TicketController extends Controller
     {
         $request->validate([
             'action' => 'required|in:mark_used,cancel,reactivate,regenerate_qr',
-            'tickets' => 'required|array',
+            'tickets' => 'required|array|max:200',
             'tickets.*' => 'exists:tickets,id'
         ]);
 
@@ -337,24 +339,29 @@ class TicketController extends Controller
             $period = $this->statsPeriod($request, 'admin.tickets.index');
             $query = $this->filteredQuery($this->validatedFilters($request), $period)->with(self::LIST_RELATIONS);
 
-            $csvContent = "Code,Événement,Type,Client,Email,Statut,Prix,Créé le,Utilisé le\n";
+            $out = fopen('php://temp', 'w+');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM UTF-8 (Excel)
+            fputcsv($out, ['Code', 'Événement', 'Type', 'Client', 'Email (masqué)', 'Statut', 'Prix (FCFA)', 'Créé le', 'Utilisé le']);
 
-            $query->orderBy('tickets.id')->chunk(500, function ($tickets) use (&$csvContent) {
+            $query->orderBy('tickets.id')->chunk(500, function ($tickets) use ($out) {
                 foreach ($tickets as $ticket) {
                     $order = $ticket->linkedOrder();
-                    $csvContent .= implode(',', [
+                    fputcsv($out, array_map([CsvSafe::class, 'cell'], [
                         $ticket->ticket_code,
-                        '"' . str_replace('"', '""', $ticket->ticketType->event->title ?? 'N/A') . '"',
-                        '"' . str_replace('"', '""', $ticket->ticketType->name ?? 'N/A') . '"',
-                        '"' . str_replace('"', '""', $order?->user?->name ?? 'N/A') . '"',
-                        $order?->user?->email ?? 'N/A',
+                        $ticket->ticketType->event->title ?? 'N/A',
+                        $ticket->ticketType->name ?? 'N/A',
+                        $order?->user?->name ?? 'N/A',
+                        PrivacyHelper::maskEmail($order?->user?->email ?? $order?->billing_email),
                         $ticket->status,
-                        number_format($ticket->ticketType->price ?? 0, 2),
+                        (int) round($ticket->ticketType->price ?? 0),
                         $ticket->created_at->format('Y-m-d H:i:s'),
-                        $ticket->used_at ? $ticket->used_at->format('Y-m-d H:i:s') : 'N/A'
-                    ]) . "\n";
+                        $ticket->used_at ? $ticket->used_at->format('Y-m-d H:i:s') : 'N/A',
+                    ]));
                 }
             });
+            rewind($out);
+            $csvContent = stream_get_contents($out);
+            fclose($out);
 
             return response($csvContent)
                 ->header('Content-Type', 'text/csv')

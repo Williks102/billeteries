@@ -171,14 +171,103 @@ class AdminTicketsTest extends TestCase
     public function test_used_ticket_is_frozen_and_cancelled_can_be_reactivated(): void
     {
         $used = $this->id('TKT-O1-1');
-        $this->admin()->get(route('admin.tickets.edit', $used))->assertOk()->assertSee('ne peut plus être modifié');
+        $this->admin()->get(route('admin.tickets.edit', $used))->assertOk()->assertSee('Aucun changement de statut possible');
         $this->admin()->put(route('admin.tickets.update', $used), ['status' => 'cancelled'])->assertSessionHasErrors('status');
         $this->assertSame('used', Ticket::find($used)->status);
 
         $this->admin()->patch(route('admin.tickets.cancel', $used))->assertSessionHas('error');
-        $cancelled = $this->id('TKT-O3-0');
-        $this->admin()->patch(route('admin.tickets.reactivate', $cancelled))->assertSessionHas('success');
-        $this->assertSame('sold', Ticket::find($cancelled)->status);
+        // annulé d'une commande remboursée (O3) ou échouée (O6) : réactivation refusée
+        foreach (['TKT-O3-0', 'TKT-O6-0'] as $code) {
+            $id = $this->id($code);
+            $this->admin()->patch(route('admin.tickets.reactivate', $id))->assertSessionHas('error', "Billet d'une commande non payée/remboursée : réactivation impossible");
+            $this->admin()->put(route('admin.tickets.update', $id), ['status' => 'sold'])->assertSessionHasErrors('status');
+            $this->assertSame('cancelled', Ticket::find($id)->status);
+        }
+        // annulé d'une commande payée : autorisé
+        DB::table('tickets')->where('ticket_code', 'TKT-O4-0')->update(['status' => 'cancelled']);
+        $paid = $this->id('TKT-O4-0');
+        $this->admin()->patch(route('admin.tickets.reactivate', $paid))->assertSessionHas('success');
+        $this->assertSame('sold', Ticket::find($paid)->status);
+    }
+
+    public function test_bulk_actions_apply_the_same_rules_and_count_only_processed_tickets(): void
+    {
+        $bulk = fn (string $action, array $codes) => $this->admin()->post(route('admin.tickets.bulk-action'), ['action' => $action, 'tickets' => array_map(fn ($c) => $this->id($c), $codes)]);
+
+        DB::table('tickets')->where('ticket_code', 'TKT-O2-0')->update(['status' => 'sold']); // commande en attente
+        $bulk('mark_used', ['TKT-O2-0'])->assertSessionHas('success', '0 ticket(s) traité(s) avec succès !');
+        $this->assertSame('sold', Ticket::where('ticket_code', 'TKT-O2-0')->value('status'));
+
+        $bulk('cancel', ['TKT-O1-1'])->assertSessionHas('success', '0 ticket(s) traité(s) avec succès !');
+        $this->assertSame('used', Ticket::where('ticket_code', 'TKT-O1-1')->value('status'));
+
+        $bulk('reactivate', ['TKT-O3-0', 'TKT-O6-0'])->assertSessionHas('success', '0 ticket(s) traité(s) avec succès !');
+        $this->assertSame('cancelled', Ticket::where('ticket_code', 'TKT-O3-0')->value('status'));
+
+        $bulk('mark_used', ['TKT-O4-0'])->assertSessionHas('success', '1 ticket(s) traité(s) avec succès !');
+        $this->assertSame('used', Ticket::where('ticket_code', 'TKT-O4-0')->value('status'));
+    }
+
+    public function test_bulk_action_validation(): void
+    {
+        $ok = $this->id('TKT-O4-0');
+        $this->admin()->post(route('admin.tickets.bulk-action'), ['action' => 'mark_used', 'tickets' => [999999]])->assertSessionHasErrors('tickets.0');
+        $this->admin()->post(route('admin.tickets.bulk-action'), ['action' => 'explode', 'tickets' => [$ok]])->assertSessionHasErrors('action');
+        $this->admin()->post(route('admin.tickets.bulk-action'), ['action' => 'cancel', 'tickets' => array_fill(0, 201, $ok)])->assertSessionHasErrors('tickets');
+        $this->assertSame('sold', Ticket::find($ok)->status);
+    }
+
+    // ---------- export CSV ----------
+
+    public function test_export_csv_is_well_formed_masked_and_formula_safe(): void
+    {
+        DB::table('tickets')->where('ticket_code', 'TKT-O4-0')->update(['ticket_code' => '=HYPERLINK("http://x","a,b")']);
+        DB::table('events')->where('id', 1)->update(['title' => '@SUM(1+1)']);
+        DB::table('users')->where('id', 1)->update(['name' => 'Jean "JJ", Dupont']);
+
+        $res = $this->admin()->get(route('admin.tickets.export', ['period' => 'all']))->assertOk();
+        $csv = $res->getContent();
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $csv);
+        $lines = array_values(array_filter(preg_split('/\r?\n/', substr($csv, 3))));
+        $rows = array_map('str_getcsv', $lines);
+
+        $this->assertGreaterThan(5, count($rows));
+        foreach ($rows as $row) {
+            $this->assertCount(9, $row);
+        }
+        $flat = implode('|', array_merge(...$rows));
+        $this->assertStringContainsString("'=HYPERLINK(", $flat);
+        $this->assertStringContainsString("'@SUM(1+1)", $flat);
+        $this->assertStringContainsString('Jean "JJ", Dupont', $flat);
+        $this->assertStringContainsString('ac***@example.test', $flat);
+        $this->assertStringNotContainsString('acheteur@example.test', $csv);
+        $this->assertSame('10000', $rows[1][6]);
+        $this->assertSame("'-1", \App\Support\CsvSafe::cell('-1'));
+        $this->assertSame("'\tx", \App\Support\CsvSafe::cell("\tx"));
+        $this->assertSame('abc', \App\Support\CsvSafe::cell('abc'));
+    }
+
+    #[DataProvider('modifyingRoutes')]
+    public function test_non_admin_cannot_modify(string $role, string $method, string $route): void
+    {
+        $user = $this->makeUser(30, $role);
+        $id = $this->id('TKT-O4-0');
+        $url = $route === 'admin.tickets.bulk-action' ? route($route) : route($route, $id);
+        $this->actingAs($user)->call($method, $url, ['status' => 'cancelled', 'action' => 'cancel', 'tickets' => [$id]])->assertForbidden();
+        $this->assertSame('sold', Ticket::find($id)->status);
+    }
+
+    /** @return array<string, array{0:string,1:string,2:string}> */
+    public static function modifyingRoutes(): array
+    {
+        $out = [];
+        foreach (['acheteur', 'promoteur'] as $role) {
+            foreach ([['PATCH', 'admin.tickets.cancel'], ['PATCH', 'admin.tickets.mark-used'], ['PATCH', 'admin.tickets.reactivate'], ['PUT', 'admin.tickets.update'], ['POST', 'admin.tickets.bulk-action']] as [$m, $r]) {
+                $out["$role $m $r"] = [$role, $m, $r];
+            }
+        }
+
+        return $out;
     }
 
     public function test_bulk_regenerate_qr_skips_non_issued_tickets(): void

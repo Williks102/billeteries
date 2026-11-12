@@ -69,7 +69,7 @@ class Ticket extends Model
     {
         return match ($this->status) {
             'sold' => $this->isIssued() ? ['used', 'cancelled'] : ['cancelled'],
-            'cancelled' => ['sold'],
+            'cancelled' => $this->linkedOrder()?->payment_status === 'paid' ? ['sold'] : [],
             'used' => [],
             default => ['cancelled'], // available, reserved
         };

@@ -228,6 +228,19 @@ class PromoterStats
         return $out;
     }
 
+    /**
+     * Requête d'EXPORT : mêmes commandes que l'écran (payées, période, promoteur), sans tri (l'appelant pagine par
+     * identifiant avec chunkByIdDesc), commission chargée d'avance. $eventId restreint à un événement du promoteur.
+     */
+    public function paidOrdersForExport(int $promoterId, DatePeriod $period, ?int $eventId = null)
+    {
+        $query = Order::query()->paid()->forScope(Scope::promoter($promoterId))->inPeriod($period)
+            ->with(['user:id,name,email', 'event:id,title', 'commission'])
+            ->withSum('orderItems as tickets_quantity', 'quantity');
+
+        return $eventId === null ? $query : $query->where('orders.event_id', $eventId);
+    }
+
     private function paidOrdersQuery(int $promoterId, DatePeriod $period)
     {
         return Order::query()->paid()->forScope(Scope::promoter($promoterId))->inPeriod($period)

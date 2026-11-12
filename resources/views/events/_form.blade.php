@@ -19,7 +19,7 @@
         ]];
     }
     $nextIndex = $blocks === [] ? 1 : ((int) max(array_keys($blocks)) + 1);
-    $advancedErrors = collect(['description', 'address', 'end_time', 'terms_conditions', 'image'])->contains(fn ($k) => $errors->has($k));
+    $advancedErrors = collect(['description', 'address', 'end_time', 'terms_conditions'])->contains(fn ($k) => $errors->has($k));
     $advancedFilled = filled(old('description')) || filled(old('address')) || filled(old('end_time')) || filled(old('terms_conditions'));
     $describe = fn (string $f, string $hint = '') => trim(($hint !== '' ? $f.'-hint ' : '').($errors->has($f) ? $f.'-error' : ''));
 @endphp
@@ -95,6 +95,15 @@
                        @error('venue') aria-invalid="true" aria-describedby="venue-error" @enderror>
                 <x-field-error name="venue" />
             </div>
+
+            <div class="col-12">
+                <label class="form-label" for="image">Image de l'événement <span class="text-muted small">(facultatif pour un brouillon)</span></label>
+                <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif"
+                       class="form-control @error('image') is-invalid @enderror"
+                       aria-describedby="{{ $describe('image', 'x') }}" @error('image') aria-invalid="true" @enderror>
+                <div id="image-hint" class="form-text">Obligatoire pour publier. JPEG, PNG ou GIF, 2 Mo maximum.</div>
+                <x-field-error name="image" />
+            </div>
         </div>
     </section>
 
@@ -150,17 +159,8 @@
     </section>
 
     <details class="ev-card ev-advanced" @if ($advancedErrors || $advancedFilled) open @endif>
-        <summary>Options avancées <span class="text-muted small">(description, image, adresse, heure de fin, conditions)</span></summary>
+        <summary>Options avancées <span class="text-muted small">(description, adresse, heure de fin, conditions)</span></summary>
         <div class="row g-3 mt-0">
-            <div class="col-12">
-                <label class="form-label" for="image">Image de l'événement <span class="text-muted small">(obligatoire pour publier)</span></label>
-                <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif"
-                       class="form-control @error('image') is-invalid @enderror"
-                       aria-describedby="{{ $describe('image', 'x') }}" @error('image') aria-invalid="true" @enderror>
-                <div id="image-hint" class="form-text">JPEG, PNG ou GIF, 2 Mo maximum.</div>
-                <x-field-error name="image" />
-            </div>
-
             <div class="col-12">
                 <label class="form-label" for="description">Description <span class="text-muted small">(facultatif)</span></label>
                 <textarea id="description" name="description" rows="4"
@@ -199,10 +199,10 @@
     </details>
 
     <div class="action-bar action-bar--sticky">
-        <button type="submit" name="action" value="publish" class="btn btn-orange">
+        <button type="submit" name="action" value="publish" class="btn btn-orange" data-submit-once>
             <i class="fas fa-paper-plane" aria-hidden="true"></i>Publier
         </button>
-        <button type="submit" name="action" value="draft" class="btn btn-outline-secondary">
+        <button type="submit" name="action" value="draft" class="btn btn-outline-secondary" data-submit-once>
             Enregistrer en brouillon
         </button>
         <a href="{{ $cancelUrl }}" class="btn action-bar__cancel">Annuler</a>
@@ -237,4 +237,5 @@
 
 @push('scripts')
 <script src="{{ asset('js/promoteur-tickets-form.js') }}" defer></script>
+<script src="{{ asset('js/event-form-submit-once.js') }}" defer></script>
 @endpush

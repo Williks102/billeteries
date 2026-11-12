@@ -472,6 +472,183 @@ class EventCreationTest extends TestCase
         }
     }
 
+    // ------------------------------------------------------------------ image (types, poids, nom stocké)
+
+    public static function badImages(): array
+    {
+        return [
+            'svg' => [fn () => UploadedFile::fake()->createWithContent('logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><script>alert(1)</script></svg>')],
+            'php' => [fn () => UploadedFile::fake()->createWithContent('shell.php', '<?php echo 1;')],
+            'php renommé en jpg (contenu réel)' => [function () {
+                $tmp = tempnam(sys_get_temp_dir(), 'img');
+                file_put_contents($tmp, '<?php system($_GET["c"]);');
+
+                return new UploadedFile($tmp, 'cover.jpg', 'image/jpeg', null, true);
+            }],
+            'bmp (image réelle, format non autorisé)' => [fn () => UploadedFile::fake()->image('poster.bmp')],
+            'trop lourd (3 Mo)' => [fn () => UploadedFile::fake()->image('big.jpg')->size(3072)],
+        ];
+    }
+
+    /** @dataProvider badImages */
+    public function test_bad_images_are_refused_and_nothing_is_stored(\Closure $file): void
+    {
+        $this->store(['image' => $file()])->assertSessionHasErrors('image');
+
+        $this->assertSame(0, Event::count());
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_valid_images_are_stored_under_a_generated_name(): void
+    {
+        foreach (['holiday.jpeg', 'poster.png'] as $original) {
+            Event::query()->delete();
+            $this->store(['image' => UploadedFile::fake()->image($original)])->assertSessionHasNoErrors();
+
+            $path = Event::firstOrFail()->image;
+            $this->assertStringStartsWith('events/', $path);
+            Storage::disk('public')->assertExists($path);
+            $this->assertStringNotContainsString(pathinfo($original, PATHINFO_FILENAME), $path);
+        }
+    }
+
+    public function test_image_field_is_in_the_essential_section_not_in_advanced_options(): void
+    {
+        $html = $this->actingAs($this->promoter)->get(route('promoteur.events.create'))->assertOk()->getContent();
+
+        $this->assertLessThan(strpos($html, '<details class="ev-card ev-advanced"'), strpos($html, 'name="image"'));
+        $this->assertStringContainsString('Obligatoire pour publier', $html);
+    }
+
+    // ------------------------------------------------------------------ bloc « Standard »
+
+    public function test_modified_standard_block_without_price_is_a_validation_error_under_the_field(): void
+    {
+        $create = route('promoteur.events.create');
+        $html = $this->actingAs($this->promoter)->from($create)->followingRedirects()
+            ->post(route('promoteur.events.store'), $this->payload(['ticket_types' => [0 => ['price' => '', 'quantity_available' => '50']]]))
+            ->getContent();
+
+        $this->assertSame(0, Event::count());
+        $this->assertStringContainsString('id="tt-0-price-error"', $html);
+        $this->assertStringContainsString('Indiquez le prix', $html);
+    }
+
+    // ------------------------------------------------------------------ propriétaire : unpublish / tickets
+
+    public function test_other_promoter_cannot_unpublish_or_add_tickets(): void
+    {
+        $event = $this->readyEvent();
+        $event->update(['status' => 'published']);
+        $other = User::find(3);
+
+        $this->actingAs($other)->post(route('promoteur.events.unpublish', $event))->assertForbidden();
+        $this->actingAs($other)->post(route('promoteur.events.tickets.store', $event), ['ticket_types' => [
+            0 => ['name' => 'VIP', 'price' => 9000, 'quantity_available' => 10],
+        ]])->assertForbidden();
+
+        $this->assertSame('published', $event->fresh()->status);
+        $this->assertSame(1, TicketType::count());
+    }
+
+    // ------------------------------------------------------------------ recalage des fins de vente
+
+    private function rescheduleEvent(): array
+    {
+        $event = $this->readyEvent(); // début 20/11/2026 20:00
+        $event->update(['status' => 'published']);
+        $base = ['event_id' => $event->id, 'price' => 1000, 'quantity_available' => 50, 'quantity_sold' => 0,
+            'sale_start_date' => Carbon::parse('2026-11-12 12:00'), 'max_per_order' => 10, 'is_active' => true];
+        $first = $event->ticketTypes()->first(); // fin = ancien début
+        $custom = TicketType::create($base + ['name' => 'Choix', 'sale_end_date' => Carbon::parse('2026-11-18 10:00')]);
+        $late = TicketType::create(array_replace($base, ['name' => 'Tard', 'quantity_sold' => 7, 'sale_end_date' => Carbon::parse('2026-11-25 10:00')]));
+
+        return [$event, $first, $custom, $late];
+    }
+
+    private function reschedule(Event $event, string $date, string $time, ?User $as = null)
+    {
+        return ($as ?? $this->promoter) === null ? null : $this->actingAs($as ?? $this->promoter)
+            ->put(route('promoteur.events.update', $event), $this->updatePayload(['event_date' => $date, 'event_time' => $time]));
+    }
+
+    public function test_postponing_moves_end_equal_to_old_start_and_keeps_explicit_choices(): void
+    {
+        [$event, $first, $custom, $late] = $this->rescheduleEvent();
+
+        $response = $this->reschedule($event, '2026-11-27', '19:00');
+
+        $this->assertSame('2026-11-27 19:00:00', $first->fresh()->sale_end_date->format('Y-m-d H:i:s'));   // (a)
+        $this->assertSame('2026-11-18 10:00:00', $custom->fresh()->sale_end_date->format('Y-m-d H:i:s'));  // (c)
+        $this->assertSame('2026-11-25 10:00:00', $late->fresh()->sale_end_date->format('Y-m-d H:i:s'));   // avant le nouveau début : inchangée
+        $response->assertSessionHas('success', fn ($m) => str_contains($m, 'Fins de vente recalées pour 1 billet(s)'));
+    }
+
+    public function test_bringing_forward_caps_later_ends_and_never_touches_stock(): void
+    {
+        [$event, $first, $custom, $late] = $this->rescheduleEvent();
+
+        $response = $this->reschedule($event, '2026-11-17', '18:00');
+
+        $this->assertSame('2026-11-17 18:00:00', $first->fresh()->sale_end_date->format('Y-m-d H:i:s'));   // (a)
+        $this->assertSame('2026-11-17 18:00:00', $late->fresh()->sale_end_date->format('Y-m-d H:i:s'));    // (b)
+        $this->assertSame('2026-11-17 18:00:00', $custom->fresh()->sale_end_date->format('Y-m-d H:i:s'));  // 18/11 10:00 > nouveau début : (b)
+        $this->assertSame(7, (int) $late->fresh()->quantity_sold);
+        $this->assertSame([50, 50, 50], TicketType::orderBy('id')->pluck('quantity_available')->map(fn ($q) => (int) $q)->all());
+        $response->assertSessionHas('success', fn ($m) => str_contains($m, 'recalées pour 3 billet(s)'));
+    }
+
+    public function test_inconsistent_sale_start_is_reported_not_modified(): void
+    {
+        [$event, $first] = $this->rescheduleEvent();
+        $first->update(['sale_start_date' => Carbon::parse('2026-11-19 00:00')]);
+
+        $response = $this->reschedule($event, '2026-11-17', '18:00');
+
+        $this->assertSame('2026-11-19 00:00:00', $first->fresh()->sale_start_date->format('Y-m-d H:i:s'));
+        $response->assertSessionHas('success', fn ($m) => str_contains($m, '1 billet(s) ont une période de vente incohérente : vérifiez-les.'));
+    }
+
+    public function test_nothing_is_realigned_when_date_and_time_are_unchanged(): void
+    {
+        [$event, $first, $custom, $late] = $this->rescheduleEvent();
+
+        $response = $this->reschedule($event, '2026-11-20', '20:00');
+
+        $this->assertSame('2026-11-20 20:00:00', $first->fresh()->sale_end_date->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-11-25 10:00:00', $late->fresh()->sale_end_date->format('Y-m-d H:i:s'));
+        $response->assertSessionHas('success', fn ($m) => ! str_contains($m, 'recalées'));
+    }
+
+    public function test_other_promoter_cannot_reschedule(): void
+    {
+        [$event, $first] = $this->rescheduleEvent();
+
+        $this->reschedule($event, '2026-11-27', '19:00', User::find(3))->assertForbidden();
+
+        $this->assertSame('2026-11-20 20:00:00', $first->fresh()->sale_end_date->format('Y-m-d H:i:s'));
+    }
+
+    // ------------------------------------------------------------------ journaux, double envoi
+
+    public function test_store_does_not_log_the_raw_exception_message(): void
+    {
+        $src = file_get_contents(base_path('app/Http/Controllers/Promoteur/EventController.php'));
+        $this->assertDoesNotMatchRegularExpression("/Erreur création événement'[^;]*getMessage/", $src);
+    }
+
+    public function test_form_disables_buttons_after_first_valid_submit(): void
+    {
+        $html = $this->actingAs($this->promoter)->get(route('promoteur.events.create'))->assertOk()->getContent();
+        $this->assertStringContainsString('js/event-form-submit-once.js', $html);
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'data-submit-once'));
+
+        $js = file_get_contents(public_path('js/event-form-submit-once.js'));
+        foreach (['pageshow', "addEventListener('submit'", "addEventListener('invalid'", 'Enregistrement', 'disabled = true', 'disabled = false'] as $needle) {
+            $this->assertStringContainsString($needle, $js, $needle);
+        }
+    }
+
     // ------------------------------------------------------------------ journaux
 
     public function test_no_request_dump_in_logs_or_mass_assignment_of_the_request(): void

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Actions\Events\CreateEventAction;
 use App\Actions\Events\PublishEventAction;
+use App\Actions\Events\RealignSalePeriodsAction;
+use Illuminate\Support\Facades\DB;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use App\Models\{Event, EventCategory};
@@ -99,7 +101,7 @@ class EventController extends Controller
                 $request->wantsPublication()
             );
         } catch (\Throwable $e) {
-            \Log::error('Erreur création événement', ['exception' => get_class($e), 'message' => $e->getMessage()]);
+            \Log::error('Erreur création événement', ['exception' => get_class($e), 'promoter_id' => Auth::id()]);
 
             return back()
                 ->withInput()
@@ -185,7 +187,7 @@ class EventController extends Controller
     /**
      * Mettre à jour un événement existant (autorisation : UpdateEventRequest)
      */
-    public function update(UpdateEventRequest $request, Event $event)
+    public function update(UpdateEventRequest $request, Event $event, RealignSalePeriodsAction $realign)
     {
         try {
             $data = $request->eventData();
@@ -200,10 +202,27 @@ class EventController extends Controller
                 $data['image'] = $request->file('image')->store('events', 'public');
             }
 
-            $event->update($data);
+            $oldStart = $event->startsAt();
+            $realigned = ['realigned' => 0, 'inconsistent' => 0];
+
+            DB::transaction(function () use ($event, $data, $oldStart, $realign, &$realigned) {
+                $event->update($data);
+                $newStart = $event->fresh()->startsAt();
+                if ($oldStart && $newStart && ! $oldStart->equalTo($newStart)) {
+                    $realigned = $realign->execute($event, $oldStart, $newStart);
+                }
+            });
+
+            $message = 'Événement mis à jour avec succès !';
+            if ($realigned['realigned'] > 0) {
+                $message .= " Fins de vente recalées pour {$realigned['realigned']} billet(s).";
+            }
+            if ($realigned['inconsistent'] > 0) {
+                $message .= " {$realigned['inconsistent']} billet(s) ont une période de vente incohérente : vérifiez-les.";
+            }
 
             return redirect()->route('promoteur.events.show', $event)
-                ->with('success', 'Événement mis à jour avec succès !');
+                ->with('success', $message);
                 
         } catch (\Exception $e) {
             \Log::error('Erreur lors de la mise à jour de l\'événement: ' . $e->getMessage());

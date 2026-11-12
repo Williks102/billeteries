@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Events\EventFormDefaults;
 use App\Support\Events\SalePeriod;
 use Illuminate\Contracts\Validation\Validator;
 
@@ -28,22 +29,30 @@ class StoreEventRequest extends EventFormRequest
     {
         parent::prepareForValidation();
 
-        // Bloc de billet laissé tel quel (sans prix, nom vide ou « Standard ») : ignoré, pas une erreur.
+        // Bloc « Standard » laissé INTACT (sans prix, quantité / max par défaut, ni description ni dates) : ignoré,
+        // ce n'est pas un billet. Modifié sans prix : erreur de validation sur le prix.
         // Les clés sont conservées pour que les erreurs retrouvent le bon bloc du formulaire.
         $tickets = $this->input('ticket_types');
         if (is_array($tickets)) {
             foreach ($tickets as $i => $row) {
-                if (! is_array($row)) {
-                    continue;
-                }
-                $name = trim((string) ($row['name'] ?? ''));
-                $price = trim((string) ($row['price'] ?? ''));
-                if ($price === '' && ($name === '' || $name === self::DEFAULT_TICKET_NAME)) {
+                if (is_array($row) && $this->isUntouchedBlock($row)) {
                     unset($tickets[$i]);
                 }
             }
             $this->merge(['ticket_types' => $tickets]);
         }
+    }
+
+    private function isUntouchedBlock(array $row): bool
+    {
+        $blank = fn (string $k) => trim((string) ($row[$k] ?? '')) === '';
+        $same = fn (string $k, int $default) => $blank($k) || trim((string) $row[$k]) === (string) $default;
+        $name = trim((string) ($row['name'] ?? ''));
+
+        return $blank('price') && ($name === '' || $name === self::DEFAULT_TICKET_NAME)
+            && $same('quantity_available', EventFormDefaults::QUANTITY)
+            && $same('max_per_order', EventFormDefaults::MAX_PER_ORDER)
+            && $blank('description') && $blank('sale_start_date') && $blank('sale_end_date');
     }
 
     public function rules(): array

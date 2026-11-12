@@ -24,8 +24,12 @@ Code : `app/Http/Requests/{EventFormRequest,StoreEventRequest,UpdateEventRequest
 - Prix : entier (avant : numérique). Pré-génération des lignes `tickets` retirée de `TicketTypeController::store` (le checkout les crée à la réservation) ; logs de debug retirés (plus aucun `$request->all()`).
 - Correctifs au passage : l'édition ne vide plus `terms_conditions` (champ absent du formulaire d'édition) ; `after:sale_start_date` (cassé en tableau) remplacé par un contrôle explicite ; script mort `publishEvent()` (avec `alert()`) retiré de show.
 
+- Recalage à la modification de la date ou de l'heure (`RealignSalePeriodsAction`, dans la transaction de `update`) : une fin de vente égale à l'ancien début passe au nouveau ; une fin postérieure au nouveau début est ramenée au nouveau début ; une fin antérieure et différente de l'ancien début (choix du promoteur) reste inchangée ; un début de vente devenu postérieur à la fin n'est pas modifié mais signalé (« N billet(s) ont une période de vente incohérente : vérifiez-les »). Message « Fins de vente recalées pour N billet(s) ». Aucune colonne `quantity_*` n'est écrite. La checklist, elle, ne s'affiche que pour un brouillon.
+- Bloc « Standard » ignoré seulement s'il est intact (sans prix, quantité 100, max 10, ni description ni dates) ; modifié sans prix : erreur sous le champ prix.
+- Image dans « L'essentiel » (facultative pour un brouillon, obligatoire pour publier) ; boutons désactivés après le premier envoi valide (`public/js/event-form-submit-once.js`, réinitialisé au retour arrière) ; l'échec de création ne journalise plus le message brut de l'exception.
+
 ## Tests
-`tests/Feature/EventCreationTest.php` (45 cas, ajouté à `test:routes`). Mutations vérifiées rouges : image non exigée, `promoter_id` lu depuis la requête, publication malgré checklist, fin de vente non bornée. Adaptés légitimement : `ActionBarsTest` et `CharteEtape2Test` (les vues contrôlées sont passées de `promoteur/events/create` à `events/_form`).
+`tests/Feature/EventCreationTest.php` (61 cas, dont refus SVG / .php / faux .jpg / bmp / 3 Mo, recalage, propriétaire sur unpublish, ajouté à `test:routes`). Mutations vérifiées rouges : `mimes` ou `max` retirés, `image` remplacé par `file`, recalage retiré, contrôle propriétaire de `unpublish` retiré,  image non exigée, `promoter_id` lu depuis la requête, publication malgré checklist, fin de vente non bornée. Adaptés légitimement : `ActionBarsTest` et `CharteEtape2Test` (les vues contrôlées sont passées de `promoteur/events/create` à `events/_form`).
 
 ## Vérification visuelle
 Instance jetable, 390 et 1280 px : pas de défilement horizontal, aucun contrôle < 44 px, aucune boîte de dialogue. Captures : `docs/audit-visuel/evenement-creation-390.jpg`, `evenement-brouillon-checklist-390.jpg`. Non vérifié : appareil mobile réel, MySQL.
@@ -34,4 +38,3 @@ Instance jetable, 390 et 1280 px : pas de défilement horizontal, aucun contrôl
 - Admin : réutiliser `CreateEventAction` (passer `promoter_id` explicitement) et `events/_form` (paramètre `topFields` pour le choix du promoteur) ; `quickPublish` admin à aligner sur `PublishEventAction`.
 - Duplication (route + `DuplicateEventAction`), édition alignée sur le partial.
 - Calculateur de gains `components/promoter-earnings-calculator` : inutilisé dans les vues mais référencé par `DefaultCommissionRateTest` (zone commission), non supprimé.
-- Changer la date d'un événement ne recale pas les fins de vente des billets existants : la checklist le signale à la publication.

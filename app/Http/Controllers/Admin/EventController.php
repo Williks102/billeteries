@@ -15,7 +15,6 @@ use App\Support\Events\SalePeriod;
 use Illuminate\Support\Facades\DB;
 use App\Models\Event;
 use App\Models\EventCategory;
-use App\Models\EventAuditLog;
 use App\Models\TicketType;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -295,7 +294,7 @@ class EventController extends Controller
     public function updateStatus(Request $request, Event $event, PublishEventAction $publish)
     {
         $request->validate([
-            'status' => 'required|in:draft,pending,published,rejected'
+            'status' => 'required|in:draft,published,cancelled'
         ]);
 
         try {
@@ -333,7 +332,7 @@ class EventController extends Controller
     public function bulkAction(Request $request)
     {
         $request->validate([
-            'action' => 'required|in:publish,reject,delete,take_control',
+            'action' => 'required|in:publish,delete',
             'events' => 'required|array',
             'events.*' => 'exists:events,id'
         ]);
@@ -341,19 +340,18 @@ class EventController extends Controller
         try {
             $events = Event::whereIn('id', $request->events)->get();
             $count = 0;
+            $refused = [];
 
             foreach ($events as $event) {
                 switch ($request->action) {
                     case 'publish':
                         // Même checklist que partout : un événement incomplet n'est pas publié (et n'est pas compté).
-                        if (app(PublishEventAction::class)->execute($event)->published) {
+                        $result = app(PublishEventAction::class)->execute($event);
+                        if ($result->published) {
                             $count++;
+                        } else {
+                            $refused[] = $event->title.' : '.(string) (array_values($result->checklist['blocking'])[0] ?? 'publication impossible');
                         }
-                        break;
-                        
-                    case 'reject':
-                        $event->update(['status' => 'rejected']);
-                        $count++;
                         break;
                         
                     case 'delete':
@@ -366,10 +364,6 @@ class EventController extends Controller
                         }
                         break;
                         
-                    case 'take_control':
-                        $event->enableAdminMode('Prise de contrôle via action groupée');
-                        $count++;
-                        break;
                 }
             }
 
@@ -379,9 +373,17 @@ class EventController extends Controller
                 'events_affected' => $count
             ]);
 
+            $message = "{$count} événement(s) traité(s) avec succès !";
+            if ($refused !== []) {
+                $shown = array_slice($refused, 0, 5);
+                $more = count($refused) - count($shown);
+                $message .= ' Non publié(s) : '.implode(' ; ', $shown).($more > 0 ? " et {$more} autre(s)" : '').'.';
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => "{$count} événement(s) traité(s) avec succès !"
+                'message' => $message,
+                'refused' => $refused,
             ]);
 
         } catch (\Exception $e) {
@@ -576,124 +578,4 @@ class EventController extends Controller
         return back()->with($success ? 'success' : 'error', $message);
     }
 
-    /**
-     * Statistiques de gestion hybride
-     */
-    public function hybridStats()
-    {
-        $stats = [
-            'interventions_last_month' => EventAuditLog::where('action', 'admin_takeover')
-                ->where('created_at', '>=', now()->subMonth())
-                ->count(),
-            'events_by_mode' => Event::selectRaw('management_mode, COUNT(*) as count')
-                ->groupBy('management_mode')
-                ->pluck('count', 'management_mode'),
-            'active_interventions' => Event::where('management_mode', 'admin')->count(),
-            'collaborative_events' => Event::where('management_mode', 'collaborative')->count(),
-        ];
-
-        return response()->json($stats);
-    }
-
-    // ==================== MÉTHODES UTILITAIRES ====================
-
-    
-    
-    /**
-     * Notifier le promoteur d'un changement de mode
-     */
-    private function notifyPromoterOfModeChange(Event $event, string $oldMode, string $newMode, string $reason)
-    {
-        // TODO: Implémenter la notification email/SMS
-        try {
-            // Mail::to($event->promoteur->email)->send(new ManagementModeChanged($event, $oldMode, $newMode, $reason));
-            Log::info('Notification promoteur changement mode', [
-                'event_id' => $event->id,
-                'promoter_id' => $event->promoter_id,
-                'old_mode' => $oldMode,
-                'new_mode' => $newMode,
-                'reason' => $reason
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Erreur notification promoteur: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Valider les permissions pour une action
-     */
-    private function validateAdminPermission(Event $event, string $permission): bool
-    {
-        // Super admin peut tout faire
-        if (auth()->user()->isAdmin() && auth()->user()->email === 'admin@clicbillet.ci') {
-            return true;
-        }
-
-        // Vérifier selon le mode de gestion
-        switch ($event->management_mode) {
-            case 'admin':
-                return true; // Admin a tous les droits
-                
-            case 'collaborative':
-                return in_array($permission, $event->admin_permissions ?? []);
-                
-            case 'promoter':
-                return false; // Aucun droit admin en mode promoteur seul
-                
-            default:
-                return false;
-        }
-    }
-
-    
-    
-
-    /**
-     * Obtenir la priorité d'un événement
-     */
-    private function getEventPriority(Event $event): string
-    {
-        if ($event->status === 'published' && $event->ticketTypes->count() === 0) {
-            return 'critique';
-        }
-
-        if ($event->event_date <= now()->addDays(2)) {
-            return 'urgent';
-        }
-
-        return 'normal';
-    }
-
-    /**
-     * Restaurer le mode promoteur avec notification
-     */
-    public function restorePromoterControl(Request $request, Event $event)
-    {
-        $request->validate([
-            'reason' => 'required|string|max:500',
-            'notify_promoter' => 'boolean'
-        ]);
-
-        try {
-            $oldMode = $event->management_mode;
-            $event->restorePromoterMode($request->reason);
-
-            if ($request->notify_promoter) {
-                $this->notifyPromoterOfModeChange($event, $oldMode, 'promoter', $request->reason);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Contrôle rendu au promoteur avec succès'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur restauration contrôle promoteur: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la restauration du contrôle'
-            ], 500);
-        }
-    }
 }

@@ -13,7 +13,7 @@
         <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-outline-primary"><i class="fas fa-edit" aria-hidden="true"></i> Modifier</a>
         <form action="{{ route('admin.events.duplicate', $event) }}" method="POST" class="d-inline">
             @csrf
-            <button type="submit" class="btn btn-outline-secondary"><i class="fas fa-copy" aria-hidden="true"></i> Dupliquer</button>
+            <button type="submit" class="btn btn-outline-secondary" style="min-height: 44px;"><i class="fas fa-copy" aria-hidden="true"></i> Dupliquer</button>
         </form>
     </x-admin.page-header>
 

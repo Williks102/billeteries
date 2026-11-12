@@ -71,7 +71,6 @@ Route::controller(EventController::class)->prefix('events/{event}')->name('event
     Route::post('quick-publish', 'quickPublish')->name('quick-publish');
     Route::post('quick-unpublish', 'quickUnpublish')->name('quick-unpublish');
     Route::post('duplicate', 'duplicate')->name('duplicate');
-    Route::post('restore-promoter-control', 'restorePromoterControl')->name('restore-promoter-control');
 });
 Route::resource('events', EventController::class);
 

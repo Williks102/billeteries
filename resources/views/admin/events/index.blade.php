@@ -35,7 +35,6 @@
 
     <x-stat-grid label="Chiffres des événements">
         <x-stat-card label="Événements publiés" :value="$stats['published']" hint="Total actuel" />
-        <x-stat-card label="En attente de validation" :value="$stats['pending']" hint="Total actuel" />
         <x-stat-card label="Brouillons" :value="$stats['draft']" hint="Total actuel" />
         <x-stat-card label="Ventes de la période (billets, hors frais)" unit="FCFA" :value="$periodSales" hint="Commandes payées, tous événements" />
     </x-stat-grid>
@@ -57,9 +56,8 @@
                     <select id="status" class="form-select" name="status">
                         <option value="">Tous les statuts</option>
                         <option value="published" {{ request('status') === 'published' ? 'selected' : '' }}>Publié</option>
-                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>En attente</option>
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Brouillon</option>
-                        <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejeté</option>
+                        <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Annulé</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -109,7 +107,6 @@
                     <select id="action" class="form-select" name="action" required>
                         <option value="">Choisir une action...</option>
                         <option value="publish">Publier les événements</option>
-                        <option value="reject">Rejeter les événements</option>
                         <option value="delete">Supprimer les événements</option>
                     </select>
                 </div>
@@ -220,19 +217,14 @@
                                             <i class="fas fa-check-circle me-1"></i>Publié
                                         </span>
                                         @break
-                                    @case('pending')
-                                        <span class="badge bg-warning">
-                                            <i class="fas fa-clock me-1"></i>En attente
-                                        </span>
-                                        @break
                                     @case('draft')
                                         <span class="badge bg-secondary">
                                             <i class="fas fa-file-alt me-1"></i>Brouillon
                                         </span>
                                         @break
-                                    @case('rejected')
+                                    @case('cancelled')
                                         <span class="badge bg-danger">
-                                            <i class="fas fa-times-circle me-1"></i>Rejeté
+                                            <i class="fas fa-times-circle me-1"></i>Annulé
                                         </span>
                                         @break
                                 @endswitch
@@ -272,29 +264,7 @@
                                             </form>
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
-                                        @if($event->status === 'pending')
-                                        <li>
-                                            <form action="{{ route('admin.events.update-status', $event) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="status" value="published">
-                                                <button type="submit" class="dropdown-item text-success">
-                                                    <i class="fas fa-check-circle me-2"></i>Approuver
-                                                </button>
-                                            </form>
-                                        </li>
-                                        <li>
-                                            <form action="{{ route('admin.events.update-status', $event) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="status" value="rejected">
-                                                <button type="submit" class="dropdown-item text-warning">
-                                                    <i class="fas fa-times-circle me-2"></i>Rejeter
-                                                </button>
-                                            </form>
-                                        </li>
-                                        @endif
-                                        @if($event->status === 'published')
+                                                                                @if($event->status === 'published')
                                         <li>
                                             <form action="{{ route('admin.events.update-status', $event) }}" method="POST" class="d-inline">
                                                 @csrf

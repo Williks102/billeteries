@@ -32,8 +32,15 @@ Routes : 199 avant, 201 après (+ `promoteur.events.duplicate`, `admin.events.du
 ## Vérification visuelle
 Instance jetable (sqlite, Chrome via Playwright, Bootstrap et Font Awesome servis en local), 390 et 1280 px : création admin, fiche admin avec checklist, liste promoteur et redirection vers l'édition de la copie : pas de défilement horizontal, aucun contrôle de création < 44 px, aucune boîte de dialogue. Le bouton « Dupliquer » de la liste promoteur est forcé à 44 px ; les boutons existants de cette carte (Détails, Modifier, Billets, Publier) restent à 31 px (préexistant). Captures : `docs/audit-visuel/evenement-admin-brouillon-checklist-390.jpg`, `evenement-duplication-liste-390.jpg`. Non vérifié : appareil mobile réel, MySQL.
 
+## Corrections après relecture
+- `updateStatus` n'accepte que `draft`, `published`, `cancelled` (422 sinon, statut inchangé ; `published` via la checklist). L'action groupée n'accepte que `publish` et `delete` ; la publication groupée liste les événements refusés (titre : premier manque, 5 lignes puis « et N autre(s) »).
+- Retirés : option « Rejeter », statuts `pending` / `rejected` (filtre, badges, menu, carte « En attente de validation ») et son JS ; route `restore-promoter-control`, `restorePromoterControl`, `hybridStats`, `notifyPromoterOfModeChange`, `validateAdminPermission`, `getEventPriority` (plus d'appelant). Routes : 201 -> 200 (199 au départ, +2 duplication, -1).
+- Bouton « Dupliquer » de la fiche admin : 44 px.
+- Le test « route de duplication non masquée par la ressource » ne protégeait rien (aucune route POST `events/{event}/...` ne la masquerait) : remplacé par un test d'enregistrement (nom, méthode POST seule) ; le GET donne 405.
+- Mutations rouges : `rejected` réautorisé dans `updateStatus`, `reject` réautorisé en action groupée.
+
 ## Ce qui reste
-- Édition admin : `admin/events/edit.blade.php` (617 lignes) garde son propre formulaire ; seul le contrôleur est aligné (requête, recalage, checklist). Pas de partial partagé, pas de champ « conditions », « supprimer l'image » (`remove_image`) non traité (comme avant).
-- L'admin ne peut pas ajouter ni modifier les billets d'un événement après création (les écrans admin ont été supprimés ; les routes de billets sont promoteur seulement) : il passe par la création ou par le promoteur.
-- `updateStatus` et le menu de la liste admin proposent encore `pending` / `rejected`, absents de l'enum de la base (erreur SQL en MySQL strict) ; `bulkAction` et `restorePromoterControl` appellent encore `enableAdminMode` / `restorePromoterMode`, inexistants dans `Event`.
+- Édition admin : `admin/events/edit.blade.php` (617 lignes) garde son propre formulaire ; seul le contrôleur est aligné. Pas de champ « conditions », `remove_image` non traité.
+- L'admin ne peut pas ajouter ni modifier les billets après création (écrans et routes admin supprimés).
+- « Dépublier » de la liste admin envoie un formulaire classique vers `update-status`, qui répond en JSON (préexistant) ; la carte de stats `PlatformStats::events` compte encore `pending` / `rejected` (service hors périmètre).
 - Le calculateur de gains reste référencé par `DefaultCommissionRateTest` (inchangé).

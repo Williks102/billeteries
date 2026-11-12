@@ -207,11 +207,13 @@ class EventDuplicationTest extends TestCase
         $this->assertSame(1, Event::count());
     }
 
-    public function test_the_duplicate_route_is_not_shadowed_by_the_events_resource(): void
+    public function test_duplicate_route_is_registered_as_post_only(): void
     {
+        // (Aucune route POST `events/{event}/...` de la ressource ne la masquerait : on vérifie l'enregistrement, pas le masquage.)
         $url = '/promoteur/events/'.$this->source->id.'/duplicate';
         $route = app('router')->getRoutes()->match(\Illuminate\Http\Request::create($url, 'POST'));
         $this->assertSame('promoteur.events.duplicate', $route->getName());
+        $this->assertSame(['POST'], $route->methods());
 
         $this->actingAs(User::find(2))->post($url)->assertRedirect(route('promoteur.events.edit', Event::orderByDesc('id')->first()));
         $this->assertSame(2, Event::count());

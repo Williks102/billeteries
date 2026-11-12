@@ -303,4 +303,61 @@ class AdminEventCreationTest extends TestCase
             $this->assertStringNotContainsString('logAction', $src, $file);
         }
     }
+
+    // ------------------------------------------------------------------ statuts et actions groupées
+
+    public function test_update_status_only_accepts_draft_published_cancelled(): void
+    {
+        $event = $this->readyEvent();
+
+        foreach (['rejected', 'pending', 'finished', 'nimporte'] as $bad) {
+            $this->actingAs($this->admin)->patchJson(route('admin.events.update-status', $event), ['status' => $bad])->assertStatus(422);
+            $this->assertSame('draft', $event->fresh()->status, $bad);
+        }
+        $this->actingAs($this->admin)->patchJson(route('admin.events.update-status', $event), ['status' => 'cancelled'])->assertOk();
+        $this->assertSame('cancelled', $event->fresh()->status);
+    }
+
+    public function test_bulk_action_refuses_reject_and_take_control_and_reports_refused_events(): void
+    {
+        $event = $this->readyEvent();
+        foreach (['reject', 'take_control'] as $bad) {
+            $this->actingAs($this->admin)->postJson(route('admin.events.bulk-action'), ['action' => $bad, 'events' => [$event->id]])->assertStatus(422);
+        }
+        $this->assertSame('draft', $event->fresh()->status);
+
+        $incomplete = [];
+        for ($i = 1; $i <= 7; $i++) {
+            $incomplete[] = $this->readyEvent(2, ['image' => null, 'title' => "Incomplet $i"])->id;
+        }
+        $json = $this->actingAs($this->admin)->postJson(route('admin.events.bulk-action'), ['action' => 'publish', 'events' => array_merge([$event->id], $incomplete)])->assertOk();
+        $this->assertSame('published', $event->fresh()->status);
+        $this->assertStringContainsString('1 événement(s) traité(s)', $json->json('message'));
+        $this->assertStringContainsString("Incomplet 1 : Ajoutez une image de l'événement.", $json->json('message'));
+        $this->assertStringContainsString('et 2 autre(s)', $json->json('message'));
+        $this->assertCount(7, $json->json('refused'));
+    }
+
+    public function test_restore_promoter_control_route_and_dead_code_are_gone(): void
+    {
+        $event = $this->readyEvent();
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('admin.events.restore-promoter-control'));
+        $this->actingAs($this->admin)->post('/admin/events/'.$event->id.'/restore-promoter-control', ['reason' => 'x'])->assertNotFound();
+
+        $src = file_get_contents(base_path('app/Http/Controllers/Admin/EventController.php'));
+        foreach (['restorePromoterMode', 'enableAdminMode', 'take_control', 'hybridStats', "'rejected'"] as $dead) {
+            $this->assertStringNotContainsString($dead, $src, $dead);
+        }
+    }
+
+    public function test_admin_list_no_longer_offers_reject_take_control_or_pending_statuses(): void
+    {
+        $this->readyEvent();
+        $html = $this->actingAs($this->admin)->get(route('admin.events.index'))->assertOk()->getContent();
+
+        foreach (['Rejeter', 'take_control', 'value="rejected"', 'value="pending"', 'En attente de validation'] as $gone) {
+            $this->assertStringNotContainsString($gone, $html, $gone);
+        }
+        $this->assertStringContainsString('value="publish"', $html);
+    }
 }

@@ -60,9 +60,6 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'publish':
                 message = `Êtes-vous sûr de vouloir publier ${count} événement(s) ?`;
                 break;
-            case 'reject':
-                message = `Êtes-vous sûr de vouloir rejeter ${count} événement(s) ?`;
-                break;
             case 'delete':
                 message = `⚠️ ATTENTION: Êtes-vous sûr de vouloir SUPPRIMER définitivement ${count} événement(s) ?\n\nCette action est irréversible !`;
                 break;

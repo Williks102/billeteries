@@ -44,7 +44,7 @@
                     <i class="fas fa-credit-card fa-2x"></i>
                 </div>
                 <h5>3. Payez</h5>
-                <p>Choisissez virement, Mobile Money ou espèces. Vos places sont réservées 48 h (24 h sans compte connecté) : réglez en suivant les instructions reçues</p>
+                <p>Choisissez virement, Mobile Money ou espèces. Vos places sont réservées {{ \App\Helpers\DurationHelper::reservationLabel(false) }} ({{ \App\Helpers\DurationHelper::reservationLabel(true) }} sans compte connecté) : réglez en suivant les instructions reçues</p>
             </div>
         </div>
         

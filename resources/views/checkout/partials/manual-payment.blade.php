@@ -6,6 +6,6 @@
 @if(session('other_order_numbers') && count(session('other_order_numbers')))
     <p class="mb-4 small text-muted">
         Autres commandes créées (un événement par commande) : {{ implode(', ', session('other_order_numbers')) }}.
-        Les instructions de chacune vous ont été envoyées par email.
+        Chaque commande a ses propres instructions de paiement.
     </p>
 @endif

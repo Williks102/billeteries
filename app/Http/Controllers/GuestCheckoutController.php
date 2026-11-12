@@ -23,7 +23,7 @@ class GuestCheckoutController extends Controller
      */
     public function show()
     {
-        $cart = session()->get('cart', []);
+        $cart = session()->get('direct_booking') ?: session()->get('cart', []);
         
         if (empty($cart)) {
             return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
@@ -63,7 +63,7 @@ class GuestCheckoutController extends Controller
             ]);
 
             // Vérification du panier
-            $cart = session()->get('cart', []);
+            $cart = session()->get('direct_booking') ?: session()->get('cart', []);
             if (empty($cart)) {
                 return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
             }
@@ -95,7 +95,7 @@ class GuestCheckoutController extends Controller
 
             // Instructions de paiement par email (commandes encore en attente), puis page de confirmation
             $service->sendManualInstructions($orders);
-            session()->forget(['cart', 'cart_timer']);
+            session()->has('direct_booking') ? session()->forget(['direct_booking', 'booking_timer']) : session()->forget(['cart', 'cart_timer']);
 
             return $this->redirectToConfirmation($orders);
 

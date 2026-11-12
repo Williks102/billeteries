@@ -85,11 +85,11 @@ class PublicPagesTest extends TestCase
         $res->assertSee('name="message"', false);
     }
 
-    public function test_direct_checkout_summary_renders(): void
+    public function test_direct_checkout_goes_straight_to_the_information_step(): void
     {
         $user = $this->makeUser(30, 'acheteur');
-        $res = $this->actingAs($user)->post(route('checkout.direct'), ['event_id' => 1, 'tickets' => [1 => 2]]);
-        $this->assertCleanPage($res);
-        $res->assertSee('Continuer vers le paiement');
+        $this->actingAs($user)->post(route('checkout.direct'), ['event_id' => 1, 'tickets' => [1 => 2]])
+            ->assertRedirect(route('checkout.show'));
+        $this->assertCleanPage($this->get(route('checkout.show')));
     }
 }

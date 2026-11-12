@@ -365,9 +365,11 @@ class CheckoutFinalFixesTest extends TestCase
         $this->assertStringContainsString('summaryDetails.textContent = summaryItems', $mobile);
         $this->assertStringContainsString('div.textContent = String(message', $mobile);
 
-        $cart = file_get_contents(resource_path('views/cart/show.blade.php'));
+        // Panier : le JS vit dans public/js/cart.js et n'écrit les messages serveur qu'en textContent.
+        $cart = file_get_contents(public_path('js/cart.js'));
         $this->assertStringNotContainsString('${message}', $cart);
-        $this->assertStringContainsString('escaper.textContent = String(message', $cart);
+        $this->assertStringNotContainsString('innerHTML', $cart);
+        $this->assertStringContainsString('statusBox.textContent = message', $cart);
     }
 
     // ===== Backoff de l'alerte SMTP =====

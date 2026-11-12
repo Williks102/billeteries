@@ -130,7 +130,7 @@
                 </div>
                 <div class="info-item">
                     <i class="fas fa-clock"></i>
-                    <span>{{ $event->formatted_event_time ?? '20h00' }}</span>
+                    <span>{{ $event->event_time?->format('H:i') ?? '20h00' }}</span>
                 </div>
                 <div class="info-item">
                     <i class="fas fa-map-marker-alt"></i>
@@ -139,7 +139,7 @@
                 @if($event->ticketTypes->count() > 0)
                 <div class="info-item">
                     <i class="fas fa-ticket-alt"></i>
-                    <span>À partir de {{ \App\Helpers\CurrencyHelper::formatFCFA($event->ticketTypes->min('price')) }}</span>
+                    <span>{{ (int) $event->ticketTypes->min('price') === 0 ? '' : 'À partir de ' }}{{ \App\Helpers\CurrencyHelper::formatPrice($event->ticketTypes->min('price')) }}</span>
                 </div>
                 @endif
             </div>
@@ -328,12 +328,21 @@ class BookingSystem {
         
         console.log(`🔘 Mise à jour boutons: ${totalTickets} billets sélectionnés`);
         
-        if (totalTickets === 0) {
-            buttons.prop('disabled', true)
-                   .html('<i class="fas fa-ticket-alt me-2"></i>Sélectionnez vos billets');
-        } else {
-            buttons.prop('disabled', false)
-                   .html(`<i class="fas fa-shopping-cart me-2"></i>Réserver ${totalTickets} billet${totalTickets > 1 ? 's' : ''}`);
+        // Le bouton « Ajouter au panier » garde son libellé ; « Réserver maintenant » envoie la sélection à checkout.direct
+        buttons.prop('disabled', totalTickets === 0);
+        const holder = document.getElementById('directTicketsDesktop');
+        if (holder) {
+            holder.textContent = '';
+            Object.keys(this.selectedTickets).forEach(id => {
+                if (this.selectedTickets[id] > 0) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'tickets[' + id + ']';
+                    input.value = this.selectedTickets[id];
+                    holder.appendChild(input);
+                }
+            });
+            $('#reserveNowDesktop').prop('disabled', totalTickets === 0);
         }
     }
     
@@ -395,7 +404,6 @@ class BookingSystem {
             if (data.success) {
                 // Animation de succès
                 reserveButtons.html('<i class="fas fa-check me-2"></i>Ajouté au panier !');
-                reserveButtons.removeClass('btn-reserve').addClass('btn-success');
                 
                 this.showAlert(data.message, 'success');
                 
@@ -420,9 +428,7 @@ class BookingSystem {
             
             // Remettre le bouton en état
             reserveButtons.prop('disabled', false)
-                         .html(originalHtml)
-                         .removeClass('btn-success')
-                         .addClass('btn-reserve');
+                         .html(originalHtml);
             
             this.showAlert(error.message || 'Erreur lors de la réservation. Veuillez réessayer.', 'error');
         }

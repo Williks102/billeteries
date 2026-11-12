@@ -7,7 +7,7 @@
     </div>
     <div class="card-body">
         @if($amount !== null)
-            <p class="mb-1"><strong>Montant à régler :</strong> {{ \App\Helpers\CurrencyHelper::formatFCFA($amount) }}</p>
+            <p class="mb-1"><strong>Montant à régler :</strong> {{ \App\Helpers\CurrencyHelper::formatPrice($amount) }}</p>
         @endif
         <p class="mb-3"><strong>Mode de paiement :</strong> {{ $info['label'] }}</p>
         <p>{{ $info['instructions'] }}</p>
@@ -16,14 +16,14 @@
             <div class="mb-3">
                 <label class="form-label fw-bold mb-1" for="pay-{{ $loop->index }}">{{ $label }}</label>
                 <input id="pay-{{ $loop->index }}" type="text" class="form-control" readonly value="{{ $value }}"
-                       style="font-size: 16px; min-height: 44px; user-select: all;">
+                       style="font-size: 16px; min-height: var(--touch-min); user-select: all;">
             </div>
         @endforeach
         @if($reference)
             <div class="mb-3">
                 <label class="form-label fw-bold mb-1" for="pay-ref">Référence à indiquer</label>
                 <input id="pay-ref" type="text" class="form-control" readonly value="{{ $reference }}"
-                       style="font-size: 16px; min-height: 44px; user-select: all;">
+                       style="font-size: 16px; min-height: var(--touch-min); user-select: all;">
             </div>
         @endif
 
@@ -32,7 +32,12 @@
                 <i class="fas fa-clock me-2" aria-hidden="true"></i>
                 À régler avant le <strong>{{ $deadline->format('d/m/Y à H:i') }}</strong>.
                 Passé ce délai, votre réservation est libérée.
+                {{-- Décompte en JavaScript progressif : sans JS, le texte « avant le … » ci-dessus reste la seule information. --}}
+                <span class="deadline-countdown" data-deadline="{{ $deadline->toIso8601String() }}" hidden></span>
             </div>
+            @once
+                <script src="{{ asset('js/deadline-countdown.js') }}" defer></script>
+            @endonce
         @endif
         <p class="small text-muted mt-3 mb-0">Votre QR code vous sera remis dès que le paiement aura été confirmé.</p>
     </div>

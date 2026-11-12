@@ -23,7 +23,7 @@
                         <div class="ticket-description">{{ $ticketType->description }}</div>
                         @endif
                     </div>
-                    <div class="ticket-price">{{ \App\Helpers\CurrencyHelper::formatFCFA($ticketType->price) }}</div>
+                    <div class="ticket-price">{{ \App\Helpers\CurrencyHelper::formatPrice($ticketType->price) }}</div>
                 </div>
                 
                 <div class="quantity-selector">
@@ -69,14 +69,24 @@
                 <div id="summaryContentDesktop"></div>
             </div>
             
-            <!-- Bouton principal -->
-            <button type="button" 
-                    id="reserveBtnDesktop" 
-                    class="btn-reserve" 
-                    onclick="reserveTickets()" 
+            <!-- Action principale : directement aux informations de commande, sans page Panier -->
+            <form method="POST" action="{{ route('checkout.direct') }}" id="directFormDesktop">
+                @csrf
+                <input type="hidden" name="event_id" value="{{ $event->id }}">
+                <div id="directTicketsDesktop"></div>
+                <button type="submit" id="reserveNowDesktop" class="btn-reserve" disabled>
+                    <i class="fas fa-ticket-alt me-2" aria-hidden="true"></i>Réserver maintenant
+                </button>
+            </form>
+            <!-- Action secondaire : plusieurs événements dans le même panier -->
+            <button type="button"
+                    id="reserveBtnDesktop"
+                    class="btn btn-outline-primary w-100 mt-2"
+                    style="min-height: 48px;"
+                    onclick="reserveTickets()"
                     disabled>
-                <i class="fas fa-ticket-alt me-2"></i>
-                Sélectionnez vos billets
+                <i class="fas fa-shopping-cart me-2" aria-hidden="true"></i>
+                Ajouter au panier
             </button>
             
             <!-- Informations de sécurité -->

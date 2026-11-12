@@ -285,9 +285,9 @@ class CartCheckoutUiTest extends TestCase
         $this->assertGreaterThanOrEqual(2, substr_count($html, 'action="'.route('checkout.direct').'"'), 'feuille mobile ET formulaire desktop');
         $this->assertStringContainsString('id="reserveNowBtn"', $html);
         $this->assertStringContainsString('id="reserveNowDesktop"', $html);
-        $this->assertSame(1, substr_count($html, 'À partir de'), 'un seul prix « À partir de »');
+        $this->assertSame(2, substr_count($html, 'À partir de'), 'prix « À partir de » : en-tête + barre d\'achat mobile');
         $this->assertDoesNotMatchRegularExpression('/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/', strip_tags(preg_replace('/<script\b.*?<\/script>/s', '', $html)), 'aucun datetime brut');
-        $this->assertStringContainsString('08:30', $html);
+        $this->assertStringContainsString('08h30', $html);
         $this->assertDoesNotMatchRegularExpression('/<img(?![^>]*\bsrc=)[^>]*>/i', $html, 'aucune balise img sans source');
     }
 

@@ -1,0 +1,33 @@
+/* Fiche publique d'un événement : sections, lignes d'information, barre d'achat mobile. Jetons : charte.css */
+.event-details { display: flex; flex-direction: column; gap: var(--section-gap); margin-block: var(--section-gap); }
+.detail-section__title { display: flex; align-items: center; gap: var(--space-2); font-size: 1.25rem; font-weight: 700; margin: 0 0 var(--space-3); color: var(--ink); }
+.detail-section__title i { color: var(--brand); }
+.detail-section__subtitle { font-size: 1rem; font-weight: 600; margin: 0 0 var(--space-2); color: var(--ink); }
+.event-description { line-height: 1.6; color: var(--ink); overflow-wrap: anywhere; }
+
+.info-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.info-row { display: flex; align-items: flex-start; gap: var(--space-3); }
+.info-row__icon { flex: 0 0 var(--space-6); width: var(--space-6); height: var(--space-6); display: inline-flex; align-items: center; justify-content: center; color: var(--brand); }
+.info-row__body { min-width: 0; line-height: 1.4; overflow-wrap: anywhere; }
+.info-row__label { display: block; font-weight: 600; color: var(--ink); }
+.info-row__value { display: block; color: var(--ink-muted); }
+
+/* Évite que la liste colle au bloc « Partager » qui suit */
+.detail-section--practical { margin-bottom: var(--section-gap); }
+
+.buy-bar { display: none; }
+@media (max-width: 767.98px) {
+    .buy-bar {
+        display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 990;
+        padding: var(--space-3) var(--gutter) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+        background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -2px 8px rgba(15, 23, 42, .08);
+    }
+    .buy-bar__price { margin: 0; font-weight: 700; color: var(--ink); min-width: 0; }
+    .buy-bar__btn { flex: 0 0 auto; min-height: var(--touch-min); font-size: 1rem; }
+    /* Réserve la hauteur de la barre pour ne rien masquer */
+    body:has(.buy-bar) { padding-bottom: calc(var(--touch-min) + var(--space-6) + env(safe-area-inset-bottom, 0px)); }
+    /* Au-dessus de la navigation du bas quand elle est présente */
+    body.has-bottom-nav .buy-bar { bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px)); padding-bottom: var(--space-3); }
+    body.has-bottom-nav:has(.buy-bar) { padding-bottom: calc(var(--bottom-nav-height) + var(--touch-min) + var(--space-6) + env(safe-area-inset-bottom, 0px)); }
+}

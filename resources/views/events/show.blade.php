@@ -5,6 +5,7 @@
 @section('title', $event->title . ' - ClicBillet CI')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/event-detail.css') }}">
 <style>
 /* ===== SYSTÈME UNIFIÉ - MOBILE FIRST ===== */
 
@@ -125,21 +126,23 @@
             
             <div class="event-quick-info">
                 <div class="info-item">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>{{ $event->formatted_event_date ?? $event->event_date->format('d/m/Y') }}</span>
+                    <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+                    <span>{{ $event->long_date_label }}</span>
                 </div>
+                @if($event->time_range_label !== '')
                 <div class="info-item">
-                    <i class="fas fa-clock"></i>
-                    <span>{{ $event->event_time?->format('H:i') ?? '20h00' }}</span>
+                    <i class="fas fa-clock" aria-hidden="true"></i>
+                    <span>{{ $event->time_range_label }}</span>
                 </div>
+                @endif
                 <div class="info-item">
                     <i class="fas fa-map-marker-alt"></i>
                     <span>{{ $event->venue }}</span>
                 </div>
-                @if($event->ticketTypes->isNotEmpty())
+                @if($event->startingPriceLabel())
                 <div class="info-item">
                     <i class="fas fa-ticket-alt"></i>
-                    <span>{{ (int) $event->ticketTypes->min('price') === 0 ? '' : 'À partir de ' }}{{ \App\Helpers\CurrencyHelper::formatPrice($event->ticketTypes->min('price')) }}</span>
+                    <span>{{ $event->startingPriceLabel() }}</span>
                 </div>
                 @endif
             </div>
@@ -156,6 +159,10 @@
         <!-- Informations utiles après le formulaire -->
         @include('events.partials.event-details-mobile')
     </div>
+
+    @if($event->showsBuyBar())
+        <x-event-buy-bar :event="$event" />
+    @endif
     
     <!-- Layout Desktop: Côte à côte -->
     <div class="d-none d-lg-block">
@@ -173,6 +180,7 @@
 
 @push('scripts')
 <script src="{{ asset('js/bfcache-reset.js') }}"></script>
+<script src="{{ asset('js/event-buy-bar.js') }}" defer></script>
 <!-- Charger jQuery AVANT le script de réservation -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 

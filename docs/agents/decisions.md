@@ -40,7 +40,9 @@ Ces décisions priment sur les hypothèses des audits. Date : 2026-11-11.
 - Test MySQL (`composer run test:mysql`) : à lancer par le propriétaire/serveur sur une base jetable dont le nom finit par `_test`.
 ### Statistiques (compléments)
 - Commissions `held` / `pending` : NON comptées (seules les commissions de commandes `paid`).
-- Remplissage public : billets vendus seulement ; les réservations non payées restent « disponibles ».
+- Remplissage (indicateurs de statistiques, admin et promoteur) : billets vendus seulement ; les réservations non payées restent « disponibles ».
+- **Places restantes affichées au public** (fiche événement) : capacité − `quantity_sold` (réservations non payées DÉDUITES : anti-survente). C'est volontaire et différent du taux de remplissage ci-dessus ; les libellés distinguent « instantané » et « ventes de la période ».
+- **Accueil public** : aucun compteur global de billets vendus ni d'organisateurs affiché (il révélerait le volume d'un promoteur tant qu'ils sont peu nombreux) ; réafficher seulement avec un seuil minimum, sur décision du propriétaire.
 ### Création d'événement
 - Variante A (formulaire unique). Brouillon sans billet autorisé, mais publier exige ≥ 1 billet. Image et description obligatoires pour publier. Suppression de la pré-génération de billets (après validation de paiements-stock). Fin de vente par défaut = début de l'événement. L'admin crée pour un promoteur ; mode hybride retiré pour l'instant. Duplication d'événement : branchée.
 ### Mobile

@@ -17,7 +17,7 @@ class BuyerPublicViewsHaveNoQueriesTest extends TestCase
         'events/partials/event-details-desktop', 'events/partials/event-details-mobile', 'components/event-card',
     ];
 
-    private const FORBIDDEN = ['->sum(', '->count(', 'selectRaw', 'DB::', '::where', '->where(', '->avg(', 'round(', 'whereMonth', 'quantity_sold', 'remainingTickets(', '->orders()'];
+    private const FORBIDDEN = ['->sum(', '->count(', 'selectRaw', 'DB::', '::where', '->where(', '->avg(', 'round(', 'whereMonth', 'quantity_sold', 'remainingTickets(', '->orders()', '::find(', '::first(', '::all(', '::query('];
 
     public static function views(): array
     {

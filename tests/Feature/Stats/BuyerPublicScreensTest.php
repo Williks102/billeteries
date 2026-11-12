@@ -244,11 +244,12 @@ class BuyerPublicScreensTest extends TestCase
 
     public function test_home_public_counters_are_the_target_values(): void
     {
-        $html = $this->get(route('home'))->assertOk()->getContent();
+        // Les compteurs restent calculés côté serveur (PublicStats) mais ne sont plus affichés sur l'accueil.
+        $counters = app(PublicStats::class)->homeCounters();
 
-        $this->assertSame('3', $this->card($html, 'evenements-a-venir'));   // 1, 2, 4 ; brouillon 6 exclu
-        $this->assertSame('12', $this->card($html, 'billets-vendus'));      // sold + used des commandes payées
-        $this->assertSame('2', $this->card($html, 'organisateurs'));
+        $this->assertSame(3, $counters['events_upcoming']);   // 1, 2, 4 ; brouillon 6 exclu
+        $this->assertSame(12, $counters['tickets_sold']);      // sold + used des commandes payées
+        $this->assertSame(2, $counters['promoters']);
     }
 
     public function test_a_used_ticket_counts_and_unpaid_or_refunded_orders_do_not(): void
@@ -271,13 +272,23 @@ class BuyerPublicScreensTest extends TestCase
         $event = $this->get(route('events.show', 1))->assertOk()->getContent();
 
         foreach ([$home, $event] as $html) {
-            foreach (['acheteur@example.test', 'b2@example.test', 'p2@example.test', 'ORD-STATS', 'x@example.test', 'TKT-O'] as $needle) {
+            foreach (['acheteur@example.test', 'b2@example.test', 'p2@example.test', 'ORD-STATS', 'x@example.test', 'TKT-O', 'Acheteur 2'] as $needle) {
                 $this->assertStringNotContainsString($needle, $html, "« {$needle} » ne doit jamais apparaître sur une page publique");
             }
             $this->assertStringNotContainsString('7 777', $this->text($html));
             $this->assertStringNotContainsString('73 000', $this->text($html));
         }
         $this->assertStringNotContainsStringIgnoringCase('visiteur', $this->text($home));
+    }
+
+    public function test_home_page_exposes_no_global_sales_counters(): void
+    {
+        // Décision : un total de billets vendus ou d'organisateurs sur l'accueil révélerait le volume d'un promoteur
+        // tant qu'il y en a peu ; ces compteurs restent calculés côté serveur (PublicStats) mais ne sont pas affichés.
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('id="public-counters"', $html);
+        $this->assertStringNotContainsString('data-stat="billets-vendus"', $html);
+        $this->assertStringNotContainsString('data-stat="organisateurs"', $html);
     }
 
     public function test_public_event_page_shows_real_remaining_places_and_no_sales_figures(): void

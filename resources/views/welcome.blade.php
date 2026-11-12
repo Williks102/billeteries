@@ -62,17 +62,6 @@ use Illuminate\Support\Facades\Storage;
     </div>
 </section>
 
-<!-- Compteurs publics (PublicStats : agrégats globaux, aucune donnée par utilisateur) -->
-<section class="py-4" aria-label="ClicBillet CI en chiffres" id="public-counters">
-    <div class="container">
-        <x-stat-grid cols="3" label="ClicBillet CI en chiffres">
-            <x-stat-card label="Événements à venir" :value="$stats['events_upcoming'] ?? null" hint="Publiés, à partir d'aujourd'hui" />
-            <x-stat-card label="Billets vendus" :value="$stats['tickets_sold'] ?? null" hint="Payés ou utilisés, depuis le lancement" />
-            <x-stat-card label="Organisateurs" :value="$stats['promoters'] ?? null" hint="Comptes organisateur inscrits" />
-        </x-stat-grid>
-    </div>
-</section>
-
 <!-- Section Événements -->
 <section id="events" class="events-section py-5">
     <div class="container">

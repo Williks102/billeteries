@@ -12,12 +12,27 @@ use App\Models\EventCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use App\Http\Controllers\Admin\Concerns\ResolvesStatsPeriod;
+use App\Services\Stats\CommissionStats;
+use App\Services\Stats\DashboardStats;
+use App\Services\Stats\EventStats;
+use App\Services\Stats\PlatformStats;
+use App\Services\Stats\SalesStats;
+use App\Services\Stats\Scope;
+use App\Support\Stats\DatePeriod;
 use Carbon\Carbon;
 
 class AdminController extends Controller
 {
-    public function __construct()
-    {
+    use ResolvesStatsPeriod;
+
+    public function __construct(
+        private readonly DashboardStats $dashboardStats,
+        private readonly PlatformStats $platformStats,
+        private readonly SalesStats $salesStats,
+        private readonly CommissionStats $commissionStats,
+        private readonly EventStats $eventStats,
+    ) {
         $this->middleware('auth');
         $this->middleware('admin');
     }
@@ -29,90 +44,48 @@ class AdminController extends Controller
     /**
      * Dashboard principal avec statistiques générales
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-        try {
-            // Statistiques générales
-            $stats = [
-                'total_users' => User::count(),
-                'total_events' => Event::count(),
-                'total_orders' => Order::count(),
-                'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
-                'pending_events' => Event::where('status', 'pending')->count(),
-                'this_month_revenue' => Order::where('payment_status', 'paid')
-                    ->whereMonth('created_at', now()->month)
-                    ->sum('total_amount'),
-                'verified_users' => User::whereNotNull('email_verified_at')->count(),
-                'promoteurs_actifs' => User::where('role', 'promoteur')
-                    ->whereHas('events', function($q) {
-                        $q->where('status', 'published');
-                    })->count(),
-            ];
+        $period = $this->statsPeriod($request, 'admin.dashboard');
+        $scope = Scope::admin();
 
-            // Évolution mensuelle des revenus (6 derniers mois)
-            $monthlyStats = collect();
-            for ($i = 5; $i >= 0; $i--) {
-                $date = now()->subMonths($i);
-                $monthlyStats->push([
-                    'month' => $date->format('M Y'),
-                    'revenue' => Order::where('payment_status', 'paid')
-                        ->whereYear('created_at', $date->year)
-                        ->whereMonth('created_at', $date->month)
-                        ->sum('total_amount'),
-                    'orders' => Order::whereYear('created_at', $date->year)
-                        ->whereMonth('created_at', $date->month)
-                        ->count(),
-                    'events' => Event::whereYear('created_at', $date->year)
-                        ->whereMonth('created_at', $date->month)
-                        ->count(),
-                ]);
-            }
+        // Tous les chiffres viennent des services Stats : la vue n'exécute ni requête ni calcul.
+        $summary = $this->dashboardStats->summary($scope, $period);
+        $platformUsers = $this->platformStats->users($period);
+        $platformEvents = $this->platformStats->events();
 
-            // Événements nécessitant attention
-            $pendingEvents = Event::where('status', 'pending')
-                ->with(['promoteur', 'category'])
-                ->latest()
-                ->take(5)
-                ->get();
-
-            // Commandes récentes
-            $recentOrders = Order::with(['user', 'event'])
-                ->latest()
-                ->take(10)
-                ->get();
-
-            // Top promoteurs du mois
-            $topPromoters = User::where('role', 'promoteur')
-                ->withCount(['events as events_this_month' => function($query) {
-                    $query->whereMonth('created_at', now()->month);
-                }])
-                ->withSum(['commissions as revenue_this_month' => function($query) {
-                    $query->whereMonth('created_at', now()->month)
-                          ->where('status', 'paid');
-                }], 'net_amount')
-                ->orderByDesc('revenue_this_month')
-                ->take(5)
-                ->get();
-
-            return view('admin.dashboard', compact(
-                'stats', 
-                'monthlyStats', 
-                'pendingEvents', 
-                'recentOrders',
-                'topPromoters'
-            ));
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur dashboard admin: ' . $e->getMessage());
-            
-            return view('admin.dashboard', [
-                'stats' => $this->getDefaultStats(),
-                'monthlyStats' => collect(),
-                'pendingEvents' => collect(),
-                'recentOrders' => collect(),
-                'topPromoters' => collect(),
+        // Évolution mensuelle sur 6 mois (ventes hors frais, commandes payées) : une série SQL, pas une requête par mois.
+        $tz = DatePeriod::TIMEZONE;
+        $monthlyStats = collect($this->salesStats->byMonth($scope, DatePeriod::custom(now($tz)->subMonthsNoOverflow(5)->startOfMonth(), now($tz))))
+            ->map(fn ($row) => [
+                'month' => Carbon::createFromFormat('!Y-m', $row['date'])->translatedFormat('M Y'),
+                'revenue' => $row['gmv'],
+                'orders' => $row['orders'],
             ]);
-        }
+
+        $pendingEvents = Event::where('status', 'pending')
+            ->with(['promoteur', 'category'])
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $recentOrders = Order::with(['user', 'event'])
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $topPromoters = $this->platformStats->topPromoters($period);
+
+        return view('admin.dashboard', compact(
+            'period',
+            'summary',
+            'platformUsers',
+            'platformEvents',
+            'monthlyStats',
+            'pendingEvents',
+            'recentOrders',
+            'topPromoters'
+        ));
     }
 
     // ================================================================
@@ -124,40 +97,51 @@ class AdminController extends Controller
      */
     public function commissions(Request $request)
     {
+        $period = $this->statsPeriod($request, 'admin.commissions');
+        $scope = Scope::admin();
+
         $query = Commission::with(['promoteur', 'order.event']);
-        
+
         // Filtres
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        
+
         if ($request->filled('promoter')) {
             $query->where('promoter_id', $request->promoter);
         }
 
-        if ($request->filled('date_from')) {
-            $query->where('created_at', '>=', $request->date_from);
-        }
+        // Période unifiée sur la liste. Exception voulue (paiement en lot, comme sur main) : les commissions
+        // EN ATTENTE de versement apparaissent TOUTES, quelle que soit leur date ; la période filtre les autres statuts.
+        $query->where(function ($q) use ($period) {
+            $q->where('status', 'pending');
+            $q->orWhere(function ($other) use ($period) {
+                if ($period->start !== null) {
+                    $other->where('created_at', '>=', $period->startForDb());
+                }
+                if ($period->end !== null) {
+                    $other->where('created_at', '<=', $period->endForDb());
+                }
+            });
+        });
+        $commissions = $query->latest()->paginate(20)->withQueryString();
 
-        if ($request->filled('date_to')) {
-            $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
-        }
-        
-        $commissions = $query->latest()->paginate(20);
-        
         // Données pour les filtres
         $promoteurs = User::where('role', 'promoteur')->orderBy('name')->get();
-        
-        // Statistiques des commissions
+
+        // Chiffres : services Stats (commandes payées de la période ; suspendues à part)
         $stats = [
-            'total_commissions' => Commission::sum('commission_amount'),
-            'paid_commissions' => Commission::where('status', 'paid')->sum('commission_amount'),
-            'pending_commissions' => Commission::where('status', 'pending')->sum('commission_amount'),
-            'held_commissions' => Commission::where('status', 'held')->sum('commission_amount'),
-            'this_month_commissions' => Commission::whereMonth('created_at', now()->month)->sum('commission_amount'),
+            'platform_revenue' => $this->commissionStats->platformRevenue($scope, $period),
+            'pending_payout' => $this->commissionStats->pendingPayout($scope, DatePeriod::all()),
+            'paid_out' => $this->commissionStats->paidOut($scope, $period),
+            'paid_out_total' => $this->commissionStats->paidOut($scope, DatePeriod::all()),
+            'held' => $this->commissionStats->held($scope, $period),
         ];
-        
-        return view('admin.commissions', compact('commissions', 'promoteurs', 'stats'));
+
+        // Net déjà versé par promoteur de la page : une seule requête (pas de requête par ligne)
+        $paidOutByPromoter = $this->commissionStats->paidOutByPromoter($commissions->pluck('promoter_id')->unique()->values()->all());
+
+        return view('admin.commissions', compact('commissions', 'promoteurs', 'stats', 'period', 'paidOutByPromoter'));
     }
 
     /**
@@ -235,51 +219,23 @@ class AdminController extends Controller
      */
     public function revenues(Request $request)
     {
-        $period = $request->get('period', 'this_month');
-        $dateRange = $this->getDateRange($period);
-        
-        // Revenus par période
-        $revenue = Order::where('payment_status', 'paid')
-            ->whereBetween('created_at', $dateRange)
-            ->sum('total_amount');
-            
-        $orders = Order::whereBetween('created_at', $dateRange)->count();
-        
-        // Commissions par période
-        $commissions = Commission::whereBetween('created_at', $dateRange)->sum('commission_amount');
-        
-        // Revenus nets (revenus - commissions)
-        $netRevenue = $revenue - $commissions;
-        
-        // Évolution sur 12 mois
-        $monthlyRevenue = collect();
-        for ($i = 11; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $monthRevenue = Order::where('payment_status', 'paid')
-                ->whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->sum('total_amount');
-            
-            $monthCommissions = Commission::whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->sum('commission_amount');
-                
-            $monthlyRevenue->push([
-                'month' => $date->format('M Y'),
-                'revenue' => $monthRevenue,
-                'commissions' => $monthCommissions,
-                'net_revenue' => $monthRevenue - $monthCommissions,
-            ]);
-        }
-        
-        return view('admin.revenues', compact(
-            'revenue', 
-            'orders', 
-            'commissions', 
-            'netRevenue', 
-            'period', 
-            'monthlyRevenue'
-        ));
+        $period = $this->statsPeriod($request, 'admin.revenues');
+        $scope = Scope::admin();
+
+        $summary = $this->dashboardStats->summary($scope, $period);
+
+        // Évolution sur 12 mois : deux séries SQL (ventes, commissions), pas 24 requêtes.
+        $tz = DatePeriod::TIMEZONE;
+        $twelve = DatePeriod::custom(now($tz)->subMonthsNoOverflow(11)->startOfMonth(), now($tz));
+        $commissionsByMonth = $this->commissionStats->byMonth($scope, $twelve);
+        $monthlyRevenue = collect($this->salesStats->byMonth($scope, $twelve))->map(fn ($row) => [
+            'month' => Carbon::createFromFormat('!Y-m', $row['date'])->translatedFormat('M Y'),
+            'revenue' => $row['gmv'],
+            'commissions' => $commissionsByMonth[$row['date']]['commission'] ?? 0,
+            'net_revenue' => $commissionsByMonth[$row['date']]['net'] ?? 0,
+        ]);
+
+        return view('admin.revenues', compact('summary', 'period', 'monthlyRevenue'));
     }
 
     /**
@@ -740,18 +696,14 @@ private function generateAnalyticsExportData($filters, $dateRange)
     /**
      * Page principale des rapports
      */
-    public function reports()
+    public function reports(Request $request)
     {
-        $stats = [
-            'total_users' => User::count(),
-            'total_events' => Event::count(),
-            'total_orders' => Order::count(),
-            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
-            'total_commissions' => Commission::sum('commission_amount'),
-            'pending_commissions' => Commission::where('status', 'pending')->sum('commission_amount'),
-        ];
+        $period = $this->statsPeriod($request, 'admin.reports.index');
+        $summary = $this->dashboardStats->summary(Scope::admin(), $period);
+        $platformUsers = $this->platformStats->users($period);
+        $platformEvents = $this->platformStats->events();
 
-        return view('admin.reports.index', compact('stats'));
+        return view('admin.reports.index', compact('period', 'summary', 'platformUsers', 'platformEvents'));
     }
 
     /**
@@ -759,15 +711,17 @@ private function generateAnalyticsExportData($filters, $dateRange)
      */
     public function salesReport(Request $request)
     {
-        $period = $request->get('period', 'this_month');
-        $dateRange = $this->getDateRange($period);
+        $period = $this->statsPeriod($request, 'admin.reports.sales');
+        $scope = Scope::admin();
+        $summary = $this->dashboardStats->summary($scope, $period);
 
-        $salesData = Order::where('payment_status', 'paid')
-            ->whereBetween('created_at', $dateRange)
-            ->with(['event', 'user'])
-            ->get();
+        $salesData = $this->salesStats->paidOrders($scope, $period)
+            ->with(['event:id,title', 'user:id,name'])
+            ->orderByRaw(\App\Support\Stats\SqlDate::SALE_REF.' DESC')
+            ->paginate(25)
+            ->withQueryString();
 
-        return view('admin.reports.sales', compact('salesData', 'period'));
+        return view('admin.reports.sales', compact('salesData', 'period', 'summary'));
     }
 
     /**
@@ -775,26 +729,10 @@ private function generateAnalyticsExportData($filters, $dateRange)
      */
     public function financialReport(Request $request)
     {
-        $period = $request->get('period', 'this_month');
-        $dateRange = $this->getDateRange($period);
+        $period = $this->statsPeriod($request, 'admin.reports.financial');
+        $summary = $this->dashboardStats->summary(Scope::admin(), $period);
 
-        $financial = [
-            'total_revenue' => Order::where('payment_status', 'paid')
-                ->whereBetween('created_at', $dateRange)
-                ->sum('total_amount'),
-            'total_commissions' => Commission::whereBetween('created_at', $dateRange)
-                ->sum('commission_amount'),
-            'paid_commissions' => Commission::whereBetween('created_at', $dateRange)
-                ->where('status', 'paid')
-                ->sum('commission_amount'),
-            'pending_commissions' => Commission::whereBetween('created_at', $dateRange)
-                ->where('status', 'pending')
-                ->sum('commission_amount'),
-        ];
-
-        $financial['net_revenue'] = $financial['total_revenue'] - $financial['total_commissions'];
-
-        return view('admin.reports.financial', compact('financial', 'period'));
+        return view('admin.reports.financial', compact('period', 'summary'));
     }
 
     /**
@@ -825,34 +763,13 @@ private function generateAnalyticsExportData($filters, $dateRange)
      */
     public function usersReport(Request $request)
     {
-        $period = $request->get('period', 'this_month');
-        $dateRange = $this->getDateRange($period);
+        $period = $this->statsPeriod($request, 'admin.reports.users');
 
-        $usersData = User::whereBetween('created_at', $dateRange)
-            ->with(['orders', 'events'])
-            ->get();
+        $stats = $this->platformStats->users($period);
+        $registrations = $this->platformStats->registrations($period);
+        $activeUsers = $this->platformStats->mostActiveNewUsers($period);
 
-        $stats = [
-            'new_users' => $usersData->count(),
-            'promoteurs' => $usersData->where('role', 'promoteur')->count(),
-            'acheteurs' => $usersData->where('role', 'acheteur')->count(),
-            'verified_users' => $usersData->whereNotNull('email_verified_at')->count(),
-            'active_users' => $usersData->filter(function($user) {
-                return $user->orders->count() > 0 || $user->events->count() > 0;
-            })->count(),
-        ];
-
-        // Évolution des inscriptions
-        $registrationEvolution = collect();
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            $registrationEvolution->push([
-                'date' => $date->format('d/m'),
-                'count' => User::whereDate('created_at', $date)->count(),
-            ]);
-        }
-
-        return view('admin.reports.users', compact('usersData', 'stats', 'period', 'registrationEvolution'));
+        return view('admin.reports.users', compact('period', 'stats', 'registrations', 'activeUsers'));
     }
 
     /**
@@ -860,43 +777,28 @@ private function generateAnalyticsExportData($filters, $dateRange)
      */
     public function eventsReport(Request $request)
     {
-        $period = $request->get('period', 'this_month');
-        $dateRange = $this->getDateRange($period);
+        $period = $this->statsPeriod($request, 'admin.reports.events');
+        $scope = Scope::admin();
 
-        $eventsData = Event::whereBetween('created_at', $dateRange)
-            ->with(['promoteur', 'category', 'orders'])
-            ->get();
+        $stats = $this->platformStats->events($period);
+        $summary = $this->dashboardStats->summary($scope, $period);
+        $topCategories = $this->eventStats->byCategory($period);
 
-        $stats = [
-            'total_events' => $eventsData->count(),
-            'published_events' => $eventsData->where('status', 'published')->count(),
-            'pending_events' => $eventsData->where('status', 'pending')->count(),
-            'draft_events' => $eventsData->where('status', 'draft')->count(),
-            'total_revenue' => $eventsData->sum(function($event) {
-                return $event->orders->where('payment_status', 'paid')->sum('total_amount');
-            }),
-            'avg_revenue_per_event' => $eventsData->count() > 0 
-                ? $eventsData->sum(function($event) {
-                    return $event->orders->where('payment_status', 'paid')->sum('total_amount');
-                }) / $eventsData->count()
-                : 0,
-        ];
+        $eventsQuery = Event::query();
+        if ($period->start !== null) {
+            $eventsQuery->where('created_at', '>=', $period->startForDb());
+        }
+        if ($period->end !== null) {
+            $eventsQuery->where('created_at', '<=', $period->endForDb());
+        }
+        $eventsData = $eventsQuery
+            ->with(['promoteur:id,name', 'category:id,name'])
+            ->latest()
+            ->paginate(25)
+            ->withQueryString();
+        $eventSales = $this->eventStats->forEvents($eventsData->pluck('id')->all(), $period);
 
-        // Top catégories
-        $topCategories = $eventsData->groupBy('category.name')
-            ->map(function($events, $categoryName) {
-                return [
-                    'name' => $categoryName ?: 'Sans catégorie',
-                    'count' => $events->count(),
-                    'revenue' => $events->sum(function($event) {
-                        return $event->orders->where('payment_status', 'paid')->sum('total_amount');
-                    }),
-                ];
-            })
-            ->sortByDesc('count')
-            ->take(5);
-
-        return view('admin.reports.events', compact('eventsData', 'stats', 'period', 'topCategories'));
+        return view('admin.reports.events', compact('period', 'stats', 'summary', 'topCategories', 'eventsData', 'eventSales'));
     }
 
     /**
@@ -1042,44 +944,4 @@ private function generateAnalyticsExportData($filters, $dateRange)
     // ================================================================
     // MÉTHODES UTILITAIRES PRIVÉES
     // ================================================================
-
-    /**
-     * Statistiques par défaut en cas d'erreur
-     */
-    private function getDefaultStats()
-    {
-        return [
-            'total_users' => 0,
-            'total_events' => 0,
-            'total_orders' => 0,
-            'total_revenue' => 0,
-            'pending_events' => 0,
-            'this_month_revenue' => 0,
-            'verified_users' => 0,
-            'promoteurs_actifs' => 0,
-        ];
-    }
-
-    /**
-     * Helper pour les plages de dates
-     */
-    private function getDateRange($period)
-    {
-        switch ($period) {
-            case 'today':
-                return [now()->startOfDay(), now()->endOfDay()];
-            case 'this_week':
-                return [now()->startOfWeek(), now()->endOfWeek()];
-            case 'this_month':
-                return [now()->startOfMonth(), now()->endOfMonth()];
-            case 'this_year':
-                return [now()->startOfYear(), now()->endOfYear()];
-            case 'last_month':
-                return [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()];
-            case 'last_year':
-                return [now()->subYear()->startOfYear(), now()->subYear()->endOfYear()];
-            default:
-                return [now()->startOfMonth(), now()->endOfMonth()];
-        }
-    }
 }

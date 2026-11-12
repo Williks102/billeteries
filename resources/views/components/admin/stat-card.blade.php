@@ -1,10 +1,3 @@
-@props(['label', 'value', 'hint' => null])
-<div class="card h-100">
-    <div class="card-body">
-        <div class="text-muted small">{{ $label }}</div>
-        <div class="stat-value fw-bold">{{ $value }}</div>
-        @if($hint)
-            <div class="text-muted small mt-1">{{ $hint }}</div>
-        @endif
-    </div>
-</div>
+{{-- Alias historique : délègue à <x-stat-card> (les valeurs déjà formatées en texte sont affichées telles quelles). --}}
+@props(['label', 'value' => null, 'hint' => null])
+<x-stat-card :label="$label" :value="$value" :hint="$hint" />

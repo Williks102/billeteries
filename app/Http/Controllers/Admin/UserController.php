@@ -7,9 +7,18 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use App\Http\Controllers\Admin\Concerns\ResolvesStatsPeriod;
+use App\Services\Stats\CommissionStats;
+use App\Services\Stats\PlatformStats;
+use App\Services\Stats\SalesStats;
+use App\Services\Stats\Scope;
+use App\Services\Stats\TicketStats;
+use App\Support\Stats\DatePeriod;
 
 class UserController extends Controller
 {
+    use ResolvesStatsPeriod;
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -21,6 +30,8 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
+        $period = $this->statsPeriod($request, 'admin.users.index');
+
         $query = User::query();
         
         // Filtres existants de votre code
@@ -44,21 +55,22 @@ class UserController extends Controller
             }
         }
         
+        // Période : inscriptions dans la période affichée (cartes ET liste)
+        if ($period->start !== null) {
+            $query->where('created_at', '>=', $period->startForDb());
+        }
+        if ($period->end !== null) {
+            $query->where('created_at', '<=', $period->endForDb());
+        }
+
         $users = $query->latest()
                       ->paginate(20)
                       ->appends($request->query());
 
-        // Ajout de statistiques pour améliorer la vue
-        $stats = [
-            'total' => User::count(),
-            'admins' => User::where('role', 'admin')->count(),
-            'promoteurs' => User::where('role', 'promoteur')->count(),
-            'acheteurs' => User::where('role', 'acheteur')->count(),
-            'verified' => User::whereNotNull('email_verified_at')->count(),
-            'new_this_month' => User::whereMonth('created_at', now()->month)->count(),
-        ];
+        // Chiffres : service Stats (totaux instantanés ; « nouveaux » = inscrits dans la période affichée)
+        $stats = app(PlatformStats::class)->users($period);
 
-        return view('admin.users.index', compact('users', 'stats'));
+        return view('admin.users.index', compact('users', 'stats', 'period'));
     }
 
     /**
@@ -119,22 +131,25 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        // Charger les relations selon votre modèle
-        $user->load(['events', 'orders', 'commissions']);
-        
-        // Statistiques spécifiques à l'utilisateur
+        $all = DatePeriod::all();
+
+        // Chiffres (toutes dates) : services Stats, mêmes définitions que le reste de l'admin
         $stats = [
             'events_count' => $user->events()->count(),
             'orders_count' => $user->orders()->count(),
-            'total_spent' => $user->orders()->where('payment_status', 'paid')->sum('total_amount'),
             'member_since' => $user->created_at->diffForHumans(),
         ];
 
-        // Statistiques spécifiques selon le rôle
+        // Acheteur : encaissé sur ses commandes payées (les commandes en attente / remboursées n'y entrent pas)
+        $stats['total_spent'] = app(SalesStats::class)->collected(Scope::buyer($user->id), $all);
+
+        // Promoteur : ventes hors frais, net après commission (à verser / versé), billets vendus
         if ($user->isPromoteur()) {
-            $stats['total_revenue'] = $user->totalRevenue();
-            $stats['pending_revenue'] = $user->pendingRevenue();
-            $stats['tickets_sold'] = $user->totalTicketsSold();
+            $scope = Scope::promoter($user->id);
+            $stats['total_sales'] = app(SalesStats::class)->gmv($scope, $all);
+            $stats['pending_revenue'] = app(CommissionStats::class)->pendingPayout($scope, $all);
+            $stats['paid_out'] = app(CommissionStats::class)->paidOut($scope, $all);
+            $stats['tickets_sold'] = app(TicketStats::class)->sold($scope, $all);
         }
 
         // Activité récente selon le rôle

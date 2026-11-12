@@ -10,32 +10,32 @@
 @section('content')
 @php $fcfa = fn ($v) => \App\Helpers\CurrencyHelper::formatFCFA($v); @endphp
 <div class="admin-page">
-    <x-admin.page-header title="Rapport des événements" subtitle="Événements créés sur la période" :back="route('admin.reports.index')" />
+    <x-admin.page-header title="Rapport des événements" subtitle="Événements créés sur la période et ventes de la période" :back="route('admin.reports.index')" />
 
-    <x-admin.period-filter :action="route('admin.reports.events')" :period="$period" />
+    <x-period-filter :action="route('admin.reports.events')" :period="$period" />
 
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3"><x-admin.stat-card label="Événements" :value="$stats['total_events']" /></div>
-        <div class="col-6 col-lg-3"><x-admin.stat-card label="Publiés" :value="$stats['published_events']" /></div>
-        <div class="col-6 col-lg-3"><x-admin.stat-card label="En attente" :value="$stats['pending_events']" /></div>
-        <div class="col-6 col-lg-3"><x-admin.stat-card label="Brouillons" :value="$stats['draft_events']" /></div>
-        <div class="col-6"><x-admin.stat-card label="Ventes (commandes payées)" :value="$fcfa($stats['total_revenue'])" /></div>
-        <div class="col-6"><x-admin.stat-card label="Moyenne par événement" :value="$fcfa($stats['avg_revenue_per_event'])" /></div>
-    </div>
+    <x-stat-grid label="Événements créés sur la période">
+        <x-stat-card label="Événements créés" :value="$stats['total']" :hint="$period->label" />
+        <x-stat-card label="Publiés" :value="$stats['published']" />
+        <x-stat-card label="En attente" :value="$stats['pending']" />
+        <x-stat-card label="Brouillons" :value="$stats['draft']" />
+        <x-stat-card label="Ventes de la période (billets, hors frais)" unit="FCFA" :value="$summary['gmv']" hint="Tous événements" />
+        <x-stat-card label="Commandes payées" :value="$summary['orders_paid']" hint="Tous événements" />
+    </x-stat-grid>
 
-    @if($topCategories->isNotEmpty())
+    @if(! empty($topCategories))
         <h2 class="h5 mb-3">Catégories les plus actives</h2>
         <div class="card mb-4">
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table mb-0 table-cards">
                     <caption class="visually-hidden">Catégories les plus actives</caption>
-                    <thead><tr><th scope="col">Catégorie</th><th scope="col" class="text-end">Événements</th><th scope="col" class="text-end">Ventes</th></tr></thead>
+                    <thead><tr><th scope="col">Catégorie</th><th scope="col" class="text-end">Événements créés</th><th scope="col" class="text-end">Ventes de la période</th></tr></thead>
                     <tbody>
                         @foreach($topCategories as $row)
                             <tr>
-                                <td>{{ $row['name'] }}</td>
-                                <td class="text-end">{{ $row['count'] }}</td>
-                                <td class="text-end text-nowrap">{{ $fcfa($row['revenue']) }}</td>
+                                <td data-label="Catégorie">{{ $row['name'] }}</td>
+                                <td data-label="Événements créés" class="text-end">{{ $row['events'] }}</td>
+                                <td data-label="Ventes de la période" class="text-end text-nowrap">{{ $fcfa($row['gmv']) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -50,31 +50,32 @@
     @else
         <div class="card">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <caption class="visually-hidden">Événements de la période</caption>
+                <table class="table table-hover mb-0 table-cards">
+                    <caption class="visually-hidden">Événements créés sur la période</caption>
                     <thead>
                         <tr>
                             <th scope="col">Événement</th>
-                            <th scope="col" class="d-none d-md-table-cell">Promoteur</th>
-                            <th scope="col" class="d-none d-md-table-cell">Catégorie</th>
+                            <th scope="col">Promoteur</th>
+                            <th scope="col">Catégorie</th>
                             <th scope="col">Statut</th>
-                            <th scope="col" class="text-end">Ventes</th>
+                            <th scope="col" class="text-end">Ventes de la période</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($eventsData as $event)
                             <tr>
-                                <td><a href="{{ route('admin.events.show', $event) }}">{{ $event->title }}</a></td>
-                                <td class="d-none d-md-table-cell">{{ $event->promoteur?->name ?? '-' }}</td>
-                                <td class="d-none d-md-table-cell">{{ $event->category?->name ?? '-' }}</td>
-                                <td><span class="badge bg-secondary">{{ $event->status }}</span></td>
-                                <td class="text-end text-nowrap">{{ $fcfa($event->orders->where('payment_status', 'paid')->sum('total_amount')) }}</td>
+                                <td data-label="Événement"><a href="{{ route('admin.events.show', $event) }}">{{ $event->title }}</a></td>
+                                <td data-label="Promoteur">{{ $event->promoteur?->name ?? '-' }}</td>
+                                <td data-label="Catégorie">{{ $event->category?->name ?? '-' }}</td>
+                                <td data-label="Statut"><span class="badge bg-secondary">{{ $event->status }}</span></td>
+                                <td data-label="Ventes de la période" class="text-end text-nowrap">{{ $fcfa($eventSales[$event->id]['gmv'] ?? 0) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
+        <div class="mt-3">{{ $eventsData->links() }}</div>
     @endif
 </div>
 @endsection

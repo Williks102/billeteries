@@ -5,8 +5,8 @@ namespace App\Services\Stats;
 use App\Support\Stats\DatePeriod;
 
 /**
- * Façade minimale : compose les services de statistiques pour un périmètre et une période.
- * Aucun écran n'en dépend encore (lots L3-L5). Valeurs non calculables : null.
+ * Façade : compose les services de statistiques pour un périmètre et une période (écrans admin : L3).
+ * Valeurs non calculables : null (affichées « — » par <x-stat-card>).
  */
 class DashboardStats
 {
@@ -21,6 +21,8 @@ class DashboardStats
     {
         $period ??= DatePeriod::default();
 
+        $byStatus = $this->orders->countsByStatus($scope, $period);
+
         return [
             'period' => ['key' => $period->key, 'label' => $period->label],
             'orders_paid' => $this->sales->paidOrdersCount($scope, $period),
@@ -32,7 +34,15 @@ class DashboardStats
             'usage_rate' => $this->tickets->usageRate($scope, $period),
             'platform_revenue' => $this->commissions->platformRevenue($scope, $period),
             'promoter_net' => $this->commissions->promoterNet($scope, $period),
-            'orders_by_status' => $this->orders->countsByStatus($scope, $period),
+            // SOLDE dû aux promoteurs : toutes dates (un solde n'est pas un flux) ; « versé » reste un flux de la période
+            'pending_payout' => $this->commissions->pendingPayout($scope, DatePeriod::all()),
+            'paid_out_total' => $this->commissions->paidOut($scope, DatePeriod::all()),
+            'paid_out' => $this->commissions->paidOut($scope, $period),
+            'held' => $this->commissions->held($scope, $period),
+            'refunds' => $this->orders->refunds($scope, $period),
+            'orders_by_status' => $byStatus,
+            'orders_created' => array_sum($byStatus),
+            'orders_awaiting_payment' => $byStatus['pending'] + $byStatus['processing'],
             'payment_rate' => $this->orders->paymentRate($scope, $period),
             'conversion_rate' => $this->orders->conversionRate($scope, $period),
         ];

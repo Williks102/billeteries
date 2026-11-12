@@ -11,8 +11,8 @@
             <h1 class="h3 mb-0">📊 Dashboard Administration</h1>
             <p class="text-muted mb-0">Vue d'ensemble de la plateforme ClicBillet CI</p>
         </div>
-        <div class="col-auto">
-            <div class="btn-group" role="group">
+        <div class="col-12 col-md-auto mt-2 mt-md-0">
+            <div class="d-flex flex-wrap gap-2" role="group" aria-label="Accès rapides">
                 <a href="{{ route('admin.reports.index') }}" class="btn btn-outline-primary">
                     <i class="fas fa-chart-line me-1"></i> Rapports
                 </a>
@@ -26,103 +26,30 @@
         </div>
     </div>
 
-    <!-- Statistiques principales -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-primary bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-users text-primary fa-lg"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <div class="text-muted small mb-1">Utilisateurs totaux</div>
-                            <div class="h4 mb-0 fw-bold">{{ number_format($stats['total_users']) }}</div>
-                            <div class="text-success small">
-                                <i class="fas fa-user-check me-1"></i>
-                                {{ number_format($stats['verified_users']) }} vérifiés
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <x-period-filter :action="route('admin.dashboard')" :period="$period" />
 
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-calendar-alt text-success fa-lg"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <div class="text-muted small mb-1">Événements</div>
-                            <div class="h4 mb-0 fw-bold">{{ number_format($stats['total_events']) }}</div>
-                            @if($stats['pending_events'] > 0)
-                            <div class="text-warning small">
-                                <i class="fas fa-clock me-1"></i>
-                                {{ $stats['pending_events'] }} en attente
-                            </div>
-                            @else
-                            <div class="text-muted small">
-                                <i class="fas fa-check-circle me-1"></i>
-                                Tout à jour
-                            </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <h2 class="h5 mt-3">Plateforme</h2>
+    <x-stat-grid cols="3" label="Chiffres de la plateforme">
+        <x-stat-card label="Utilisateurs" :value="$platformUsers['total']" :hint="$platformUsers['verified'].' vérifiés'" />
+        <x-stat-card label="Événements" :value="$platformEvents['total']" :hint="$platformEvents['pending'].' en attente de validation'" />
+        <x-stat-card label="Nouveaux utilisateurs" :value="$platformUsers['new']" :hint="'Inscrits : '.$period->label" />
+    </x-stat-grid>
 
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-info bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-shopping-cart text-info fa-lg"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <div class="text-muted small mb-1">Commandes</div>
-                            <div class="h4 mb-0 fw-bold">{{ number_format($stats['total_orders']) }}</div>
-                            <div class="text-muted small">
-                                <i class="fas fa-chart-line me-1"></i>
-                                Ce mois
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-warning bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-coins text-warning fa-lg"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <div class="text-muted small mb-1">Revenus totaux</div>
-                            <div class="h4 mb-0 fw-bold">{{ number_format($stats['total_revenue']) }} F</div>
-                            <div class="text-success small">
-                                <i class="fas fa-arrow-up me-1"></i>
-                                {{ number_format($stats['this_month_revenue']) }} F ce mois
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <h2 class="h5">Ventes : {{ $period->label }}</h2>
+    <x-stat-grid label="Ventes de la période">
+        <x-stat-card label="Ventes (billets, hors frais)" unit="FCFA" :value="$summary['gmv']" hint="Commandes payées" />
+        <x-stat-card label="Encaissé" unit="FCFA" :value="$summary['collected']" hint="Total payé par les clients" />
+        <x-stat-card label="Commission plateforme" unit="FCFA" :value="$summary['platform_revenue']" hint="Revenu de la plateforme" />
+        <x-stat-card label="Net promoteurs à verser (total, toutes dates)" unit="FCFA" :value="$summary['pending_payout']" hint="Solde dû, indépendant de la période" />
+        <x-stat-card label="Net promoteurs versé" unit="FCFA" :value="$summary['paid_out']" hint="Versé sur la période" />
+        <x-stat-card label="Commandes payées" :value="$summary['orders_paid']" />
+        <x-stat-card label="En attente de paiement" :value="$summary['orders_awaiting_payment']" hint="Commandes créées sur la période" />
+        <x-stat-card label="Remboursées" :value="$summary['refunds']['count']" :hint="'Montant remboursé : '.\App\Helpers\CurrencyHelper::formatFCFA($summary['refunds']['amount'])" />
+        <x-stat-card label="Billets vendus" :value="$summary['tickets_sold']" hint="Payés ou utilisés" />
+        <x-stat-card label="Taux d'utilisation" unit="%" :value="$summary['usage_rate']" hint="Scannés / vendus" />
+        <x-stat-card label="Taux de paiement" unit="%" :value="$summary['payment_rate']" hint="Payées / créées" />
+        <x-stat-card label="Panier moyen" unit="FCFA" :value="$summary['average_basket']" hint="Ventes / commandes payées" />
+    </x-stat-grid>
 
     <div class="row g-4">
         
@@ -131,21 +58,11 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0 pb-0">
                     <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="card-title mb-0">📈 Évolution des Revenus</h5>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="period" id="period3" checked>
-                            <label class="btn btn-outline-secondary" for="period3">3M</label>
-                            
-                            <input type="radio" class="btn-check" name="period" id="period6">
-                            <label class="btn btn-outline-secondary" for="period6">6M</label>
-                            
-                            <input type="radio" class="btn-check" name="period" id="period12">
-                            <label class="btn btn-outline-secondary" for="period12">1A</label>
-                        </div>
+                        <h2 class="h5 card-title mb-0">Ventes des 6 derniers mois</h2>
                     </div>
                 </div>
                 <div class="card-body">
-                    <canvas id="revenueChart" height="100"></canvas>
+                    <canvas id="revenueChart" height="100" role="img" aria-label="Ventes (billets, hors frais) et commandes payées par mois sur 6 mois"></canvas>
                 </div>
             </div>
         </div>
@@ -154,36 +71,33 @@
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0 pb-0">
-                    <h5 class="card-title mb-0">🏆 Top Promoteurs</h5>
+                    <h2 class="h5 card-title mb-0">Top promoteurs : net sur la période</h2>
                 </div>
                 <div class="card-body">
                     @forelse($topPromoters as $promoter)
                     <div class="d-flex align-items-center mb-3">
                         <div class="flex-shrink-0">
-                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                <span class="fw-bold text-primary">{{ substr($promoter->name, 0, 1) }}</span>
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" aria-hidden="true">
+                                <span class="fw-bold text-primary">{{ mb_substr($promoter['name'], 0, 1) }}</span>
                             </div>
                         </div>
-                        <div class="flex-grow-1 ms-3">
-                            <div class="fw-semibold">{{ $promoter->name }}</div>
-                            <div class="text-muted small">
-                                {{ $promoter->events_this_month }} événements ce mois
-                            </div>
+                        <div class="flex-grow-1 ms-3 min-w-0">
+                            <div class="fw-semibold text-break">{{ $promoter['name'] }}</div>
+                            <div class="text-muted small">{{ $promoter['orders'] }} commande(s) payée(s)</div>
                         </div>
                         <div class="text-end">
-                            <div class="fw-bold text-success">
-                                {{ number_format($promoter->revenue_this_month ?? 0) }} F
-                            </div>
+                            <div class="fw-bold text-success">{{ \App\Helpers\CurrencyHelper::formatFCFA($promoter['net']) }}</div>
+                            <div class="text-muted small">net</div>
                         </div>
                     </div>
                     @empty
                     <div class="text-center text-muted py-3">
-                        <i class="fas fa-users fa-2x mb-2 opacity-50"></i>
-                        <p class="mb-0">Aucun promoteur actif ce mois</p>
+                        <i class="fas fa-users fa-2x mb-2 opacity-50" aria-hidden="true"></i>
+                        <p class="mb-0">Aucune vente de promoteur sur la période</p>
                     </div>
                     @endforelse
                 </div>
-                @if($topPromoters->count() > 0)
+                @if(! empty($topPromoters))
                 <div class="card-footer bg-transparent border-0 pt-0">
                     <a href="{{ route('admin.users.index', ['role' => 'promoteur']) }}" class="btn btn-sm btn-outline-primary w-100">
                         Voir tous les promoteurs
@@ -194,13 +108,13 @@
         </div>
 
         <!-- Événements en attente -->
-        @if($pendingEvents->count() > 0)
+        @if($pendingEvents->isNotEmpty())
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0 pb-0">
                     <div class="d-flex align-items-center justify-content-between">
                         <h5 class="card-title mb-0">⏰ Événements en Attente</h5>
-                        <span class="badge bg-warning">{{ $pendingEvents->count() }}</span>
+                        <span class="badge bg-warning text-dark">{{ $platformEvents['pending'] }}</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -209,7 +123,7 @@
                         <div class="flex-grow-1">
                             <div class="fw-semibold">{{ $event->title }}</div>
                             <div class="text-muted small">
-                                Par {{ $event->promoteur->name }} • {{ $event->created_at->diffForHumans() }}
+                                Par {{ $event->promoteur?->name ?? '-' }} • {{ $event->created_at->diffForHumans() }}
                             </div>
                         </div>
                         <div class="text-end">
@@ -233,16 +147,18 @@
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0 pb-0">
-                    <h5 class="card-title mb-0">🛒 Commandes Récentes</h5>
+                    <h2 class="h5 card-title mb-0">Commandes récentes (tous statuts)</h2>
                 </div>
                 <div class="card-body">
-                    @forelse($recentOrders->take(5) as $order)
+                    @forelse($recentOrders as $order)
                     <div class="d-flex align-items-center mb-3">
                         <div class="flex-shrink-0">
                             @if($order->payment_status === 'paid')
                                 <i class="fas fa-check-circle text-success"></i>
-                            @elseif($order->payment_status === 'pending')
+                            @elseif(in_array($order->payment_status, ['pending', 'processing'], true))
                                 <i class="fas fa-clock text-warning"></i>
+                            @elseif($order->payment_status === 'refunded')
+                                <i class="fas fa-rotate-left text-secondary"></i>
                             @else
                                 <i class="fas fa-times-circle text-danger"></i>
                             @endif
@@ -250,11 +166,11 @@
                         <div class="flex-grow-1 ms-3">
                             <div class="fw-semibold">{{ $order->order_number }}</div>
                             <div class="text-muted small">
-                                {{ $order->user->name }} • {{ $order->event->title }}
+                                {{ $order->user?->name ?? '-' }} • {{ $order->event?->title ?? '-' }}
                             </div>
                         </div>
                         <div class="text-end">
-                            <div class="fw-bold">{{ number_format($order->total_amount) }} F</div>
+                            <div class="fw-bold">{{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }}</div>
                             <div class="text-muted small">{{ $order->created_at->format('d/m H:i') }}</div>
                         </div>
                     </div>
@@ -265,7 +181,7 @@
                     </div>
                     @endforelse
                 </div>
-                @if($recentOrders->count() > 0)
+                @if($recentOrders->isNotEmpty())
                 <div class="card-footer bg-transparent border-0 pt-0">
                     <a href="{{ route('admin.orders.index') }}" class="btn btn-sm btn-outline-primary w-100">
                         Voir toutes les commandes
@@ -327,14 +243,14 @@ const revenueChart = new Chart(ctx, {
     data: {
         labels: {!! json_encode($monthlyStats->pluck('month')) !!},
         datasets: [{
-            label: 'Revenus (F CFA)',
+            label: 'Ventes (FCFA, hors frais)',
             data: {!! json_encode($monthlyStats->pluck('revenue')) !!},
             borderColor: 'rgb(75, 192, 192)',
             backgroundColor: 'rgba(75, 192, 192, 0.1)',
             tension: 0.4,
             fill: true
         }, {
-            label: 'Commandes',
+            label: 'Commandes payées',
             data: {!! json_encode($monthlyStats->pluck('orders')) !!},
             borderColor: 'rgb(255, 99, 132)',
             backgroundColor: 'rgba(255, 99, 132, 0.1)',
@@ -381,30 +297,6 @@ const revenueChart = new Chart(ctx, {
         }
     }
 });
-
-// Animation des compteurs
-function animateCounters() {
-    const counters = document.querySelectorAll('.h4');
-    
-    counters.forEach(counter => {
-        const target = parseInt(counter.textContent.replace(/[^\d]/g, ''));
-        const duration = 2000;
-        const increment = target / (duration / 16);
-        let current = 0;
-        
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                current = target;
-                clearInterval(timer);
-            }
-            counter.textContent = Math.floor(current).toLocaleString();
-        }, 16);
-    });
-}
-
-// Démarrer les animations au chargement
-document.addEventListener('DOMContentLoaded', animateCounters);
 
 // Actualisation automatique des données (optionnel)
 setInterval(() => {

@@ -9,7 +9,7 @@
     <div class="row align-items-center mb-4">
         <div class="col">
             <h1 class="h3 mb-0">🎫 Gestion des Événements</h1>
-            <p class="text-muted mb-0">{{ $events->total() }} événement(s) au total</p>
+            <p class="text-muted mb-0">{{ $events->total() }} événement(s) créé(s) · Période : {{ $period->label }}</p>
         </div>
         <div class="col-auto">
             <div class="btn-group" role="group">
@@ -31,50 +31,22 @@
         </div>
     </div>
 
-    <!-- Statistiques rapides -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="card border-0 bg-primary bg-opacity-10">
-                <div class="card-body text-center">
-                    <i class="fas fa-calendar-check text-primary fa-2x mb-2"></i>
-                    <h4 class="mb-1 text-primary">{{ number_format($stats['published']) }}</h4>
-                    <small class="text-muted">Publiés</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 bg-warning bg-opacity-10">
-                <div class="card-body text-center">
-                    <i class="fas fa-clock text-warning fa-2x mb-2"></i>
-                    <h4 class="mb-1 text-warning">{{ number_format($stats['pending']) }}</h4>
-                    <small class="text-muted">En attente</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 bg-secondary bg-opacity-10">
-                <div class="card-body text-center">
-                    <i class="fas fa-file-alt text-secondary fa-2x mb-2"></i>
-                    <h4 class="mb-1 text-secondary">{{ number_format($stats['draft']) }}</h4>
-                    <small class="text-muted">Brouillons</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 bg-success bg-opacity-10">
-                <div class="card-body text-center">
-                    <i class="fas fa-coins text-success fa-2x mb-2"></i>
-                    <h4 class="mb-1 text-success">{{ number_format($stats['total_revenue']) }} F</h4>
-                    <small class="text-muted">Revenus totaux</small>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-period-filter :action="route('admin.events.index')" :period="$period" :keep="request()->only(['status', 'category', 'search', 'promoteur'])" />
+
+    <x-stat-grid label="Chiffres des événements">
+        <x-stat-card label="Événements publiés" :value="$stats['published']" hint="Total actuel" />
+        <x-stat-card label="En attente de validation" :value="$stats['pending']" hint="Total actuel" />
+        <x-stat-card label="Brouillons" :value="$stats['draft']" hint="Total actuel" />
+        <x-stat-card label="Ventes de la période (billets, hors frais)" unit="FCFA" :value="$periodSales" hint="Commandes payées, tous événements" />
+    </x-stat-grid>
 
     <!-- Filtres -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.events.index') }}" class="row g-3">
+                @foreach(request()->only(['period', 'start_date', 'end_date']) as $k => $v)
+                <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                @endforeach
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold text-muted" for="search">RECHERCHE</label>
                     <input id="search" type="text" class="form-control" name="search" value="{{ request('search') }}" 
@@ -159,9 +131,9 @@
     <!-- Liste des événements -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
-            @if($events->count() > 0)
+            @if($events->isNotEmpty())
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 table-cards">
                     <thead class="bg-light">
                         <tr>
                             <th width="40">
@@ -172,8 +144,8 @@
                             <th>Catégorie</th>
                             <th>Date</th>
                             <th>Statut</th>
-                            <th>Ventes</th>
-                            <th>Revenus</th>
+                            <th>Billets vendus</th>
+                            <th>Ventes (hors frais)</th>
                             <th width="120">Actions</th>
                         </tr>
                     </thead>
@@ -184,7 +156,7 @@
                                 <input type="checkbox" class="form-check-input row-checkbox" 
                                        name="events[]" aria-label="Sélectionner l'événement {{ $event->title }}" value="{{ $event->id }}">
                             </td>
-                            <td>
+                            <td data-label="Événement">
                                 <div class="d-flex align-items-center">
                                     @if($event->image)
                                     <img src="{{ Storage::url($event->image) }}" alt="{{ $event->title }}" 
@@ -204,7 +176,7 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="Promoteur">
                                 <div class="d-flex align-items-center">
                                     <div class="bg-primary bg-opacity-10 rounded-circle me-2 d-flex align-items-center justify-content-center" 
                                          style="width: 35px; height: 35px;">
@@ -218,7 +190,7 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="Catégorie">
                                 @if($event->category)
                                 <span class="badge rounded-pill" style="background-color: {{ $event->category->color ?? '#6c757d' }}20; color: {{ $event->category->color ?? '#6c757d' }};">
                                     @if($event->category->icon)
@@ -230,7 +202,7 @@
                                 <span class="text-muted">Non catégorisé</span>
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Date">
                                 <div class="fw-semibold">{{ \Carbon\Carbon::parse($event->event_date)->format('d/m/Y') }}</div>
                                 <div class="text-muted small">{{ $event->event_time }}</div>
                                 <div class="text-muted small">
@@ -241,7 +213,7 @@
                                     @endif
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="Statut">
                                 @switch($event->status)
                                     @case('published')
                                         <span class="badge bg-success">
@@ -265,26 +237,19 @@
                                         @break
                                 @endswitch
                             </td>
-                            <td>
-                                @php
-                                    $totalTickets = $event->ticketTypes->sum('quantity_available') ?? 0;
-                                    $soldTickets = $event->ticketTypes->sum('quantity_sold') ?? 0;
-                                    $percentage = $totalTickets > 0 ? round(($soldTickets / $totalTickets) * 100, 1) : 0;
-                                @endphp
-                                <div class="fw-semibold">{{ number_format($soldTickets) }} / {{ number_format($totalTickets) }}</div>
-                                <div class="progress mt-1" style="height: 4px;">
-                                    <div class="progress-bar bg-success" style="width: {{ $percentage }}%"></div>
+                            <td data-label="Billets vendus">
+                                @php $row = $eventStats[$event->id]; @endphp
+                                <div class="fw-semibold">{{ number_format($row['sold'], 0, ',', ' ') }} / {{ number_format($row['capacity'], 0, ',', ' ') }}</div>
+                                <div class="progress mt-1" style="height: 4px;" role="progressbar" aria-label="Taux de remplissage" aria-valuenow="{{ $row['fill_rate'] ?? 0 }}" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar bg-success" style="width: {{ $row['fill_rate'] ?? 0 }}%"></div>
                                 </div>
-                                <div class="text-muted small">{{ $percentage }}% vendus</div>
+                                <div class="text-muted small">{{ $row['fill_rate'] === null ? '—' : number_format($row['fill_rate'], 1, ',', ' ').' %' }} vendus (billets payés)</div>
                             </td>
-                            <td>
-                                @php
-                                    $revenue = $event->orders()->where('payment_status', 'paid')->sum('total_amount') ?? 0;
-                                @endphp
-                                <div class="fw-semibold text-success">{{ number_format($revenue) }} F</div>
-                                <div class="text-muted small">{{ $event->orders()->count() }} commande(s)</div>
+                            <td data-label="Ventes">
+                                <div class="fw-semibold text-success">{{ \App\Helpers\CurrencyHelper::formatFCFA($row['gmv']) }}</div>
+                                <div class="text-muted small">{{ $row['orders_paid'] }} commande(s) payée(s) sur {{ $row['orders_total'] }}</div>
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('admin.events.show', $event) }}" class="btn btn-sm btn-outline-primary" 
                                        title="Voir détails">

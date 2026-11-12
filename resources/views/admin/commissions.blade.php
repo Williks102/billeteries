@@ -9,9 +9,9 @@
     <div class="row align-items-center mb-4">
         <div class="col">
             <h1 class="h3 mb-0">💰 Gestion des Commissions</h1>
-            <p class="text-muted mb-0">{{ $commissions->total() }} commission(s) au total</p>
+            <p class="text-muted mb-0">{{ $commissions->total() }} commission(s) : toutes les commissions en attente de versement (toutes dates) + les autres statuts créés sur la période <strong>{{ $period->label }}</strong></p>
         </div>
-        <div class="col-auto">
+        <div class="col-12 col-md-auto mt-2 mt-md-0">
             <div class="btn-group" role="group">
                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#bulkPayModal">
                     <i class="fas fa-credit-card me-1"></i> Paiement en lot
@@ -31,53 +31,28 @@
         </div>
     </div>
 
-    <!-- Statistiques des commissions -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 bg-success bg-opacity-10">
-                <div class="card-body text-center">
-                    <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
-                    <h4 class="mb-1 text-success">{{ number_format($stats['paid_commissions']) }} F</h4>
-                    <small class="text-muted">Commissions payées</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 bg-warning bg-opacity-10">
-                <div class="card-body text-center">
-                    <i class="fas fa-clock text-warning fa-2x mb-2"></i>
-                    <h4 class="mb-1 text-warning">{{ number_format($stats['pending_commissions']) }} F</h4>
-                    <small class="text-muted">En attente</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 bg-info bg-opacity-10">
-                <div class="card-body text-center">
-                    <i class="fas fa-pause-circle text-info fa-2x mb-2"></i>
-                    <h4 class="mb-1 text-info">{{ number_format($stats['held_commissions']) }} F</h4>
-                    <small class="text-muted">En attente</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 bg-primary bg-opacity-10">
-                <div class="card-body text-center">
-                    <i class="fas fa-calendar text-primary fa-2x mb-2"></i>
-                    <h4 class="mb-1 text-primary">{{ number_format($stats['this_month_commissions']) }} F</h4>
-                    <small class="text-muted">Ce mois</small>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-period-filter :action="route('admin.commissions')" :period="$period" :keep="request()->only(['promoter', 'status'])" />
+
+    <p class="mb-3">
+        <a href="{{ route('admin.commissions', ['status' => 'pending']) }}" class="btn btn-outline-warning">
+            <i class="fas fa-clock me-1" aria-hidden="true"></i> En attente de versement (toutes dates)
+        </a>
+    </p>
+
+    <x-stat-grid label="Commissions de la période">
+        <x-stat-card label="Commission plateforme" unit="FCFA" :value="$stats['platform_revenue']" hint="Commandes payées de la période" />
+        <x-stat-card label="Net promoteurs à verser (total, toutes dates)" unit="FCFA" :value="$stats['pending_payout']" hint="Solde dû, indépendant de la période" />
+        <x-stat-card label="Net promoteurs versé" unit="FCFA" :value="$stats['paid_out']" :hint="'Sur la période. Total versé : '.\App\Helpers\CurrencyHelper::formatFCFA($stats['paid_out_total'])" />
+        <x-stat-card label="Commissions suspendues" unit="FCFA" :value="$stats['held']['commission']" hint="Commandes remboursées : hors revenus" />
+    </x-stat-grid>
 
     <!-- Filtres -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.commissions') }}" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold text-muted">PROMOTEUR</label>
-                    <select class="form-select" name="promoter">
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold text-muted" for="f-promoter">Promoteur</label>
+                    <select class="form-select" name="promoter" id="f-promoter">
                         <option value="">Tous les promoteurs</option>
                         @foreach($promoteurs as $promoteur)
                         <option value="{{ $promoteur->id }}" {{ request('promoter') == $promoteur->id ? 'selected' : '' }}>
@@ -86,9 +61,9 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold text-muted">STATUT</label>
-                    <select class="form-select" name="status">
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-semibold text-muted" for="f-status">Statut</label>
+                    <select class="form-select" name="status" id="f-status">
                         <option value="">Tous les statuts</option>
                         <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>En attente</option>
                         <option value="paid" {{ request('status') === 'paid' ? 'selected' : '' }}>Payé</option>
@@ -96,27 +71,16 @@
                         <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Annulé</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold text-muted">PÉRIODE</label>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <input type="date" class="form-control form-control-sm" name="date_from" 
-                                   value="{{ request('date_from') }}" placeholder="Du">
-                        </div>
-                        <div class="col-6">
-                            <input type="date" class="form-control form-control-sm" name="date_to" 
-                                   value="{{ request('date_to') }}" placeholder="Au">
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-semibold text-muted">ACTIONS</label>
-                    <div class="d-flex gap-2">
+                @foreach(request()->only(['period', 'start_date', 'end_date']) as $k => $v)
+                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                @endforeach
+                <div class="col-12 col-md-5">
+                    <div class="action-bar">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-filter me-1"></i> Filtrer
                         </button>
-                        <a href="{{ route('admin.commissions') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-1"></i> Reset
+                        <a href="{{ route('admin.commissions') }}" class="btn btn-outline-secondary action-bar__cancel">
+                            <i class="fas fa-times me-1"></i> Réinitialiser
                         </a>
                     </div>
                 </div>
@@ -127,9 +91,9 @@
     <!-- Liste des commissions -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
-            @if($commissions->count() > 0)
+            @if($commissions->isNotEmpty())
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 table-cards">
                     <thead class="bg-light">
                         <tr>
                             <th width="40">
@@ -149,11 +113,11 @@
                         @foreach($commissions as $commission)
                         <tr>
                             <td>
-                                <input type="checkbox" class="form-check-input commission-checkbox" 
+                                <input type="checkbox" class="form-check-input commission-checkbox" aria-label="Sélectionner la commission COM-{{ str_pad($commission->id, 6, '0', STR_PAD_LEFT) }}" 
                                        name="commissions[]" value="{{ $commission->id }}"
                                        data-status="{{ $commission->status }}">
                             </td>
-                            <td>
+                            <td data-label="Commission">
                                 <div>
                                     <div class="fw-bold">COM-{{ str_pad($commission->id, 6, '0', STR_PAD_LEFT) }}</div>
                                     <div class="text-muted small">
@@ -167,39 +131,35 @@
                                     @endif
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="Promoteur">
                                 <div class="d-flex align-items-center">
                                     <div class="bg-primary bg-opacity-10 rounded-circle me-2 d-flex align-items-center justify-content-center" 
                                          style="width: 35px; height: 35px;">
                                         <span class="fw-bold text-primary small">
-                                            {{ substr($commission->promoteur->name, 0, 1) }}
+                                            {{ mb_substr($commission->promoteur?->name ?? '?', 0, 1) }}
                                         </span>
                                     </div>
                                     <div>
-                                        <div class="fw-semibold">{{ $commission->promoteur->name }}</div>
-                                        <div class="text-muted small">{{ $commission->promoteur->email }}</div>
-                                        @php
-                                            $totalCommissions = $commission->promoteur->commissions()
-                                                ->where('status', 'paid')->sum('commission_amount');
-                                        @endphp
+                                        <div class="fw-semibold">{{ $commission->promoteur?->name ?? '-' }}</div>
+                                        <div class="text-muted small">{{ $commission->promoteur?->email }}</div>
                                         <div class="text-success small">
-                                            Total: {{ number_format($totalCommissions) }} F
+                                            Net versé (total) : {{ \App\Helpers\CurrencyHelper::formatFCFA($paidOutByPromoter[$commission->promoter_id] ?? 0) }}
                                         </div>
                                     </div>
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="Commande">
                                 <div>
                                     <div class="fw-semibold">{{ $commission->order->order_number }}</div>
                                     <div class="text-muted small">
-                                        {{ number_format($commission->order->total_amount) }} F
+                                        {{ \App\Helpers\CurrencyHelper::formatFCFA($commission->order->total_amount) }}
                                     </div>
                                     <div class="text-muted small">
                                         {{ $commission->order->created_at->format('d/m/Y H:i') }}
                                     </div>
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="Événement">
                                 <div>
                                     <div class="fw-semibold">{{ Str::limit($commission->order->event->title, 20) }}</div>
                                     <div class="text-muted small">
@@ -208,18 +168,18 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>
-                                <div class="fw-bold text-success h5 mb-1">{{ number_format($commission->amount) }} F</div>
+                            <td data-label="Montant">
+                                <div class="fw-bold text-success h5 mb-1">{{ \App\Helpers\CurrencyHelper::formatFCFA($commission->commission_amount) }}</div>
                                 @if($commission->net_amount)
                                 <div class="text-muted small">
-                                    Net: {{ number_format($commission->net_amount) }} F
+                                    Net promoteur : {{ \App\Helpers\CurrencyHelper::formatFCFA($commission->net_amount) }}
                                 </div>
                                 @endif
                                 <div class="text-muted small">
-                                    {{ round(($commission->amount / $commission->order->total_amount) * 100, 1) }}% du total
+                                    Taux : {{ $commission->commission_rate }} %
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="Statut">
                                 @switch($commission->status)
                                     @case('paid')
                                         <span class="badge bg-success">
@@ -248,12 +208,12 @@
                                         @break
                                 @endswitch
                             </td>
-                            <td>
+                            <td data-label="Date">
                                 <div class="fw-semibold">{{ $commission->created_at->format('d/m/Y') }}</div>
                                 <div class="text-muted small">{{ $commission->created_at->format('H:i') }}</div>
                                 <div class="text-muted small">{{ $commission->created_at->diffForHumans() }}</div>
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
                                             data-bs-toggle="dropdown">

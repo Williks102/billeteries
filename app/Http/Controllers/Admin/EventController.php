@@ -40,52 +40,8 @@ class EventController extends Controller
     {
         $period = $this->statsPeriod($request, 'admin.events.index');
 
-        $query = Event::with(['category', 'promoteur']);
-        
-        // Filtres
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
-        }
-        
-        if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('promoteur', function($pq) use ($request) {
-                      $pq->where('name', 'like', '%' . $request->search . '%');
-                  });
-            });
-        }
-
-        if ($request->filled('promoteur')) {
-            $query->where('promoter_id', $request->promoteur);
-        }
-
-        if ($request->filled('date_from')) {
-            $query->where('event_date', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->where('event_date', '<=', $request->date_to);
-        }
-
-        // Filtre par mode de gestion (nouveau)
-        if ($request->filled('management_mode')) {
-            $query->where('management_mode', $request->management_mode);
-        }
-
-        // Tri par défaut : plus récents
-        // Période : événements créés dans la période affichée (cartes ET liste)
-        if ($period->start !== null) {
-            $query->where('events.created_at', '>=', $period->startForDb());
-        }
-        if ($period->end !== null) {
-            $query->where('events.created_at', '<=', $period->endForDb());
-        }
+        // Mêmes filtres et même période que l'export (filteredQuery)
+        $query = $this->filteredQuery($request, $period)->with(['category', 'promoteur']);
 
         $events = $query->latest()->paginate(20)->withQueryString();
 
@@ -456,13 +412,97 @@ class EventController extends Controller
         return view('admin.events.intervention-dashboard', compact('eventsNeedingIntervention'));
     }
 
+    /** Événements filtrés : mêmes filtres et même période (créés dans la période) pour la liste, les cartes ET l'export. */
+    private function filteredQuery(Request $request, \App\Support\Stats\DatePeriod $period)
+    {
+        $query = Event::query();
+        
+        // Filtres
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+        
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('promoteur', function($pq) use ($request) {
+                      $pq->where('name', 'like', '%' . $request->search . '%');
+                  });
+            });
+        }
+
+        if ($request->filled('promoteur')) {
+            $query->where('promoter_id', $request->promoteur);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->where('event_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->where('event_date', '<=', $request->date_to);
+        }
+
+        // Filtre par mode de gestion (nouveau)
+        if ($request->filled('management_mode')) {
+            $query->where('management_mode', $request->management_mode);
+        }
+
+        // Tri par défaut : plus récents
+        // Période : événements créés dans la période affichée (cartes ET liste)
+        if ($period->start !== null) {
+            $query->where('events.created_at', '>=', $period->startForDb());
+        }
+        if ($period->end !== null) {
+            $query->where('events.created_at', '<=', $period->endForDb());
+        }
+
+        return $query;
+    }
+
     /**
-     * Exporter les événements
+     * Export CSV des événements : mêmes filtres et même période que l'écran ; chiffres par événement = ceux de la
+     * liste (EventStats::forEvents, toutes dates : vendus = sold + used de commandes payées, ventes = somme des
+     * lignes des commandes payées, net = commissions pending/paid), 5 requêtes par paquet de 500.
+     * Aucune donnée personnelle d'acheteur : seulement le nom du promoteur.
      */
     public function export(Request $request)
     {
-        // TODO: Implémenter l'export CSV/Excel
-        return response()->json(['message' => 'Export en cours de développement']);
+        $period = $this->statsPeriod($request, 'admin.events.index');
+        $query = $this->filteredQuery($request, $period)->with(['category:id,name', 'promoteur:id,name']);
+
+        return \App\Support\CsvExport::response(
+            'evenements-'.now()->format('Y-m-d').'.csv',
+            ['ID', 'Titre', 'Promoteur', 'Catégorie', 'Statut', 'Date événement', 'Billets vendus', 'Capacité',
+                'Commandes payées', 'Ventes (FCFA)', 'Net promoteur (FCFA)', 'Créé le'],
+            function (callable $emit) use ($query) {
+                $query->chunkByIdDesc(500, function ($events) use ($emit) {
+                    $figures = app(\App\Services\Stats\EventStats::class)->forEvents($events->pluck('id')->all());
+                    foreach ($events as $event) {
+                        $f = $figures[$event->id];
+                        $emit([
+                            $event->id,
+                            $event->title,
+                            $event->promoteur?->name ?? 'N/A',
+                            $event->category?->name ?? 'N/A',
+                            $event->status,
+                            $event->event_date ? $event->event_date->format('d/m/Y') : 'N/A',
+                            $f['sold'],
+                            $f['capacity'],
+                            $f['orders_paid'],
+                            $f['gmv'],
+                            $f['promoter_net'],
+                            $event->created_at->format('d/m/Y H:i'),
+                        ]);
+                    }
+                });
+            }
+        );
     }
 
     /**

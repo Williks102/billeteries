@@ -34,45 +34,8 @@ class OrderController extends Controller
         $period = $this->statsPeriod($request, 'admin.orders.index');
 
         try {
-            $query = Order::with(['user', 'event'])->withSum('orderItems as tickets_quantity', 'quantity');
-
-            // Filtres
-            if ($request->filled('payment_status')) {
-                $query->where('payment_status', $request->payment_status);
-            }
-
-            if ($request->filled('search')) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('order_number', 'like', "%{$search}%")
-                      ->orWhereHas('user', function($uq) use ($search) {
-                          $uq->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('event', function($eq) use ($search) {
-                          $eq->where('title', 'like', "%{$search}%");
-                      });
-                });
-            }
-
-            if ($request->filled('event')) {
-                $query->where('event_id', $request->event);
-            }
-
-            if ($request->filled('user')) {
-                $query->where('user_id', $request->user);
-            }
-
-            // Une seule période (DatePeriod) pour les cartes ET la liste : commandes créées dans la période
-            $query->inPeriod($period, 'created');
-
-            if ($request->filled('amount_min')) {
-                $query->where('total_amount', '>=', $request->amount_min);
-            }
-
-            if ($request->filled('amount_max')) {
-                $query->where('total_amount', '<=', $request->amount_max);
-            }
+            // Mêmes filtres que l'export (filteredQuery) : une seule définition de la liste
+            $query = $this->filteredQuery($request, $period)->with(['user', 'event']);
 
             // Tri par défaut : plus récentes
             $orders = $query->latest()->paginate(20)->withQueryString();
@@ -428,118 +391,92 @@ class OrderController extends Controller
     }
 
     /**
-     * Export des commandes - ✅ Améliorer l'export existant
+     * Commandes filtrées : MÊMES filtres et MÊME période (commandes créées dans la période, DatePeriod) que l'écran
+     * et que l'export. Un seul endroit, donc le fichier contient exactement les lignes de la liste (hors pagination).
+     */
+    private function filteredQuery(Request $request, \App\Support\Stats\DatePeriod $period)
+    {
+        $query = Order::query()->withSum('orderItems as tickets_quantity', 'quantity');
+
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('event', function ($eq) use ($search) {
+                      $eq->where('title', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($request->filled('event')) {
+            $query->where('event_id', $request->event);
+        }
+
+        if ($request->filled('user')) {
+            $query->where('user_id', $request->user);
+        }
+
+        // Une seule période (DatePeriod) pour les cartes, la liste ET l'export
+        $query->inPeriod($period, 'created');
+
+        if ($request->filled('amount_min')) {
+            $query->where('total_amount', '>=', $request->amount_min);
+        }
+
+        if ($request->filled('amount_max')) {
+            $query->where('total_amount', '<=', $request->amount_max);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Export CSV des commandes : mêmes filtres et même période que l'écran (période invalide : erreur de
+     * validation lisible). Colonnes personnelles = celles de l'écran (nom, e-mail COMPLET du compte : l'écran admin l'affiche
+     * en entier ; commande invité sans compte : e-mail de facturation MASQUÉ, l'écran n'affiche rien) ; pas de téléphone ni de codes de billets. Montants en FCFA entiers. Lecture par paquets.
      */
     public function export(Request $request)
     {
-        try {
-            $query = Order::with(['user', 'event', 'orderItems.ticketType']);
+        $period = $this->statsPeriod($request, 'admin.orders.index');
+        $query = $this->filteredQuery($request, $period)->with(['user', 'event', 'orderItems.ticketType']);
 
-            // Appliquer les mêmes filtres que l'index
-            if ($request->filled('payment_status')) {
-                $query->where('payment_status', $request->payment_status);
-            }
-            
-            if ($request->filled('event')) {
-                $query->where('event_id', $request->event);
-            }
+        Log::info('Export commandes par admin', [
+            'admin_id' => auth()->id(),
+            'filters' => $request->only(['payment_status', 'event', 'user', 'period', 'start_date', 'end_date']),
+        ]);
 
-            if ($request->filled('date_from')) {
-                $query->where('created_at', '>=', $request->date_from);
-            }
-
-            if ($request->filled('date_to')) {
-                $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
-            }
-
-            if ($request->filled('search')) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('order_number', 'like', "%{$search}%")
-                      ->orWhereHas('user', function($uq) use ($search) {
-                          $uq->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('event', function($eq) use ($search) {
-                          $eq->where('title', 'like', "%{$search}%");
-                      });
+        return \App\Support\CsvExport::response(
+            'commandes-'.now()->format('Y-m-d').'.csv',
+            ['Numéro Commande', 'Date Commande', 'Client', 'Email Client', 'Événement', 'Date Événement', 'Lieu',
+                'Statut Paiement', 'Montant Total (FCFA)', 'Nombre de Billets', 'Types de Billets'],
+            function (callable $emit) use ($query) {
+                $query->chunkByIdDesc(500, function ($orders) use ($emit) {
+                    foreach ($orders as $order) {
+                        $emit([
+                            $order->order_number,
+                            $order->created_at->format('d/m/Y H:i'),
+                            $order->user?->name ?? 'N/A',
+                            $order->user?->email ?? \App\Helpers\PrivacyHelper::maskEmail($order->billing_email),
+                            $order->event?->title ?? 'N/A',
+                            $order->event?->event_date ? $order->event->event_date->format('d/m/Y') : 'N/A',
+                            $order->event?->venue ?? 'N/A',
+                            ucfirst((string) $order->payment_status),
+                            (int) round($order->total_amount),
+                            (int) $order->tickets_quantity,
+                            $order->orderItems->map(fn ($i) => ($i->ticketType?->name ?? 'N/A').' (x'.$i->quantity.')')->implode(', '),
+                        ]);
+                    }
                 });
             }
-
-            $orders = $query->orderBy('created_at', 'desc')->get();
-
-            // ✅ Export CSV détaillé avec en-têtes français
-            $filename = 'commandes_export_' . date('Y_m_d_H_i_s') . '.csv';
-            
-            $headers = [
-                'Content-Type' => 'text/csv; charset=utf-8',
-                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            ];
-
-            $callback = function() use ($orders) {
-                $file = fopen('php://output', 'w');
-                
-                // BOM UTF-8 pour Excel français
-                fwrite($file, "\xEF\xBB\xBF");
-                
-                // En-têtes détaillés
-                fputcsv($file, [
-                    'Numéro Commande',
-                    'Date Commande', 
-                    'Client',
-                    'Email Client',
-                    'Téléphone',
-                    'Événement',
-                    'Date Événement',
-                    'Lieu',
-                    'Statut Paiement',
-                    'Montant Total (FCFA)',
-                    'Nombre de Billets',
-                    'Types de Billets',
-                    'Codes Billets'
-                ], ';');
-                
-                foreach ($orders as $order) {
-                    $ticketTypes = $order->orderItems->map(function($item) {
-                        return $item->ticketType->name . ' (x' . $item->quantity . ')';
-                    })->implode(', ');
-                    
-                    $ticketCodes = $order->tickets->pluck('ticket_code')->implode(', ');
-                    
-                    fputcsv($file, [
-                        $order->order_number,
-                        $order->created_at->format('d/m/Y H:i'),
-                        $order->user->name,
-                        $order->user->email,
-                        $order->user->phone ?? 'N/A',
-                        $order->event->title ?? 'N/A',
-                        $order->event && $order->event->event_date ? $order->event->event_date->format('d/m/Y') : 'N/A',
-                        $order->event->venue ?? 'N/A',
-                        ucfirst($order->payment_status),
-                        number_format($order->total_amount, 0, ',', ' '),
-                        $order->tickets->count(),
-                        $ticketTypes,
-                        $ticketCodes
-                    ], ';');
-                }
-                
-                fclose($file);
-            };
-
-            Log::info('Export commandes par admin', [
-                'admin_id' => auth()->id(),
-                'total_orders' => $orders->count(),
-                'filters' => $request->only(['payment_status', 'event', 'date_from', 'date_to'])
-            ]);
-
-            return response()->stream($callback, 200, $headers);
-
-        } catch (\Exception $e) {
-            $this->logFailure('Erreur export commandes', $e);
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de l\'export des commandes');
-        }
+        );
     }
 
     /** Journalise une erreur interne sans message brut ni PII (les messages SQL contiennent des valeurs). */

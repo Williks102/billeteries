@@ -217,7 +217,7 @@ class EventCreationTest extends TestCase
         ];
     }
 
-    /** @dataProvider invalidPayloads */
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidPayloads')]
     public function test_invalid_input_is_rejected_and_nothing_is_saved(array $override, string $errorKey): void
     {
         $this->store($override)->assertSessionHasErrors($errorKey);
@@ -298,7 +298,7 @@ class EventCreationTest extends TestCase
         ];
     }
 
-    /** @dataProvider checklistCases */
+    #[\PHPUnit\Framework\Attributes\DataProvider('checklistCases')]
     public function test_publication_is_refused_with_the_exact_list_of_blockers(string $case, array $expectedCodes): void
     {
         $event = $this->readyEvent();

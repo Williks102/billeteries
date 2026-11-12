@@ -32,36 +32,8 @@ class UserController extends Controller
     {
         $period = $this->statsPeriod($request, 'admin.users.index');
 
-        $query = User::query();
-        
-        // Filtres existants de votre code
-        if ($request->filled('role')) {
-            $query->where('role', $request->role);
-        }
-        
-        if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%');
-            });
-        }
-        
-        // Ajout du filtre par statut de vérification
-        if ($request->filled('status')) {
-            if ($request->status === 'verified') {
-                $query->whereNotNull('email_verified_at');
-            } elseif ($request->status === 'unverified') {
-                $query->whereNull('email_verified_at');
-            }
-        }
-        
-        // Période : inscriptions dans la période affichée (cartes ET liste)
-        if ($period->start !== null) {
-            $query->where('created_at', '>=', $period->startForDb());
-        }
-        if ($period->end !== null) {
-            $query->where('created_at', '<=', $period->endForDb());
-        }
+        // Mêmes filtres et même période que l'export (filteredQuery)
+        $query = $this->filteredQuery($request, $period);
 
         $users = $query->latest()
                       ->paginate(20)
@@ -424,66 +396,72 @@ class UserController extends Controller
     }
 
     /**
-     * NOUVELLE MÉTHODE: Export des utilisateurs
+     * Utilisateurs filtrés : mêmes filtres (rôle, recherche, statut e-mail) et même période (inscriptions dans la
+     * période, DatePeriod) pour la liste, les cartes ET l'export.
+     */
+    private function filteredQuery(Request $request, DatePeriod $period)
+    {
+        $query = User::query();
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        if ($request->filled('status')) {
+            if ($request->status === 'verified') {
+                $query->whereNotNull('email_verified_at');
+            } elseif ($request->status === 'unverified') {
+                $query->whereNull('email_verified_at');
+            }
+        }
+
+        if ($period->start !== null) {
+            $query->where('created_at', '>=', $period->startForDb());
+        }
+        if ($period->end !== null) {
+            $query->where('created_at', '<=', $period->endForDb());
+        }
+
+        return $query;
+    }
+
+    /**
+     * Export CSV des utilisateurs : mêmes filtres et même période que l'écran. L'e-mail reste COMPLET parce que
+     * l'écran admin des utilisateurs (users/index.blade.php) l'affiche en entier, comme le téléphone ; jamais de
+     * mot de passe ni de jeton (colonnes explicites, pas de toArray()).
      */
     public function export(Request $request)
     {
-        try {
-            $users = User::when($request->role, function($query, $role) {
-                    return $query->where('role', $role);
-                })
-                ->when($request->status, function($query, $status) {
-                    if ($status === 'verified') {
-                        return $query->whereNotNull('email_verified_at');
-                    } elseif ($status === 'unverified') {
-                        return $query->whereNull('email_verified_at');
+        $period = $this->statsPeriod($request, 'admin.users.index');
+        $query = $this->filteredQuery($request, $period)->select(['id', 'name', 'email', 'role', 'phone', 'email_verified_at', 'created_at']);
+
+        return \App\Support\CsvExport::response(
+            'utilisateurs-'.now()->format('Y-m-d').'.csv',
+            ['Nom', 'Email', 'Rôle', 'Téléphone', 'Statut Email', 'Date Inscription'],
+            function (callable $emit) use ($query) {
+                $query->chunkByIdDesc(500, function ($users) use ($emit) {
+                    foreach ($users as $user) {
+                        $emit([
+                            $user->name,
+                            $user->email,
+                            ucfirst((string) $user->role),
+                            $user->phone ?: 'N/A',
+                            $user->email_verified_at ? 'Vérifié' : 'Non vérifié',
+                            $user->created_at->format('d/m/Y H:i'),
+                        ]);
                     }
-                })
-                ->get();
-
-            $csvData = [];
-            $csvData[] = ['Nom', 'Email', 'Rôle', 'Téléphone', 'Statut Email', 'Date Inscription'];
-
-            foreach ($users as $user) {
-                $csvData[] = [
-                    $user->name,
-                    $user->email,
-                    ucfirst($user->role),
-                    $user->phone ?? 'N/A',
-                    $user->email_verified_at ? 'Vérifié' : 'Non vérifié',
-                    $user->created_at->format('d/m/Y H:i')
-                ];
+                });
             }
-
-            $filename = 'utilisateurs_' . date('Y_m_d_H_i_s') . '.csv';
-            
-            $headers = [
-                'Content-Type' => 'text/csv',
-                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            ];
-
-            $callback = function() use ($csvData) {
-                $file = fopen('php://output', 'w');
-                fputcsv($file, ["\xEF\xBB\xBF"]); // BOM UTF-8
-                
-                foreach ($csvData as $row) {
-                    fputcsv($file, $row, ';'); // Point-virgule pour Excel français
-                }
-                
-                fclose($file);
-            };
-
-            return response()->stream($callback, 200, $headers);
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur export utilisateurs: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de l\'export');
-        }
+        );
     }
-  
-    
+
 /**
  * Envoyer un lien de reset password pour un utilisateur (action admin)
  */

@@ -373,26 +373,28 @@ class AdminController extends Controller
     }
 
     /**
-     * Export global selon le type
+     * Export global selon le type : redirige vers l'export du type (mêmes paramètres de filtre et de période),
+     * sauf les commissions, servies ici.
      */
     public function export(Request $request, $type)
     {
-        switch ($type) {
-            case 'users':
-                return redirect()->route('admin.users.export', $request->all());
-            case 'events':
-                return redirect()->route('admin.events.export', $request->all());
-            case 'orders':
-                return redirect()->route('admin.orders.export', $request->all());
-            case 'tickets':
-                return redirect()->route('admin.tickets.export', $request->all());
-            case 'categories':
-                return redirect()->route('admin.categories.export', $request->all());
-            case 'commissions':
-                return $this->exportCommissions($request);
-            default:
-                return redirect()->back()->with('error', 'Type d\'export non reconnu');
+        $targets = [
+            'users' => 'admin.users.export',
+            'events' => 'admin.events.export',
+            'orders' => 'admin.orders.export',
+            'tickets' => 'admin.tickets.export',
+            'categories' => 'admin.categories.export',
+        ];
+
+        if ($type === 'commissions') {
+            return $this->exportCommissions($request);
         }
+
+        if (isset($targets[$type])) {
+            return redirect()->route($targets[$type], $request->query());
+        }
+
+        return redirect()->back()->with('error', 'Type d\'export non reconnu');
     }
 
     /**
@@ -439,48 +441,55 @@ class AdminController extends Controller
     }
 
     /**
-     * Export des commissions
+     * Export CSV des commissions : mêmes filtres (statut, promoteur) que l'écran, et la MÊME période que les cartes
+     * (date de VENTE de la commande, DatePeriod), pour que le total des lignes « compté » égale le revenu plateforme
+     * affiché. Différence voulue avec la liste : la liste montre aussi toutes les commissions en attente quelle que
+     * soit leur date (paiement en lot) ; l'export, lui, est borné à la période. E-mail promoteur complet (affiché en
+     * entier par l'écran). Lecture par paquets.
      */
     private function exportCommissions(Request $request)
     {
-        try {
-            $query = Commission::with(['promoteur', 'order.event']);
+        $period = $this->statsPeriod($request, 'admin.commissions');
 
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
+        $query = Commission::query()
+            ->whereIn('commissions.order_id', Order::query()->forScope(Scope::admin())->inPeriod($period)->select('orders.id'))
+            ->with(['promoteur:id,name,email', 'order:id,order_number,event_id,payment_status,total_amount', 'order.event:id,title']);
 
-            if ($request->filled('promoter')) {
-                $query->where('promoter_id', $request->promoter);
-            }
-
-            $commissions = $query->get();
-
-            $csvContent = "ID,Promoteur,Événement,Commande,Montant,Statut,Date création,Date paiement\n";
-            
-            foreach ($commissions as $commission) {
-                $csvContent .= implode(',', [
-                    $commission->id,
-                    '"' . addslashes($commission->promoteur->name ?? 'N/A') . '"',
-                    '"' . addslashes($commission->order->event->title ?? 'N/A') . '"',
-                    $commission->order->order_number ?? 'N/A',
-                    number_format($commission->amount, 2),
-                    $commission->status,
-                    $commission->created_at->format('Y-m-d H:i:s'),
-                    $commission->paid_at ? $commission->paid_at->format('Y-m-d H:i:s') : 'N/A'
-                ]) . "\n";
-            }
-
-            return response($csvContent)
-                ->header('Content-Type', 'text/csv')
-                ->header('Content-Disposition', 'attachment; filename="commissions-export-' . now()->format('Y-m-d') . '.csv"');
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur export commissions: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors de l\'export des commissions');
+        if ($request->filled('status')) {
+            $query->where('commissions.status', $request->status);
         }
+
+        if ($request->filled('promoter')) {
+            $query->where('commissions.promoter_id', $request->promoter);
+        }
+
+        return \App\Support\CsvExport::response(
+            'commissions-'.now()->format('Y-m-d').'.csv',
+            ['ID', 'Promoteur', 'Email Promoteur', 'Événement', 'Commande', 'Statut Commande', 'Ventes (FCFA)',
+                'Commission (FCFA)', 'Net Promoteur (FCFA)', 'Statut Commission', 'Compté dans les revenus', 'Date création', 'Date paiement'],
+            function (callable $emit) use ($query) {
+                $query->chunkByIdDesc(500, function ($commissions) use ($emit) {
+                    foreach ($commissions as $c) {
+                        $counted = $c->order?->payment_status === 'paid' && in_array($c->status, ['pending', 'paid'], true);
+                        $emit([
+                            $c->id,
+                            $c->promoteur?->name ?? 'N/A',
+                            $c->promoteur?->email ?? 'N/A',
+                            $c->order?->event?->title ?? 'N/A',
+                            $c->order?->order_number ?? 'N/A',
+                            $c->order?->payment_status ?? 'N/A',
+                            (int) ($c->order?->total_amount ?? 0),
+                            (int) $c->commission_amount,
+                            (int) $c->net_amount,
+                            $c->status,
+                            $counted ? 'Oui' : 'Non',
+                            $c->created_at->format('d/m/Y H:i'),
+                            $c->paid_at ? $c->paid_at->format('d/m/Y H:i') : 'N/A',
+                        ]);
+                    }
+                });
+            }
+        );
     }
 
     // ================================================================

@@ -49,6 +49,20 @@ class Ticket extends Model
     }
 
     /**
+     * Statistiques : billets rattachés aux commandes données (pivot order_tickets OU order_item_id,
+     * selon l'ancienneté du billet). $orders : requête Eloquent sur orders.
+     */
+    public function scopeOfOrders($query, $orders)
+    {
+        $ids = $orders->clone()->select('orders.id');
+
+        return $query->where(function ($q) use ($ids) {
+            $q->whereIn('tickets.id', \Illuminate\Support\Facades\DB::table('order_tickets')->select('ticket_id')->whereIn('order_id', $ids))
+                ->orWhereIn('tickets.order_item_id', \Illuminate\Support\Facades\DB::table('order_items')->select('id')->whereIn('order_id', $ids));
+        });
+    }
+
+    /**
      * Générer un code de billet unique
      */
     public static function generateTicketCode()

@@ -95,6 +95,34 @@ class Order extends Model
     }
 
     /**
+     * Statistiques : commandes dont la date de référence tombe dans la période (bornes incluses).
+     * $reference : 'sale' (défaut : paid_at, repli created_at), 'created' ou 'updated'.
+     */
+    public function scopeInPeriod($query, \App\Support\Stats\DatePeriod $period, string $reference = 'sale')
+    {
+        $column = match ($reference) {
+            'created' => 'orders.created_at',
+            'updated' => 'orders.updated_at',
+            default => \App\Support\Stats\SqlDate::SALE_REF,
+        };
+
+        if ($period->start !== null) {
+            $query->whereRaw("{$column} >= ?", [$period->startForDb()]);
+        }
+        if ($period->end !== null) {
+            $query->whereRaw("{$column} <= ?", [$period->endForDb()]);
+        }
+
+        return $query;
+    }
+
+    /** Statistiques : restreint au périmètre (admin, promoteur, événement, acheteur). */
+    public function scopeForScope($query, \App\Services\Stats\Scope $scope)
+    {
+        return $scope->constrainOrders($query);
+    }
+
+    /**
      * Accessors - Formatage
      */
     public function getFormattedTotalAttribute()

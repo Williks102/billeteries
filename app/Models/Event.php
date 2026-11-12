@@ -96,6 +96,78 @@ class Event extends Model
     }
 
     /**
+     * Début de l'événement (date + heure de début).
+     */
+    public function startsAt(): ?Carbon
+    {
+        if (! $this->event_date) {
+            return null;
+        }
+
+        return \App\Support\Events\SalePeriod::eventStart(
+            $this->event_date->format('Y-m-d'),
+            $this->event_time ? $this->event_time->format('H:i') : null
+        );
+    }
+
+    /**
+     * Checklist de publication (source unique : PublishEventAction, page de l'événement, création).
+     * `blocking` : conditions obligatoires (code => message) ; `warnings` : recommandations non bloquantes.
+     *
+     * @return array{blocking: array<string,string>, warnings: array<string,string>, can_publish: bool}
+     */
+    public function publicationChecklist(): array
+    {
+        $blocking = [];
+        $warnings = [];
+        $now = now();
+        $start = $this->startsAt();
+        $active = $this->ticketTypes()->where('is_active', true)->get();
+
+        if ($active->isEmpty()) {
+            $blocking['tickets'] = 'Ajoutez au moins un billet actif.';
+        }
+
+        if ($start === null || $start->lessThanOrEqualTo($now)) {
+            $blocking['date'] = "La date et l'heure de l'événement doivent être dans le futur.";
+        }
+
+        if ($active->isNotEmpty()) {
+            $reasons = [];
+            $hasValid = false;
+            foreach ($active as $type) {
+                $from = $type->sale_start_date;
+                $to = $type->sale_end_date;
+                if ($from === null || $to === null || $from->greaterThan($to)) {
+                    $reasons['order'] = 'le début de vente est après la fin';
+                } elseif ($start !== null && $to->greaterThan($start)) {
+                    $reasons['after_event'] = "la fin de vente est après le début de l'événement";
+                } elseif ($to->lessThan($now)) {
+                    $reasons['closed'] = 'la période de vente est terminée';
+                } else {
+                    $hasValid = true;
+                }
+            }
+            if (! $hasValid) {
+                $blocking['sale_period'] = 'Aucun billet n\'a une période de vente valide ('.implode(' ; ', $reasons).').';
+            }
+        }
+
+        if (empty($this->image)) {
+            $blocking['image'] = "Ajoutez une image de l'événement.";
+        }
+
+        if (trim((string) $this->description) === '') {
+            $warnings['description'] = 'La description est vide : elle aide les acheteurs à se décider.';
+        }
+        if ($active->count() === 1) {
+            $warnings['single_ticket'] = 'Un seul type de billet : pensez à une offre complémentaire (VIP, gratuit...).';
+        }
+
+        return ['blocking' => $blocking, 'warnings' => $warnings, 'can_publish' => $blocking === []];
+    }
+
+    /**
      * Accessors
      */
     public function getFormattedEventDateAttribute()

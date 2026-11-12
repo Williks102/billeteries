@@ -22,7 +22,7 @@ class ActionBarsTest extends TestCase
         'components/admin/category-form.blade.php' => 1,
         'pages/contact.blade.php' => 1,
         'pages/support.blade.php' => 1,
-        'promoteur/events/create.blade.php' => 1,
+        'events/_form.blade.php' => 3,
         'promoteur/events/tickets/_form.blade.php' => 1,
         'promoteur/profile.blade.php' => 2,
     ];

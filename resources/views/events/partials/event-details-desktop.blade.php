@@ -100,7 +100,7 @@ use Illuminate\Support\Facades\Storage;
     </div>
     
     <!-- Événements similaires - Version desktop -->
-    @if($similarEvents && $similarEvents->count() > 0)
+    @if($similarEvents && $similarEvents->isNotEmpty())
     <div class="detail-card">
         <div class="detail-title">
             <i class="fas fa-heart"></i>

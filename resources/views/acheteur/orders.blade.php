@@ -26,64 +26,8 @@ use Illuminate\Support\Facades\Storage;
         </a>
     </div>
     
-    <!-- Statistiques rapides -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ $stats['total_orders'] ?? 0 }}</h4>
-                            <small>Commandes totales</small>
-                        </div>
-                        <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ $stats['paid_orders'] ?? 0 }}</h4>
-                            <small>Commandes payées</small>
-                        </div>
-                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ $stats['total_tickets'] ?? 0 }}</h4>
-                            <small>Billets achetés</small>
-                        </div>
-                        <i class="fas fa-ticket-alt fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ \App\Helpers\CurrencyHelper::formatNumber($stats['total_spent'] ?? 0) }}</h4>
-                            <small>FCFA dépensés</small>
-                        </div>
-                        <i class="fas fa-coins fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Statistiques du compte (cumulées, toutes dates) -->
+    @include('acheteur._stats', ['stats' => $stats ?? null])
     
     <!-- Filtres -->
     <div class="card mb-4">
@@ -96,6 +40,7 @@ use Illuminate\Support\Facades\Storage;
                         <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Payées</option>
                         <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>En attente de paiement</option>
                         <option value="failed" {{ request('payment_status') == 'failed' ? 'selected' : '' }}>Échouées</option>
+                        <option value="refunded" {{ request('payment_status') == 'refunded' ? 'selected' : '' }}>Remboursées</option>
                     </select>
                 </div>
                 
@@ -130,7 +75,7 @@ use Illuminate\Support\Facades\Storage;
     </div>
     
     <!-- Liste des commandes -->
-    @if($orders->count() > 0)
+    @if($orders->isNotEmpty())
         <div class="row">
             @foreach($orders as $order)
                 <div class="col-12 mb-4">
@@ -201,11 +146,11 @@ use Illuminate\Support\Facades\Storage;
                                         @endif
                                     </div>
                                     
-                                    @if($order->tickets->count() > 0)
+                                    @if($order->tickets_count > 0)
                                         <div class="mt-1">
                                             <small class="text-muted">
                                                 <i class="fas fa-ticket-alt me-1"></i>
-                                                {{ $order->tickets->count() }} billet(s)
+                                                {{ $order->tickets_count }} billet(s)
                                             </small>
                                         </div>
                                     @endif
@@ -237,14 +182,14 @@ use Illuminate\Support\Facades\Storage;
                             </div>
                             
                             <!-- Détails des billets (repliable) -->
-                            @if($order->payment_status === 'paid' && $order->tickets->count() > 0)
+                            @if($order->payment_status === 'paid' && $order->tickets_count > 0)
                                 <div class="mt-3 pt-3 border-top">
                                     <a class="btn btn-sm btn-outline-secondary" 
                                        data-bs-toggle="collapse" 
                                        href="#tickets-{{ $order->id }}" 
                                        role="button">
                                         <i class="fas fa-chevron-down me-1"></i>
-                                        Voir les billets ({{ $order->tickets->count() }})
+                                        Voir les billets ({{ $order->tickets_count }})
                                     </a>
                                     
                                     <div class="collapse mt-3" id="tickets-{{ $order->id }}">
@@ -261,11 +206,11 @@ use Illuminate\Support\Facades\Storage;
                                                 </div>
                                             @endforeach
                                             
-                                            @if($order->tickets->count() > 4)
+                                            @if($order->tickets_count > 4)
                                                 <div class="col-md-3">
                                                     <div class="card card-body p-2 bg-light text-center">
                                                         <small class="text-muted">
-                                                            +{{ $order->tickets->count() - 4 }} autres billets
+                                                            +{{ $order->tickets_count - 4 }} autres billets
                                                         </small>
                                                     </div>
                                                 </div>

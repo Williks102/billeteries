@@ -105,7 +105,7 @@ use Illuminate\Support\Facades\Storage;
 
         <!-- Liste des événements -->
         <div class="row" id="eventsContainer">
-            @if(isset($events) && $events->count() > 0)
+            @if(isset($events) && $events->isNotEmpty())
                 @foreach($events as $event)
                     <div class="col-lg-4 col-md-6 mb-4 event-card" data-category="{{ $event->category->slug }}">
                         <div class="card border-0 shadow-sm h-100 event-item">
@@ -143,7 +143,7 @@ use Illuminate\Support\Facades\Storage;
 
 
                                
-                                @if($event->ticketTypes->count() > 0)
+                                @if($event->ticketTypes->isNotEmpty())
                                     <div class="event-price mb-3">
                                         <span class="text-muted">À partir de</span>
                                         <span class="h5 text-orange mb-0">

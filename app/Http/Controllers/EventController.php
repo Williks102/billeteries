@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\EventCategory;
-use App\Models\TicketType;
+use App\Services\Stats\PublicStats;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -14,32 +14,29 @@ class EventController extends Controller
     /**
      * Affichage du détail d'un événement (public)
      */
-    public function show(Event $event)
+    public function show(Event $event, PublicStats $publicStats)
     {
         // Vérifier que l'événement est publié
         if ($event->status !== 'published') {
             abort(404, 'Événement non trouvé ou non publié');
         }
 
-        // Charger les relations nécessaires
+        // Charger les relations nécessaires. AUCUNE commande n'est chargée : le public ne voit aucun chiffre de vente.
         $event->load([
-            'category', 
-            'promoteur', 
+            'category',
+            'promoteur',
             'ticketTypes' => function($query) {
                 $query->where('is_active', true)
                       ->where('sale_start_date', '<=', now())
                       ->where('sale_end_date', '>=', now())
                       ->orderBy('price', 'asc');
             },
-            'orders' => function($query) {
-                $query->where('payment_status', 'paid');
-            }
         ]);
 
-        // Vérifier que l'événement a des billets disponibles
-        $hasAvailableTickets = $event->ticketTypes->filter(function($ticketType) {
-            return $ticketType->remainingTickets() > 0;
-        })->count() > 0;
+        // Places restantes AFFICHÉES (décision D6) : capacité - quantity_sold, réservations non payées déduites
+        // (anti-survente). Aucune vente détaillée ni taux de remplissage n'est exposé au public.
+        $availability = $publicStats->remaining($event);
+        $hasAvailableTickets = $availability['total'] > 0;
 
         // Événements similaires (même catégorie)
         $similarEvents = Event::with(['category', 'ticketTypes'])
@@ -50,29 +47,10 @@ class EventController extends Controller
             ->limit(4)
             ->get();
 
-        // Statistiques de l'événement
-        $eventStats = [
-            'total_tickets' => $event->ticketTypes->sum('quantity_available') ?? 0,
-            'sold_tickets' => $event->ticketTypes->sum('quantity_sold') ?? 0,
-            'available_tickets' => $event->ticketTypes->sum(function($type) {
-                return $type->remainingTickets();
-            }),
-            'min_price' => $event->ticketTypes->min('price') ?? 0,
-            'max_price' => $event->ticketTypes->max('price') ?? 0,
-            'total_revenue' => $event->orders->sum('total_amount') ?? 0,
-        ];
-
-        // Calcul du pourcentage de vente
-        $salesPercentage = $eventStats['total_tickets'] > 0 
-            ? round(($eventStats['sold_tickets'] / $eventStats['total_tickets']) * 100, 1)
-            : 0;
-
         return view('events.show', compact(
-            'event', 
-            'similarEvents', 
-            'hasAvailableTickets',
-            'eventStats',
-            'salesPercentage'
+            'event',
+            'similarEvents',
+            'hasAvailableTickets'
         ));
     }
 

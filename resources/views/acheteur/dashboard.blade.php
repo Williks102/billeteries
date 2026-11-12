@@ -24,67 +24,11 @@ use Illuminate\Support\Facades\Storage;
         </a>
     </div>
     
-    <!-- Statistiques -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon primary me-3">
-                        <i class="fas fa-ticket-alt"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h4>{{ $stats['total_tickets'] ?? 0 }}</h4>
-                        <p class="text-muted mb-0">Billets achetés</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon success me-3">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h4>{{ $stats['past_events'] ?? 0 }}</h4>
-                        <p class="text-muted mb-0">Événements assistés</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon info me-3">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h4>{{ $stats['upcoming_events'] ?? 0 }}</h4>
-                        <p class="text-muted mb-0">Événements à venir</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon primary me-3">
-                        <i class="fas fa-shopping-bag"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h4>{{ $stats['total_orders'] ?? 0 }}</h4>
-                        <p class="text-muted mb-0">Commandes</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Statistiques (cumulées, toutes dates) -->
+    @include('acheteur._stats', ['stats' => $stats])
 
     <!-- Événements à venir -->
-    @if($upcomingEvents && $upcomingEvents->count() > 0)
+    @if($upcomingEvents && $upcomingEvents->isNotEmpty())
     <div class="row mb-4">
         <div class="col-12">
             <div class="content-card">
@@ -138,13 +82,6 @@ use Illuminate\Support\Facades\Storage;
                         @endforeach
                     </div>
                     
-                    @if($upcomingEvents->count() > 3)
-                    <div class="text-center mt-3">
-                        <a href="{{ route('acheteur.tickets.index') }}" class="btn btn-outline-acheteur">
-                            Voir tous mes billets ({{ $upcomingEvents->count() }})
-                        </a>
-                    </div>
-                    @endif
                 </div>
             </div>
         </div>
@@ -152,7 +89,7 @@ use Illuminate\Support\Facades\Storage;
     @endif
 
     <!-- Historique récent -->
-    @if($recentOrders && $recentOrders->count() > 0)
+    @if($recentOrders && $recentOrders->isNotEmpty())
     <div class="row mb-4">
         <div class="col-12">
             <div class="content-card">
@@ -239,7 +176,7 @@ use Illuminate\Support\Facades\Storage;
     @endif
 
     <!-- Message si aucune activité -->
-    @if((!$upcomingEvents || $upcomingEvents->count() === 0) && (!$recentOrders || $recentOrders->count() === 0))
+    @if((!$upcomingEvents || $upcomingEvents->isEmpty()) && (!$recentOrders || $recentOrders->isEmpty()))
     <div class="row">
         <div class="col-12">
             <div class="content-card text-center py-5">

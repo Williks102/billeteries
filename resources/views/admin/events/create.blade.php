@@ -12,7 +12,7 @@
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('admin.events.index') }}">Événements</a></li>
-                    <li class="breadcrumb-item active">Créer</li>
+                    <li class="breadcrumb-item active" aria-current="page">Créer</li>
                 </ol>
             </nav>
         </div>

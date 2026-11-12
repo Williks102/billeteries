@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Mon Espace') - {{ config('app.name') }}</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
 
     <style>
@@ -24,10 +24,7 @@
             --black-secondary: #2c3338;
             --gray-light: #f0f0f1;
             --gray-medium: #8c8f94;
-            --sidebar-width: 280px;
-            --sidebar-mini-width: 60px;
-            --topbar-height: 60px;
-            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: all var(--motion) ease;
         }
 
         * {
@@ -51,133 +48,14 @@
 
         /* ========================= SIDEBAR ========================= */
         .acheteur-sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--black-primary);
-            color: #c3c4c7;
-            transition: var(--transition-smooth);
-            z-index: 1000;
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-
-        .acheteur-sidebar.mini {
-            width: var(--sidebar-mini-width);
-        }
-
-        /* Sidebar Header */
-        .sidebar-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px 20px;
-            background: var(--black-secondary);
-            border-bottom: 1px solid #3c3f44;
-            min-height: var(--topbar-height);
-        }
-
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: #c3c4c7;
-            text-decoration: none;
-            font-size: 1.1rem;
-            font-weight: 600;
-            transition: var(--transition-smooth);
-        }
-
-        .sidebar-brand:hover {
-            color: white;
-        }
-
-        .sidebar-brand i {
-            font-size: 1.4rem;
-            color: var(--primary-orange);
-        }
-
-        .sidebar-brand-text {
-            transition: var(--transition-smooth);
-        }
-
-        .acheteur-sidebar.mini .sidebar-brand-text {
-            opacity: 0;
-            width: 0;
-            overflow: hidden;
-        }
-
-        .sidebar-toggle {
-            background: none;
-            border: none;
-            color: #c3c4c7;
-            padding: 8px;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: var(--transition-smooth);
-        }
-
-        .sidebar-toggle:hover {
-            background: rgba(var(--brand-rgb), 0.1);
-            color: var(--primary-orange);
-        }
-
-        /* Sidebar Menu */
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+            transition: width var(--motion) ease-in-out, transform var(--motion) ease-in-out;
         }
 
         .sidebar-menu > li {
             position: relative;
         }
 
-        .sidebar-menu > li > a {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px 20px;
-            color: #c3c4c7;
-            text-decoration: none;
-            transition: var(--transition-smooth);
-            border-left: 3px solid transparent;
-            position: relative;
-        }
-
-        .sidebar-menu > li > a:hover {
-            background: rgba(var(--brand-rgb), 0.08);
-            color: white;
-            border-left-color: var(--primary-orange);
-        }
-
-        .sidebar-menu > li > a.active {
-            background: rgba(var(--brand-rgb), 0.15);
-            color: white;
-            border-left-color: var(--primary-orange);
-        }
-
-        .sidebar-menu > li > a i {
-            width: 20px;
-            text-align: center;
-            font-size: 1.1rem;
-        }
-
-        .sidebar-menu-text {
-            flex: 1;
-            transition: var(--transition-smooth);
-            white-space: nowrap;
-        }
-
-        .acheteur-sidebar.mini .sidebar-menu-text {
-            opacity: 0;
-            width: 0;
-            overflow: hidden;
-        }
-
-        /* Submenu */
+        /* Sidebar Menu */
         .sidebar-submenu {
             list-style: none;
             padding: 0;
@@ -190,21 +68,6 @@
 
         .submenu-parent.open .sidebar-submenu {
             max-height: 400px;
-        }
-
-        .sidebar-submenu a {
-            display: block;
-            padding: 12px 20px 12px 60px;
-            color: #a7aaad;
-            text-decoration: none;
-            transition: var(--transition-smooth);
-            font-size: 0.95rem;
-        }
-
-        .sidebar-submenu a:hover,
-        .sidebar-submenu a.active {
-            background: rgba(var(--brand-rgb), 0.08);
-            color: white;
         }
 
         .menu-chevron {
@@ -227,163 +90,48 @@
             margin-left: auto;
         }
 
-        /* ========================= TOPBAR ========================= */
-        .acheteur-topbar {
-            position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
-            right: 0;
-            height: var(--topbar-height);
-            background: white;
-            border-bottom: 1px solid #dcdcde;
-            z-index: 999;
-            transition: var(--transition-smooth);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        .acheteur-sidebar.mini + .acheteur-topbar {
-            left: var(--sidebar-mini-width);
-        }
-
-        .mobile-toggle {
-            display: none;
-            background: none;
-            border: none;
-            padding: 8px;
-            color: var(--gray-medium);
-            cursor: pointer;
-            border-radius: 4px;
-            margin-right: 15px;
-            transition: var(--transition-smooth);
-        }
-
-        .mobile-toggle:hover {
-            background: rgba(37, 99, 235, 0.1);
-            color: var(--acheteur-primary);
-        }
-
-        .topbar-breadcrumb {
-            flex: 1;
-        }
-
-        .breadcrumb {
-            background: none;
-            padding: 0;
-            margin: 0;
-            font-size: 0.9rem;
-        }
-
-        .breadcrumb-item + .breadcrumb-item::before {
-            color: var(--gray-medium);
-        }
-
-        .breadcrumb-item.active {
-            color: var(--acheteur-primary);
-            font-weight: 500;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--acheteur-primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .user-details {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: #3c434a;
-            font-size: 0.9rem;
-            line-height: 1.2;
-        }
-
-        .user-role {
-            font-size: 0.75rem;
-            color: var(--gray-medium);
-            text-transform: uppercase;
-        }
-
         /* ========================= MAIN CONTENT ========================= */
         .acheteur-main {
             flex: 1;
+            min-width: 0;
             margin-left: var(--sidebar-width);
-            transition: var(--transition-smooth);
+            transition: margin-left var(--motion) ease-in-out;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        .acheteur-sidebar.mini + .acheteur-main {
-            margin-left: var(--sidebar-mini-width);
-        }
+        .acheteur-sidebar.mini ~ .acheteur-main { margin-left: var(--sidebar-mini-width); }
+        .acheteur-sidebar.mini ~ .acheteur-main .acheteur-topbar { left: var(--sidebar-mini-width); }
 
         .acheteur-content {
             flex: 1;
-            padding: calc(var(--topbar-height) + var(--gutter)) var(--gutter) var(--gutter);
             background: var(--gray-light);
         }
 
         /* ========================= MOBILE RESPONSIVE ========================= */
         @media (max-width: 768px) {
-            .acheteur-sidebar {
-                transform: translateX(-100%);
-                width: var(--sidebar-width);
-                box-shadow: 0 0 20px rgba(0,0,0,0.3);
-            }
-            
-            .acheteur-sidebar.mobile-visible {
-                transform: translateX(0);
-            }
-
-            .acheteur-main {
+            .acheteur-main,
+            .acheteur-sidebar.mini ~ .acheteur-main {
                 margin-left: 0;
                 width: 100%;
             }
 
-            .acheteur-topbar {
-                left: 0;
-                width: 100%;
+            .acheteur-sidebar {
+                transform: translateX(-100%);
+                box-shadow: 0 0 20px rgba(0,0,0,0.3);
             }
 
-            .mobile-toggle {
-                display: block !important;
+            .acheteur-sidebar.mobile-visible {
+                transform: translateX(0);
+            }
+
+            .acheteur-sidebar.mini ~ .acheteur-main .acheteur-topbar {
+                left: 0;
             }
 
             .topbar-breadcrumb {
                 display: none;
-            }
-
-            .user-info {
-                display: none;
-            }
-
-            .acheteur-content {
-                padding: calc(var(--topbar-height) + var(--gutter)) var(--gutter) var(--gutter);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .acheteur-content {
-                padding: calc(var(--topbar-height) + var(--gutter)) var(--gutter) var(--gutter);
             }
         }
 
@@ -468,30 +216,30 @@
                 padding: 16px;
                 margin-bottom: 16px;
             }
-            
+
             .stat-card .d-flex {
                 flex-direction: row;
                 text-align: left;
                 gap: 12px;
             }
-            
+
             .stat-icon {
                 width: 40px;
                 height: 40px;
                 font-size: 1.1rem;
                 flex-shrink: 0;
             }
-            
+
             .stat-info h4 {
                 font-size: 1.4rem;
                 margin-bottom: 4px;
             }
-            
+
             .stat-info p {
                 font-size: 0.8rem;
                 line-height: 1.2;
             }
-            
+
             .dashboard-card {
                 padding: 16px;
                 margin-bottom: 16px;
@@ -503,17 +251,17 @@
             .stat-card {
                 padding: 12px;
             }
-            
+
             .stat-card .d-flex {
                 flex-direction: column;
                 text-align: center;
                 gap: 8px;
             }
-            
+
             .stat-icon {
                 margin: 0 auto;
             }
-            
+
             .stat-info h4 {
                 font-size: 1.2rem;
             }
@@ -560,34 +308,15 @@
                 padding: 12px 20px;
                 font-size: 0.95rem;
             }
-            
+
             .d-flex.justify-content-between {
                 flex-direction: column;
                 gap: 15px;
             }
-            
+
             .d-flex.justify-content-between > div:last-child {
                 text-align: center;
             }
-        }
-
-        /* ========================= MOBILE OVERLAY ========================= */
-        .mobile-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
-            opacity: 0;
-            visibility: hidden;
-            transition: var(--transition-smooth);
-        }
-
-        .mobile-overlay.active {
-            opacity: 1;
-            visibility: visible;
         }
 
         /* ========================= ALERTS ========================= */
@@ -617,22 +346,22 @@
                 border-radius: 8px;
                 overflow: hidden;
             }
-            
+
             .table {
                 font-size: 0.85rem;
                 margin: 0;
             }
-            
+
             .table th,
             .table td {
                 padding: 8px 12px;
                 vertical-align: middle;
             }
-            
+
             .table thead {
                 display: none;
             }
-            
+
             .table tbody tr {
                 display: block;
                 margin-bottom: 16px;
@@ -641,7 +370,7 @@
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 padding: 16px;
             }
-            
+
             .table tbody td {
                 display: block;
                 padding: 4px 0;
@@ -649,7 +378,7 @@
                 position: relative;
                 padding-left: 40%;
             }
-            
+
             .table tbody td::before {
                 content: attr(data-label);
                 position: absolute;
@@ -674,59 +403,20 @@
             border-color: var(--primary-orange) !important;
         }
 
-        /* ========================= TOOLTIP SIDEBAR ========================= */
-        .sidebar-tooltip {
-            position: absolute;
-            left: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--black-secondary);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            margin-left: 10px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 1001;
-        }
-
-        .sidebar-tooltip::before {
-            content: '';
-            position: absolute;
-            right: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            border: 5px solid transparent;
-            border-right-color: var(--black-secondary);
-        }
-
-        .acheteur-sidebar.mini .sidebar-menu a:hover .sidebar-tooltip {
-            opacity: 1;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar-tooltip {
-                display: none;
-            }
-        }
-
         /* ========================= RESPONSIVE TEXT ========================= */
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.5rem;
             }
-            
+
             h2 {
                 font-size: 1.3rem;
             }
-            
+
             h3 {
                 font-size: 1.1rem;
             }
-            
+
             .lead {
                 font-size: 1rem;
             }
@@ -747,27 +437,27 @@
                 background-position: -200% 0;
             }
         }
-        
+
     </style>
-    
+
     @stack('styles')
 </head>
 <body>
     @include('partials.demo-banner')
     <div class="acheteur-wrapper">
         <!-- Mobile Overlay -->
-        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
-        
+        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()" aria-hidden="true"></div>
+
         <!-- Sidebar -->
-        <nav class="acheteur-sidebar" id="acheteurSidebar">
+        <nav class="acheteur-sidebar" id="acheteurSidebar" aria-label="Menu acheteur">
             <!-- Sidebar Header -->
             <div class="sidebar-header">
                 <a href="{{ route('acheteur.dashboard') }}" class="sidebar-brand">
                     <i class="fas fa-user-circle"></i>
                     <span class="sidebar-brand-text">Mon Espace</span>
                 </a>
-                <button class="sidebar-toggle d-none d-md-block" onclick="toggleSidebar()">
-                    <i class="fas fa-chevron-left"></i>
+                <button type="button" class="sidebar-toggle d-none d-md-block" onclick="toggleSidebar()" aria-label="Réduire ou déployer le menu">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
             </div>
 
@@ -883,13 +573,13 @@
         <div class="acheteur-main">
             <!-- Top Bar -->
             <header class="acheteur-topbar">
-                <button class="mobile-toggle" onclick="toggleMobileSidebar()">
-                    <i class="fas fa-bars"></i>
-                </button>
-                
-                <div class="topbar-breadcrumb">
+                <div class="topbar-left">
+                    <button type="button" class="mobile-toggle" onclick="toggleMobileSidebar()" aria-label="Ouvrir le menu" aria-controls="acheteurSidebar" aria-expanded="false">
+                        <i class="fas fa-bars" aria-hidden="true"></i>
+                    </button>
+
                     @hasSection('breadcrumb')
-                    <nav aria-label="breadcrumb">
+                    <nav class="topbar-breadcrumb" aria-label="Fil d'Ariane">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item">
                                 <a href="{{ route('acheteur.dashboard') }}">Dashboard</a>
@@ -899,13 +589,13 @@
                     </nav>
                     @endif
                 </div>
-                
+
                 <div class="user-info">
                     <div class="user-details">
                         <span class="user-name">{{ Auth::user()->name }}</span>
                         <span class="user-role">Acheteur</span>
                     </div>
-                    <div class="user-avatar">
+                    <div class="user-avatar" aria-hidden="true">
                         {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                     </div>
                 </div>
@@ -955,13 +645,13 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         // ========================= SIDEBAR FUNCTIONS =========================
         function toggleSidebar() {
             const sidebar = document.getElementById('acheteurSidebar');
             sidebar.classList.toggle('mini');
-            
+
             // Sauvegarder l'état
             localStorage.setItem('acheteurSidebarMini', sidebar.classList.contains('mini'));
         }
@@ -970,40 +660,53 @@
             const sidebar = document.getElementById('acheteurSidebar');
             const overlay = document.getElementById('mobileOverlay');
             const body = document.body;
-            
+
             sidebar.classList.toggle('mobile-visible');
             overlay.classList.toggle('active');
-            
+
             if (sidebar.classList.contains('mobile-visible')) {
                 body.style.overflow = 'hidden';
             } else {
                 body.style.overflow = '';
             }
+            syncMobileToggle(sidebar.classList.contains('mobile-visible'));
         }
+
+        function syncMobileToggle(open) {
+            const btn = document.querySelector('.mobile-toggle');
+            if (!btn) return;
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeMobileSidebar();
+        });
 
         function closeMobileSidebar() {
             const sidebar = document.getElementById('acheteurSidebar');
             const overlay = document.getElementById('mobileOverlay');
             const body = document.body;
-            
+
             sidebar.classList.remove('mobile-visible');
             overlay.classList.remove('active');
             body.style.overflow = '';
+            syncMobileToggle(false);
         }
 
         function toggleSubmenu(menuId, element) {
             event.preventDefault();
-            
+
             const submenu = document.getElementById('submenu-' + menuId);
             const parent = element.closest('.submenu-parent');
-            
+
             // Fermer tous les autres sous-menus
             document.querySelectorAll('.submenu-parent').forEach(item => {
                 if (item !== parent) {
                     item.classList.remove('open');
                 }
             });
-            
+
             // Toggle le sous-menu actuel
             parent.classList.toggle('open');
         }
@@ -1049,7 +752,7 @@
             const sidebar = document.getElementById('acheteurSidebar');
             const diffX = touchEndX - touchStartX;
             const diffY = touchEndY - touchStartY;
-            
+
             // S'assurer que c'est un swipe horizontal
             if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
                 if (window.innerWidth <= 768) {
@@ -1069,7 +772,7 @@
             const sidebar = document.getElementById('acheteurSidebar');
             const overlay = document.getElementById('mobileOverlay');
             const body = document.body;
-            
+
             if (window.innerWidth > 768) {
                 sidebar.classList.remove('mobile-visible');
                 overlay.classList.remove('active');
@@ -1113,11 +816,11 @@
                     </div>
                 </div>
             `;
-            
+
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
             modal.show();
-            
+
             // Nettoyer le modal après fermeture
             document.getElementById('passwordModal').addEventListener('hidden.bs.modal', function() {
                 this.remove();
@@ -1127,7 +830,7 @@
         function submitPasswordChange() {
             const form = document.getElementById('passwordForm');
             const formData = new FormData(form);
-            
+
             // Ici, vous pouvez ajouter la logique AJAX pour soumettre le changement de mot de passe
             // fetch('/acheteur/profile/password', { method: 'POST', body: formData })
             console.log('Changement de mot de passe à implémenter');
@@ -1184,7 +887,7 @@
             }
         });
     </script>
-    
+
     @stack('scripts')
 </body>
 </html>

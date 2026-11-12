@@ -4,7 +4,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.tickets.index') }}">Billets</a></li>
-    <li class="breadcrumb-item active">{{ $ticket->ticket_code }}</li>
+    <li class="breadcrumb-item active" aria-current="page">{{ $ticket->ticket_code }}</li>
 @endsection
 
 @section('content')

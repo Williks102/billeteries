@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
 
     <style>
+        /* Barre du haut, menu latéral, tiroir mobile, gouttières et jetons : public/css/charte.css (section « Barres de navigation »).
+           Ici seulement ce qui est propre à l'admin. */
         :root {
             --primary-orange: var(--brand);
             --primary-dark: var(--brand-hover);
@@ -22,9 +24,6 @@
             --black-secondary: #2c3338;
             --gray-light: #f0f0f1;
             --gray-medium: #8c8f94;
-            --sidebar-width: 280px;
-            --sidebar-mini-width: 60px;
-            --topbar-height: 60px;
         }
 
         * {
@@ -38,157 +37,25 @@
             color: #3c434a;
         }
 
-        /* ========================= LAYOUT STRUCTURE ========================= */
         .admin-wrapper {
             display: flex;
             min-height: 100vh;
         }
 
-        /* ========================= SIDEBAR ========================= */
+        /* ========================= SIDEBAR (propre à l'admin) ========================= */
         .admin-sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--black-primary);
-            color: #c3c4c7;
-            transition: all 0.2s ease-in-out;
-            z-index: 1000;
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-
-        .admin-sidebar.mini {
-            width: var(--sidebar-mini-width);
+            transition: width var(--motion) ease-in-out, transform var(--motion) ease-in-out;
         }
 
         .admin-sidebar.mobile-hidden {
             transform: translateX(-100%);
         }
 
-        /* Sidebar Header */
-        .sidebar-header {
-            padding: 0;
-            height: var(--topbar-height);
-            background: var(--black-secondary);
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid #3c434a;
-        }
-
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            text-decoration: none;
-            color: #f0f0f1;
-            font-weight: 600;
-            font-size: 1.1rem;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        .sidebar-brand i {
-            color: var(--primary-orange);
-            font-size: 1.4rem;
-            margin-right: 12px;
-            flex-shrink: 0;
-        }
-
-        .sidebar-brand-text {
-            transition: opacity 0.2s ease;
-        }
-
-        .admin-sidebar.mini .sidebar-brand-text {
-            opacity: 0;
-            width: 0;
-        }
-
-        /* Toggle Button */
-        .sidebar-toggle {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #8c8f94;
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 3px;
-            transition: color 0.2s;
-        }
-
-        .sidebar-toggle:hover {
-            color: var(--primary-orange);
-        }
-
-        .admin-sidebar.mini .sidebar-toggle {
-            display: none;
-        }
-
-        /* Sidebar Menu */
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
         .sidebar-menu > li {
             border-bottom: 1px solid #2c3338;
         }
 
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            padding: 12px 20px;
-            color: #c3c4c7;
-            text-decoration: none;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .sidebar-menu a:hover {
-            background: #2c3338;
-            color: #72aee6;
-        }
-
-        .sidebar-menu a.active {
-            background: var(--primary-orange);
-            color: white;
-        }
-
-        .sidebar-menu a.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: var(--primary-dark);
-        }
-
-        .sidebar-menu i {
-            width: 20px;
-            text-align: center;
-            margin-right: 12px;
-            flex-shrink: 0;
-            font-size: 1.1rem;
-        }
-
-        .sidebar-menu-text {
-            white-space: nowrap;
-            overflow: hidden;
-            transition: opacity 0.2s ease;
-        }
-
-        .admin-sidebar.mini .sidebar-menu-text {
-            opacity: 0;
-            width: 0;
-        }
-
-        /* Submenu */
+        /* Sous-menus */
         .sidebar-submenu {
             list-style: none;
             padding: 0;
@@ -196,296 +63,61 @@
             background: #1a1e23;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease;
+            transition: max-height var(--motion) ease;
         }
 
         .sidebar-submenu.open {
-            max-height: 300px;
+            max-height: 400px;
         }
 
-        .sidebar-submenu a {
-            padding: 10px 20px 10px 52px;
-            font-size: 0.9rem;
-            border-left: 3px solid transparent;
-        }
-
-        .sidebar-submenu a:hover {
-            background: #2c3338;
-            border-left-color: var(--primary-orange);
-        }
-
-        .sidebar-submenu a.active {
-            background: #2c3338;
-            border-left-color: var(--primary-orange);
-            color: var(--primary-orange);
-        }
-
-        /* Chevron pour submenu */
         .menu-chevron {
-            margin-left: auto;
-            transition: transform 0.3s ease;
-            color: #8c8f94;
-            font-size: 0.8rem;
+            transition: transform var(--motion) ease;
         }
 
         .submenu-parent.open .menu-chevron {
             transform: rotate(180deg);
-            color: var(--primary-orange);
         }
 
-        /* Meilleure visibilité du chevron */
-        .sidebar-menu a:hover .menu-chevron {
-            color: #72aee6;
+        .sidebar-submenu .submenu-separator {
+            margin-top: var(--space-2);
+            border-top: 1px solid #3c434a;
+            padding-top: var(--space-2);
         }
 
-        /* Mini sidebar hover expansion */
-        .admin-sidebar.mini:hover {
-            width: var(--sidebar-width);
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
-        }
+        /* Décalage de la barre et du contenu selon l'état du menu (largeurs = jetons de la charte) */
+        .admin-sidebar.mini ~ .admin-topbar { left: var(--sidebar-mini-width); }
+        .admin-sidebar.mobile-hidden ~ .admin-topbar { left: 0; }
 
-        .admin-sidebar.mini:hover .sidebar-brand-text,
-        .admin-sidebar.mini:hover .sidebar-menu-text {
-            opacity: 1;
-            width: auto;
-        }
-
-        /* ========================= TOPBAR ========================= */
-        .admin-topbar {
-            position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
-            right: 0;
-            height: var(--topbar-height);
-            background: white;
-            border-bottom: 1px solid #dcdcde;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            z-index: 999;
-            transition: left 0.2s ease-in-out;
-        }
-
-        .admin-sidebar.mini ~ .admin-topbar {
-            left: var(--sidebar-mini-width);
-        }
-
-        .admin-sidebar.mobile-hidden ~ .admin-topbar {
-            left: 0;
-        }
-
-        /* Mobile toggle button */
-        .mobile-toggle {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            color: var(--black-primary);
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 4px;
-        }
-
-        .mobile-toggle:hover {
-            background: var(--gray-light);
-        }
-
-        /* Home button */
-        .home-button {
-            background: var(--gray-dark);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .home-button:hover {
-            background: var(--primary-dark);
-            color: white;
-            transform: translateY(-1px);
-        }
-        .topbar-breadcrumb {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--gray-medium);
-            font-size: 0.9rem;
-        }
-
-        .topbar-breadcrumb a {
-            color: var(--primary-orange);
-            text-decoration: none;
-        }
-
-        /* User menu */
-        .topbar-user {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .topbar-notifications {
-            position: relative;
-            cursor: pointer;
-            color: var(--gray-medium);
-            font-size: 1.1rem;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #d63638;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--primary-orange);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-
-        .user-info {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .user-name {
-            font-weight: 500;
-            font-size: 0.9rem;
-            color: var(--black-primary);
-        }
-
-        .user-role {
-            font-size: 0.8rem;
-            color: var(--gray-medium);
-        }
-
-        /* ========================= MAIN CONTENT ========================= */
         .admin-main {
+            flex: 1 1 auto;
+            min-width: 0;
             margin-left: var(--sidebar-width);
-            margin-top: var(--topbar-height);
-            padding: var(--gutter);
             min-height: calc(100vh - var(--topbar-height));
-            transition: margin-left 0.2s ease-in-out;
-            width: calc(100% - var(--sidebar-width));
+            transition: margin-left var(--motion) ease-in-out;
         }
 
-        .admin-sidebar.mini ~ .admin-main {
-            margin-left: var(--sidebar-mini-width);
-            width: calc(100% - var(--sidebar-mini-width));
-        }
+        .admin-sidebar.mini ~ .admin-main { margin-left: var(--sidebar-mini-width); }
 
-        .admin-sidebar.mobile-hidden ~ .admin-main {
-            margin-left: 0;
-            width: 100%;
-        }
-
-        /* ========================= RESPONSIVE ========================= */
         @media (max-width: 1024px) {
-            .admin-sidebar {
-                width: var(--sidebar-mini-width);
-            }
-            
-            .admin-topbar {
-                left: var(--sidebar-mini-width);
-            }
-            
-            .admin-main {
-                margin-left: var(--sidebar-mini-width);
-                width: calc(100% - var(--sidebar-mini-width));
-            }
+            .admin-main { margin-left: var(--sidebar-mini-width); }
         }
 
         @media (max-width: 768px) {
             .admin-sidebar {
                 transform: translateX(-100%);
-                width: var(--sidebar-width); /* Sidebar complète sur mobile quand ouverte */
+                width: var(--sidebar-width);
             }
-            
+
             .admin-sidebar.mobile-open {
                 transform: translateX(0);
                 box-shadow: 0 0 20px rgba(0,0,0,0.5);
             }
-            
-            /* CORRECTION MOBILE : Forcer l'affichage complet */
-            .admin-sidebar.mobile-open .sidebar-brand-text,
-            .admin-sidebar.mobile-open .sidebar-menu-text {
-                opacity: 1 !important;
-                width: auto !important;
-            }
-            
-            /* CORRECTION MOBILE : Submenus visibles */
-            .admin-sidebar.mobile-open .sidebar-submenu.open {
-                max-height: 400px;
-                display: block;
-            }
-            
-            /* CORRECTION MOBILE : Chevrons plus visibles */
-            .admin-sidebar .menu-chevron {
-                color: #c3c4c7 !important;
-                font-size: 1rem !important;
-                margin-left: auto;
-            }
-            
-            .admin-sidebar .submenu-parent.open .menu-chevron {
-                color: var(--primary-orange) !important;
-            }
-            
-            .admin-topbar {
-                left: 0;
-            }
-            
-            .admin-main {
-                margin-left: 0;
-                width: 100%;
-                padding: var(--gutter);
-            }
-            
-            .mobile-toggle {
-                display: block;
-            }
-            
-            .user-info {
-                display: none;
-            }
-            
-            /* Pas de hover effects sur mobile */
-            .admin-sidebar:hover {
-                width: var(--sidebar-width);
-            }
-            
-            /* Désactiver les tooltips sur mobile */
-            .sidebar-tooltip {
-                display: none;
-            }
+
+            .admin-main { margin-left: 0; }
+
         }
 
-        /* ========================= CARDS AND COMPONENTS ========================= */
+        /* ========================= CARTES ========================= */
         .dashboard-card {
             background: white;
             border-radius: 8px;
@@ -504,58 +136,6 @@
             border: 1px solid #dcdcde;
             border-left: 4px solid var(--primary-orange);
         }
-
-        /* Mobile overlay */
-        .mobile-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            .mobile-overlay.active {
-                display: block;
-            }
-        }
-
-        /* Tooltip pour mini sidebar */
-        .sidebar-tooltip {
-            position: absolute;
-            left: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--black-secondary);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            margin-left: 10px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 1001;
-        }
-
-        .sidebar-tooltip::before {
-            content: '';
-            position: absolute;
-            right: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            border: 5px solid transparent;
-            border-right-color: var(--black-secondary);
-        }
-
-        .admin-sidebar.mini .sidebar-menu a:hover .sidebar-tooltip {
-            opacity: 1;
-        }
-        
     </style>
     
     @stack('styles')
@@ -564,15 +144,15 @@
     @include('partials.demo-banner')
     <div class="admin-wrapper">
         <!-- Sidebar -->
-        <nav class="admin-sidebar" id="adminSidebar">
+        <nav class="admin-sidebar" id="adminSidebar" aria-label="Menu d'administration">
             <!-- Sidebar Header -->
             <div class="sidebar-header">
                 <a href="{{ route('admin.dashboard') }}" class="sidebar-brand">
                     <i class="fas fa-shield-alt"></i>
                     <span class="sidebar-brand-text">ClicBillet CI</span>
                 </a>
-                <button class="sidebar-toggle" data-action="toggle-sidebar">
-                    <i class="fas fa-chevron-left"></i>
+                <button type="button" class="sidebar-toggle" data-action="toggle-sidebar" aria-label="Réduire ou déployer le menu">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
             </div>
 
@@ -622,7 +202,7 @@
 
                         
                         <!-- Séparateur -->
-                        <li style="margin-top: 8px; border-top: 1px solid #3c434a; padding-top: 8px;">
+                        <li class="submenu-separator">
                             <a href="{{ route('admin.categories.index') }}">Catégories</a>
                         </li>
                     </ul>
@@ -686,10 +266,11 @@
                     </ul>
                 </li>
                 <li>
-                    <a href="{{ route('home') }}" class="home-button gap-2">
-                    <i class="fas fa-globe"></i>
-                    <span>Voir le site</span>
-                </a>
+                    <a href="{{ route('home') }}">
+                        <i class="fas fa-globe"></i>
+                        <span class="sidebar-menu-text">Voir le site</span>
+                        <span class="sidebar-tooltip">Voir le site</span>
+                    </a>
                 </li>
             </ul>
         </nav>
@@ -697,43 +278,48 @@
         <!-- Topbar -->
         <header class="admin-topbar">
             <div class="topbar-left">
-                <button class="mobile-toggle" data-action="toggle-mobile-sidebar">
-                    <i class="fas fa-bars"></i>
+                <button type="button" class="mobile-toggle" data-action="toggle-mobile-sidebar" aria-label="Ouvrir le menu" aria-controls="adminSidebar" aria-expanded="false">
+                    <i class="fas fa-bars" aria-hidden="true"></i>
                 </button>
-                <nav class="topbar-breadcrumb">
-                    <a href="{{ route('admin.dashboard') }}">
-                        <i class="fas fa-home"></i>
-                    </a>
-                    @if(View::hasSection('breadcrumb'))
-                        @yield('breadcrumb')
-                    @endif
+                <nav class="topbar-breadcrumb" aria-label="Fil d'Ariane">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('admin.dashboard') }}" class="topbar-home" aria-label="Accueil de l'administration">
+                                <i class="fas fa-home" aria-hidden="true"></i>
+                            </a>
+                        </li>
+                        @if(View::hasSection('breadcrumb'))
+                            @yield('breadcrumb')
+                        @endif
+                    </ol>
                 </nav>
-                
             </div>
 
             <div class="topbar-user">
                 <!-- Notifications -->
-                <div class="topbar-notifications" data-action="toggle-notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="notification-badge">3</span>
-                </div>
+                <button type="button" class="topbar-icon-btn topbar-notifications" data-action="toggle-notifications" aria-label="Notifications, 3 non lues">
+                    <i class="fas fa-bell" aria-hidden="true"></i>
+                    <span class="notification-badge" aria-hidden="true">3</span>
+                </button>
 
                 <!-- User Info -->
                 <div class="user-info">
-                    <div class="user-name">{{ auth()->user()->name }}</div>
-                    <div class="user-role">Administrateur</div>
+                    <div class="user-details">
+                        <div class="user-name">{{ auth()->user()->name }}</div>
+                        <div class="user-role">Administrateur</div>
+                    </div>
                 </div>
 
                 <!-- User Avatar + Dropdown -->
                 <div class="dropdown">
-                    <div class="user-avatar" data-bs-toggle="dropdown" style="cursor: pointer;">
-                        {{ substr(auth()->user()->name, 0, 1) }}
-                    </div>
+                    <button type="button" class="topbar-avatar-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menu du compte de {{ auth()->user()->name }}">
+                        <span class="user-avatar" aria-hidden="true">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                    </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ route('admin.profile') }}">
                             <i class="fas fa-user me-2"></i>Mon profil
                         </a></li>
-                        <li><a class="dropdown-item" href="#">
+                        <li><a class="dropdown-item" href="{{ route('admin.settings.index') }}">
                             <i class="fas fa-cog me-2"></i>Paramètres
                         </a></li>
                         <li><hr class="dropdown-divider"></li>
@@ -751,7 +337,7 @@
         </header>
 
         <!-- Mobile Overlay -->
-        <div class="mobile-overlay" id="mobileOverlay" data-action="close-mobile-sidebar"></div>
+        <div class="mobile-overlay" id="mobileOverlay" data-action="close-mobile-sidebar" aria-hidden="true"></div>
 
         <!-- Main Content -->
         <main class="admin-main">

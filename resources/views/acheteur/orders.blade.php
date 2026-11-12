@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 @section('title', 'Mes Commandes - ClicBillet CI')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active">Mes Commandes</li>
+    <li class="breadcrumb-item active" aria-current="page">Mes Commandes</li>
 @endsection
 
 @section('content')

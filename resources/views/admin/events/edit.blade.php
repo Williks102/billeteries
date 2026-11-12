@@ -116,7 +116,7 @@ use Illuminate\Support\Facades\Storage;
                     <li class="breadcrumb-item">
                         <a href="{{ route('admin.events.index') }}">Événements</a>
                     </li>
-                    <li class="breadcrumb-item active">{{ $event->title }}</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ $event->title }}</li>
                 </ol>
             </nav>
             

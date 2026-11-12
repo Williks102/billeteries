@@ -4,7 +4,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.emails.dashboard') }}">Emails</a></li>
-    <li class="breadcrumb-item active">Modèles</li>
+    <li class="breadcrumb-item active" aria-current="page">Modèles</li>
 @endsection
 
 @section('content')

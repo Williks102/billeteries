@@ -4,7 +4,7 @@
         <!-- VERSION MOBILE uniquement (d-lg-none) -->
         <div class="d-lg-none w-100 d-flex align-items-center justify-content-between">
             <!-- Hamburger -->
-            <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Ouvrir le menu">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
@@ -26,14 +26,14 @@
                 </a>
 
                 <!-- Bouton recherche mobile -->
-                <button class="btn btn-link p-2 text-muted" type="button" data-bs-toggle="modal" data-bs-target="#mobileSearchModal">
-                    <i class="fas fa-search"></i>
+                <button class="btn btn-link p-2 text-muted" type="button" data-bs-toggle="modal" data-bs-target="#mobileSearchModal" aria-label="Rechercher">
+                    <i class="fas fa-search" aria-hidden="true"></i>
                 </button>
                 
                 <!-- Menu compte mobile -->
                 @auth
                     <div class="dropdown">
-                        <button class="btn btn-link p-2 text-muted" type="button" data-bs-toggle="dropdown">
+                        <button class="btn btn-link p-2 text-muted" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mon compte">
                             <div class="user-avatar">
                                 {{ substr(auth()->user()->name, 0, 1) }}
                             </div>
@@ -66,8 +66,8 @@
                         </ul>
                     </div>
                 @else
-                    <a href="{{ route('login') }}" class="btn btn-link p-2 text-muted">
-                        <i class="fas fa-user"></i>
+                    <a href="{{ route('login') }}" class="btn btn-link p-2 text-muted" aria-label="Connexion">
+                        <i class="fas fa-user" aria-hidden="true"></i>
                     </a>
                 @endauth
             </div>
@@ -168,7 +168,7 @@
                         <a class="nav-link" href="{{ route('login') }}">Connexion</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('register') }}">
+                        <a class="nav-link py-0" href="{{ route('register') }}">
                             <span class="btn btn-orange btn-sm">Créer un compte</span>
                         </a>
                     </li>
@@ -351,7 +351,9 @@
 
 /* Barre de recherche desktop */
 .search-container {
-    min-width: 350px;
+    flex: 1 1 200px;
+    min-width: 0;
+    max-width: 350px;
 }
 
 .search-input-group {
@@ -394,8 +396,9 @@
 
 /* Avatar utilisateur */
 .user-avatar {
-    width: 35px;
-    height: 35px;
+    width: var(--avatar-size);
+    height: var(--avatar-size);
+    flex: none;
     background: rgba(var(--brand-rgb), 0.1);
     border-radius: 50%;
     display: flex;
@@ -446,11 +449,9 @@
         box-shadow: none;
     }
     
-    /* Centrer le logo sur mobile */
+    /* Logo centré dans l'espace libre entre le menu et les actions (jamais superposé aux icônes) */
     .navbar-brand {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
+        min-width: 0;
     }
     
     /* Ajustement des boutons d'action mobile */
@@ -496,5 +497,32 @@
 .dropdown-item i {
     width: 20px;
     text-align: center;
+}
+
+/* Barre : cibles >= 44 px, éléments centrés sur la même ligne, jamais de retour à la ligne ni de défilement horizontal */
+.navbar { min-height: var(--topbar-height); padding-block: var(--space-2); }
+.navbar .navbar-brand { display: flex; align-items: center; min-height: var(--touch-min); margin-block: 0; padding-block: 0; }
+.navbar .nav-link.cart-link { min-width: var(--touch-min); justify-content: center; }
+.navbar .nav-item { display: flex; align-items: center; }
+.navbar .btn-orange { white-space: nowrap; }
+.navbar .nav-link { display: flex; align-items: center; min-height: var(--touch-min); }
+.navbar .nav-link.active { font-weight: 600; }
+.navbar .btn-link, .navbar-toggler {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: var(--touch-min); min-height: var(--touch-min);
+}
+.navbar .btn-search { min-width: var(--touch-min); }
+.navbar .search-input, .navbar .btn-search { padding-block: 0; min-height: calc(var(--touch-min) - 4px); }
+.navbar-toggler { padding: 0 !important; width: var(--touch-min); height: var(--touch-min); }
+.navbar .search-input-group { align-items: stretch; border: 0; box-shadow: inset 0 0 0 1px var(--line); }
+.navbar .search-input-group:focus-within { box-shadow: var(--focus-ring); }
+@media (min-width: 992px) {
+    .navbar > .container > .d-lg-flex { flex-wrap: nowrap; gap: var(--space-4); min-width: 0; }
+    .navbar .navbar-brand { margin-right: 0 !important; flex: none; }
+    .navbar .search-container { margin-right: 0 !important; }
+    .navbar .navbar-nav { flex-wrap: nowrap; }
+}
+@media (max-width: 575.98px) {
+    .brand-text { font-size: 1.25rem; }
 }
 </style>

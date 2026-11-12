@@ -17,20 +17,27 @@
     localStorage.setItem('sidebar-state', sidebarState);
   }
 
-  function toggleMobileSidebar() {
+  function setDrawer(open) {
     const sidebar = getSidebar();
     const overlay = getOverlay();
     if (!sidebar || !overlay) return;
-    sidebar.classList.toggle('mobile-open');
-    overlay.classList.toggle('active');
+    sidebar.classList.toggle('mobile-open', open);
+    overlay.classList.toggle('active', open);
+    document.body.classList.toggle('nav-drawer-open', open);
+    document.querySelectorAll('[data-action="toggle-mobile-sidebar"]').forEach((el) => {
+      el.setAttribute('aria-expanded', open ? 'true' : 'false');
+      el.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+    });
+  }
+
+  function toggleMobileSidebar() {
+    const sidebar = getSidebar();
+    if (!sidebar) return;
+    setDrawer(!sidebar.classList.contains('mobile-open'));
   }
 
   function closeMobileSidebar() {
-    const sidebar = getSidebar();
-    const overlay = getOverlay();
-    if (!sidebar || !overlay) return;
-    sidebar.classList.remove('mobile-open');
-    overlay.classList.remove('active');
+    setDrawer(false);
   }
 
   function toggleSubmenu(menuId, element) {
@@ -64,7 +71,7 @@
 
     if (window.innerWidth <= 768) {
       sidebar.classList.add('mobile-hidden');
-      sidebar.classList.remove('mini', 'mobile-open');
+      sidebar.classList.remove('mini');
     } else if (window.innerWidth <= 1024) {
       sidebar.classList.add('mini');
       sidebar.classList.remove('mobile-hidden', 'mobile-open');
@@ -73,7 +80,7 @@
       if (sidebarState === 'open') sidebar.classList.remove('mini');
     }
 
-    getOverlay()?.classList.remove('active');
+    if (window.innerWidth > 768) setDrawer(false);
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -95,6 +102,10 @@
     document.querySelectorAll('[data-action="close-mobile-sidebar"]').forEach((el) => el.addEventListener('click', (e) => { e.preventDefault(); closeMobileSidebar(); }));
     document.querySelectorAll('[data-action="toggle-submenu"]').forEach((el) => el.addEventListener('click', (e) => { e.preventDefault(); toggleSubmenu(el.dataset.menu, el); }));
     document.querySelectorAll('[data-action="toggle-notifications"]').forEach((el) => el.addEventListener('click', (e) => { e.preventDefault(); toggleNotifications(); }));
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeMobileSidebar();
   });
 
   window.addEventListener('resize', handleResize);

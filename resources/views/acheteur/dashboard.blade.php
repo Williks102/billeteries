@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 @section('title', 'Mon tableau de bord - ClicBillet CI')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active">Tableau de bord</li>
+    <li class="breadcrumb-item active" aria-current="page">Tableau de bord</li>
 @endsection
 
 @section('content')

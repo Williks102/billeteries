@@ -5,7 +5,7 @@
 @section('title', 'Mes billets - ClicBillet CI')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active">Mes billets</li>
+    <li class="breadcrumb-item active" aria-current="page">Mes billets</li>
 @endsection
 
 @section('content')

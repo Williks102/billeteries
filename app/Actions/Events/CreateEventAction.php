@@ -2,6 +2,8 @@
 
 namespace App\Actions\Events;
 
+use App\Models\ActivityLog;
+use App\Services\ActivityLogger;
 use App\Support\Media;
 use App\Models\Event;
 use App\Models\TicketType;
@@ -69,6 +71,13 @@ class CreateEventAction
                         'is_active' => true,
                     ]);
                 }
+
+                ActivityLogger::record(
+                    ActivityLog::EVENT_CREATED,
+                    $event,
+                    sprintf('Événement n°%d créé (brouillon, %d type(s) de billet)', $event->id, count($tickets)),
+                    ['promoter_id' => $promoterId, 'status' => 'draft', 'ticket_types' => count($tickets)]
+                );
 
                 return $event;
             });

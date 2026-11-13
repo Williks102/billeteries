@@ -28,6 +28,22 @@ class LoginController extends Controller
     protected $redirectTo = '/';
 
     /**
+     * Journal d'activité : seules les connexions d'administrateur sont tracées (identifiant du compte, jamais l'e-mail).
+     */
+    protected function authenticated(\Illuminate\Http\Request $request, $user)
+    {
+        if (($user->role ?? null) === 'admin') {
+            \App\Services\ActivityLogger::record(
+                \App\Models\ActivityLog::AUTH_ADMIN_LOGIN,
+                $user,
+                'Connexion administrateur'
+            );
+        }
+
+        return null;
+    }
+
+    /**
      * Create a new controller instance.
      *
      * @return void

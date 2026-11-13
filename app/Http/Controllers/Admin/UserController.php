@@ -74,15 +74,16 @@ class UserController extends Controller
                 'password' => Hash::make($request->password),
                 'role' => $request->role,
                 'phone' => $request->phone,
-                'email_verified_at' => now(), // Auto-vérifier les comptes créés par admin
             ]);
+
+            // Auto-vérifier les comptes créés par admin. forceFill : email_verified_at n'est pas $fillable
+            // (sans cela la valeur était ignorée en silence et le compte restait « non vérifié »).
+            $user->forceFill(['email_verified_at' => now()])->save();
 
             // Log de l'action pour traçabilité
             \Log::info('Utilisateur créé par admin', [
                 'admin_id' => auth()->id(),
-                'admin_name' => auth()->user()->name,
                 'new_user_id' => $user->id,
-                'new_user_email' => $user->email,
                 'new_user_role' => $user->role
             ]);
 
@@ -208,9 +209,8 @@ class UserController extends Controller
             // Log des modifications
             \Log::info('Utilisateur modifié par admin', [
                 'admin_id' => auth()->id(),
-                'admin_name' => auth()->user()->name,
                 'user_id' => $user->id,
-                'changes' => array_diff_assoc($data, $oldData)
+                'changed_fields' => array_keys(array_diff_assoc($data, $oldData)) // noms de champs seulement, jamais les valeurs
             ]);
 
             return redirect()->route('admin.users.index')
@@ -255,15 +255,11 @@ class UserController extends Controller
 
         try {
             $userName = $user->name;
-            $userEmail = $user->email;
-            
+
             // Log avant suppression
             \Log::warning('Utilisateur supprimé par admin', [
                 'admin_id' => auth()->id(),
-                'admin_name' => auth()->user()->name,
                 'deleted_user_id' => $user->id,
-                'deleted_user_name' => $userName,
-                'deleted_user_email' => $userEmail,
                 'deleted_user_role' => $user->role
             ]);
             
@@ -298,7 +294,8 @@ class UserController extends Controller
 
         try {
             $newStatus = $user->email_verified_at ? null : now();
-            $user->update(['email_verified_at' => $newStatus]);
+            // forceFill : email_verified_at n'est pas $fillable (update() l'ignorait et répondait « succès »).
+            $user->forceFill(['email_verified_at' => $newStatus])->save();
             
             $status = $newStatus ? 'vérifié' : 'non vérifié';
             
@@ -344,12 +341,21 @@ class UserController extends Controller
 
             switch ($request->action) {
                 case 'verify':
-                    $count = User::whereIn('id', $userIds)->update(['email_verified_at' => now()]);
+                    // Un à un (et non en requête de masse) pour que le journal d'activité voie chaque changement
+                    $count = 0;
+                    foreach (User::whereIn('id', $userIds)->whereNull('email_verified_at')->get() as $target) {
+                        $target->forceFill(['email_verified_at' => now()])->save(); // forceFill : email_verified_at n'est pas $fillable (comme l'ancienne requête de masse)
+                        $count++;
+                    }
                     $message = "{$count} utilisateur(s) vérifié(s)";
                     break;
                     
                 case 'unverify':
-                    $count = User::whereIn('id', $userIds)->update(['email_verified_at' => null]);
+                    $count = 0;
+                    foreach (User::whereIn('id', $userIds)->whereNotNull('email_verified_at')->get() as $target) {
+                        $target->forceFill(['email_verified_at' => null])->save();
+                        $count++;
+                    }
                     $message = "{$count} utilisateur(s) marqué(s) comme non vérifiés";
                     break;
                     
@@ -367,7 +373,12 @@ class UserController extends Controller
                         ], 422);
                     }
                     
-                    $count = User::whereIn('id', $userIds)->delete();
+                    // Un à un : l'observer journalise chaque suppression (une requête de masse le contournerait)
+                    $count = 0;
+                    foreach (User::whereIn('id', $userIds)->get() as $target) {
+                        $target->delete();
+                        $count++;
+                    }
                     $message = "{$count} utilisateur(s) supprimé(s)";
                     break;
             }
@@ -485,8 +496,7 @@ public function resetPassword(Request $request, User $user)
         
         Log::info('Reset password envoyé par admin', [
             'admin_id' => auth()->id(),
-            'target_user_id' => $user->id,
-            'target_email' => $user->email
+            'target_user_id' => $user->id
         ]);
         
         return response()->json([

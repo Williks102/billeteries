@@ -27,6 +27,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Journal d'activité : modifications d'événements, de billets (prix, stock, dates) et de rôles
+        \App\Models\Event::observe(\App\Observers\EventActivityObserver::class);
+        \App\Models\TicketType::observe(\App\Observers\TicketTypeActivityObserver::class);
+        \App\Models\User::observe(\App\Observers\UserActivityObserver::class);
+
         // Pilote « r2 » : S3 standard, sans l'en-tête ACL (non pris en charge par Cloudflare R2).
         \Illuminate\Support\Facades\Storage::extend('r2', function ($app, array $config) {
             $disk = $app['filesystem']->createS3Driver($config);

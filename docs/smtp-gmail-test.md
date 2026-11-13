@@ -21,17 +21,16 @@ Compte Google, Sécurité, **Validation en 2 étapes** : activez-la (nécessaire
 3. Google affiche **une seule fois** un code de 16 lettres. Copiez-le (sans les espaces) directement dans Render (étape 4). **Ne l'envoyez à personne** : ni dans une conversation avec l'assistant, ni sur GitHub.
 
 ## 4. Variables dans Render (Environment)
+Le fichier `render.yaml` du dépôt contient déjà les valeurs publiques de Gmail (`MAIL_SCHEME=smtp`, `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`). Il vous reste **4 valeurs à saisir dans Render** (elles ne doivent jamais être écrites dans le dépôt, qui est public) :
+
 | Variable | Valeur |
 |---|---|
 | `MAIL_MAILER` | `smtp` |
-| `MAIL_SCHEME` | `smtp` |
-| `MAIL_HOST` | `smtp.gmail.com` |
-| `MAIL_PORT` | `587` |
 | `MAIL_USERNAME` | l'adresse Gmail du compte dédié |
 | `MAIL_PASSWORD` | le mot de passe d'application (16 lettres, sans espaces) |
 | `MAIL_FROM_ADDRESS` | la même adresse Gmail |
 
-Enregistrez : Render redéploie.
+Après la fusion de la PR qui ajoute ces variables, Render peut vous demander leurs valeurs depuis la page **Blueprint** du service (bouton de synchronisation) ; sinon ajoutez-les à la main dans **Environment**. Enregistrez : Render redéploie.
 
 ## 5. Tester
 1. Connectez-vous comme admin, menu **Paramètres, Emails**.

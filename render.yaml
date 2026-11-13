@@ -95,16 +95,13 @@ services:
         sync: false
 
       # --- Email : par défaut journalisé, jamais envoyé (démo). Pour envoyer de vrais e-mails (test avec un compte
-      # Gmail dédié, voir docs/smtp-gmail-test.md, ou plus tard le SMTP du domaine), saisir ces variables dans
-      # Render > Environment : sync: false = la valeur saisie dans le tableau de bord n'est jamais écrasée par ce
-      # fichier. Sans MAIL_MAILER, l'application retombe sur « log ».
+      # Gmail dédié, voir docs/smtp-gmail-test.md), saisir MAIL_MAILER (smtp), MAIL_USERNAME, MAIL_PASSWORD et
+      # MAIL_FROM_ADDRESS dans Render > Environment : sync: false = la valeur saisie dans le tableau de bord n'est
+      # jamais écrasée par ce fichier, et rien de personnel ni de secret n'est écrit dans ce dépôt public. Sans
+      # MAIL_MAILER, l'application retombe sur « log ».
+      # MAIL_SCHEME / MAIL_HOST / MAIL_PORT : valeurs non secrètes de Gmail (test), sans effet tant que
+      # MAIL_MAILER n'est pas « smtp ». À modifier ici le jour où le SMTP définitif (domaine) est choisi.
       - key: MAIL_MAILER
-        sync: false
-      - key: MAIL_SCHEME
-        sync: false
-      - key: MAIL_HOST
-        sync: false
-      - key: MAIL_PORT
         sync: false
       - key: MAIL_USERNAME
         sync: false
@@ -112,6 +109,12 @@ services:
         sync: false
       - key: MAIL_FROM_ADDRESS
         sync: false
+      - key: MAIL_SCHEME
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
       - key: MAIL_FROM_NAME
         value: Billetterie
 

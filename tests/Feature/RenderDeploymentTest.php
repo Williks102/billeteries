@@ -86,7 +86,9 @@ class RenderDeploymentTest extends TestCase
     public function test_mail_credentials_are_never_written_in_render_yaml(): void
     {
         $env = $this->renderEnv();
-        foreach (['MAIL_MAILER', 'MAIL_SCHEME', 'MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM_ADDRESS'] as $key) {
+        // Mode d'envoi, identifiant, mot de passe et adresse d'expédition : saisis dans Render, jamais dans ce dépôt public.
+        // (MAIL_SCHEME / MAIL_HOST / MAIL_PORT sont des valeurs publiques de Gmail, sans effet tant que MAIL_MAILER n'est pas smtp.)
+        foreach (['MAIL_MAILER', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM_ADDRESS'] as $key) {
             $this->assertArrayHasKey($key, $env, $key);
             $this->assertFalse($env[$key]['sync'] ?? null, "$key doit être sync: false (valeur saisie dans Render)");
             $this->assertArrayNotHasKey('value', $env[$key], "$key ne doit pas avoir de valeur dans le dépôt");

@@ -105,6 +105,18 @@ class CommissionRateSettingTest extends TestCase
         $this->assertSame(200, (int) $new->commission_amount);
     }
 
+    public function test_low_rates_are_stored_as_percentages_not_multiplied(): void
+    {
+        foreach ([[1, '1.00'], [0.5, '0.50'], [0, '0.00'], [6, '6.00']] as [$rate, $expected]) {
+            $this->save($rate)->assertSessionHas('success');
+            $order = $this->paidOrder();
+            $order->markAsPaid('REF-'.str_replace('.', '', (string) $rate));
+
+            $row = DB::table('commissions')->where('order_id', $order->id)->first();
+            $this->assertSame($expected, number_format((float) $row->commission_rate, 2, '.', ''), "taux {$rate} % mal stocké");
+        }
+    }
+
     public function test_promoter_or_category_setting_still_wins(): void
     {
         $this->save(10);

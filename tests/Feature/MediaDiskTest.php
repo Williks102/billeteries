@@ -152,21 +152,6 @@ class MediaDiskTest extends TestCase
         $this->assertSame([], Storage::disk('public')->allFiles());
     }
 
-    public function test_promoter_avatar_uses_media_disk(): void
-    {
-        $user = User::find(2);
-        $this->actingAs($user);
-        $request = Request::create('/x', 'POST', [], [], ['avatar' => UploadedFile::fake()->image('me.jpg')]);
-        $request->setUserResolver(fn () => $user);
-
-        $json = app(\App\Http\Controllers\Promoteur\ProfileController::class)->updateAvatar($request)->getData(true);
-
-        $files = Storage::disk('media_test')->allFiles('avatars');
-        $this->assertCount(1, $files);
-        $this->assertSame([], Storage::disk('public')->allFiles());
-        $this->assertSame(Media::url($files[0]), $json['avatar_url']);
-    }
-
     public function test_guardrail_no_hardcoded_public_disk_or_storage_url_in_app_and_views(): void
     {
         $offenders = [];

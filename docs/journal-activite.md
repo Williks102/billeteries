@@ -16,7 +16,7 @@ Qui a fait quoi, et quand. Écran réservé aux admins : **Paramètres > Journal
 | Commande | `order.status_changed`, `order.cancelled`, `order.refunded`, `order.expired` | `OrderPaymentService` ; `Order::releaseStock` (annulation et expiration, via `orders:release-expired`) |
 | Billet | `ticket_type.created`, `.updated` (avant/après : prix, capacité, activation, dates de vente, max par commande), `.deleted` | `TicketTypeActivityObserver` |
 | Événement | `event.created`, `.duplicated`, `.updated` (titre, date, heure, lieu, catégorie ; un changement d'adresse est signalé « adresse modifiée » sans la valeur), `.published`, `.unpublished`, `.status_changed`, `.deleted` | `CreateEventAction`, `DuplicateEventAction`, `EventActivityObserver` |
-| Plateforme | `settings.updated` (taux de commission avant/après ; rien n'est écrit si le taux est inchangé), `auth.admin_login` | `Admin\SettingsController`, `Auth\LoginController` |
+| Plateforme | `settings.updated` (taux de commission par défaut, valeur effective avant/après, y compris le retour à la valeur du serveur ; rien n'est écrit si le taux est inchangé), `auth.admin_login` | `Admin\SettingsController`, `Auth\LoginController` |
 | Utilisateur | `user.created`, `user.deleted` (identifiant et rôle seulement), `user.role_changed`, `user.status_changed` (vérification d'e-mail) | `UserActivityObserver` |
 
 ## Plusieurs lignes pour une même action

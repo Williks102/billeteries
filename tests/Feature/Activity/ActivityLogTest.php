@@ -30,6 +30,7 @@ class ActivityLogTest extends TestCase
 
         // La VRAIE migration (types portables SQLite / MySQL)
         (include base_path('database/migrations/2026_11_13_100000_create_activity_logs_table.php'))->up();
+        (include base_path('database/migrations/2025_07_29_214626_create_settings_table.php'))->up();
 
         $this->admin = $this->makeUser(10, 'admin');
         // Données personnelles volontairement reconnaissables : elles ne doivent JAMAIS apparaître dans le journal
@@ -342,7 +343,7 @@ class ActivityLogTest extends TestCase
     public function test_commission_rate_log_has_distinct_before_and_after_and_nothing_when_unchanged(): void
     {
         $this->actingAs($this->admin);
-        config(['app.commission_rate' => 5]);
+        config(['payments.default_commission_rate' => 5]); // secours du serveur (rien en base)
         $payload = [
             'section' => 'general', 'app_name' => 'Billeterie', 'app_url' => 'https://example.test', 'timezone' => 'Africa/Abidjan',
             'commission_rate' => 8, 'max_tickets_per_order' => 10,
@@ -352,7 +353,7 @@ class ActivityLogTest extends TestCase
         $log = ActivityLog::where('action', 'settings.updated')->sole();
         $this->assertEquals(['from' => 5, 'to' => 8], $log->properties['commission_rate']);
 
-        // Valeur inchangée (la config vaut maintenant 8) : aucune ligne supplémentaire
+        // Valeur inchangée (la base vaut maintenant 8) : aucune ligne supplémentaire
         $this->post(route('admin.settings.store'), $payload)->assertSessionHas('success');
         $this->assertSame(1, ActivityLog::where('action', 'settings.updated')->count());
     }

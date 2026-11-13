@@ -29,10 +29,42 @@
             <div class="card h-100">
                 <div class="card-header"><h2 class="h5 mb-0">Commission plateforme</h2></div>
                 <div class="card-body">
-                    <p class="mb-1">Taux par défaut : <strong>{{ rtrim(rtrim(number_format((float) config('payments.default_commission_rate'), 2, ',', ' '), '0'), ',') }} %</strong></p>
-                    <p class="text-muted small mb-0">
-                        Prélevé sur le prix des billets. Les taux définis par promoteur ou par catégorie sont prioritaires.
-                        Valeur issue de <code>DEFAULT_COMMISSION_RATE</code>.
+                    @php
+                        $commissionRate = \App\Services\CommissionRate::default();
+                        $commissionFromDb = \App\Services\CommissionRate::source() === 'database';
+                        $fmtRate = fn ($r) => rtrim(rtrim(number_format((float) $r, 2, ',', ' '), '0'), ',');
+                    @endphp
+                    <p class="mb-1">Taux par défaut actuel : <strong>{{ $fmtRate($commissionRate) }} %</strong></p>
+                    <p class="small mb-3">
+                        Source :
+                        @if($commissionFromDb)
+                            défini dans l'administration
+                        @else
+                            valeur par défaut du serveur (<code>DEFAULT_COMMISSION_RATE</code>)
+                        @endif
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.store') }}" class="commission-rate-form" novalidate>
+                        @csrf
+                        <input type="hidden" name="section" value="commission">
+                        <label for="commission_rate" class="form-label">Nouveau taux de commission (%)</label>
+                        <input type="number" inputmode="decimal" step="0.01" min="0" max="100" id="commission_rate" name="commission_rate"
+                               value="{{ old('commission_rate', $commissionRate) }}"
+                               class="form-control commission-rate-input @error('commission_rate') is-invalid @enderror"
+                               aria-describedby="commission_rate_help" required>
+                        @error('commission_rate')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <button type="submit" class="btn btn-orange commission-rate-submit mt-3">Enregistrer le taux</button>
+                    </form>
+                    @if($commissionFromDb)
+                        <form method="POST" action="{{ route('admin.settings.store') }}" class="mt-2">
+                            @csrf
+                            <input type="hidden" name="section" value="commission">
+                            <input type="hidden" name="reset" value="1">
+                            <button type="submit" class="btn btn-outline-secondary commission-rate-submit">Revenir à la valeur par défaut du serveur</button>
+                        </form>
+                    @endif
+                    <p id="commission_rate_help" class="text-muted small mt-3 mb-0">
+                        S'applique aux nouvelles commandes ; les commandes déjà payées gardent leur commission ;
+                        les taux par promoteur ou par catégorie, s'il y en a, priment. Prélevé sur le prix des billets.
                     </p>
                 </div>
             </div>

@@ -2,6 +2,8 @@
 
 namespace App\Actions\Events;
 
+use App\Models\ActivityLog;
+use App\Services\ActivityLogger;
 use App\Support\Media;
 use App\Models\Event;
 use App\Models\TicketType;
@@ -64,6 +66,13 @@ class DuplicateEventAction
                         'is_active' => (bool) $type->is_active,
                     ]);
                 }
+
+                ActivityLogger::record(
+                    ActivityLog::EVENT_DUPLICATED,
+                    $copy,
+                    sprintf('Événement n°%d dupliqué depuis l\'événement n°%d (brouillon)', $copy->id, $source->id),
+                    ['source_event_id' => $source->id, 'status' => 'draft']
+                );
 
                 return $copy;
             });

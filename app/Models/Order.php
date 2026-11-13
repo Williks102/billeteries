@@ -273,15 +273,16 @@ class Order extends Model
      * sans effet (false) si la commande est déjà payée, échouée ou remboursée.
      * Transaction + verrou sur la commande puis sur les types de billets (id croissant).
      */
-    public function releaseStock(): bool
+    public function releaseStock(bool $expired = false): bool
     {
-        return DB::transaction(function () {
+        return DB::transaction(function () use ($expired) {
             $order = static::whereKey($this->getKey())->lockForUpdate()->first();
 
             if (!$order || !in_array($order->payment_status, ['pending', 'processing'], true)) {
                 return false;
             }
 
+            $previous = $order->payment_status;
             $items = $order->orderItems()->orderBy('ticket_type_id')->get();
             foreach ($items as $item) {
                 $ticketType = TicketType::whereKey($item->ticket_type_id)->lockForUpdate()->first();
@@ -293,6 +294,16 @@ class Order extends Model
 
             $order->update(['payment_status' => 'failed']);
             $this->payment_status = 'failed';
+
+            // Point de passage unique de toute libération (annulation, échec, expiration) : journal après commit
+            \App\Services\ActivityLogger::record(
+                $expired ? \App\Models\ActivityLog::ORDER_EXPIRED : \App\Models\ActivityLog::ORDER_CANCELLED,
+                $order,
+                ($expired ? 'Réservation expirée, stock libéré : ' : 'Commande annulée, stock libéré : ').$order->order_number,
+                ['order_number' => $order->order_number, 'amount' => (int) $order->total_amount, 'status' => ['from' => $previous, 'to' => 'failed']],
+                null,
+                $expired
+            );
 
             return true;
         });

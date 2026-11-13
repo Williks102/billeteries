@@ -32,6 +32,7 @@ class MigrationChainTest extends TestCase
         'commissions' => ['order_id', 'promoter_id', 'gross_amount', 'commission_rate', 'commission_amount', 'net_amount', 'platform_fee', 'payment_processor_fee', 'status', 'paid_at', 'notes', 'paid_by'],
         'commission_settings' => ['category_id', 'promoter_id', 'commission_rate', 'platform_fee_fixed', 'min_commission', 'is_active', 'valid_from', 'valid_until'],
         'payments' => ['order_id', 'payment_method', 'amount', 'status', 'provider_transaction_id', 'provider_response', 'completed_at'],
+        'activity_logs' => ['user_id', 'actor_role', 'action', 'subject_type', 'subject_id', 'event_id', 'description', 'properties', 'ip_fingerprint', 'created_at'],
         'event_audit_logs' => ['event_id', 'user_id', 'action', 'description', 'old_values', 'new_values', 'ip_address', 'user_agent'],
         'mail_logs' => ['to_email', 'to_name', 'subject', 'template', 'data', 'status', 'error_message', 'sent_at'],
         'settings' => ['key', 'value', 'type', 'description', 'group', 'is_public'],

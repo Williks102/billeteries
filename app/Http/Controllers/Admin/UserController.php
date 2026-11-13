@@ -344,12 +344,21 @@ class UserController extends Controller
 
             switch ($request->action) {
                 case 'verify':
-                    $count = User::whereIn('id', $userIds)->update(['email_verified_at' => now()]);
+                    // Un à un (et non en requête de masse) pour que le journal d'activité voie chaque changement
+                    $count = 0;
+                    foreach (User::whereIn('id', $userIds)->get() as $target) {
+                        $target->forceFill(['email_verified_at' => now()])->save(); // forceFill : email_verified_at n'est pas $fillable (comme l'ancienne requête de masse)
+                        $count++;
+                    }
                     $message = "{$count} utilisateur(s) vérifié(s)";
                     break;
                     
                 case 'unverify':
-                    $count = User::whereIn('id', $userIds)->update(['email_verified_at' => null]);
+                    $count = 0;
+                    foreach (User::whereIn('id', $userIds)->get() as $target) {
+                        $target->forceFill(['email_verified_at' => null])->save();
+                        $count++;
+                    }
                     $message = "{$count} utilisateur(s) marqué(s) comme non vérifiés";
                     break;
                     

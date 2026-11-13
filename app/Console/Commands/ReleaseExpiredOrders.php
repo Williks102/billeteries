@@ -19,7 +19,7 @@ class ReleaseExpiredOrders extends Command
         Order::expiredReservations()->orderBy('id')->chunkById(100, function ($orders) use (&$released) {
             foreach ($orders as $order) {
                 // releaseStock() relit la commande sous verrou : une commande payée entre-temps n'est pas touchée
-                if ($order->releaseStock()) {
+                if ($order->releaseStock(true)) {
                     $released++;
                     Log::info('Réservation expirée libérée', ['order_id' => $order->id]);
                 }

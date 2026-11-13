@@ -122,6 +122,19 @@ class SettingsController extends Controller
                 'maintenance_mode' => $request->boolean('maintenance_mode'),
             ]);
 
+            \App\Services\ActivityLogger::record(
+                \App\Models\ActivityLog::SETTINGS_UPDATED,
+                null,
+                'Paramètres généraux modifiés (taux de commission : '.$request->commission_rate.' %)',
+                [
+                    'section' => 'general',
+                    'commission_rate' => ['from' => (float) config('app.commission_rate', config('payments.default_commission_rate')), 'to' => (float) $request->commission_rate],
+                    'max_tickets_per_order' => (int) $request->max_tickets_per_order,
+                    'allow_refunds' => $request->boolean('allow_refunds'),
+                    'maintenance_mode' => $request->boolean('maintenance_mode'),
+                ]
+            );
+
             \Log::info('Paramètres généraux modifiés par admin', [
                 'admin_id' => auth()->id(),
                 'settings' => $request->only(['app_name', 'commission_rate', 'max_tickets_per_order'])
@@ -165,6 +178,8 @@ class SettingsController extends Controller
                 'MAIL_FROM_ADDRESS' => $request->mail_from_address,
                 'MAIL_FROM_NAME' => $request->mail_from_name,
             ]);
+
+            \App\Services\ActivityLogger::record(\App\Models\ActivityLog::SETTINGS_UPDATED, null, 'Paramètres e-mail modifiés', ['section' => 'email']);
 
             \Log::info('Paramètres email modifiés par admin', [
                 'admin_id' => auth()->id(),

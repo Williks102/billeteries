@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\EventController;
@@ -30,6 +31,9 @@ Route::prefix('finances')->name('finances.')->group(function () {
     Route::patch('commissions/{commission}/status', [AdminController::class, 'updateCommissionStatus'])->name('commissions.update-status');
     Route::post('commissions/bulk-pay', [AdminController::class, 'bulkPayCommissions'])->name('commissions.bulk-pay');
 });
+
+// ===== Journal d'activité (lecture seule) =====
+Route::get('activity', [ActivityLogController::class, 'index'])->name('activity.index');
 
 // ===== Rapports =====
 Route::controller(AdminController::class)->prefix('reports')->name('reports.')->group(function () {

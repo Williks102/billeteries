@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\OrderPaymentException;
+use App\Models\ActivityLog;
 use App\Models\Commission;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -64,6 +65,7 @@ class OrderPaymentService
             }
 
             $reference = $reference !== null && trim($reference) !== '' ? trim($reference) : null;
+            $wasStatus = $locked->payment_status;
 
             $locked->update([
                 'payment_status' => 'paid',
@@ -102,6 +104,23 @@ class OrderPaymentService
                 'amount' => $locked->total_amount,
                 'confirmed_by' => $confirmedBy?->id,
             ]);
+
+            // Journal (écrit après le commit ; sans référence de paiement libre, qui peut contenir une donnée personnelle)
+            ActivityLogger::record(
+                ActivityLog::PAYMENT_CONFIRMED,
+                $locked,
+                $confirmedBy
+                    ? 'Paiement confirmé manuellement, commande '.$locked->order_number
+                    : 'Paiement confirmé automatiquement (démo, commande gratuite ou système), commande '.$locked->order_number,
+                [
+                    'order_number' => $locked->order_number,
+                    'amount' => (int) $locked->total_amount,
+                    'from_status' => $wasStatus,
+                    'automatic' => $confirmedBy === null,
+                ],
+                null,
+                $confirmedBy === null
+            );
 
             $confirmedNow = true;
 
@@ -186,6 +205,13 @@ class OrderPaymentService
                 'refunded' => $this->refund($order),
             };
 
+            ActivityLogger::record(
+                ActivityLog::ORDER_STATUS_CHANGED,
+                $order,
+                sprintf('Statut de la commande %s : %s vers %s', $order->order_number, $from, $to),
+                ['order_number' => $order->order_number, 'status' => ['from' => $from, 'to' => $to]]
+            );
+
             Log::info('Statut de commande modifié par admin', [
                 'order_id' => $order->id,
                 'from' => $from,
@@ -241,6 +267,13 @@ class OrderPaymentService
             Commission::where('order_id', $locked->id)->whereIn('status', ['pending'])->update(['status' => 'held']);
 
             $locked->update(['payment_status' => 'refunded']);
+
+            ActivityLogger::record(
+                ActivityLog::ORDER_REFUNDED,
+                $locked,
+                'Commande remboursée : '.$locked->order_number,
+                ['order_number' => $locked->order_number, 'amount' => (int) $locked->total_amount]
+            );
         });
 
         return $order->refresh();

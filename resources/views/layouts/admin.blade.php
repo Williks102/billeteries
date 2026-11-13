@@ -251,15 +251,16 @@
                 </li>
 
                 <!-- Paramètres -->
-                <li class="submenu-parent {{ request()->routeIs('admin.settings.*') ? 'open' : '' }}">
+                <li class="submenu-parent {{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.activity.*') ? 'open' : '' }}">
                     <a href="#" data-action="toggle-submenu" data-menu="settings" class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
                         <i class="fas fa-cog"></i>
                         <span class="sidebar-menu-text">Paramètres</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
                         <span class="sidebar-tooltip">Paramètres</span>
                     </a>
-                    <ul class="sidebar-submenu {{ request()->routeIs('admin.settings.*') ? 'open' : '' }}" id="submenu-settings">
+                    <ul class="sidebar-submenu {{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.activity.*') ? 'open' : '' }}" id="submenu-settings">
                         <li><a href="{{ route('admin.profile') }}">Mon profil</a></li>
+                        <li><a href="{{ route('admin.activity.index') }}" class="{{ request()->routeIs('admin.activity.*') ? 'active' : '' }}">Journal d'activité</a></li>
                         <li><a href="#">Emails</a></li>
                         <li><a href="#">Configuration</a></li>
                         <li><a href="#">Sauvegardes</a></li>

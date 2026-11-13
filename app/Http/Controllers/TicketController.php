@@ -3,7 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\TicketPdfService;
 
 class TicketController extends Controller
 {
@@ -47,27 +47,25 @@ class TicketController extends Controller
     /**
      * Télécharger un billet en PDF
      */
-    public function download(Ticket $ticket)
+    public function download(Ticket $ticket, TicketPdfService $pdfs)
     {
-        // Vérifier les permissions
+        // Mêmes règles que Acheteur\OrderController::download : propriétaire de la commande ou admin seulement
+        // (les promoteurs et les autres acheteurs sont refusés), jamais de PDF avant paiement confirmé.
+        $order = $ticket->linkedOrder();
         $user = auth()->user();
-        
-        if ($user->isAcheteur() && $ticket->order->user_id !== $user->id) {
+
+        if ($order === null || ($order->user_id !== $user->id && !$user->isAdmin())) {
             abort(403);
         }
-        
-        if ($user->isPromoteur() && $ticket->ticketType->event->promoter_id !== $user->id) {
-            abort(403);
+
+        $order->loadMissing(TicketPdfService::RELATIONS);
+
+        if (!$order->isPaid() || !$ticket->isIssued()) {
+            return redirect()->route($user->isAcheteur() ? 'acheteur.tickets.show' : 'tickets.show', $ticket)
+                ->with('error', 'Ce billet sera disponible au téléchargement après la confirmation du paiement.');
         }
-        
-        $ticket->load(['ticketType.event.category', 'orderItem.order.user']);
-        
-        $pdf = Pdf::loadView('tickets.pdf', compact('ticket'))
-            ->setPaper('a4', 'portrait');
-        
-        $filename = 'billet_' . $ticket->ticket_code . '.pdf';
-        
-        return $pdf->download($filename);
+
+        return $pdfs->forTicket($order, $ticket)->download($pdfs->ticketFileName($order, $ticket));
     }
 
     /**

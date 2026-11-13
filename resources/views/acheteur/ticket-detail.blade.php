@@ -46,11 +46,12 @@
                              width="260" height="260" style="width: min(260px, 70vw); height: auto; display: block;">
                     </div>
                     <p class="text-muted small mt-3 mb-3">Augmentez la luminosité de l'écran pour faciliter le scan.</p>
-                    {{-- tickets.download (PDF d'un billet) renvoie une erreur : la vue tickets.pdf n'existe pas.
-                         On propose le PDF de la commande (acheteur.orders.download) tant que ce n'est pas corrigé. --}}
+                    <a href="{{ route('tickets.download', $ticket) }}" class="btn btn-primary btn-lg w-100 mb-2" style="min-height: 48px;">
+                        <i class="fas fa-download me-2" aria-hidden="true"></i>Télécharger ce billet (PDF)
+                    </a>
                     @if($order)
-                        <a href="{{ route('acheteur.orders.download', $order) }}" class="btn btn-primary btn-lg w-100" style="min-height: 48px;">
-                            <i class="fas fa-download me-2" aria-hidden="true"></i>Télécharger mes billets (PDF)
+                        <a href="{{ route('acheteur.orders.download', $order) }}" class="btn btn-outline-primary w-100" style="min-height: 48px;">
+                            Télécharger tous mes billets (PDF)
                         </a>
                     @endif
                 </div>

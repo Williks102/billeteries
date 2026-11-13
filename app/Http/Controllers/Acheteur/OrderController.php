@@ -117,22 +117,10 @@ public function index(Request $request)
             ->with('error', 'Vos billets seront disponibles au téléchargement après la confirmation du paiement.');
     }
 
-    // Charger les relations nécessaires
-    $order->load(['event.category', 'tickets.ticketType', 'orderItems.ticketType', 'user']);
-    
-    // Générer le PDF avec DomPDF
-    $pdf = \PDF::loadView('acheteur.tickets-pdf', compact('order'));
-    
-    // Configuration du PDF
-    $pdf->setPaper('A4', 'portrait');
-    $pdf->setOptions(['dpi' => 150, 'defaultFont' => 'sans-serif']);
-    
-    // Nom du fichier
-    $fileName = 'billets-' . $order->order_number . '-' . $order->event->title . '.pdf';
-    $fileName = \Str::slug($fileName) . '.pdf';
-    
-    // Télécharger le PDF
-    return $pdf->download($fileName);
+    $order->loadMissing(\App\Services\TicketPdfService::RELATIONS);
+    $pdfs = app(\App\Services\TicketPdfService::class);
+
+    return $pdfs->forOrder($order)->download($pdfs->orderFileName($order));
 }
 
 /**

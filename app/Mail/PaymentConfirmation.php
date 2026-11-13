@@ -54,12 +54,11 @@ class PaymentConfirmation extends Mailable
 {
     try {
         // Charger les relations pour le PDF
-        $this->order->load(['event.category', 'tickets.ticketType', 'orderItems.ticketType', 'user']);
-        
-        // Générer le PDF avec votre template existant
-        $pdf = \PDF::loadView('acheteur.tickets-pdf', ['order' => $this->order]);
-        $pdf->setPaper('A4', 'portrait');
-        
+        $this->order->loadMissing(\App\Services\TicketPdfService::RELATIONS);
+
+        // Même gabarit que le téléchargement (une page A4 par billet)
+        $pdf = app(\App\Services\TicketPdfService::class)->forOrder($this->order);
+
         // Nom du fichier
         $fileName = 'Billets-' . $this->order->order_number . '.pdf';
         

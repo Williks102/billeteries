@@ -12,14 +12,14 @@
     <x-admin.page-header title="Modèles d'emails" :back="route('admin.emails.dashboard')" />
 
     <div class="alert alert-info" role="note">
-        Les contenus sont définis dans le code de l'application ; cette liste est en lecture seule.
+        Ces modèles correspondent aux messages réellement envoyés par l'application. Leur contenu est défini dans le code ; cette liste est en lecture seule.
     </div>
 
     <div class="list-group">
-        @foreach($templates as $key => $label)
+        @foreach($templates as $class => $template)
             <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
-                <span>{{ $label }}</span>
-                <code class="small">{{ $key }}</code>
+                <span>{{ $template['label'] }}</span>
+                <span class="text-muted small">{{ $template['audience'] }}</span>
             </div>
         @endforeach
     </div>

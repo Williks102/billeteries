@@ -8,20 +8,40 @@
 
 @section('content')
 <div class="admin-page">
-    <x-admin.page-header title="Emails" subtitle="Envoi de test et modèles de messages">
+    <x-admin.page-header title="Emails" subtitle="Configuration d'envoi (lecture seule) et message de test">
         <a href="{{ route('admin.emails.templates') }}" class="btn btn-outline-primary">
-            <i class="fas fa-envelope-open-text" aria-hidden="true"></i> Modèles
+            <i class="fas fa-envelope-open-text" aria-hidden="true"></i> Modèles ({{ $templateCount }})
         </a>
     </x-admin.page-header>
 
-    <div class="alert alert-info" role="note">
-        Le suivi des emails (envoyés, rebonds, ouvertures, clics) n'est pas encore en place : aucune statistique n'est affichée.
-        Les confirmations de commande peuvent être renvoyées depuis la fiche de chaque commande.
-    </div>
+    @if($mailerIsSimulated)
+        <div class="alert alert-warning" role="alert">
+            <strong>Aucun message n'est réellement envoyé.</strong>
+            Le pilote d'envoi est « {{ $mailer }} » : les messages sont seulement écrits dans le journal du serveur.
+            Pour envoyer de vrais e-mails, un service d'envoi doit être configuré dans l'environnement du serveur.
+        </div>
+    @endif
 
-    <div class="row">
+    <div class="row g-3">
         <div class="col-lg-6">
-            <div class="card">
+            <div class="card h-100">
+                <div class="card-header"><h2 class="h5 mb-0">Configuration d'envoi</h2></div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt>Pilote d'envoi</dt>
+                        <dd>{{ $mailer }}</dd>
+                        <dt>Adresse de l'expéditeur</dt>
+                        <dd class="text-break">{{ $fromAddress !== '' ? $fromAddress : 'Non définie' }}</dd>
+                        <dt>Nom de l'expéditeur</dt>
+                        <dd>{{ $fromName !== '' ? $fromName : 'Non défini' }}</dd>
+                    </dl>
+                    <p class="text-muted small mt-3 mb-0">Aucun identifiant ni mot de passe n'est affiché. Le suivi des e-mails (envoyés, rebonds, ouvertures) n'existe pas : aucune statistique n'est présentée.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
                 <div class="card-header"><h2 class="h5 mb-0">Envoyer un email de test</h2></div>
                 <div class="card-body">
                     <form id="test-email-form" action="{{ route('admin.emails.test') }}" method="POST" novalidate>
@@ -44,21 +64,5 @@
 @endsection
 
 @push('scripts')
-<script>
-document.getElementById('test-email-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var form = e.target, out = document.getElementById('test-email-result');
-    out.className = 'mt-3 text-muted';
-    out.textContent = 'Envoi en cours…';
-    fetch(form.action, {
-        method: 'POST',
-        headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': form.querySelector('[name=_token]').value},
-        body: new FormData(form)
-    }).then(function (r) { return r.json().then(function (d) { return {ok: r.ok, d: d}; }); })
-      .then(function (res) {
-          out.className = 'mt-3 ' + (res.ok ? 'text-success' : 'text-danger');
-          out.textContent = res.d.message || (res.d.errors ? Object.values(res.d.errors)[0][0] : 'Erreur');
-      }).catch(function () { out.className = 'mt-3 text-danger'; out.textContent = 'Erreur réseau.'; });
-});
-</script>
+<script src="{{ asset('js/admin-emails-test.js') }}" defer></script>
 @endpush

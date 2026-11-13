@@ -1,9 +1,9 @@
 @extends('layouts.admin')
 
-@section('title', 'Paramètres')
+@section('title', 'Configuration')
 
 @section('breadcrumb')
-    <li class="breadcrumb-item active" aria-current="page">Paramètres</li>
+    <li class="breadcrumb-item active" aria-current="page">Configuration</li>
 @endsection
 
 @section('content')
@@ -11,7 +11,7 @@
     $yesNo = fn ($v) => $v ? 'Oui' : 'Non';
 @endphp
 <div class="admin-page">
-    <x-admin.page-header title="Paramètres" subtitle="Vue d'ensemble de la configuration (lecture seule)" />
+    <x-admin.page-header title="Configuration" subtitle="Vue d'ensemble de la configuration (lecture seule)" />
 
     <div class="alert alert-info" role="note">
         Aucune valeur sensible (clés, mots de passe) n'est affichée. La configuration se modifie dans l'environnement du serveur.

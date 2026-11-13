@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\OrderController;
@@ -111,12 +112,8 @@ Route::controller(PageController::class)->prefix('pages/{page}')->name('pages.')
 });
 Route::resource('pages', PageController::class);
 
+// ===== Sauvegardes (page d'information, lecture seule) =====
+Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
+
 // ===== Paramètres =====
-Route::controller(SettingsController::class)->prefix('settings')->name('settings.')->group(function () {
-    Route::post('test-email', 'testEmail')->name('test-email');
-    Route::post('backup', 'backup')->name('backup');
-    Route::post('clear-cache', 'clearCache')->name('clear-cache');
-    Route::post('optimize-db', 'optimizeDatabase')->name('optimize-db');
-    Route::post('cleanup-files', 'cleanupFiles')->name('cleanup-files');
-});
 Route::resource('settings', SettingsController::class)->only(['index', 'store']);

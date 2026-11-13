@@ -100,10 +100,28 @@ class Ticket extends Model
     public static function generateTicketCode()
     {
         do {
-            $code = 'TKT-' . strtoupper(Str::random(8));
+            $code = 'TKT-' . self::randomCodeSuffix();
         } while (self::where('ticket_code', $code)->exists());
-        
+
         return $code;
+    }
+
+    /**
+     * Alphabet des codes de billet SANS caractères ambigus (ni 0/O, ni 1/I/L) : un contrôleur qui doit saisir
+     * un code à la main (QR illisible) ne peut pas confondre un O et un zéro. 8 caractères parmi 31 (~39 bits),
+     * toujours compatibles avec le format attendu par le scanner (`TKT-` + 8 caractères A-Z / 0-9).
+     */
+    public const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+    private static function randomCodeSuffix(int $length = 8): string
+    {
+        $max = strlen(self::CODE_ALPHABET) - 1;
+        $suffix = '';
+        for ($i = 0; $i < $length; $i++) {
+            $suffix .= self::CODE_ALPHABET[random_int(0, $max)];
+        }
+
+        return $suffix;
     }
 
     /** Préfixe d'une data-URI PNG valide (seul format accepté dans tickets.qr_code). */

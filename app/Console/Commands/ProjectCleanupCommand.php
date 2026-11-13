@@ -198,7 +198,7 @@ Artisan::command('tickets:diagnose {ticket_code? : Code du ticket à diagnostiqu
         $this->line("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         
         $ticket = \App\Models\Ticket::where('ticket_code', $ticketCode)
-            ->with(['ticketType.event', 'orderTickets.order.user'])
+            ->with(['ticketType.event', 'orderItem.order.user'])
             ->first();
         
         if (!$ticket) {

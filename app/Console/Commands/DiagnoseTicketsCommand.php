@@ -31,7 +31,7 @@ class DiagnoseTicketsCommand extends Command
         $this->line("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         $ticket = Ticket::where('ticket_code', $ticketCode)
-            ->with(['ticketType.event', 'orderTickets.order.user'])
+            ->with(['ticketType.event', 'orderItem.order.user'])
             ->first();
 
         if (!$ticket) {
@@ -243,6 +243,9 @@ class DiagnoseTicketsCommand extends Command
 
     protected function getMainOrder($ticket)
     {
-        return $ticket->orderTickets()->with('order.user')->first()?->order;
+        $order = $ticket->linkedOrder();
+        $order?->loadMissing('user');
+
+        return $order;
     }
 }

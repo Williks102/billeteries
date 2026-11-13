@@ -202,8 +202,8 @@
                 <li>
                     <a href="{{ route('promoteur.dashboard') }}" class="{{ request()->routeIs('promoteur.dashboard') ? 'active' : '' }}">
                         <i class="fas fa-tachometer-alt"></i>
-                        <span class="sidebar-menu-text">Dashboard</span>
-                        <span class="sidebar-tooltip">Dashboard</span>
+                        <span class="sidebar-menu-text">Tableau de bord</span>
+                        <span class="sidebar-tooltip">Tableau de bord</span>
                     </a>
                 </li>
 
@@ -304,7 +304,7 @@
                                     <i class="fas fa-home" aria-hidden="true"></i>
                                 </a>
                             </li>
-                            <li class="breadcrumb-item active" aria-current="page">@yield('breadcrumb', 'Dashboard')</li>
+                            <li class="breadcrumb-item active" aria-current="page">@hasSection('breadcrumb')@yield('breadcrumb')@else{{ \Illuminate\Support\Str::limit(trim($__env->yieldContent('title')) ?: 'Tableau de bord', 40) }}@endif</li>
                         </ol>
                     </nav>
                 </div>

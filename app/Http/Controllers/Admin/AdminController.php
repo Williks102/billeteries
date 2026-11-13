@@ -383,7 +383,6 @@ class AdminController extends Controller
             'events' => 'admin.events.export',
             'orders' => 'admin.orders.export',
             'tickets' => 'admin.tickets.export',
-            'categories' => 'admin.categories.export',
         ];
 
         if ($type === 'commissions') {

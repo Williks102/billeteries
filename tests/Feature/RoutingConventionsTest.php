@@ -26,7 +26,7 @@ class RoutingConventionsTest extends TestCase
     ];
 
     /** Closures tolérées (redirections triviales). */
-    private const ALLOWED_CLOSURES = ['up', 'storage.local', 'dashboard', 'checkout.choose', 'profile', 'admin.promoters.show'];
+    private const ALLOWED_CLOSURES = ['up', 'storage.local', 'storage.local.upload', 'dashboard', 'checkout.choose', 'profile', 'admin.promoters.show'];
 
     private function appRoutes(): RouteCollection
     {

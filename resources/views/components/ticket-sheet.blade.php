@@ -97,7 +97,7 @@
             <div style="font-size: 9pt; font-weight: bold; color: #475569; letter-spacing: 1pt;">COMMANDE</div>
             <div style="font-size: 14pt; font-weight: bold; color: #0f172a; margin-top: 3pt;">#{{ $sheet['order_number'] }}</div>
             @if($sheet['ordered_at'] !== '')
-                <div style="font-size: 10pt; color: #475569; margin-top: 2pt;">Passée le {{ $sheet['ordered_at'] }}</div>
+                <div style="font-size: 10pt; color: #475569; margin-top: 2pt;">Date : {{ $sheet['ordered_at'] }}</div>
             @endif
         </td>
     </tr>

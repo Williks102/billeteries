@@ -88,6 +88,26 @@ class Media
     }
 
     /**
+     * Origine (schéma + hôte) où sont servies les images du disque média actif, ou null si elle est locale
+     * ou inconnue. Sert à autoriser ce domaine dans `img-src` de la politique de sécurité (CSP) : sans cela
+     * le navigateur bloque les images hébergées sur R2 / un CDN. Aucun appel réseau.
+     */
+    public static function publicOrigin(): ?string
+    {
+        $url = self::url('x');
+        if ($url === null) {
+            return null;
+        }
+
+        $parts = parse_url($url);
+        if (! is_array($parts) || ($parts['scheme'] ?? null) !== 'https' || empty($parts['host'])) {
+            return null;
+        }
+
+        return 'https://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+    }
+
+    /**
      * Comme url(), mais sur disque LOCAL renvoie null si le fichier a disparu (évite une image cassée dans le panier).
      * Sur un disque distant, aucune vérification (elle coûterait un appel réseau par ligne) : l'`onerror` de la vue prend le relais.
      */

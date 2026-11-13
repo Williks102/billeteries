@@ -12,10 +12,14 @@ class SecurityHeaders
     {
         $response = $next($request);
 
+        // Images hébergées hors du site (R2, CDN) : le domaine du disque média doit être autorisé dans img-src.
+        $mediaOrigin = \App\Support\Media::publicOrigin();
+        $imgSrc = "'self' data: blob: https://res.cloudinary.com".($mediaOrigin ? ' '.$mediaOrigin : '');
+
                         $csp = "default-src 'self'; " .
                "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net; " . 
                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " .
-               "img-src 'self' data: blob: https://res.cloudinary.com; " .
+               "img-src ".$imgSrc."; " .
                "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " .
                "connect-src 'self' https://cdn.jsdelivr.net; " .
                "frame-src 'self'; " .

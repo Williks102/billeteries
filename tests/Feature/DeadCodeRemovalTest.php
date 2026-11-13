@@ -25,9 +25,6 @@ class DeadCodeRemovalTest extends TestCase
      */
     private const KNOWN_ROUTES_WITHOUT_ACTION = [
         'acheteur.favorites', 'acheteur.favorites.add', 'acheteur.favorites.remove',
-        'admin.categories.export', 'admin.categories.reorder', 'admin.categories.duplicate',
-        'admin.categories.merge', 'admin.categories.toggle-status',
-        'cart.extend.timer', 'cart.status',
     ];
 
     /**

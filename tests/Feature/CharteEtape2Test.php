@@ -19,7 +19,7 @@ class CharteEtape2Test extends TestCase
         'events/show', 'events/all', 'events/partials/booking-form-desktop', 'events/partials/booking-form-mobile',
         'events/partials/event-details-desktop', 'events/partials/event-details-mobile',
         'acheteur/dashboard', 'acheteur/orders', 'acheteur/order-detail',
-        'components/event-card', 'components/events-carousel',
+        'components/event-card',
         'emails/admin-new-order', 'emails/order-confirmation', 'emails/payment-confirmation', 'emails/promoteur-new-sale',
         'promoteur/dashboard', 'promoteur/events/tickets/index',
     ];

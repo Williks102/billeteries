@@ -86,6 +86,9 @@ class PageController extends Controller
                 $data['slug'] = Str::slug($data['slug']);
             }
 
+            // Contenu HTML : liste d'autorisation stricte à l'enregistrement
+            $data['content'] = \App\Support\HtmlSanitizer::clean($data['content']);
+
             // Valeurs par défaut
             $data['is_active'] = $request->has('is_active');
             $data['show_in_menu'] = $request->has('show_in_menu');
@@ -147,6 +150,9 @@ class PageController extends Controller
             if (!empty($data['slug'])) {
                 $data['slug'] = Str::slug($data['slug']);
             }
+
+            // Contenu HTML : liste d'autorisation stricte à l'enregistrement
+            $data['content'] = \App\Support\HtmlSanitizer::clean($data['content']);
 
             // Valeurs par défaut
             $data['is_active'] = $request->has('is_active');

@@ -47,7 +47,7 @@ Variables à saisir par vous (secrètes ou propres à votre installation) :
 
 | Variable | Où trouver la valeur |
 |---|---|
-| APP_KEY | **Utilisez la clé que l'assistant vous a donnée dans la conversation** (jamais dans le dépôt). Pour en obtenir une autre sans ligne de commande : voir « APP_KEY » ci-dessous. |
+| APP_KEY | **Votre propre clé**, générée par vous et collée directement dans Render : ne la partagez jamais (ni dans une conversation, ni dans le dépôt). Voir « APP_KEY » ci-dessous pour la générer. |
 | APP_URL | L'adresse publique du service, visible en haut de la page du service Render : `https://<nom>.onrender.com`, sans `/` final. Au premier déploiement, mettez le nom prévu, puis corrigez si Render en a choisi un autre. |
 | DB_HOST | TiDB Cloud, bouton Connect, champ Host. |
 | DB_DATABASE | `billetterie` (créée à l'étape A.7). |
@@ -79,6 +79,12 @@ Variables déjà fixées dans `render.yaml` (en clair, sans danger) :
 | MAIL_FROM_ADDRESS / MAIL_FROM_NAME | `noreply@example.com` / `Billetterie` (adresse fictive) |
 | MAX_*, PENDING_*, *_THROTTLE_PER_MINUTE, *_RESERVATION_MINUTES, MANUAL_RESERVATION_MINUTES, GUEST_MANUAL_RESERVATION_MINUTES | Plafonds anti-abus : valeurs de `render.yaml` (identiques aux défauts du projet). **Facultatives** en option manuelle : sans elles, les défauts du projet s'appliquent. |
 
+### E-mails
+
+> **Attention : avec `MAIL_MAILER=log`, AUCUN e-mail n'est livré** (confirmations de commande, billets en pièce jointe, réinitialisation de mot de passe) et leur contenu est écrit **en clair** dans les journaux Render (adresses, liens de réinitialisation, instructions de paiement). **Un vrai SMTP est requis AVANT la vérification d'e-mail et l'ouverture au public** (voir F).
+
+Pour une démo avec des données fictives, `log` suffit ; sinon utilisez un vrai SMTP, ou `MAIL_MAILER=array` (rien n'est écrit ni envoyé).
+
 ### APP_KEY
 
 APP_KEY est la clé qui chiffre les sessions et les cookies. Trois formes sont acceptées (le conteneur normalise la valeur au démarrage et, si elle est inutilisable, s'arrête avec un message clair SANS afficher la valeur) :
@@ -87,7 +93,9 @@ APP_KEY est la clé qui chiffre les sessions et les cookies. Trois formes sont a
 2. 44 caractères base64 SANS le préfixe `base64:` : le conteneur ajoute le préfixe tout seul. C'est le cas d'une valeur générée par Render.
 3. Exactement 32 caractères quelconques : acceptés tels quels.
 
-**Votre clé :** utilisez la clé que l'assistant vous a donnée dans la conversation. Collez-la directement dans le champ APP_KEY de Render, sans espace ni retour à la ligne.
+**Votre clé :** générez VOTRE PROPRE clé (32 caractères alphanumériques du gestionnaire de mots de passe de votre téléphone, ou `php artisan key:generate --show`) et collez-la directement dans le champ APP_KEY de Render, sans espace ni retour à la ligne. **Ne la partagez jamais** : ni dans une conversation avec un assistant, ni dans le dépôt, ni dans une capture d'écran. Une clé qui a transité dans une conversation est à considérer comme compromise (c'est ainsi que la clé de la démo a fuité) : régénérez-en une.
+
+**Changer la clé :** tous les utilisateurs sont déconnectés (sessions et cookies « se souvenir de moi » invalides) et les liens de réinitialisation en cours cessent de fonctionner. **Aucune donnée n'est perdue** : l'application ne chiffre aucune donnée en base avec cette clé (aucun `encrypt()`, `Crypt::`, ni cast `encrypted` dans le code ; vérifié par recherche). Elle sert aussi à calculer les empreintes d'IP des plafonds et du journal d'activité : après un changement, les anciennes empreintes ne correspondent plus, sans autre conséquence.
 
 **En obtenir une autre sans ligne de commande (depuis un téléphone) :**
 

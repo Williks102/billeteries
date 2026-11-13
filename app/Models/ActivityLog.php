@@ -47,6 +47,8 @@ class ActivityLog extends Model
     public const USER_ROLE_CHANGED = 'user.role_changed';
     public const USER_STATUS_CHANGED = 'user.status_changed';
     public const AUTH_ADMIN_LOGIN = 'auth.admin_login';
+    public const AUTH_LOGIN_FAILED = 'auth.login_failed';
+    public const AUTH_LOCKOUT = 'auth.lockout';
 
     /** Libellés français affichés dans le journal (clé stable => texte). */
     public const LABELS = [
@@ -71,6 +73,8 @@ class ActivityLog extends Model
         self::USER_ROLE_CHANGED => "Rôle d'utilisateur modifié",
         self::USER_STATUS_CHANGED => "Statut d'utilisateur modifié",
         self::AUTH_ADMIN_LOGIN => 'Connexion administrateur',
+        self::AUTH_LOGIN_FAILED => 'Échec de connexion',
+        self::AUTH_LOCKOUT => 'Verrouillage de connexion',
     ];
 
     /** Familles du filtre : clé => [libellé, préfixes d'action]. */
@@ -79,7 +83,8 @@ class ActivityLog extends Model
         'order' => ['Commande', ['order.']],
         'ticket' => ['Billet', ['ticket_type.', 'ticket.']],
         'event' => ['Événement', ['event.']],
-        'platform' => ['Plateforme', ['settings.', 'auth.']],
+        'platform' => ['Plateforme', ['settings.']],
+        'auth' => ['Connexions', ['auth.']],
         'user' => ['Utilisateur', ['user.']],
     ];
 

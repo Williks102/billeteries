@@ -52,6 +52,35 @@ Billetterie en ligne pour la Côte d'Ivoire : Laravel 12, PHP 8.3, vues Blade et
 
 **Dépendances et sécurité** (13/11/2026, branche `claude/dependances-securite`) : `composer audit` passait de 45 avis (1 critique, 15 élevés, 16 moyens, 6 faibles, 7 sans gravité ; 11 paquets) à **0 avis**. Mise à jour ciblée dans les contraintes existantes de `composer.json` (inchangé) : `laravel/framework` 12.21 -> 12.72, `symfony/*` 7.3 -> 7.4, `league/commonmark` 2.7 -> 2.10, `dompdf/dompdf` 3.1.0 -> 3.1.6, `phpunit` 11.5.27 -> 11.5.58, `psysh` 0.12.9 -> 0.12.24. Seul ajustement de test : `storage.local.upload` (route PUT signée ajoutée par le framework pour le disque local) ajouté à `ALLOWED_CLOSURES` de `RoutingConventionsTest` ; il y a désormais 190 routes. `cloudinary/*` et `webmozart/assert` (orphelins du verrou, requis par personne) ont disparu. Contrôle régulier : `composer audit` (à relancer avant chaque déploiement).
 
+### Plan sécurité (checklist du « Guide du vibecoder sécurisé »)
+Branche `claude/securite-phase1` (13/11/2026) : volets non bloqués de la phase 1. État des 13 points :
+
+| # | Point | État | Détail |
+|---|---|---|---|
+| 1 | Authentification | Appliqué sauf MFA admin | Limitation de connexion native (5/min), mot de passe oublié limité par IP et par e-mail, réponses neutres (pas d'énumération), échecs de connexion journalisés. MFA admin à faire. |
+| 2 | Sessions | Appliqué | |
+| 3 | Autorisations | Appliqué | |
+| 4 | Validation | Partiel | |
+| 5 | Secrets | Partiel | APP_KEY de la démo à régénérer (action du propriétaire, voir `docs/deploiement-render.md`). |
+| 6 | XSS | Partiel | Contenu des pages (CMS) nettoyé à l'enregistrement et à l'affichage (`App\Support\HtmlSanitizer`) ; CSP stricte à faire. |
+| 7 | Routes et limitation de débit | Partiel | Nouveaux throttles : `PASSWORD_RESET_THROTTLE_PER_MINUTE` (IP) + 3 demandes / 10 min par e-mail. |
+| 8 | CSRF | Appliqué | |
+| 9 | Uploads | Appliqué | |
+| 10 | En-têtes | Partiel | `Permissions-Policy` ajoutée (caméra autorisée pour le scanner), HSTS sans `preload`. CSP à faire. |
+| 11 | Dépendances | Appliqué | 0 avis, mises à jour faites ; `composer audit` avant chaque déploiement. |
+| 12 | Monitoring | Partiel | Journal d'activité + échecs de connexion ; pas d'alerte ni de suivi d'erreurs. |
+| 13 | Sauvegardes | Non vérifié | |
+
+Phases restantes :
+1. **Vérification d'e-mail** : **BLOQUÉE** tant que le propriétaire n'a pas choisi un SMTP réel (avec `MAIL_MAILER=log` aucun e-mail n'est livré).
+2. **CSP stricte, en 4 lots** : A) nonce + mode « rapport seulement » ; B) sortir le JavaScript inline des 26 vues avec `<script>` et des 91 attributs `onclick` de 32 vues ; C) héberger jQuery et Chart.js localement puis activer `script-src` strict ; D) styles en dernier.
+3. **MFA admin**.
+4. **Monitoring** (Sentry ou équivalent).
+5. **Sauvegardes TiDB** : vérifier la rétention, tester une restauration.
+6. **Test sur la vraie base TiDB** (`composer run test:mysql`).
+7. **Réglages de production** : `TRUSTED_PROXIES` testé avec un en-tête `X-Forwarded-For` falsifié, nouvelle `APP_KEY`.
+8. **Contenu juridique**.
+
 **Autres chantiers** : barre de navigation en bas sur mobile ; messages de validation en français (les formulaires affichent des clés brutes `validation.required`) ; mobile pour les écrans non vus (listes admin, formulaires longs).
 
 **Petites dettes connues** : routes vers des méthodes absentes : seuls les favoris acheteur restent (lien du menu `layouts/acheteur`), listés dans `DeadCodeRemovalTest` ; `resources/js/cart-unified.js` n'est chargé nulle part (appelle l'ancien `/cart/extend-timer`) ; vue d'authentification qui appelle `verification.resend` (route absente) ; l'admin ne peut pas modifier les billets après la création d'un événement et son formulaire d'édition (617 lignes) n'est pas refondu ; prix décimal du formulaire promoteur converti en 0 ; sauvegarde de la base : page Sauvegardes informative (`admin.backups.index`), la sauvegarde réelle = TiDB Cloud (à vérifier dans sa console : fréquence, rétention) ; routes mortes `mysqldump`/`OPTIMIZE TABLE`/nettoyage/vidage de cache supprimées ; `AdminController::resendOrderEmail` et `OrderController::resendEmail` ne renvoient rien (réponse « succès » sans envoi, à câbler ou retirer) ; cloche de notifications retirée du promoteur (aucune fonction derrière).

@@ -156,6 +156,8 @@ services:
         value: "10"
       - key: REGISTER_THROTTLE_PER_MINUTE
         value: "5"
+      - key: PASSWORD_RESET_THROTTLE_PER_MINUTE
+        value: "5"
       - key: CHECKOUT_THROTTLE_PER_MINUTE
         value: "10"
       - key: VERIFY_TICKET_THROTTLE_PER_MINUTE

@@ -73,6 +73,8 @@ class CloudinaryDiskTest extends TestCase
 
     private const SECRET = 'S3cr3tValueDoNotLeak';
 
+    public const LEAKED_SECRET = 'S3cr3tValueDoNotLeak';
+
     private const URL = 'cloudinary://123456789:'.self::SECRET.'@democloud';
 
     private FakeCloudinaryGateway $gateway;
@@ -185,6 +187,40 @@ class CloudinaryDiskTest extends TestCase
         $this->assertMatchesRegularExpression('#^events/[A-Za-z0-9]{40}\.jpg$#', $path);
         $this->assertSame('events/'.pathinfo($path, PATHINFO_FILENAME), $this->gateway->uploads[0]['public_id']);
         $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_sdk_errors_never_leak_the_secret_in_our_exception_messages(): void
+    {
+        $leaky = new class implements CloudinaryGateway
+        {
+            public function upload(string $source, string $publicId): void
+            {
+                throw new \RuntimeException('Échec sur cloudinary://123456789:'.CloudinaryDiskTest::LEAKED_SECRET.'@democloud');
+            }
+
+            public function destroy(string $publicId): void
+            {
+                throw new \RuntimeException('Échec sur cloudinary://123456789:'.CloudinaryDiskTest::LEAKED_SECRET.'@democloud');
+            }
+
+            public function exists(string $publicId): bool
+            {
+                return true;
+            }
+        };
+        $adapter = new CloudinaryAdapter(CloudinaryConfig::fromDiskConfig((array) config('filesystems.disks.cloudinary')), $leaky);
+
+        foreach ([
+            fn () => $adapter->write('events/a.jpg', $this->jpeg(), new Config),
+            fn () => $adapter->delete('events/a.jpg'),
+        ] as $action) {
+            try {
+                $action();
+                $this->fail('Une erreur du SDK doit être convertie en exception Flysystem.');
+            } catch (\League\Flysystem\FilesystemException $e) {
+                $this->assertStringNotContainsString(self::LEAKED_SECRET, $e->getMessage());
+            }
+        }
     }
 
     public function test_non_image_is_refused_by_mime_and_by_extension(): void

@@ -79,8 +79,10 @@
                     </tr>
                 </table>
             @endif
+            @if($sheet['qr'])
             <div style="font-size: 10pt; color: #475569; margin-top: 10pt;">Référence du billet</div>
             <div style="font-family: 'Courier New', monospace; font-size: 15pt; font-weight: bold; color: #0f172a; letter-spacing: 1pt;">{{ $sheet['ticket_code'] }}</div>
+            @endif
         </td>
     </tr>
 </table>

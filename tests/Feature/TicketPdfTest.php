@@ -126,6 +126,9 @@ class TicketPdfTest extends TestCase
 
         $this->assertStringContainsString('QR indisponible', $html);
         $this->assertStringNotContainsString('data:image/png', $html);
+        // Le code du billet (secret) n'est pas imprimé tant que le billet n'est pas émis
+        $this->assertStringNotContainsString('TKT-ABC', $html);
+        $this->assertStringNotContainsString('Référence du billet', $html);
     }
 
     // ===== Génération réelle DomPDF =====
@@ -156,6 +159,17 @@ class TicketPdfTest extends TestCase
         $attachments = (new PaymentConfirmation($this->order()))->attachments();
 
         $this->assertCount(1, $attachments);
+    }
+
+    public function test_payment_confirmation_writes_no_file_to_disk_and_skips_unpaid_orders(): void
+    {
+        $dir = storage_path('app/temp');
+        $before = is_dir($dir) ? glob($dir.'/*') : [];
+
+        $this->assertCount(1, (new PaymentConfirmation($this->order()))->attachments());
+        $this->assertSame($before, is_dir($dir) ? glob($dir.'/*') : [], 'Aucun PDF (avec des QR) ne doit rester sur le disque.');
+
+        $this->assertSame([], (new PaymentConfirmation($this->order(false)))->attachments(), 'Jamais de billets joints avant paiement.');
     }
 
     // ===== Route d'un seul billet =====

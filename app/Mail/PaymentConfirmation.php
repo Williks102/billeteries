@@ -51,47 +51,38 @@ class PaymentConfirmation extends Mailable
      * Get the attachments for the message.
      */
     public function attachments(): array
-{
-    try {
-        // Charger les relations pour le PDF
-        $this->order->loadMissing(\App\Services\TicketPdfService::RELATIONS);
+    {
+        try {
+            // Jamais de billets (QR) joints avant la confirmation du paiement.
+            if (! $this->order->isPaid()) {
+                return [];
+            }
 
-        // Même gabarit que le téléchargement (une page A4 par billet)
-        $pdf = app(\App\Services\TicketPdfService::class)->forOrder($this->order);
+            // Charger les relations pour le PDF
+            $this->order->loadMissing(\App\Services\TicketPdfService::RELATIONS);
 
-        // Nom du fichier
-        $fileName = 'Billets-' . $this->order->order_number . '.pdf';
-        
-        // Fichier temporaire
-        $tempPath = storage_path('app/temp/' . $fileName);
-        
-        // Créer le dossier si nécessaire
-        if (!file_exists(dirname($tempPath))) {
-            mkdir(dirname($tempPath), 0755, true);
+            // Même gabarit que le téléchargement (une page A4 par billet)
+            $pdf = app(\App\Services\TicketPdfService::class)->forOrder($this->order);
+            $fileName = 'Billets-' . $this->order->order_number . '.pdf';
+
+            \Log::info("PDF joint à l'email", [
+                'order_id' => $this->order->id,
+                'file_name' => $fileName,
+                'is_guest' => $this->order->user->is_guest,
+            ]);
+
+            // Pièce jointe en mémoire : aucun fichier (avec des QR valides) n'est écrit sur le disque.
+            return [
+                \Illuminate\Mail\Mailables\Attachment::fromData(fn () => $pdf->output(), $fileName)
+                    ->withMime('application/pdf'),
+            ];
+        } catch (\Exception $e) {
+            \Log::error("Erreur PDF email", [
+                'order_id' => $this->order->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return []; // Pas de PDF en cas d'erreur
         }
-        
-        // Sauvegarder le PDF
-        file_put_contents($tempPath, $pdf->output());
-        
-        \Log::info("PDF joint à l'email", [
-            'order_id' => $this->order->id,
-            'file_name' => $fileName,
-            'is_guest' => $this->order->user->is_guest
-        ]);
-        
-        return [
-            \Illuminate\Mail\Mailables\Attachment::fromPath($tempPath)
-                ->as($fileName)
-                ->withMime('application/pdf')
-        ];
-        
-    } catch (\Exception $e) {
-        \Log::error("Erreur PDF email", [
-            'order_id' => $this->order->id,
-            'error' => $e->getMessage()
-        ]);
-        return []; // Pas de PDF en cas d'erreur
     }
-
-}
 }

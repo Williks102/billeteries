@@ -12,8 +12,11 @@ use Symfony\Component\HttpFoundation\Response;
  * Limitation de débit « mot de passe oublié » / « réinitialisation » : par IP ET par adresse e-mail.
  *
  * - les clés de cache ne contiennent jamais l'adresse ni l'IP en clair : HMAC avec la clé de l'application ;
- * - la limite par e-mail compte chaque demande, que le compte existe ou non : le 429 ne révèle donc rien
- *   sur l'existence d'un compte ;
+ * - la limite par e-mail est calculée pour le COUPLE (e-mail, IP) : un tiers ne peut pas, depuis une autre IP,
+ *   épuiser le quota de la victime et lui interdire de demander un lien ou de soumettre son vrai jeton.
+ *   Elle compte chaque demande, que le compte existe ou non : le 429 ne révèle donc rien sur l'existence d'un compte.
+ *   Le « mail-bombing » d'une victime depuis plusieurs IP reste borné par le délai de 60 s du broker Laravel
+ *   (`auth.passwords.users.throttle`) : au plus un e-mail par minute et par compte ;
  * - usage : PasswordResetThrottle::class.':forgot' (demande de lien) ou ':reset' (soumission du nouveau mot de passe).
  */
 class PasswordResetThrottle
@@ -34,7 +37,7 @@ class PasswordResetThrottle
                 ? (int) config('payments.password_reset_email_reset_max', 5)
                 : (int) config('payments.password_reset_email_max', 3);
             $decay = max(1, (int) config('payments.password_reset_email_window_minutes', 10)) * 60;
-            $keys[] = ['pwreset:'.$scope.':mail:'.hash_hmac('sha256', $normalized, (string) config('app.key')), max(1, $max), $decay];
+            $keys[] = ['pwreset:'.$scope.':mail:'.hash_hmac('sha256', $normalized.'|'.(string) $request->ip(), (string) config('app.key')), max(1, $max), $decay];
         }
 
         // Contrôle de TOUTES les limites avant de compter : une demande refusée ne consomme pas l'autre compteur.

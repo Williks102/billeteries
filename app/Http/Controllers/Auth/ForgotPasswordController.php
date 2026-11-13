@@ -33,13 +33,24 @@ class ForgotPasswordController extends Controller
     {
         $this->validateEmail($request);
 
-        // Journal sans donnée personnelle : ni e-mail ni IP en clair (empreintes HMAC seulement)
-        $response = $this->broker()->sendResetLink($this->credentials($request));
+        // L'envoi (synchrone quand le compte existe) se fait APRÈS l'envoi de la réponse : le temps de réponse ne
+        // distingue plus un compte existant d'un compte inconnu (pas d'énumération par chronométrage).
+        $credentials = $this->credentials($request);
+        $emailHash = hash_hmac('sha256', mb_strtolower(trim((string) $request->input('email'))), (string) config('app.key'));
+        $broker = $this->broker();
 
-        Log::info('Demande de réinitialisation de mot de passe', [
-            'email_hash' => hash_hmac('sha256', mb_strtolower(trim((string) $request->input('email'))), (string) config('app.key')),
-            'sent' => $response === Password::RESET_LINK_SENT,
-        ]);
+        app()->terminating(function () use ($broker, $credentials, $emailHash) {
+            try {
+                $response = $broker->sendResetLink($credentials);
+                // Journal sans donnée personnelle : ni e-mail ni IP en clair (empreinte HMAC seulement)
+                Log::info('Demande de réinitialisation de mot de passe', [
+                    'email_hash' => $emailHash,
+                    'sent' => $response === Password::RESET_LINK_SENT,
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Erreur lors de la demande de réinitialisation de mot de passe', ['email_hash' => $emailHash]);
+            }
+        });
 
         // Réponse NEUTRE : identique que le compte existe ou non (pas d'énumération de comptes).
         return back()->with('status', 'Si un compte correspond à cette adresse, un lien de réinitialisation vient de lui être envoyé.');

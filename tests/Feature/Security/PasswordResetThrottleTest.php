@@ -44,23 +44,24 @@ class PasswordResetThrottleTest extends TestCase
         $this->assertNull($unknown->getSession()->get('errors'));
     }
 
-    public function test_per_email_limit_gives_a_french_429_without_plain_keys(): void
+    public function test_per_email_and_ip_limit_gives_a_french_429_without_plain_keys(): void
     {
+        config(['payments.password_reset_throttle_per_minute' => 100]); // isole la limite (e-mail, IP)
         $email = 'acheteur3@example.test';
-        // 3 demandes depuis des IP différentes : seule la limite par e-mail joue
+        // 3 demandes depuis la MÊME IP : la 4e est refusée (casse de l'e-mail normalisée)
         $this->forgot($email, '10.0.0.1')->assertStatus(302);
-        $this->forgot($email, '10.0.0.2')->assertStatus(302);
-        $this->forgot(strtoupper($email), '10.0.0.3')->assertStatus(302); // casse normalisée
+        $this->forgot($email, '10.0.0.1')->assertStatus(302);
+        $this->forgot(strtoupper($email), '10.0.0.1')->assertStatus(302);
 
-        $blocked = $this->forgot($email, '10.0.0.4');
+        $blocked = $this->forgot($email, '10.0.0.1');
         $blocked->assertStatus(429);
         $this->assertStringContainsString('Trop de tentatives', $blocked->getContent());
 
-        // Même refus pour une adresse inexistante au-delà de 3 : le 429 ne révèle rien sur l'existence du compte
-        foreach (['10.0.1.1', '10.0.1.2', '10.0.1.3'] as $ip) {
-            $this->forgot('fantome@example.test', $ip)->assertStatus(302);
+        // Même refus pour une adresse inexistante : le 429 ne révèle rien sur l'existence du compte
+        foreach (range(1, 3) as $_) {
+            $this->forgot('fantome@example.test', '10.0.1.1')->assertStatus(302);
         }
-        $this->forgot('fantome@example.test', '10.0.1.4')->assertStatus(429);
+        $this->forgot('fantome@example.test', '10.0.1.1')->assertStatus(429);
 
         // Aucune clé de cache ne contient l'e-mail ou l'IP en clair
         $store = Cache::getStore();
@@ -71,6 +72,21 @@ class PasswordResetThrottleTest extends TestCase
             $this->assertStringNotContainsString('fantome', (string) $key);
             $this->assertStringNotContainsString('10.0.', (string) $key);
         }
+    }
+
+    public function test_a_third_party_cannot_lock_a_victim_out_from_another_ip(): void
+    {
+        config(['payments.password_reset_throttle_per_minute' => 100]);
+        $victim = 'acheteur3@example.test';
+
+        // L'attaquant épuise SON quota pour l'adresse de la victime...
+        foreach (range(1, 3) as $_) {
+            $this->forgot($victim, '203.0.113.7')->assertStatus(302);
+        }
+        $this->forgot($victim, '203.0.113.7')->assertStatus(429);
+
+        // ... mais la victime, depuis son IP, peut toujours demander son lien
+        $this->forgot($victim, '198.51.100.20')->assertStatus(302);
     }
 
     public function test_per_ip_limit(): void
@@ -84,8 +100,9 @@ class PasswordResetThrottleTest extends TestCase
         $this->forgot('u7@example.test', '10.9.9.10')->assertStatus(302);
     }
 
-    public function test_reset_submission_is_throttled_and_failure_is_neutral(): void
+    public function test_reset_submission_is_throttled_per_email_and_ip_and_failure_is_neutral(): void
     {
+        config(['payments.password_reset_throttle_per_minute' => 100]);
         $payload = fn (string $email) => [
             'token' => 'faux', 'email' => $email, 'password' => 'Nouveau-mdp-123', 'password_confirmation' => 'Nouveau-mdp-123',
         ];
@@ -99,9 +116,25 @@ class PasswordResetThrottleTest extends TestCase
             $unknown->getSession()->get('errors')->get('email')
         );
 
+        // 5 soumissions depuis la même IP pour la même adresse, la 6e est refusée
         for ($i = 0; $i < 4; $i++) {
-            $post('acheteur3@example.test', '10.2.0.'.$i)->assertStatus(302);
+            $post('acheteur3@example.test', '10.2.0.1')->assertStatus(302);
         }
-        $post('acheteur3@example.test', '10.2.0.99')->assertStatus(429);
+        $post('acheteur3@example.test', '10.2.0.1')->assertStatus(302);
+        $post('acheteur3@example.test', '10.2.0.1')->assertStatus(429);
+
+        // Un tiers qui a épuisé SON quota ne bloque pas la vraie soumission de la victime (autre IP)
+        $post('acheteur3@example.test', '10.2.0.99')->assertStatus(302);
+    }
+
+    public function test_the_reset_link_is_sent_after_the_response_and_still_goes_out(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $this->forgot('acheteur3@example.test')->assertStatus(302);
+        $this->forgot('inconnu@example.test', '10.0.5.5')->assertStatus(302);
+
+        \Illuminate\Support\Facades\Notification::assertSentToTimes(\App\Models\User::where('email', 'acheteur3@example.test')->first(), \Illuminate\Auth\Notifications\ResetPassword::class, 1);
+        \Illuminate\Support\Facades\Notification::assertSentTimes(\Illuminate\Auth\Notifications\ResetPassword::class, 1);
     }
 }

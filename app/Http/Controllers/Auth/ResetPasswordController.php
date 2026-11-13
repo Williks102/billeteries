@@ -11,6 +11,12 @@ class ResetPasswordController extends Controller
 {
     use ResetsPasswords;
 
+    public function __construct()
+    {
+        // Limitation par IP et par e-mail (config payments.password_reset_*), 429 en français
+        $this->middleware(\App\Http\Middleware\PasswordResetThrottle::class.':reset')->only('reset');
+    }
+
     /**
      * Redirection après reset réussi
      */
@@ -34,12 +40,6 @@ class ResetPasswordController extends Controller
     {
         $request->validate($this->rules(), $this->validationErrorMessages());
 
-        Log::info("Tentative reset password", [
-            'email' => $request->email,
-            'token' => substr($request->token, 0, 10) . '...',
-            'ip' => $request->ip()
-        ]);
-
         // Réinitialiser le mot de passe
         $response = $this->broker()->reset(
             $this->credentials($request), function ($user, $password) {
@@ -47,20 +47,28 @@ class ResetPasswordController extends Controller
             }
         );
 
-        if ($response == \Illuminate\Support\Facades\Password::PASSWORD_RESET) {
-            Log::info("Password reset réussi", [
-                'email' => $request->email
-            ]);
-        } else {
-            Log::warning("Échec password reset", [
-                'email' => $request->email,
-                'response' => $response
-            ]);
-        }
+        // Journal sans donnée personnelle (ni e-mail, ni jeton, ni IP)
+        Log::info('Réinitialisation de mot de passe', ['succes' => $response == \Illuminate\Support\Facades\Password::PASSWORD_RESET]);
 
         return $response == \Illuminate\Support\Facades\Password::PASSWORD_RESET
                     ? $this->sendResetResponse($request, $response)
                     : $this->sendResetFailedResponse($request, $response);
+    }
+
+    /**
+     * Échec NEUTRE : même message que l'e-mail existe ou non (pas d'énumération de comptes).
+     */
+    protected function sendResetFailedResponse(Request $request, $response)
+    {
+        $message = 'Ce lien de réinitialisation est invalide ou a expiré. Demandez-en un nouveau.';
+
+        if ($request->wantsJson()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['email' => [$message]]);
+        }
+
+        return redirect()->back()
+            ->withInput($request->only('email'))
+            ->withErrors(['email' => $message]);
     }
 
     /**

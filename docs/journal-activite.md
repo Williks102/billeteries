@@ -17,6 +17,7 @@ Qui a fait quoi, et quand. Écran réservé aux admins : **Paramètres > Journal
 | Billet | `ticket_type.created`, `.updated` (avant/après : prix, capacité, activation, dates de vente, max par commande), `.deleted` | `TicketTypeActivityObserver` |
 | Événement | `event.created`, `.duplicated`, `.updated` (titre, date, heure, lieu, catégorie ; un changement d'adresse est signalé « adresse modifiée » sans la valeur), `.published`, `.unpublished`, `.status_changed`, `.deleted` | `CreateEventAction`, `DuplicateEventAction`, `EventActivityObserver` |
 | Plateforme | `settings.updated` (taux de commission par défaut, valeur effective avant/après, y compris le retour à la valeur du serveur ; rien n'est écrit si le taux est inchangé), `auth.admin_login` | `Admin\SettingsController`, `Auth\LoginController` |
+| Connexions | `auth.login_failed` (raison : compte inconnu / mot de passe incorrect), `auth.lockout` (trop de tentatives) ; `auth.admin_login` figure dans la même famille du filtre | `Listeners\LogAuthFailure` (événements `Failed` et `Lockout`) |
 | Utilisateur | `user.created`, `user.deleted` (identifiant et rôle seulement), `user.role_changed`, `user.status_changed` (vérification d'e-mail) | `UserActivityObserver` |
 
 ## Plusieurs lignes pour une même action
@@ -34,3 +35,6 @@ Un changement de statut de paiement fait par l'admin produit **deux lignes** : `
 - Défense en profondeur : `ActivityLogger` retire des propriétés toute clé contenant (insensible à la casse) `email`, `phone`, `password`, `token`, `secret`, `api_key`, `name`, `address`, `mail`, `mobile`, `iban`, `card`, `jwt`, `cvv`, ou comportant le mot `tel`, `ip` ou `pin` (par mot : `user_ip`, `clientIp`, pas `description`). Garde-fous : `tests/Feature/Activity/`.
 - L'écran affiche le nom de l'acteur en le relisant dans `users` (il n'est pas copié dans le journal).
 - **Ajout seul = règle applicative.** Le modèle refuse update/delete, mais `ActivityLog::query()->delete()`, `truncate` ou du SQL direct le contournent. **À faire en production** : retirer les droits `UPDATE` et `DELETE` sur `activity_logs` à l'utilisateur SQL de l'application (ne garder que `INSERT` et `SELECT`), et confier toute purge à un compte distinct.
+
+## Échecs de connexion (`auth.login_failed`, `auth.lockout`)
+Écrits par `App\Listeners\LogAuthFailure`. Acteur absent ; propriétés = raison et empreinte HMAC de l'identifiant saisi (jamais l'e-mail ni le mot de passe) ; empreinte HMAC de l'IP en colonne. **Anti-inondation** : au plus une ligne par minute et par identifiant, une par minute et par IP (`Cache::add`), et 30 lignes par minute au total ; au-delà, l'événement est ignoré. Le journaliseur ne lève jamais (la connexion n'est ni ralentie ni cassée). Filtre « Connexions » de l'écran. Les lignes d'un même identifiant se reconnaissent par `identifier_hash` ; les compteurs de limitation vivent dans le cache (donc perdus au vidage du cache, sans conséquence sur les données).

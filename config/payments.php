@@ -54,6 +54,13 @@ return [
     // Throttle de l'inscription (POST register) : tentatives par minute et par IP
     'register_throttle_per_minute' => (int) env('REGISTER_THROTTLE_PER_MINUTE', 5),
 
+    // Throttle « mot de passe oublié » et « réinitialisation » : tentatives par minute et par IP, et par e-mail
+    // (clé = HMAC de l'e-mail normalisé) sur la fenêtre indiquée : 3 demandes de lien / 5 réinitialisations par 10 min.
+    'password_reset_throttle_per_minute' => (int) env('PASSWORD_RESET_THROTTLE_PER_MINUTE', 5),
+    'password_reset_email_max' => 3,
+    'password_reset_email_reset_max' => 5,
+    'password_reset_email_window_minutes' => 10,
+
     // Throttle des POST de checkout : tentatives par fenêtre d'une minute (clé = IP, ou id utilisateur pour un connecté)
     'checkout_throttle_per_minute' => (int) env('CHECKOUT_THROTTLE_PER_MINUTE', 10),
 

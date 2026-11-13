@@ -37,6 +37,13 @@ class Page extends Model
     {
         parent::boot();
         
+        // Contenu HTML : nettoyé à chaque enregistrement (liste d'autorisation stricte), quel que soit le chemin
+        static::saving(function ($page) {
+            if ($page->content !== null) {
+                $page->content = \App\Support\HtmlSanitizer::clean($page->content);
+            }
+        });
+
         static::creating(function ($page) {
             if (empty($page->slug)) {
                 $page->slug = Str::slug($page->title);

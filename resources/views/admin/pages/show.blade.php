@@ -19,7 +19,7 @@
                         </header>
                         
                         <div class="page-body">
-                            {!! $page->content !!}
+                            {!! \App\Support\HtmlSanitizer::clean($page->content) !!}
                         </div>
                     </article>
                 </div>
@@ -42,7 +42,7 @@
                 <div id="content" class="row">
                     <div class="col-lg-10 mx-auto">
                         <div class="page-content">
-                            {!! $page->content !!}
+                            {!! \App\Support\HtmlSanitizer::clean($page->content) !!}
                         </div>
                     </div>
                 </div>
@@ -72,7 +72,7 @@
                     </div>
                     
                     <div class="page-content">
-                        {!! $page->content !!}
+                        {!! \App\Support\HtmlSanitizer::clean($page->content) !!}
                     </div>
                 </div>
             </div>
@@ -90,7 +90,7 @@
                     </header>
                     
                     <div class="page-content">
-                        {!! $page->content !!}
+                        {!! \App\Support\HtmlSanitizer::clean($page->content) !!}
                     </div>
                 </div>
                 
@@ -141,7 +141,7 @@
                     </header>
                     
                     <div class="page-content">
-                        {!! $page->content !!}
+                        {!! \App\Support\HtmlSanitizer::clean($page->content) !!}
                     </div>
                     
                     <!-- CTA Section -->
@@ -174,7 +174,7 @@
                         </header>
                         
                         <div class="page-body">
-                            {!! $page->content !!}
+                            {!! \App\Support\HtmlSanitizer::clean($page->content) !!}
                         </div>
                         
                         <footer class="page-footer mt-5 pt-4 border-top">

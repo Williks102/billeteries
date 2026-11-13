@@ -32,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\TicketType::observe(\App\Observers\TicketTypeActivityObserver::class);
         \App\Models\User::observe(\App\Observers\UserActivityObserver::class);
 
+        // Journal des échecs de connexion et verrouillages (sans donnée personnelle, plafonné contre l'inondation)
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Failed::class, [\App\Listeners\LogAuthFailure::class, 'handleFailed']);
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Lockout::class, [\App\Listeners\LogAuthFailure::class, 'handleLockout']);
+
         // Pilote « r2 » : S3 standard, sans l'en-tête ACL (non pris en charge par Cloudflare R2).
         \Illuminate\Support\Facades\Storage::extend('r2', function ($app, array $config) {
             $disk = $app['filesystem']->createS3Driver($config);

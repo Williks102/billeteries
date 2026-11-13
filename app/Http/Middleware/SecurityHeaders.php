@@ -35,10 +35,12 @@ class SecurityHeaders
 
 
         $response->headers->set('Content-Security-Policy', $csp);
-        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
+        // camera=(self) : le scanner de billets du promoteur utilise la caméra du navigateur
+        $response->headers->set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()');
 
         return $response;
     }

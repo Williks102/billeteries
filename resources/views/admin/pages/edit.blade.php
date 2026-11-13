@@ -125,7 +125,7 @@
                                 <div class="card bg-light">
                                     <div class="card-body">
                                         <div id="preview-content">
-                                            {!! $page->content !!}
+                                            {!! \App\Support\HtmlSanitizer::clean($page->content) !!}
                                         </div>
                                     </div>
                                 </div>

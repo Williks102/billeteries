@@ -1,6 +1,6 @@
 <!-- resources/views/components/promoter-earnings-calculator.blade.php -->
 @php
-    $rate = (float) config('payments.default_commission_rate');
+    $rate = \App\Services\CommissionRate::default();
     $rateLabel = rtrim(rtrim(number_format($rate, 2, ',', ''), '0'), ',');
     $gross = 5000 * 50;
     $commission = (int) round($gross * $rate / 100);

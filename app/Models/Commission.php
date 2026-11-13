@@ -132,8 +132,9 @@ class Commission extends Model
      */
     public function setCommissionRateAttribute($value)
     {
-        // Permet de passer 15 au lieu de 0.15 pour 15%
-        $this->attributes['commission_rate'] = is_numeric($value) && $value > 1 ? $value : $value * 100;
+        // Le taux est TOUJOURS un pourcentage (6 = 6 %, 0.5 = 0,5 %, 0 = 0 %). L'ancienne heuristique
+        // (« ≤ 1 ⇒ fraction ×100 ») transformait 1 % en 100 % et 0,5 % en 50 % depuis que l'admin peut régler le taux.
+        $this->attributes['commission_rate'] = $value;
     }
 
     /**

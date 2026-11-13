@@ -32,7 +32,7 @@ class CommissionCalculator
         $commissionSetting = CommissionSetting::getCommissionForEvent($event, $event->promoter_id);
 
         if (! $commissionSetting) {
-            $commissionRate = (float) config('payments.default_commission_rate');
+            $commissionRate = \App\Services\CommissionRate::default();
         } else {
             $commissionRate = $commissionSetting->commission_rate;
         }

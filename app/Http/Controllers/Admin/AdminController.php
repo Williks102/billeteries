@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Support\EmailTemplates;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Event;
@@ -496,94 +497,61 @@ class AdminController extends Controller
     // ================================================================
 
     /**
-     * Dashboard des emails
+     * Page Emails : configuration d'envoi en lecture seule (jamais de secret) + test d'envoi.
      */
     public function emailDashboard()
     {
-        // Statistiques des emails
-        $emailStats = [
-            'total_sent' => 0, // À implémenter selon votre système
-            'bounce_rate' => 0,
-            'open_rate' => 0,
-            'click_rate' => 0,
-        ];
+        $mailer = (string) config('mail.default');
 
-        return view('admin.emails.dashboard', compact('emailStats'));
+        return view('admin.emails.dashboard', [
+            'mailer' => $mailer,
+            'mailerIsSimulated' => in_array($mailer, ['log', 'array'], true),
+            'fromAddress' => (string) config('mail.from.address'),
+            'fromName' => (string) config('mail.from.name'),
+            'templateCount' => count(EmailTemplates::all()),
+        ]);
     }
 
     /**
-     * Test d'envoi d'email
+     * Test d'envoi d'email (JSON). Les erreurs techniques ne sont jamais renvoyées à l'écran.
      */
     public function testEmail(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email'
-        ]);
+        $request->validate(
+            ['email' => ['required', 'email']],
+            ['email.required' => 'Indiquez une adresse e-mail.', 'email.email' => 'Cette adresse e-mail n\'est pas valide.']
+        );
 
         try {
-            Mail::raw('Test email depuis ClicBillet CI - ' . now(), function ($message) use ($request) {
-                $message->to($request->email)
-                        ->subject('Test Email - ClicBillet CI');
+            $to = (string) $request->input('email');
+            Mail::raw('Message de test envoyé depuis l\'administration - ' . now()->format('d/m/Y H:i'), function ($message) use ($to) {
+                $message->to($to)->subject('Test d\'envoi - ' . config('app.name'));
             });
+
+            $simulated = in_array((string) config('mail.default'), ['log', 'array'], true);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Email de test envoyé avec succès !'
+                'message' => $simulated
+                    ? 'Test enregistré dans le journal du serveur : aucun message n\'a été réellement envoyé (pilote « ' . config('mail.default') . ' »).'
+                    : 'Message de test envoyé.',
             ]);
+        } catch (\Throwable $e) {
+            \Log::error('Erreur test email', ['exception' => get_class($e)]);
 
-        } catch (\Exception $e) {
-            \Log::error('Erreur test email: ' . $e->getMessage());
-            
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'envoi : ' . $e->getMessage()
+                'message' => 'L\'envoi a échoué. Vérifiez la configuration d\'envoi du serveur (détail dans le journal du serveur).',
             ], 500);
         }
     }
 
     /**
-     * Templates d'emails
+     * Modèles d'emails : un par classe de app/Mail (liste tenue par EmailTemplates, vérifiée par un test).
      */
     public function emailTemplates()
     {
-        // Liste des templates disponibles
-        $templates = [
-            'order_confirmation' => 'Confirmation de commande',
-            'ticket_delivery' => 'Livraison de tickets',
-            'event_reminder' => 'Rappel d\'événement',
-            'commission_payment' => 'Paiement de commission',
-        ];
-
-        return view('admin.emails.templates', compact('templates'));
-    }
-
-    /**
-     * Renvoyer email de commande
-     */
-    public function resendOrderEmail(Order $order)
-    {
-        try {
-            // TODO: Implémenter selon votre système d'emails
-            // Mail::to($order->user->email)->send(new OrderConfirmationMail($order));
-
-            \Log::info('Email commande renvoyé par admin', [
-                'admin_id' => auth()->id(),
-                'order_id' => $order->id
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Email renvoyé avec succès !'
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur renvoi email: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du renvoi'
-            ], 500);
-        }
+        return view('admin.emails.templates', ['templates' => EmailTemplates::all()]);
     }
 
     // ================================================================

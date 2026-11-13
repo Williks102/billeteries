@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\CommissionRate;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
@@ -48,7 +46,7 @@ class SettingsController extends Controller
             'total_revenue' => \App\Models\Order::where('payment_status', 'paid')->sum('total_amount'),
             'cache_entries' => $this->getCacheEntries(),
             'log_files_count' => count(File::files(storage_path('logs'))),
-            'storage_used' => $this->formatBytes($this->getStorageSize()),
+            'storage_used' => $this->storageUsedLabel(),
         ];
 
         // Configuration actuelle
@@ -256,249 +254,6 @@ class SettingsController extends Controller
         }
     }
 
-    /**
-     * Test d'envoi d'email
-     */
-    public function testEmail(Request $request)
-    {
-        $request->validate([
-            'test_email' => 'required|email'
-        ]);
-
-        try {
-            $testEmail = $request->test_email;
-            
-            Mail::raw('🎫 Email de test depuis ClicBillet CI - ' . now(), function ($message) use ($testEmail) {
-                $message->to($testEmail)
-                        ->subject('Test Email - ClicBillet CI - ' . now()->format('H:i:s'));
-            });
-
-            \Log::info('Email de test envoyé par admin', [
-                'admin_id' => auth()->id(),
-                'test_email' => $testEmail
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Email de test envoyé avec succès !'
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur envoi email de test: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'envoi : ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Sauvegarde de la base de données
-     */
-    public function backup(Request $request)
-    {
-        try {
-            $fileName = 'backup-' . now()->format('Y-m-d-H-i-s') . '.sql';
-            $filePath = storage_path('app/backups/' . $fileName);
-
-            // Créer le dossier si inexistant
-            if (!File::exists(dirname($filePath))) {
-                File::makeDirectory(dirname($filePath), 0755, true);
-            }
-
-            // Exécuter mysqldump (à adapter selon votre configuration)
-            $command = sprintf(
-                'mysqldump -u%s -p%s %s > %s',
-                config('database.connections.mysql.username'),
-                config('database.connections.mysql.password'),
-                config('database.connections.mysql.database'),
-                $filePath
-            );
-
-            exec($command, $output, $returnVar);
-
-            if ($returnVar === 0 && File::exists($filePath)) {
-                \Log::info('Sauvegarde créée par admin', [
-                    'admin_id' => auth()->id(),
-                    'backup_file' => $fileName,
-                    'file_size' => File::size($filePath)
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Sauvegarde créée avec succès !',
-                    'file' => $fileName,
-                    'size' => $this->formatBytes(File::size($filePath))
-                ]);
-            } else {
-                throw new \Exception('Échec de la commande mysqldump');
-            }
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur création sauvegarde: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la sauvegarde : ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Vider le cache
-     */
-    public function clearCache(Request $request)
-    {
-        try {
-            $cacheTypes = $request->get('cache_types', ['config', 'route', 'view']);
-            $clearedCaches = [];
-
-            if (in_array('config', $cacheTypes)) {
-                Artisan::call('config:clear');
-                $clearedCaches[] = 'Configuration';
-            }
-
-            if (in_array('route', $cacheTypes)) {
-                Artisan::call('route:clear');
-                $clearedCaches[] = 'Routes';
-            }
-
-            if (in_array('view', $cacheTypes)) {
-                Artisan::call('view:clear');
-                $clearedCaches[] = 'Vues';
-            }
-
-            if (in_array('application', $cacheTypes)) {
-                Cache::flush();
-                $clearedCaches[] = 'Application';
-            }
-
-            if (in_array('opcache', $cacheTypes) && function_exists('opcache_reset')) {
-                opcache_reset();
-                $clearedCaches[] = 'OPCache';
-            }
-
-            \Log::info('Cache vidé par admin', [
-                'admin_id' => auth()->id(),
-                'cache_types' => $clearedCaches
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Cache vidé avec succès : ' . implode(', ', $clearedCaches)
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur vidage cache: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du vidage du cache : ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Optimisation de la base de données
-     */
-    public function optimizeDatabase(Request $request)
-    {
-        try {
-            // Optimiser les tables
-            $tables = DB::select('SHOW TABLES');
-            $optimizedTables = [];
-
-            foreach ($tables as $table) {
-                $tableName = array_values((array) $table)[0];
-                DB::statement("OPTIMIZE TABLE `{$tableName}`");
-                $optimizedTables[] = $tableName;
-            }
-
-            \Log::info('Base de données optimisée par admin', [
-                'admin_id' => auth()->id(),
-                'tables_optimized' => count($optimizedTables)
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => count($optimizedTables) . ' table(s) optimisée(s) avec succès !'
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur optimisation base de données: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'optimisation : ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Nettoyage des fichiers temporaires
-     */
-    public function cleanupFiles(Request $request)
-    {
-        try {
-            $cleanupTypes = $request->get('cleanup_types', ['logs', 'temp']);
-            $deletedFiles = 0;
-            $freedSpace = 0;
-
-            if (in_array('logs', $cleanupTypes)) {
-                $logFiles = File::files(storage_path('logs'));
-                $oldLogs = array_filter($logFiles, function($file) {
-                    return $file->getMTime() < strtotime('-30 days');
-                });
-                
-                foreach ($oldLogs as $file) {
-                    $freedSpace += $file->getSize();
-                    File::delete($file->getPathname());
-                    $deletedFiles++;
-                }
-            }
-
-            if (in_array('temp', $cleanupTypes)) {
-                $tempFiles = File::files(storage_path('app/temp'));
-                foreach ($tempFiles as $file) {
-                    $freedSpace += $file->getSize();
-                    File::delete($file->getPathname());
-                    $deletedFiles++;
-                }
-            }
-
-            if (in_array('cache_images', $cleanupTypes)) {
-                $cacheImages = File::files(storage_path('app/public/cache'));
-                foreach ($cacheImages as $file) {
-                    if ($file->getMTime() < strtotime('-7 days')) {
-                        $freedSpace += $file->getSize();
-                        File::delete($file->getPathname());
-                        $deletedFiles++;
-                    }
-                }
-            }
-
-            \Log::info('Nettoyage fichiers par admin', [
-                'admin_id' => auth()->id(),
-                'files_deleted' => $deletedFiles,
-                'space_freed' => $freedSpace
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => "{$deletedFiles} fichier(s) supprimé(s), {$this->formatBytes($freedSpace)} libéré(s)"
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur nettoyage fichiers: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du nettoyage : ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
     // ================= MÉTHODES UTILITAIRES =================
 
     /**
@@ -558,18 +313,30 @@ class SettingsController extends Controller
     }
 
     /**
-     * Obtenir la taille du stockage utilisé
+     * Taille des images stockées sur le disque LOCAL du serveur. Sur un disque distant (R2, Cloudinary) elle n'est
+     * pas mesurée ici : on le dit au lieu d'afficher un 0 trompeur.
      */
-    private function getStorageSize()
+    private function storageUsedLabel(): string
     {
+        $driver = config('filesystems.disks.'.\App\Support\Media::diskName().'.driver');
+        if (! in_array($driver, ['local', null], true)) {
+            return 'Hébergé hors du serveur (non mesuré)';
+        }
+
+        $dir = storage_path('app/public');
+        if (! is_dir($dir)) {
+            return $this->formatBytes(0);
+        }
+
         try {
             $size = 0;
-            foreach ($files as $file) {
+            foreach (File::allFiles($dir) as $file) {
                 $size += $file->getSize();
             }
-            return $size;
-        } catch (\Exception $e) {
-            return 0;
+
+            return $this->formatBytes($size);
+        } catch (\Throwable $e) {
+            return 'Inconnu';
         }
     }
 

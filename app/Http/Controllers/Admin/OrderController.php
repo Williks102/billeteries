@@ -288,39 +288,40 @@ class OrderController extends Controller
     }
 
     /**
-     * Renvoyer l'email de confirmation
+     * Renvoyer l'email de confirmation (billets en pièce jointe).
+     * Répond en JSON pour le bouton de la liste (fetch) et par une redirection pour un envoi de formulaire classique.
      */
-    public function resendEmail(Order $order)
+    public function resendEmail(Request $request, Order $order)
     {
+        $reply = function (bool $ok, string $message, int $status = 200) use ($request) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => $ok, 'message' => $message], $status);
+            }
+
+            return redirect()->back()->with($ok ? 'success' : 'error', $message);
+        };
+
         if ($order->payment_status !== 'paid') {
-            return redirect()->back()->with('error', 'Seules les commandes payées peuvent recevoir un email de confirmation');
+            return $reply(false, 'Seules les commandes payées peuvent recevoir un email de confirmation.', 422);
         }
 
         try {
-            // ✅ Utiliser votre EmailService existant
-            $emailService = app(\App\Services\EmailService::class);
-            
-            // Envoyer l'email de confirmation avec les billets
-            $success = $emailService->sendPaymentConfirmation($order);
-            
-            if ($success) {
-                Log::info('Email renvoyé par admin', [
-                    'admin_id' => auth()->id(),
-                    'order_id' => $order->id,
-                ]);
+            $success = app(\App\Services\EmailService::class)->sendPaymentConfirmation($order);
 
-                return redirect()->back()
-                    ->with('success', 'Email de confirmation renvoyé avec succès !');
-            } else {
-                return redirect()->back()
-                    ->with('error', 'Erreur lors de l\'envoi de l\'email. Vérifiez les logs.');
+            if (! $success) {
+                return $reply(false, "Erreur lors de l'envoi de l'email. Consultez les journaux du serveur.", 500);
             }
 
+            Log::info('Email renvoyé par admin', [
+                'admin_id' => auth()->id(),
+                'order_id' => $order->id,
+            ]);
+
+            return $reply(true, 'Email de confirmation renvoyé avec succès !');
         } catch (\Throwable $e) {
             $this->logFailure('Erreur renvoi email commande', $e, $order);
-            
-            return redirect()->back()
-                ->with('error', 'Erreur lors du renvoi de l\'email');
+
+            return $reply(false, "Erreur lors du renvoi de l'email.", 500);
         }
     }
 

@@ -74,8 +74,11 @@ class UserController extends Controller
                 'password' => Hash::make($request->password),
                 'role' => $request->role,
                 'phone' => $request->phone,
-                'email_verified_at' => now(), // Auto-vérifier les comptes créés par admin
             ]);
+
+            // Auto-vérifier les comptes créés par admin. forceFill : email_verified_at n'est pas $fillable
+            // (sans cela la valeur était ignorée en silence et le compte restait « non vérifié »).
+            $user->forceFill(['email_verified_at' => now()])->save();
 
             // Log de l'action pour traçabilité
             \Log::info('Utilisateur créé par admin', [
@@ -298,7 +301,8 @@ class UserController extends Controller
 
         try {
             $newStatus = $user->email_verified_at ? null : now();
-            $user->update(['email_verified_at' => $newStatus]);
+            // forceFill : email_verified_at n'est pas $fillable (update() l'ignorait et répondait « succès »).
+            $user->forceFill(['email_verified_at' => $newStatus])->save();
             
             $status = $newStatus ? 'vérifié' : 'non vérifié';
             

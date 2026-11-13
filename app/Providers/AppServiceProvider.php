@@ -27,6 +27,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Pilote « r2 » : S3 standard, sans l'en-tête ACL (non pris en charge par Cloudflare R2).
+        \Illuminate\Support\Facades\Storage::extend('r2', function ($app, array $config) {
+            $disk = $app['filesystem']->createS3Driver($config);
+            $disk->getClient()->getHandlerList()->prependSign(
+                \Aws\Middleware::mapRequest(
+                    fn (\Psr\Http\Message\RequestInterface $request) => $request->withoutHeader('x-amz-acl')
+                ),
+                'r2-sans-acl'
+            );
+
+            return $disk;
+        });
+
         // Mode démo (paiements simulés, désactivé par défaut) : `$demoMode` disponible dans toutes les vues
         // pour le bandeau des layouts.
         if (config('payments.demo_blocked_in_production')) {

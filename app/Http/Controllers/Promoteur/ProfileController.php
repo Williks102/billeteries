@@ -6,12 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use App\Models\{Event, Order, Commission, Ticket};
 use Carbon\Carbon;
 
 /**
- * Profil du promoteur (singleton : show, update) + avatar.
+ * Profil du promoteur (singleton : show, update).
  */
 class ProfileController extends Controller
 {
@@ -117,32 +116,5 @@ class ProfileController extends Controller
         $promoteur->update($updateData);
 
         return back()->with('success', 'Profil mis à jour avec succès');
-    }
-
-    /**
-     * Mettre à jour l'avatar du promoteur
-     */
-    public function updateAvatar(Request $request)
-    {
-        $request->validate([
-            'avatar' => 'required|image|max:2048|mimes:jpeg,png,jpg'
-        ]);
-
-        $promoteur = Auth::user();
-
-        // Supprimer l'ancien avatar
-        if ($promoteur->avatar) {
-            Storage::disk('public')->delete($promoteur->avatar);
-        }
-
-        // Sauvegarder le nouveau
-        $avatarPath = $request->file('avatar')->store('avatars', 'public');
-        $promoteur->update(['avatar' => $avatarPath]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Avatar mis à jour avec succès',
-            'avatar_url' => Storage::url($avatarPath)
-        ]);
     }
 }

@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Disque des images (affiches d'événements, avatars)
+    |--------------------------------------------------------------------------
+    |
+    | Source unique de vérité : App\Support\Media. Défaut « public » (disque local,
+    | storage/app/public). Mettre MEDIA_DISK=r2 pour Cloudflare R2 (voir docs/stockage-images.md).
+    |
+    */
+
+    'media_disk' => env('MEDIA_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -58,6 +70,22 @@ return [
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
             'report' => false,
+        ],
+
+        // Cloudflare R2 (compatible S3). Pas de `visibility` : R2 ne gère pas les ACL, et le pilote « r2 »
+        // (AppServiceProvider) retire l'en-tête x-amz-acl. L'accès public se règle sur le bucket.
+        'r2' => [
+            'driver' => 'r2',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => 'auto',
+            'bucket' => env('R2_BUCKET'),
+            'endpoint' => env('R2_ENDPOINT'),
+            'url' => env('R2_PUBLIC_URL') ?: null,
+            'use_path_style_endpoint' => true,
+            'retain_visibility' => false,
+            'throw' => true,
+            'report' => true,
         ],
 
     ],

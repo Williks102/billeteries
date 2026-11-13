@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Storage;
+use App\Support\Media;
 use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\EventCategory;
@@ -186,7 +186,7 @@ class HomeController extends Controller
                     'category_slug' => $event->category->slug,
                     'min_price' => $event->ticketTypes->min('price'),
                     'max_price' => $event->ticketTypes->max('price'),
-                    'image_url' => $event->image ? Storage::url( $event->image) : null,
+                    'image_url' => $event->image ? Media::url($event->image) : null,
                     'url' => route('events.show', $event),
                 ];
             })

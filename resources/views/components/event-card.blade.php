@@ -7,7 +7,7 @@
 @endphp
 <article class="card h-100 shadow-sm border-0">
     @if($event->image)
-        <img src="{{ \Illuminate\Support\Facades\Storage::url($event->image) }}" class="card-img-top" alt="{{ $event->title }}" loading="lazy" style="aspect-ratio:16/9;object-fit:cover;">
+        <img src="{{ \App\Support\Media::url($event->image) }}" class="card-img-top" alt="{{ $event->title }}" loading="lazy" style="aspect-ratio:16/9;object-fit:cover;">
     @endif
     <div class="card-body">
         @if($event->category)

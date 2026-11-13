@@ -2,13 +2,13 @@
 
 namespace App\Actions\Events;
 
+use App\Support\Media;
 use App\Models\Event;
 use App\Models\TicketType;
 use App\Support\Events\EventFormDefaults;
 use App\Support\Events\SalePeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -69,7 +69,7 @@ class DuplicateEventAction
             });
         } catch (\Throwable $e) {
             if ($imagePath) {
-                Storage::disk('public')->delete($imagePath);
+                Media::delete($imagePath);
             }
             throw $e;
         }
@@ -78,14 +78,14 @@ class DuplicateEventAction
     /** Copie le fichier image sous un nouveau nom généré ; null si pas d'image ou fichier introuvable. */
     private function copyImage(?string $path): ?string
     {
-        if (empty($path) || ! Storage::disk('public')->exists($path)) {
+        if (empty($path) || ! Media::disk()->exists($path)) {
             return null;
         }
 
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
         $extension = in_array($extension, ['jpg', 'jpeg', 'png', 'gif'], true) ? $extension : 'jpg';
         $new = 'events/'.Str::random(40).'.'.$extension;
-        Storage::disk('public')->copy($path, $new);
+        Media::disk()->copy($path, $new);
 
         return $new;
     }

@@ -57,7 +57,7 @@ use Illuminate\Support\Facades\Storage;
             <div class="row align-items-center">
                 @if($order->event && $order->event->image)
                     <div class="col-md-3">
-                        <img src="{{ Storage::url( $order->event->image) }}" 
+                        <img src="{{ \App\Support\Media::url($order->event->image) }}" 
                              alt="{{ $order->event->title }}" 
                              class="img-fluid rounded">
                     </div>

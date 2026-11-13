@@ -110,7 +110,7 @@ use Illuminate\Support\Facades\Storage;
                     <div class="col-lg-4 col-md-6 mb-4 event-card" data-category="{{ $event->category->slug }}">
                         <div class="card border-0 shadow-sm h-100 event-item">
                             @if($event->image)
-                                <img src="{{ Storage::url($event->image) }}" class="card-img-top event-image" alt="Affiche de l événement {{ $event->title }} organisé à {{ $event->venue }} le {{ $event->event_date->format('d/m/Y') }}. Ambiance festive, public attendu nombreux.">
+                                <img src="{{ \App\Support\Media::url($event->image) }}" class="card-img-top event-image" alt="Affiche de l événement {{ $event->title }} organisé à {{ $event->venue }} le {{ $event->event_date->format('d/m/Y') }}. Ambiance festive, public attendu nombreux.">
                             @else
                                 <div class="card-img-top event-image-placeholder d-flex align-items-center justify-content-center">
                                     <i class="{{ $event->category->icon ?? 'fas fa-calendar' }} fa-3x text-muted"></i>

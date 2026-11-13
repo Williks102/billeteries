@@ -223,7 +223,7 @@ use Illuminate\Support\Facades\Storage;
                     
                     @if($event->image)
                         <div class="current-image mb-3">
-                            <img src="{{ Storage::url($event->image) }}" 
+                            <img src="{{ \App\Support\Media::url($event->image) }}" 
                                  alt="Image actuelle" 
                                  class="image-preview">
                             <div class="mt-2">

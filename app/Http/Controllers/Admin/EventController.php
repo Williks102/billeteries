@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Support\Media;
 use App\Actions\Events\CreateEventAction;
 use App\Actions\Events\DuplicateEventAction;
 use App\Actions\Events\PublishEventAction;
@@ -18,7 +19,6 @@ use App\Models\EventCategory;
 use App\Models\TicketType;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -188,7 +188,7 @@ class EventController extends Controller
             $newImage = null;
             $oldImage = $event->image;
             if ($request->hasFile('image')) {
-                $newImage = $request->file('image')->store('events', 'public');
+                $newImage = Media::store($request->file('image'), 'events');
                 $data['image'] = $newImage;
             }
 
@@ -207,13 +207,13 @@ class EventController extends Controller
                 });
             } catch (\Throwable $e) {
                 if ($newImage) {
-                    Storage::disk('public')->delete($newImage);
+                    Media::delete($newImage);
                 }
                 throw $e;
             }
 
             if ($newImage && $oldImage) {
-                Storage::disk('public')->delete($oldImage);
+                Media::delete($oldImage);
             }
 
             $message = "Événement '{$event->title}' mis à jour avec succès !";
@@ -266,7 +266,7 @@ class EventController extends Controller
 
             // Supprimer l'image si elle existe
             if ($event->image) {
-                Storage::disk('public')->delete($event->image);
+                Media::delete($event->image);
             }
 
             $eventTitle = $event->title;
@@ -357,7 +357,7 @@ class EventController extends Controller
                     case 'delete':
                         if ($event->orders()->where('payment_status', 'paid')->count() === 0) {
                             if ($event->image) {
-                                Storage::disk('public')->delete($event->image);
+                                Media::delete($event->image);
                             }
                             $event->delete();
                             $count++;

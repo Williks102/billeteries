@@ -204,8 +204,8 @@ class Order extends Model
         $event = $this->event;
         $commissionSetting = CommissionSetting::getCommissionForEvent($event, $event->promoter_id);
 
-        // Taux inchangé : réglage promoteur > catégorie > défaut, sinon taux par défaut (payments.default_commission_rate, 6 %).
-        $commissionRate = $commissionSetting ? $commissionSetting->commission_rate : (float) config('payments.default_commission_rate');
+        // Taux inchangé : réglage promoteur > catégorie > défaut, sinon taux par défaut (App\Services\CommissionRate, 6 % de secours).
+        $commissionRate = $commissionSetting ? $commissionSetting->commission_rate : \App\Services\CommissionRate::default();
 
         // Assiette = prix des billets uniquement (somme des lignes). Pour une ancienne commande dont
         // total_amount incluait 500 FCFA de frais historiques, ces frais ne sont donc pas commissionnés.

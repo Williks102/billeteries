@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\CommissionRate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -78,6 +79,8 @@ class SettingsController extends Controller
         switch ($section) {
             case 'general':
                 return $this->updateGeneralSettings($request);
+            case 'commission':
+                return $this->updateCommissionSettings($request);
             case 'email':
                 return $this->updateEmailSettings($request);
             case 'payment':
@@ -91,6 +94,55 @@ class SettingsController extends Controller
         }
     }
 
+    private const COMMISSION_RULES = ['required', 'numeric', 'min:0', 'max:100', 'decimal:0,2'];
+
+    private const COMMISSION_MESSAGES = [
+        'commission_rate.required' => 'Indiquez le taux de commission.',
+        'commission_rate.numeric' => 'Le taux de commission doit être un nombre (exemple : 6 ou 7.5).',
+        'commission_rate.min' => 'Le taux de commission ne peut pas être négatif.',
+        'commission_rate.max' => 'Le taux de commission ne peut pas dépasser 100 %.',
+        'commission_rate.decimal' => 'Le taux de commission ne peut avoir que 2 décimales au maximum.',
+    ];
+
+    /**
+     * Taux de commission par défaut : enregistrement ou retour à la valeur du serveur.
+     */
+    private function updateCommissionSettings(Request $request)
+    {
+        if ($request->boolean('reset')) {
+            $hadStored = CommissionRate::stored() !== null;
+            $from = CommissionRate::default();
+            CommissionRate::reset();
+            $to = CommissionRate::default();
+            if ($hadStored) {
+                $this->logCommissionChange($from, $to, 'Taux de commission : retour à la valeur par défaut du serveur');
+            }
+
+            return redirect()->route('admin.settings.index')->with('success', 'Taux de commission remis à la valeur par défaut du serveur.');
+        }
+
+        $request->validate(['commission_rate' => self::COMMISSION_RULES], self::COMMISSION_MESSAGES);
+
+        $from = CommissionRate::default();
+        $to = (float) $request->input('commission_rate');
+        CommissionRate::save($to);
+        if ($from !== $to) {
+            $this->logCommissionChange($from, $to, sprintf('Taux de commission modifié : %s %% vers %s %%', $from, $to));
+        }
+
+        return redirect()->route('admin.settings.index')->with('success', 'Taux de commission enregistré. Il s\'applique aux nouvelles commandes.');
+    }
+
+    private function logCommissionChange(float $from, float $to, string $description, array $extra = []): void
+    {
+        \App\Services\ActivityLogger::record(
+            \App\Models\ActivityLog::SETTINGS_UPDATED,
+            null,
+            $description,
+            ['section' => 'general', 'commission_rate' => ['from' => $from, 'to' => $to]] + $extra
+        );
+    }
+
     /**
      * Paramètres généraux
      */
@@ -100,15 +152,15 @@ class SettingsController extends Controller
             'app_name' => 'required|string|max:255',
             'app_url' => 'required|url',
             'timezone' => 'required|string',
-            'commission_rate' => 'required|numeric|min:0|max:100',
+            'commission_rate' => self::COMMISSION_RULES,
             'max_tickets_per_order' => 'required|integer|min:1|max:50',
             'allow_refunds' => 'boolean',
             'maintenance_mode' => 'boolean',
-        ]);
+        ], self::COMMISSION_MESSAGES);
 
         try {
-            // Ancienne valeur capturée AVANT updateDatabaseSettings() (qui fait Config::set et écraserait le « avant »)
-            $oldCommission = (float) config('app.commission_rate', config('payments.default_commission_rate'));
+            // Valeur effective AVANT (base ou défaut du serveur)
+            $oldCommission = CommissionRate::default();
 
             // Mettre à jour le fichier .env (simulation - en réalité il faudrait utiliser un package comme vlucas/phpdotenv)
             $this->updateEnvFile([
@@ -118,8 +170,8 @@ class SettingsController extends Controller
             ]);
 
             // Mettre à jour les paramètres en base de données (si vous avez une table settings)
+            CommissionRate::save((float) $request->commission_rate);
             $this->updateDatabaseSettings([
-                'commission_rate' => $request->commission_rate,
                 'max_tickets_per_order' => $request->max_tickets_per_order,
                 'allow_refunds' => $request->boolean('allow_refunds'),
                 'maintenance_mode' => $request->boolean('maintenance_mode'),

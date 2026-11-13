@@ -285,7 +285,7 @@
 
 @section('content')
 @php
-    $defaultRate = (float) config('payments.default_commission_rate');
+    $defaultRate = \App\Services\CommissionRate::default();
     $defaultRateLabel = rtrim(rtrim(number_format($defaultRate, 2, ',', ''), '0'), ',');
     $exampleCommission = (int) round(5000 * $defaultRate / 100);
     $exampleNet = number_format(5000 - $exampleCommission, 0, ',', ' ');

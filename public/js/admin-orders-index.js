@@ -56,6 +56,7 @@ function resendEmail(orderId) {
     fetch(`/admin/orders/${orderId}/resend-email`, {
         method: 'POST',
         headers: {
+            'Accept': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
         }
     })

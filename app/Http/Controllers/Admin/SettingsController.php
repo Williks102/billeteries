@@ -46,7 +46,7 @@ class SettingsController extends Controller
             'total_revenue' => \App\Models\Order::where('payment_status', 'paid')->sum('total_amount'),
             'cache_entries' => $this->getCacheEntries(),
             'log_files_count' => count(File::files(storage_path('logs'))),
-            'storage_used' => $this->formatBytes($this->getStorageSize()),
+            'storage_used' => $this->storageUsedLabel(),
         ];
 
         // Configuration actuelle
@@ -313,18 +313,30 @@ class SettingsController extends Controller
     }
 
     /**
-     * Obtenir la taille du stockage utilisé
+     * Taille des images stockées sur le disque LOCAL du serveur. Sur un disque distant (R2, Cloudinary) elle n'est
+     * pas mesurée ici : on le dit au lieu d'afficher un 0 trompeur.
      */
-    private function getStorageSize()
+    private function storageUsedLabel(): string
     {
+        $driver = config('filesystems.disks.'.\App\Support\Media::diskName().'.driver');
+        if (! in_array($driver, ['local', null], true)) {
+            return 'Hébergé hors du serveur (non mesuré)';
+        }
+
+        $dir = storage_path('app/public');
+        if (! is_dir($dir)) {
+            return $this->formatBytes(0);
+        }
+
         try {
             $size = 0;
-            foreach ($files as $file) {
+            foreach (File::allFiles($dir) as $file) {
                 $size += $file->getSize();
             }
-            return $size;
-        } catch (\Exception $e) {
-            return 0;
+
+            return $this->formatBytes($size);
+        } catch (\Throwable $e) {
+            return 'Inconnu';
         }
     }
 

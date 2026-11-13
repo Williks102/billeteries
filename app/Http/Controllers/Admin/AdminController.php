@@ -554,35 +554,6 @@ class AdminController extends Controller
         return view('admin.emails.templates', ['templates' => EmailTemplates::all()]);
     }
 
-    /**
-     * Renvoyer email de commande
-     */
-    public function resendOrderEmail(Order $order)
-    {
-        try {
-            // TODO: Implémenter selon votre système d'emails
-            // Mail::to($order->user->email)->send(new OrderConfirmationMail($order));
-
-            \Log::info('Email commande renvoyé par admin', [
-                'admin_id' => auth()->id(),
-                'order_id' => $order->id
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Email renvoyé avec succès !'
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Erreur renvoi email: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du renvoi'
-            ], 500);
-        }
-    }
-
     // ================================================================
     // MÉTHODES UTILITAIRES PRIVÉES
     // ================================================================

@@ -51,7 +51,6 @@ Route::controller(AdminController::class)->prefix('emails')->name('emails.')->gr
     Route::get('/', 'emailDashboard')->name('dashboard');
     Route::post('test', 'testEmail')->name('test');
     Route::get('templates', 'emailTemplates')->name('templates');
-    Route::post('orders/{order}/resend', 'resendOrderEmail')->name('resend');
 });
 
 // ===== Redirections de compatibilité (déclarées avant les ressources) =====

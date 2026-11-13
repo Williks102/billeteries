@@ -83,6 +83,16 @@ class RenderDeploymentTest extends TestCase
         $this->assertGreaterThan(8, $count);
     }
 
+    public function test_mail_credentials_are_never_written_in_render_yaml(): void
+    {
+        $env = $this->renderEnv();
+        foreach (['MAIL_MAILER', 'MAIL_SCHEME', 'MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM_ADDRESS'] as $key) {
+            $this->assertArrayHasKey($key, $env, $key);
+            $this->assertFalse($env[$key]['sync'] ?? null, "$key doit être sync: false (valeur saisie dans Render)");
+            $this->assertArrayNotHasKey('value', $env[$key], "$key ne doit pas avoir de valeur dans le dépôt");
+        }
+    }
+
     public function test_secrets_are_sync_false_in_render_yaml(): void
     {
         $env = $this->renderEnv();
@@ -102,7 +112,9 @@ class RenderDeploymentTest extends TestCase
         $this->assertSame('4000', $v('DB_PORT'));
         $this->assertSame('/etc/ssl/certs/ca-certificates.crt', $v('DB_SSL_CA'));
         $this->assertSame('sync', $v('QUEUE_CONNECTION'));
-        $this->assertSame('log', $v('MAIL_MAILER'));
+        // MAIL_MAILER : jamais une valeur d'envoi réel écrite en dur dans le dépôt. Soit absente (sync: false, saisie dans
+        // Render ; sans valeur l'application retombe sur « log »), soit « log ».
+        $this->assertContains($v('MAIL_MAILER'), [null, 'log']);
         $this->assertSame('true', $v('SESSION_SECURE_COOKIE'));
         $this->assertSame('false', $v('TELESCOPE_ENABLED'));
         $this->assertSame('6', $v('DEFAULT_COMMISSION_RATE'));

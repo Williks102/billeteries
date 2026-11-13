@@ -94,11 +94,24 @@ services:
       - key: R2_PUBLIC_URL
         sync: false
 
-      # --- Email : journalisé, jamais envoyé (démo) ---
+      # --- Email : par défaut journalisé, jamais envoyé (démo). Pour envoyer de vrais e-mails (test avec un compte
+      # Gmail dédié, voir docs/smtp-gmail-test.md, ou plus tard le SMTP du domaine), saisir ces variables dans
+      # Render > Environment : sync: false = la valeur saisie dans le tableau de bord n'est jamais écrasée par ce
+      # fichier. Sans MAIL_MAILER, l'application retombe sur « log ».
       - key: MAIL_MAILER
-        value: log
+        sync: false
+      - key: MAIL_SCHEME
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
       - key: MAIL_FROM_ADDRESS
-        value: noreply@example.com
+        sync: false
       - key: MAIL_FROM_NAME
         value: Billetterie
 

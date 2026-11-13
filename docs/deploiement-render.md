@@ -68,7 +68,7 @@ Variables déjà fixées dans `render.yaml` (en clair, sans danger) :
 | DB_SSL_VERIFY | `true` (vérifie le certificat du serveur) |
 | SESSION_DRIVER / CACHE_STORE | `database` |
 | QUEUE_CONNECTION | `sync` (pas de worker gratuit) |
-| MAIL_MAILER | `log` (les emails sont écrits dans les journaux, pas envoyés) |
+| MAIL_MAILER | `log` par défaut (les emails sont écrits dans les journaux, pas envoyés). Pour tester de vrais envois : `docs/smtp-gmail-test.md` (variables `MAIL_*` saisies dans Render, jamais dans le dépôt). |
 | SESSION_SECURE_COOKIE | `true` |
 | TRUSTED_PROXIES | `*` : acceptable ici parce que l'application n'est joignable que via le proxy de Render. À ne pas copier ailleurs. |
 | TELESCOPE_ENABLED | `false` |

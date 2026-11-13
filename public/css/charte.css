@@ -573,3 +573,8 @@ body.nav-drawer-open { overflow: hidden; }
 .activity-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); color: var(--ink-muted); font-size: 14px; }
 .activity-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--link); }
 @media (min-width: 768px) { .activity-submit { width: auto; min-width: 160px; } }
+
+/* Réglage du taux de commission (admin) : cibles tactiles >= 44 px, saisie 16 px (pas de zoom iOS) */
+.commission-rate-input { min-height: var(--touch-min); font-size: 16px; }
+.commission-rate-submit { min-height: var(--touch-min); width: 100%; }
+@media (min-width: 768px) { .commission-rate-submit { width: auto; } }

@@ -20,7 +20,7 @@
     <p>Utilisez le scanner de votre espace promoteur pour vérifier les QR codes des billets.</p>
 
     <h2 class="h5 mt-4">Commission</h2>
-    <p>La commission de la plateforme est de {{ rtrim(rtrim(number_format((float) config('payments.default_commission_rate'), 2, ',', ' '), '0'), ',') }} % du montant des ventes.</p>
+    <p>La commission de la plateforme est de {{ rtrim(rtrim(number_format(\App\Services\CommissionRate::default(), 2, ',', ' '), '0'), ',') }} % du montant des ventes.</p>
 
     <p class="mt-4">Une question ? <a href="{{ route('pages.support') }}">Contactez le support</a>.</p>
 </div>

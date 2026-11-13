@@ -4,6 +4,7 @@
 @extends('layouts.promoteur')
 
 @section('title', 'Scanner de Billets - ClicBillet CI')
+@section('breadcrumb', 'Scanner')
 
 @section('head')
 <meta name="csrf-token" content="{{ csrf_token() }}">

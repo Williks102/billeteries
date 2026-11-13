@@ -97,13 +97,6 @@ Route::controller(TicketController::class)->prefix('tickets/{ticket}')->name('ti
 Route::resource('tickets', TicketController::class)->only(['index', 'show', 'edit', 'update']);
 
 // ===== Catégories =====
-Route::post('categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder');
-Route::get('categories-export', [CategoryController::class, 'export'])->name('categories.export');
-Route::controller(CategoryController::class)->prefix('categories/{category}')->name('categories.')->group(function () {
-    Route::patch('toggle-status', 'toggleStatus')->name('toggle-status');
-    Route::post('duplicate', 'duplicate')->name('duplicate');
-    Route::post('merge', 'merge')->name('merge');
-});
 Route::resource('categories', CategoryController::class);
 
 // ===== Pages CMS =====

@@ -65,8 +65,6 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::delete('/remove', [CartController::class, 'remove'])->name('remove');
     Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
     Route::get('/data', [CartController::class, 'getCartData'])->name('data');
-    Route::post('/extend-timer', [CartController::class, 'extendTimer'])->name('extend.timer');
-    Route::get('/status', [CartController::class, 'getStatus'])->name('status');
 });
 
 // ==================== VÉRIFICATION TICKETS (PUBLIQUE) ====================

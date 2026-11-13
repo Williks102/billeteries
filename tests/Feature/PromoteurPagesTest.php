@@ -86,4 +86,12 @@ class PromoteurPagesTest extends TestCase
         $this->actingAs(User::find(2))->get(route('promoteur.reports.index'))
             ->assertOk()->assertSee("1\u{00A0}000\u{00A0}FCFA")->assertSee('Ventes (billets, hors frais)')->assertDontSee('Festival Beta');
     }
+
+    public function test_breadcrumb_uses_page_title_in_french_instead_of_dashboard(): void
+    {
+        $html = $this->actingAs(User::find(2))->get(route('promoteur.reports.index'))->assertOk()->getContent();
+        preg_match('/<li class="breadcrumb-item active"[^>]*>(.*?)<\/li>/s', $html, $m);
+        $this->assertSame('Rapports', trim($m[1]));
+        $this->assertStringNotContainsString('>Dashboard<', $html);
+    }
 }

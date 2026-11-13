@@ -156,7 +156,7 @@
                             <td data-label="Événement">
                                 <div class="d-flex align-items-center">
                                     @if($event->image)
-                                    <img src="{{ Storage::url($event->image) }}" alt="{{ $event->title }}" 
+                                    <img src="{{ \App\Support\Media::url($event->image) }}" alt="{{ $event->title }}" 
                                          class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
                                     @else
                                     <div class="bg-secondary bg-opacity-10 rounded me-3 d-flex align-items-center justify-content-center" 

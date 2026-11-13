@@ -147,7 +147,7 @@ use Illuminate\Support\Facades\Storage;
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="card event-card h-100">
                         @if($event->image)
-                            <img src="{{ Storage::url($event->image) }}" class="card-img-top event-image">
+                            <img src="{{ \App\Support\Media::url($event->image) }}" class="card-img-top event-image">
                         @else
                             <div class="event-image d-flex align-items-center justify-content-center text-white">
                                 <i class="fas fa-calendar-alt fa-3x"></i>

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Media;
 use App\Models\Event;
 use App\Models\EventCategory;
 use App\Services\Stats\PublicStats;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class EventController extends Controller
 {
@@ -164,7 +164,7 @@ class EventController extends Controller
                 ],
                 'min_price' => $event->ticketTypes->min('price') ?? 0,
                 'max_price' => $event->ticketTypes->max('price') ?? 0,
-                'image' => $event->image ? Storage::url($event->image) : null,
+                'image' => $event->image ? Media::url($event->image) : null,
                 'url' => route('events.show', $event),
                 'available_tickets' => $event->ticketTypes->sum(function($type) {
                     return $type->remainingTickets();

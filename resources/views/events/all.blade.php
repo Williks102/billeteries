@@ -179,7 +179,7 @@ use Illuminate\Support\Facades\Storage;
                             <div class="event-card h-100">
                                 <div class="position-relative">
                                     @if($event->image)
-                                        <img src="{{ Storage::url($event->image) }}" 
+                                        <img src="{{ \App\Support\Media::url($event->image) }}" 
                                              class="card-img-top event-image" 
                                              alt="{{ $event->title }}">
                                     @else
@@ -263,7 +263,7 @@ use Illuminate\Support\Facades\Storage;
                             <div class="row align-items-center">
                                 <div class="col-md-2">
                                     @if($event->image)
-                                        <img src="{{ Storage::url($event->image) }}" 
+                                        <img src="{{ \App\Support\Media::url($event->image) }}" 
                                              class="img-fluid rounded event-thumbnail" 
                                              alt="{{ $event->title }}">
                                     @else

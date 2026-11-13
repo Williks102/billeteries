@@ -52,8 +52,8 @@
                                 @endif
                                 
                                 <!-- Image d'événement -->
-                                @if($event->image && Storage::exists($event->image))
-                                    <img src="{{ Storage::url($event->image) }}" 
+                                @if($event->image)
+                                    <img src="{{ \App\Support\Media::url($event->image) }}" 
                                          class="event-image" 
                                          alt="{{ $event->title }}"
                                          loading="lazy">

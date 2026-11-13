@@ -85,7 +85,7 @@ use Illuminate\Support\Facades\Storage;
                                 <!-- Image de l'événement -->
                                 <div class="col-md-2">
                                     @if($order->event && $order->event->image)
-                                        <img src="{{ Storage::url( $order->event->image) }}" 
+                                        <img src="{{ \App\Support\Media::url($order->event->image) }}" 
                                              alt="{{ $order->event->title }}" 
                                              class="img-fluid rounded" style="max-height: 100px; object-fit: cover;">
                                     @else

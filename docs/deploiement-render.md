@@ -146,11 +146,11 @@ Autre point de vigilance, non vérifié sur TiDB : les verrous `SELECT … FOR U
 
 **Base pleine ou lente** : TiDB Starter gratuit offre un quota de 5 Gio de stockage et d'environ 50 millions d'unités de requêtes par mois. Au-delà, les requêtes peuvent être limitées. Surveillez la page Usage du cluster ; pour une démo c'est largement suffisant.
 
-**Images qui disparaissent** : normal (fichiers éphémères). Retéléversez-les, ou passez à un stockage externe (voir ci-dessous).
+**Images qui disparaissent** : normal (fichiers éphémères). Retéléversez-les, ou passez à un stockage externe : le code est prêt pour Cloudflare R2, guide pas à pas dans [stockage-images.md](stockage-images.md).
 
 ## F. Passer ensuite à un hébergement durable
 
-- Stockage externe des images (S3 ou équivalent) au lieu du disque local.
+- Stockage externe des images (Cloudflare R2, code prêt) au lieu du disque local : voir [stockage-images.md](stockage-images.md).
 - Vrai cron (`* * * * * php artisan schedule:run`) ou service planifié, plus un vrai worker de file (QUEUE_CONNECTION=database ou redis).
 - Vrai SMTP (MAIL_MAILER=smtp et ses variables) pour envoyer les emails.
 - TRUSTED_PROXIES réel : listez les IP/CIDR du proxy de l'hébergeur au lieu de `*`.

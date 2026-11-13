@@ -79,6 +79,21 @@ services:
       - key: FILESYSTEM_DISK
         value: local
 
+      # --- Images : disque local éphémère par défaut ; passer MEDIA_DISK à « r2 » dans Render pour Cloudflare R2 ---
+      # Guide : docs/stockage-images.md. Aucune valeur ici : tout est saisi dans le tableau de bord Render.
+      - key: MEDIA_DISK
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+
       # --- Email : journalisé, jamais envoyé (démo) ---
       - key: MAIL_MAILER
         value: log

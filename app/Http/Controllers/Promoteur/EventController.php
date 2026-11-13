@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Promoteur;
 
+use App\Support\Media;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use App\Actions\Events\CreateEventAction;
 use App\Actions\Events\DuplicateEventAction;
 use App\Actions\Events\PublishEventAction;
@@ -195,24 +195,32 @@ class EventController extends Controller
             $data['event_time'] = SalePeriod::eventStart($data['event_date'], $data['event_time']);
             $data['end_time'] = ! empty($data['end_time']) ? SalePeriod::eventStart($data['event_date'], $data['end_time']) : null;
 
+            $oldImage = $event->image;
+            $newImage = null;
             if ($request->hasFile('image')) {
-                if ($event->image && Storage::disk('public')->exists($event->image)) {
-                    Storage::disk('public')->delete($event->image);
-                }
-
-                $data['image'] = $request->file('image')->store('events', 'public');
+                $newImage = Media::store($request->file('image'), 'events');
+                $data['image'] = $newImage;
             }
 
             $oldStart = $event->startsAt();
             $realigned = ['realigned' => 0, 'inconsistent' => 0];
 
-            DB::transaction(function () use ($event, $data, $oldStart, $realign, &$realigned) {
-                $event->update($data);
-                $newStart = $event->fresh()->startsAt();
-                if ($oldStart && $newStart && ! $oldStart->equalTo($newStart)) {
-                    $realigned = $realign->execute($event, $oldStart, $newStart);
-                }
-            });
+            try {
+                DB::transaction(function () use ($event, $data, $oldStart, $realign, &$realigned) {
+                    $event->update($data);
+                    $newStart = $event->fresh()->startsAt();
+                    if ($oldStart && $newStart && ! $oldStart->equalTo($newStart)) {
+                        $realigned = $realign->execute($event, $oldStart, $newStart);
+                    }
+                });
+            } catch (\Throwable $e) {
+                Media::delete($newImage); // ne pas laisser d'image orpheline
+                throw $e;
+            }
+
+            if ($newImage) {
+                Media::delete($oldImage);
+            }
 
             $message = 'Événement mis à jour avec succès !';
             if ($realigned['realigned'] > 0) {
@@ -249,9 +257,7 @@ class EventController extends Controller
                     ->with('error', 'Impossible de supprimer un événement avec des billets vendus');
             }
 
-            if ($event->image && Storage::disk('public')->exists($event->image)) {
-                Storage::disk('public')->delete($event->image);
-            }
+            Media::delete($event->image);
 
             $event->delete();
 

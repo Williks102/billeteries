@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Storage;
             <div class="col-md-4">
                 <div class="similar-event-card border rounded p-3 h-100">
                     @if($similar->image)
-                    <img src="{{ Storage::url( $similar->image) }}" 
+                    <img src="{{ \App\Support\Media::url($similar->image) }}" 
                          alt="{{ $similar->title }}"
                          class="w-100 rounded mb-3"
                          style="height: 120px; object-fit: cover;">

@@ -3,8 +3,8 @@
 <ul class="order-lines">
     @foreach($cart as $item)
         <li class="order-line">
-            @if(!empty($item['event_image']) && \Illuminate\Support\Facades\Storage::disk('public')->exists($item['event_image']))
-                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($item['event_image']) }}" alt="" class="order-line__img" width="56" height="56" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'order-line__img'}))">
+            @if(!empty($item['event_image']) && \App\Support\Media::urlIfPresent($item['event_image']))
+                <img src="{{ \App\Support\Media::urlIfPresent($item['event_image']) }}" alt="" class="order-line__img" width="56" height="56" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'order-line__img'}))">
             @else
                 <span class="order-line__img" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
             @endif

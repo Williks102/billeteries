@@ -48,7 +48,7 @@ var(--brand);">
                     <div class="row align-items-center">
                         <div class="col-md-2">
                             @if($event->image)
-                                <img src="{{ Storage::url($event->image) }}" 
+                                <img src="{{ \App\Support\Media::url($event->image) }}" 
                                      class="img-fluid rounded" 
                                      alt="{{ $event->title }}"
                                      style="height: 80px; width: 80px; object-fit: cover;">

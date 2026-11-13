@@ -2,12 +2,12 @@
 
 namespace App\Actions\Events;
 
+use App\Support\Media;
 use App\Models\Event;
 use App\Models\TicketType;
 use App\Support\Events\SalePeriod;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Crée un événement et ses billets dans UNE transaction.
@@ -30,7 +30,7 @@ class CreateEventAction
      */
     public function execute(array $data, array $tickets, ?UploadedFile $image, int $promoterId, bool $publish = false): EventCreationResult
     {
-        $imagePath = $image ? $image->store('events', 'public') : null;
+        $imagePath = $image ? Media::store($image, 'events') : null;
 
         try {
             $event = DB::transaction(function () use ($data, $tickets, $imagePath, $promoterId) {
@@ -74,7 +74,7 @@ class CreateEventAction
             });
         } catch (\Throwable $e) {
             if ($imagePath) {
-                Storage::disk('public')->delete($imagePath);
+                Media::delete($imagePath);
             }
             throw $e;
         }

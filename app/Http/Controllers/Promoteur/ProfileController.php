@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Promoteur;
 
+use App\Support\Media;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use App\Models\{Event, Order, Commission, Ticket};
 use Carbon\Carbon;
 
@@ -132,17 +132,17 @@ class ProfileController extends Controller
 
         // Supprimer l'ancien avatar
         if ($promoteur->avatar) {
-            Storage::disk('public')->delete($promoteur->avatar);
+            Media::delete($promoteur->avatar);
         }
 
         // Sauvegarder le nouveau
-        $avatarPath = $request->file('avatar')->store('avatars', 'public');
+        $avatarPath = Media::store($request->file('avatar'), 'avatars');
         $promoteur->update(['avatar' => $avatarPath]);
 
         return response()->json([
             'success' => true,
             'message' => 'Avatar mis à jour avec succès',
-            'avatar_url' => Storage::url($avatarPath)
+            'avatar_url' => Media::url($avatarPath)
         ]);
     }
 }

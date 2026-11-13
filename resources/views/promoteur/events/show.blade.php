@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 <style>
     .event-header {
         background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5)), 
-                    url('{{ $event->image ? Storage::url($event->image) : "" }}') center/cover;
+                    url('{{ $event->image ? \App\Support\Media::url($event->image) : "" }}') center/cover;
         color: white;
         padding: 3rem 0;
         border-radius: 15px;

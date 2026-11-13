@@ -353,7 +353,7 @@ use Illuminate\Support\Facades\Storage;
                         <div class="mb-3">
                             <label class="form-label fw-semibold" for="image">Image actuelle</label>
                             <div class="current-image-container">
-                                <img src="{{ Storage::url($event->image) }}" 
+                                <img src="{{ \App\Support\Media::url($event->image) }}" 
                                      alt="Image actuelle" 
                                      class="image-preview d-block">
                                 <button type="button" 

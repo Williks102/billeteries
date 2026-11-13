@@ -79,7 +79,7 @@ services:
       - key: FILESYSTEM_DISK
         value: local
 
-      # --- Images : disque local éphémère par défaut ; passer MEDIA_DISK à « r2 » dans Render pour Cloudflare R2 ---
+      # --- Images : disque local éphémère par défaut ; passer MEDIA_DISK à « r2 » (Cloudflare R2) ou « cloudinary » dans Render ---
       # Guide : docs/stockage-images.md. Aucune valeur ici : tout est saisi dans le tableau de bord Render.
       - key: MEDIA_DISK
         sync: false
@@ -92,6 +92,14 @@ services:
       - key: R2_ENDPOINT
         sync: false
       - key: R2_PUBLIC_URL
+        sync: false
+      # Alternative sans carte bancaire : MEDIA_DISK=cloudinary + CLOUDINARY_URL (cloudinary://<api_key>:<api_secret>@<cloud_name>).
+      # Guide : docs/stockage-cloudinary.md. Les deux autres sont optionnelles.
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        sync: false
+      - key: CLOUDINARY_TRANSFORMATIONS
         sync: false
 
       # --- Email : journalisé, jamais envoyé (démo) ---

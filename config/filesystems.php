@@ -21,7 +21,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Source unique de vérité : App\Support\Media. Défaut « public » (disque local,
-    | storage/app/public). Mettre MEDIA_DISK=r2 pour Cloudflare R2 (voir docs/stockage-images.md).
+    | storage/app/public). Mettre MEDIA_DISK=r2 pour Cloudflare R2 (voir docs/stockage-images.md)
+    | ou MEDIA_DISK=cloudinary (voir docs/stockage-cloudinary.md).
     |
     */
 
@@ -84,6 +85,18 @@ return [
             'url' => env('R2_PUBLIC_URL') ?: null,
             'use_path_style_endpoint' => true,
             'retain_visibility' => false,
+            'throw' => true,
+            'report' => true,
+        ],
+
+        // Cloudinary (plan gratuit sans carte bancaire) : seul secret = CLOUDINARY_URL
+        // (cloudinary://<api_key>:<api_secret>@<cloud_name>), lu par App\Support\Filesystem\CloudinaryConfig.
+        // Voir docs/stockage-cloudinary.md.
+        'cloudinary' => [
+            'driver' => 'cloudinary',
+            'cloudinary_url' => env('CLOUDINARY_URL'),
+            'folder' => env('CLOUDINARY_FOLDER', ''),
+            'transformations' => env('CLOUDINARY_TRANSFORMATIONS') ?: 'f_auto,q_auto',
             'throw' => true,
             'report' => true,
         ],

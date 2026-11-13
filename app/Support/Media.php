@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Support\Filesystem\CloudinaryConfig;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -56,6 +57,14 @@ class Media
                 throw new \RuntimeException('Stockage R2 non configuré (variables manquantes : '.implode(', ', $missing).').');
             }
         }
+
+        if (($config['driver'] ?? null) === 'cloudinary') {
+            $problem = CloudinaryConfig::problem($config);
+            if ($problem !== null) {
+                Log::error('Stockage des images : '.$problem.'.');
+                throw new \RuntimeException('Stockage Cloudinary non configuré ('.$problem.').');
+            }
+        }
     }
 
     /**
@@ -74,6 +83,13 @@ class Media
         // Disque distant sans URL publique : ne pas laisser le SDK deviner une URL (pas de lien cassé silencieux).
         if (in_array($config['driver'] ?? null, ['r2', 's3'], true) && empty($config['url'])) {
             Log::error('Stockage des images : URL publique absente pour le disque « '.$name.' » (R2_PUBLIC_URL non défini).');
+
+            return null;
+        }
+
+        // Cloudinary sans CLOUDINARY_URL valide : pas d'URL devinée, pas d'appel réseau.
+        if (($config['driver'] ?? null) === 'cloudinary' && ($problem = CloudinaryConfig::problem($config)) !== null) {
+            Log::error('Stockage des images : '.$problem.'.');
 
             return null;
         }

@@ -10,14 +10,16 @@ class MigrateMediaToDisk extends Command
 {
     protected $signature = 'media:migrate-to-r2 {--dry-run : Affiche ce qui serait copié sans rien écrire}';
 
+    protected $aliases = ['media:migrate'];
+
     protected $description = 'Copie les images locales (storage/app/public : events/, avatars/) vers le disque média (MEDIA_DISK). Ne supprime rien, idempotent.';
 
     public function handle(): int
     {
         $target = Media::diskName();
 
-        if ($target === 'public') {
-            $this->error('MEDIA_DISK vaut « public » : rien à migrer. Définissez MEDIA_DISK=r2 (et les variables R2_*) d\'abord.');
+        if ($target === 'public' || config('filesystems.disks.'.$target.'.driver') === 'local') {
+            $this->error('MEDIA_DISK vaut « '.$target.' » (disque local) : rien à migrer. Définissez MEDIA_DISK=r2 (variables R2_*) ou MEDIA_DISK=cloudinary (CLOUDINARY_URL) d\'abord.');
 
             return self::FAILURE;
         }

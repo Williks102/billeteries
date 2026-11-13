@@ -2,6 +2,8 @@
 
 Sur Render (offre gratuite), le disque est effacé à chaque déploiement : les affiches d'événements et les avatars disparaissent. Ce guide branche les images sur **Cloudflare R2** (stockage compatible S3, gratuit jusqu'à 10 Go). Tout se fait depuis un navigateur de téléphone.
 
+**Pas de carte bancaire ?** Cloudflare en demande une pour R2. L'alternative gratuite sans carte est Cloudinary : voir [stockage-cloudinary.md](stockage-cloudinary.md) (`MEDIA_DISK=cloudinary`).
+
 Sans aucune manipulation, l'application continue de fonctionner comme avant (disque local). Rien ne change tant que vous n'avez pas défini `MEDIA_DISK=r2`.
 
 ## 1. Créer le compte Cloudflare

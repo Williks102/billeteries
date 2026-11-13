@@ -40,6 +40,22 @@ class AppServiceProvider extends ServiceProvider
             return $disk;
         });
 
+        // Pilote « cloudinary » (alternative gratuite sans carte à R2) : adaptateur Flysystem maison, voir docs/stockage-cloudinary.md.
+        \Illuminate\Support\Facades\Storage::extend('cloudinary', function ($app, array $config) {
+            $settings = \App\Support\Filesystem\CloudinaryConfig::fromDiskConfig($config);
+            if ($settings === null) {
+                // Aucune valeur dans le message : seulement le nom de la variable à corriger.
+                throw new \RuntimeException('Stockage Cloudinary non configuré ('.\App\Support\Filesystem\CloudinaryConfig::problem($config).').');
+            }
+
+            $gateway = $app->bound(\App\Support\Filesystem\CloudinaryGateway::class)
+                ? $app->make(\App\Support\Filesystem\CloudinaryGateway::class)
+                : new \App\Support\Filesystem\SdkCloudinaryGateway($settings);
+            $adapter = new \App\Support\Filesystem\CloudinaryAdapter($settings, $gateway);
+
+            return new \Illuminate\Filesystem\FilesystemAdapter(new \League\Flysystem\Filesystem($adapter, $config), $adapter, $config);
+        });
+
         // Mode démo (paiements simulés, désactivé par défaut) : `$demoMode` disponible dans toutes les vues
         // pour le bandeau des layouts.
         if (config('payments.demo_blocked_in_production')) {

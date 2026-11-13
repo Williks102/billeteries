@@ -68,4 +68,43 @@ class AdminEmailVerificationTest extends TestCase
         $this->assertNotNull($created);
         $this->assertNotNull($created->email_verified_at);
     }
+
+    public function test_user_creation_and_deletion_are_logged_with_id_and_role_only(): void
+    {
+        $this->post(route('admin.users.store'), [
+            'name' => 'Nouvel Admin Prive', 'email' => 'nouvel.admin.prive@example.test',
+            'password' => 'motdepasse123', 'password_confirmation' => 'motdepasse123',
+            'role' => 'admin', 'phone' => '0799999999',
+        ])->assertRedirect(route('admin.users.index'));
+
+        $created = User::where('email', 'nouvel.admin.prive@example.test')->firstOrFail();
+        $log = ActivityLog::where('action', 'user.created')->sole();
+        $this->assertSame($created->id, $log->subject_id);
+        $this->assertSame(['role' => 'admin'], $log->properties);
+        $this->assertStringContainsString('admin', $log->description);
+
+        $this->deleteJson(route('admin.users.destroy', $created))->assertOk();
+        $deleted = ActivityLog::where('action', 'user.deleted')->sole();
+        $this->assertSame($created->id, $deleted->subject_id);
+        $this->assertSame(['role' => 'admin'], $deleted->properties);
+
+        $dump = json_encode(ActivityLog::all()->map->getAttributes()->all(), JSON_UNESCAPED_UNICODE);
+        foreach (['nouvel.admin.prive@example.test', 'Nouvel Admin Prive', '0799999999'] as $forbidden) {
+            $this->assertStringNotContainsString($forbidden, $dump);
+        }
+    }
+
+    public function test_bulk_delete_is_logged_and_count_reflects_changed_rows(): void
+    {
+        $a = $this->makeUser(21, 'acheteur');
+        $b = $this->makeUser(22, 'acheteur');
+        $b->forceFill(['email_verified_at' => now()])->save();
+
+        $this->postJson(route('admin.users.bulk-action'), ['action' => 'verify', 'users' => [21, 22]])
+            ->assertOk()->assertJson(['message' => '1 utilisateur(s) vérifié(s)']);
+
+        $this->postJson(route('admin.users.bulk-action'), ['action' => 'delete', 'users' => [21, 22]])
+            ->assertOk()->assertJson(['message' => '2 utilisateur(s) supprimé(s)']);
+        $this->assertSame(2, ActivityLog::where('action', 'user.deleted')->count());
+    }
 }

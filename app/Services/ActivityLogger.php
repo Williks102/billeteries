@@ -21,7 +21,16 @@ use Illuminate\Support\Facades\Log;
 class ActivityLogger
 {
     /** Fragments de clés interdits dans `properties` (comparaison en minuscules). */
-    private const FORBIDDEN_KEY_PARTS = ['email', 'phone', 'password', 'token', 'secret', 'api_key', 'apikey', 'name', 'address'];
+    private const FORBIDDEN_KEY_PARTS = [
+        'email', 'phone', 'password', 'token', 'secret', 'api_key', 'apikey', 'name', 'address',
+        'mail', 'mobile', 'iban', 'card', 'jwt', 'cvv',
+    ];
+
+    /**
+     * Fragments trop courts pour une recherche par sous-chaîne (« ip » est dans « description », « pin » dans
+     * « shipping ») : retirés seulement s'ils forment un mot de la clé (user_ip, clientIp, tel, pin_code).
+     */
+    private const FORBIDDEN_KEY_WORDS = ['tel', 'ip', 'pin'];
 
     /**
      * @param  array<string,mixed>  $properties  valeurs avant/après (ex. ['price' => ['from' => 1000, 'to' => 1500]])
@@ -89,6 +98,10 @@ class ActivityLogger
         $clean = [];
         foreach ($properties as $key => $value) {
             $lower = strtolower((string) $key);
+            $words = array_map('strtolower', preg_split('/[^A-Za-z0-9]+|(?<=[a-z])(?=[A-Z])/', (string) $key, -1, PREG_SPLIT_NO_EMPTY) ?: []);
+            if (array_intersect(self::FORBIDDEN_KEY_WORDS, $words) !== []) {
+                continue;
+            }
             foreach (self::FORBIDDEN_KEY_PARTS as $part) {
                 if (str_contains($lower, $part)) {
                     continue 2;

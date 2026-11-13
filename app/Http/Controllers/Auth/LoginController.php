@@ -28,11 +28,6 @@ class LoginController extends Controller
     protected $redirectTo = '/';
 
     /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    /**
      * Journal d'activité : seules les connexions d'administrateur sont tracées (identifiant du compte, jamais l'e-mail).
      */
     protected function authenticated(\Illuminate\Http\Request $request, $user)
@@ -48,6 +43,11 @@ class LoginController extends Controller
         return null;
     }
 
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
     public function __construct()
     {
         $this->middleware('guest')->except('logout');

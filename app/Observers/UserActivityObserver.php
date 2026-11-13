@@ -12,6 +12,26 @@ use App\Services\ActivityLogger;
  */
 class UserActivityObserver
 {
+    public function created(User $user): void
+    {
+        ActivityLogger::record(
+            ActivityLog::USER_CREATED,
+            $user,
+            sprintf('Utilisateur n°%d créé (rôle %s)', $user->id, $user->role),
+            ['role' => $user->role]
+        );
+    }
+
+    public function deleted(User $user): void
+    {
+        ActivityLogger::record(
+            ActivityLog::USER_DELETED,
+            $user,
+            sprintf('Utilisateur n°%d supprimé (rôle %s)', $user->id, $user->role),
+            ['role' => $user->role]
+        );
+    }
+
     public function updated(User $user): void
     {
         $changes = $user->getChanges();
@@ -33,7 +53,7 @@ class UserActivityObserver
                     ActivityLog::USER_STATUS_CHANGED,
                     $user,
                     sprintf('Utilisateur n°%d : e-mail %s', $user->id, $to ? 'marqué vérifié' : 'marqué non vérifié'),
-                    ['email_verified' => ['from' => $from, 'to' => $to]]
+                    ['verified' => ['from' => $from, 'to' => $to]]
                 );
             }
         }

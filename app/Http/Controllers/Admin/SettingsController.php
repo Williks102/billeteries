@@ -107,6 +107,9 @@ class SettingsController extends Controller
         ]);
 
         try {
+            // Ancienne valeur capturée AVANT updateDatabaseSettings() (qui fait Config::set et écraserait le « avant »)
+            $oldCommission = (float) config('app.commission_rate', config('payments.default_commission_rate'));
+
             // Mettre à jour le fichier .env (simulation - en réalité il faudrait utiliser un package comme vlucas/phpdotenv)
             $this->updateEnvFile([
                 'APP_NAME' => $request->app_name,
@@ -122,18 +125,21 @@ class SettingsController extends Controller
                 'maintenance_mode' => $request->boolean('maintenance_mode'),
             ]);
 
-            \App\Services\ActivityLogger::record(
-                \App\Models\ActivityLog::SETTINGS_UPDATED,
-                null,
-                'Paramètres généraux modifiés (taux de commission : '.$request->commission_rate.' %)',
-                [
-                    'section' => 'general',
-                    'commission_rate' => ['from' => (float) config('app.commission_rate', config('payments.default_commission_rate')), 'to' => (float) $request->commission_rate],
-                    'max_tickets_per_order' => (int) $request->max_tickets_per_order,
-                    'allow_refunds' => $request->boolean('allow_refunds'),
-                    'maintenance_mode' => $request->boolean('maintenance_mode'),
-                ]
-            );
+            $newCommission = (float) $request->commission_rate;
+            if ($oldCommission !== $newCommission) {
+                \App\Services\ActivityLogger::record(
+                    \App\Models\ActivityLog::SETTINGS_UPDATED,
+                    null,
+                    sprintf('Taux de commission modifié : %s %% vers %s %%', $oldCommission, $newCommission),
+                    [
+                        'section' => 'general',
+                        'commission_rate' => ['from' => $oldCommission, 'to' => $newCommission],
+                        'max_tickets_per_order' => (int) $request->max_tickets_per_order,
+                        'allow_refunds' => $request->boolean('allow_refunds'),
+                        'maintenance_mode' => $request->boolean('maintenance_mode'),
+                    ]
+                );
+            }
 
             \Log::info('Paramètres généraux modifiés par admin', [
                 'admin_id' => auth()->id(),

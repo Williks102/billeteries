@@ -303,4 +303,57 @@ class ActivityLogTest extends TestCase
 
         $this->assertSame(['price' => ['from' => 1, 'to' => 2]], ActivityLog::sole()->properties);
     }
+
+    public function test_logger_scrubs_extended_sensitive_keys_in_nested_arrays_and_case_variants(): void
+    {
+        ActivityLogger::record(ActivityLog::SETTINGS_UPDATED, null, 'Test', [
+            'Mail' => 'x', 'contact_tel' => '1', 'MOBILE' => '2', 'user_ip' => '3', 'clientIp' => '3', 'IBAN' => '4',
+            'card_number' => '5', 'jwt' => '6', 'CVV' => '7', 'pin' => '8', 'pin_code' => '8',
+            'nested' => ['Client_IP' => '9', 'iban_code' => 'x', 'ticket_type_id' => 3, 'deep' => ['PIN' => '1', 'quantity' => 2]],
+            'ticket_type_id' => 3, 'quantity' => 2, 'status' => 'paid', 'price' => 1000, 'commission' => 5,
+            'description' => 'ok', 'shipping' => 'ok', 'total' => 10, 'hotel' => 'ok',
+        ]);
+
+        $this->assertSame([
+            'nested' => ['ticket_type_id' => 3, 'deep' => ['quantity' => 2]],
+            'ticket_type_id' => 3, 'quantity' => 2, 'status' => 'paid', 'price' => 1000, 'commission' => 5,
+            'description' => 'ok', 'shipping' => 'ok', 'total' => 10, 'hotel' => 'ok',
+        ], ActivityLog::sole()->properties);
+    }
+
+    public function test_event_address_change_is_logged_without_the_value(): void
+    {
+        Schema::table('events', fn ($t) => $t->string('address')->nullable());
+        $event = Event::find(1);
+        $event->update(['address' => '12 rue Secrete, Abidjan']);
+
+        $log = ActivityLog::where('action', 'event.updated')->sole();
+        $this->assertStringContainsString('adresse modifiée', $log->description);
+        $this->assertNull($log->properties, 'Aucun diff vide ne doit être stocké.');
+        $this->assertStringNotContainsString('Secrete', json_encode($log->getAttributes()));
+
+        $event->update(['title' => 'Nouveau titre', 'address' => '99 autre adresse']);
+        $second = ActivityLog::where('action', 'event.updated')->latest('id')->first();
+        $this->assertStringContainsString('title', $second->description);
+        $this->assertStringContainsString('adresse modifiée', $second->description);
+        $this->assertArrayNotHasKey('address', $second->properties);
+    }
+
+    public function test_commission_rate_log_has_distinct_before_and_after_and_nothing_when_unchanged(): void
+    {
+        $this->actingAs($this->admin);
+        config(['app.commission_rate' => 5]);
+        $payload = [
+            'section' => 'general', 'app_name' => 'Billeterie', 'app_url' => 'https://example.test', 'timezone' => 'Africa/Abidjan',
+            'commission_rate' => 8, 'max_tickets_per_order' => 10,
+        ];
+
+        $this->post(route('admin.settings.store'), $payload)->assertSessionHas('success');
+        $log = ActivityLog::where('action', 'settings.updated')->sole();
+        $this->assertEquals(['from' => 5, 'to' => 8], $log->properties['commission_rate']);
+
+        // Valeur inchangée (la config vaut maintenant 8) : aucune ligne supplémentaire
+        $this->post(route('admin.settings.store'), $payload)->assertSessionHas('success');
+        $this->assertSame(1, ActivityLog::where('action', 'settings.updated')->count());
+    }
 }

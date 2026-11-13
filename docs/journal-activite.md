@@ -15,9 +15,12 @@ Qui a fait quoi, et quand. Écran réservé aux admins : **Paramètres > Journal
 | Paiement | `payment.confirmed` | `OrderPaymentService::confirmPayment` |
 | Commande | `order.status_changed`, `order.cancelled`, `order.refunded`, `order.expired` | `OrderPaymentService` ; `Order::releaseStock` (annulation et expiration, via `orders:release-expired`) |
 | Billet | `ticket_type.created`, `.updated` (avant/après : prix, capacité, activation, dates de vente, max par commande), `.deleted` | `TicketTypeActivityObserver` |
-| Événement | `event.created`, `.duplicated`, `.updated` (titre, date, heure, lieu, adresse, catégorie), `.published`, `.unpublished`, `.status_changed`, `.deleted` | `CreateEventAction`, `DuplicateEventAction`, `EventActivityObserver` |
-| Plateforme | `settings.updated` (taux de commission avant/après), `auth.admin_login` | `Admin\SettingsController`, `Auth\LoginController` |
-| Utilisateur | `user.role_changed`, `user.status_changed` (vérification d'e-mail) | `UserActivityObserver` |
+| Événement | `event.created`, `.duplicated`, `.updated` (titre, date, heure, lieu, catégorie ; un changement d'adresse est signalé « adresse modifiée » sans la valeur), `.published`, `.unpublished`, `.status_changed`, `.deleted` | `CreateEventAction`, `DuplicateEventAction`, `EventActivityObserver` |
+| Plateforme | `settings.updated` (taux de commission avant/après ; rien n'est écrit si le taux est inchangé), `auth.admin_login` | `Admin\SettingsController`, `Auth\LoginController` |
+| Utilisateur | `user.created`, `user.deleted` (identifiant et rôle seulement), `user.role_changed`, `user.status_changed` (vérification d'e-mail) | `UserActivityObserver` |
+
+## Plusieurs lignes pour une même action
+Un changement de statut de paiement fait par l'admin produit **deux lignes** : `payment.confirmed` + `order.status_changed` ; de même annulation = `order.cancelled` + `order.status_changed`, remboursement = `order.refunded` + `order.status_changed`. La première décrit l'événement métier, la seconde la transition de statut ; ce n'est pas un doublon à dédupliquer.
 
 ## Volontairement non journalisé
 - Scan et validation des billets (`ticket.scanned`) : flux à haut volume avec plusieurs points de passage (`ScannerController`, `TicketVerificationController`, admin), pas de point unique.
@@ -28,5 +31,6 @@ Qui a fait quoi, et quand. Écran réservé aux admins : **Paramètres > Journal
 - Durée de conservation : **illimitée pour l'instant** (décision à prendre avant la production ; une purge devra passer par une commande dédiée, le modèle ne permet pas la suppression applicative).
 - **Aucune donnée personnelle** : jamais d'e-mail, téléphone, nom, mot de passe, jeton, `guest_token`, clé API, ni référence de paiement saisie librement. Seulement des identifiants (id, numéro de commande) et des valeurs métier (statut, montant, prix, quantité).
 - L'IP n'est jamais stockée en clair : seulement `ip_fingerprint` = HMAC-SHA256 de l'IP avec la clé de l'application (`CheckoutService::ipHash`, comme le plafond des commandes gratuites). Changer `APP_KEY` rend les anciennes empreintes incomparables.
-- Défense en profondeur : `ActivityLogger` retire des propriétés toute clé contenant `email`, `phone`, `password`, `token`, `secret`, `api_key`, `name`, `address`. Garde-fous : `tests/Feature/Activity/`.
+- Défense en profondeur : `ActivityLogger` retire des propriétés toute clé contenant (insensible à la casse) `email`, `phone`, `password`, `token`, `secret`, `api_key`, `name`, `address`, `mail`, `mobile`, `iban`, `card`, `jwt`, `cvv`, ou comportant le mot `tel`, `ip` ou `pin` (par mot : `user_ip`, `clientIp`, pas `description`). Garde-fous : `tests/Feature/Activity/`.
 - L'écran affiche le nom de l'acteur en le relisant dans `users` (il n'est pas copié dans le journal).
+- **Ajout seul = règle applicative.** Le modèle refuse update/delete, mais `ActivityLog::query()->delete()`, `truncate` ou du SQL direct le contournent. **À faire en production** : retirer les droits `UPDATE` et `DELETE` sur `activity_logs` à l'utilisateur SQL de l'application (ne garder que `INSERT` et `SELECT`), et confier toute purge à un compte distinct.

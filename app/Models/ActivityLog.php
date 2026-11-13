@@ -42,6 +42,8 @@ class ActivityLog extends Model
 
     // Plateforme et utilisateurs
     public const SETTINGS_UPDATED = 'settings.updated';
+    public const USER_CREATED = 'user.created';
+    public const USER_DELETED = 'user.deleted';
     public const USER_ROLE_CHANGED = 'user.role_changed';
     public const USER_STATUS_CHANGED = 'user.status_changed';
     public const AUTH_ADMIN_LOGIN = 'auth.admin_login';
@@ -64,6 +66,8 @@ class ActivityLog extends Model
         self::EVENT_DUPLICATED => 'Événement dupliqué',
         self::EVENT_DELETED => 'Événement supprimé',
         self::SETTINGS_UPDATED => 'Paramètres modifiés',
+        self::USER_CREATED => 'Utilisateur créé',
+        self::USER_DELETED => 'Utilisateur supprimé',
         self::USER_ROLE_CHANGED => "Rôle d'utilisateur modifié",
         self::USER_STATUS_CHANGED => "Statut d'utilisateur modifié",
         self::AUTH_ADMIN_LOGIN => 'Connexion administrateur',

@@ -14,7 +14,10 @@ use App\Services\ActivityLogger;
 class EventActivityObserver
 {
     /** Champs suivis (hors statut) => valeurs avant/après journalisées. */
-    private const TRACKED = ['title', 'event_date', 'event_time', 'venue', 'address', 'category_id'];
+    private const TRACKED = ['title', 'event_date', 'event_time', 'venue', 'category_id'];
+
+    /** Champ dont on journalise le changement SANS la valeur (donnée sensible pour le logger). */
+    private const VALUE_HIDDEN = 'address';
 
     public function updated(Event $event): void
     {
@@ -43,12 +46,17 @@ class EventActivityObserver
             }
         }
 
-        if ($diff !== []) {
+        $labels = array_keys($diff);
+        if (array_key_exists(self::VALUE_HIDDEN, $changes)) {
+            $labels[] = 'adresse modifiée';
+        }
+
+        if ($labels !== []) {
             ActivityLogger::record(
                 ActivityLog::EVENT_UPDATED,
                 $event,
-                sprintf('Événement n°%d modifié (%s)', $event->id, implode(', ', array_keys($diff))),
-                $diff
+                sprintf('Événement n°%d modifié (%s)', $event->id, implode(', ', $labels)),
+                $diff // jamais d'adresse ici ; vide = pas de propriétés stockées
             );
         }
     }

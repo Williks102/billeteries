@@ -96,7 +96,7 @@
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         @if($can['mark_used'])
-                            <form method="POST" action="{{ route('admin.tickets.mark-used', $ticket) }}" onsubmit="return confirm('Marquer ce billet comme utilisé ?')">
+                            <form method="POST" action="{{ route('admin.tickets.mark-used', $ticket) }}" data-confirm="Marquer ce billet comme utilisé ?">
                                 @csrf @method('PATCH')
                                 <button type="submit" class="btn btn-success w-100"><i class="fas fa-check" aria-hidden="true"></i> Marquer comme utilisé</button>
                             </form>
@@ -117,7 +117,7 @@
                             </form>
                         @endif
                         @if($can['cancel'])
-                            <form method="POST" action="{{ route('admin.tickets.cancel', $ticket) }}" onsubmit="return confirm('Annuler ce billet ?')">
+                            <form method="POST" action="{{ route('admin.tickets.cancel', $ticket) }}" data-confirm="Annuler ce billet ?">
                                 @csrf @method('PATCH')
                                 <button type="submit" class="btn btn-outline-danger w-100"><i class="fas fa-ban" aria-hidden="true"></i> Annuler le billet</button>
                             </form>

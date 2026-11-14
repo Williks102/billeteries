@@ -134,7 +134,7 @@
                                 </a>
                                 
                                 @if($info['can_be_used'])
-                                    <button id="scanBtn" class="btn btn-success btn-lg" onclick="scanTicket()">
+                                    <button id="scanBtn" class="btn btn-success btn-lg" data-on-click="ticket-scan">
                                         <i class="fas fa-qrcode me-2"></i>Marquer comme Utilisé
                                     </button>
                                 @else
@@ -176,6 +176,14 @@
 {{-- JavaScript pour les actions de scan --}}
 @if($ticket && $info['can_be_used'] && $can_scan)
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'ticket-scan': function () { scanTicket(); }
+    });
+});
+
 function scanTicket() {
     if (!confirm('Confirmer le scan de ce billet ? Cette action est irréversible.')) {
         return;

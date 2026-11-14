@@ -228,7 +228,7 @@ use Illuminate\Support\Facades\Storage;
                                     <form method="POST" action="{{ route('promoteur.events.publish', $event) }}">
                                         @csrf
                                         <button type="submit" class="btn btn-success btn-sm w-100"
-                                                onclick="return confirm('Publier cet événement ?')">
+                                                data-confirm="Publier cet événement ?">
                                             <i class="fas fa-upload me-1"></i> Publier
                                         </button>
                                     </form>
@@ -236,7 +236,7 @@ use Illuminate\Support\Facades\Storage;
                                     <form method="POST" action="{{ route('promoteur.events.unpublish', $event) }}">
                                         @csrf
                                         <button type="submit" class="btn btn-warning btn-sm w-100"
-                                                onclick="return confirm('Dépublier cet événement ?')">
+                                                data-confirm="Dépublier cet événement ?">
                                             <i class="fas fa-download me-1"></i> Dépublier
                                         </button>
                                     </form>

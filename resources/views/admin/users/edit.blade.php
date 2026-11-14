@@ -189,7 +189,7 @@
                                            id="password" 
                                            name="password"
                                            placeholder="Minimum 8 caractères">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password')">
+                                    <button class="btn btn-outline-secondary" type="button" data-on-click="password-toggle" data-target="password">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
@@ -214,7 +214,7 @@
                                            id="password_confirmation" 
                                            name="password_confirmation"
                                            placeholder="Répéter le mot de passe">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password_confirmation')">
+                                    <button class="btn btn-outline-secondary" type="button" data-on-click="password-toggle" data-target="password_confirmation">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
@@ -324,7 +324,7 @@
                                             @else
                                                 En attente de vérification
                                                 <br>
-                                                <button class="btn btn-sm btn-outline-primary mt-1" onclick="resendVerification()">
+                                                <button class="btn btn-sm btn-outline-primary mt-1" data-on-click="user-resend-verification">
                                                     Renvoyer l'email
                                                 </button>
                                             @endif
@@ -564,6 +564,15 @@
 
 @push('scripts')
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'password-toggle': function (el, e) { togglePassword(el.dataset.target, e); },
+        'user-resend-verification': function () { resendVerification(); }
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // Gestion de l'affichage des informations de rôle
     const roleSelect = document.getElementById('role');
@@ -689,9 +698,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Fonction pour afficher/masquer le mot de passe
-function togglePassword(inputId) {
+function togglePassword(inputId, evt) {
     const input = document.getElementById(inputId);
-    const icon = event.target.closest('button').querySelector('i');
+    const icon = (evt || window.event).target.closest('button').querySelector('i');
     
     if (input.type === 'password') {
         input.type = 'text';
@@ -738,5 +747,6 @@ document.querySelector('form').addEventListener('submit', function(e) {
         document.getElementById('password_confirmation').focus();
     }
 });
+
 </script>
 @endpush

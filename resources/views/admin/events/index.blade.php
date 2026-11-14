@@ -23,7 +23,7 @@
                     <li><a class="dropdown-item" href="{{ route('admin.events.export', request()->query()) }}">
                         <i class="fas fa-file-csv me-2"></i> Export CSV
                     </a></li>
-                    <li><a class="dropdown-item" href="#" onclick="window.print()">
+                    <li><a class="dropdown-item" href="#" data-on-click="print">
                         <i class="fas fa-print me-2"></i> Imprimer
                     </a></li>
                 </ul>
@@ -117,7 +117,7 @@
                     <button type="submit" class="btn btn-warning me-2">
                         <i class="fas fa-bolt me-1"></i> Exécuter
                     </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="clearSelection()">
+                    <button type="button" class="btn btn-outline-secondary" data-on-click="events-clear-selection">
                         Annuler
                     </button>
                 </div>
@@ -279,7 +279,7 @@
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
                                             <form action="{{ route('admin.events.destroy', $event) }}" method="POST" 
-                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')" class="d-inline">
+                                                  data-confirm="Êtes-vous sûr de vouloir supprimer cet événement ?" class="d-inline">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="dropdown-item text-danger">

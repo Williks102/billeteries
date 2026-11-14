@@ -105,7 +105,7 @@
                             </div>
                             <div class="action-bar mt-0">
                                 <button type="submit" class="btn btn-success"
-                                        onclick="return confirm('Confirmer la réception du paiement de {{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }} ?')">
+                                        data-confirm="Confirmer la réception du paiement de {{ \App\Helpers\CurrencyHelper::formatFCFA($order->total_amount) }} ?">
                                     <i class="fas fa-check-circle" aria-hidden="true"></i> Confirmer le paiement
                                 </button>
                             </div>

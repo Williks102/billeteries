@@ -78,13 +78,13 @@
     <div class="d-flex align-items-center justify-content-between">
         <span id="selected-count">0 utilisateur(s) sélectionné(s)</span>
         <div>
-            <button type="button" class="btn btn-success btn-sm" onclick="bulkAction('verify')">
+            <button type="button" class="btn btn-success btn-sm" data-on-click="users-bulk-action" data-bulk-action="verify">
                 <i class="fas fa-check me-1"></i>Vérifier emails
             </button>
-            <button type="button" class="btn btn-warning btn-sm" onclick="bulkAction('unverify')">
+            <button type="button" class="btn btn-warning btn-sm" data-on-click="users-bulk-action" data-bulk-action="unverify">
                 <i class="fas fa-times me-1"></i>Dé-vérifier
             </button>
-            <button type="button" class="btn btn-danger btn-sm" onclick="bulkAction('delete')">
+            <button type="button" class="btn btn-danger btn-sm" data-on-click="users-bulk-action" data-bulk-action="delete">
                 <i class="fas fa-trash me-1"></i>Supprimer
             </button>
         </div>
@@ -143,7 +143,7 @@
                                 @if($user->id !== auth()->id())
                                     <button type="button" 
                                             class="btn btn-sm btn-outline-primary" 
-                                            onclick="toggleEmailVerification({{ $user->id }})"
+                                            data-on-click="user-toggle-email" data-user-id="{{ $user->id }}"
                                             title="Basculer la vérification">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
@@ -171,7 +171,7 @@
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 @if($user->id !== auth()->id())
-                                    <button onclick="deleteUser({{ $user->id }}, '{{ $user->name }}')" 
+                                    <button data-on-click="user-delete" data-user-id="{{ $user->id }}" data-user-name="{{ $user->name }}" 
                                             class="btn btn-sm btn-outline-danger"
                                             title="Supprimer">
                                         <i class="fas fa-trash"></i>

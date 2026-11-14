@@ -153,7 +153,7 @@
                         <i class="fas fa-user-edit me-2" style="color: var(--brand);"></i>
                         Informations Personnelles
                     </h5>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleEdit()">
+                    <button class="btn btn-outline-secondary btn-sm" data-on-click="profile-edit-toggle">
                         <i class="fas fa-edit me-2"></i>Modifier
                     </button>
                 </div>
@@ -164,8 +164,8 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" for="name">Nom complet</label>
-                            <input id="name" type="text" name="name" class="form-control" 
+                            <label class="form-label" for="nameInput">Nom complet</label>
+                            <input type="text" name="name" class="form-control" 
                                    value="{{ $user->name }}" readonly id="nameInput">
                         </div>
                         
@@ -199,7 +199,7 @@
                         <button type="submit" class="btn btn-orange">
                             <i class="fas fa-save me-2"></i>Sauvegarder
                         </button>
-                        <button type="button" class="btn btn-secondary action-bar__cancel" onclick="cancelEdit()">
+                        <button type="button" class="btn btn-secondary action-bar__cancel" data-on-click="profile-edit-cancel">
                             Annuler
                         </button>
                     </div>
@@ -226,7 +226,7 @@
                             </small>
                         </div>
                         <div class="col-md-4 text-end">
-                            <button class="btn btn-outline-secondary" onclick="changePassword()">
+                            <button class="btn btn-outline-secondary" data-on-click="profile-password-modal">
                                 <i class="fas fa-key me-2"></i>Changer
                             </button>
                         </div>
@@ -369,6 +369,16 @@
 
 @push('scripts')
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'profile-edit-toggle': function () { toggleEdit(); },
+        'profile-edit-cancel': function () { cancelEdit(); },
+        'profile-password-modal': function () { changePassword(); }
+    });
+});
+
 function toggleEdit() {
     const inputs = ['nameInput', 'emailInput', 'phoneInput', 'bioInput'];
     const saveButtons = document.getElementById('saveButtons');

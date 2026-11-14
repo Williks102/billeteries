@@ -446,7 +446,7 @@
     @include('partials.demo-banner')
     <div class="acheteur-wrapper">
         <!-- Mobile Overlay -->
-        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()" aria-hidden="true"></div>
+        <div class="mobile-overlay" id="mobileOverlay" data-on-click="mobile-sidebar-close" aria-hidden="true"></div>
 
         <!-- Sidebar -->
         <nav class="acheteur-sidebar" id="acheteurSidebar" aria-label="Menu acheteur">
@@ -456,7 +456,7 @@
                     <i class="fas fa-user-circle"></i>
                     <span class="sidebar-brand-text">Mon Espace</span>
                 </a>
-                <button type="button" class="sidebar-toggle d-none d-md-block" onclick="toggleSidebar()" aria-label="Réduire ou déployer le menu">
+                <button type="button" class="sidebar-toggle d-none d-md-block" data-on-click="sidebar-toggle" aria-label="Réduire ou déployer le menu">
                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
             </div>
@@ -474,7 +474,7 @@
 
                 <!-- Mes Billets -->
                 <li class="submenu-parent {{ request()->routeIs('acheteur.tickets*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('tickets', this)" class="{{ request()->routeIs('acheteur.tickets*') ? 'active' : '' }}">
+                    <a href="#" data-on-click="submenu-toggle" data-menu="tickets" class="{{ request()->routeIs('acheteur.tickets*') ? 'active' : '' }}">
                         <i class="fas fa-ticket-alt"></i>
                         <span class="sidebar-menu-text">Mes Billets</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -490,7 +490,7 @@
 
                 <!-- Mes Commandes -->
                 <li class="submenu-parent {{ request()->routeIs('acheteur.orders*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('orders', this)" class="{{ request()->routeIs('acheteur.orders*') ? 'active' : '' }}">
+                    <a href="#" data-on-click="submenu-toggle" data-menu="orders" class="{{ request()->routeIs('acheteur.orders*') ? 'active' : '' }}">
                         <i class="fas fa-shopping-bag"></i>
                         <span class="sidebar-menu-text">Mes Commandes</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -545,7 +545,7 @@
 
                 <!-- Profil & Paramètres -->
                 <li class="submenu-parent {{ request()->routeIs('acheteur.profile*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('settings', this)" class="{{ request()->routeIs('acheteur.profile*') ? 'active' : '' }}">
+                    <a href="#" data-on-click="submenu-toggle" data-menu="settings" class="{{ request()->routeIs('acheteur.profile*') ? 'active' : '' }}">
                         <i class="fas fa-cog"></i>
                         <span class="sidebar-menu-text">Paramètres</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -553,14 +553,14 @@
                     </a>
                     <ul class="sidebar-submenu" id="submenu-settings">
                         <li><a href="{{ route('acheteur.profile.show') }}">Mon Profil</a></li>
-                        <li><a href="#" onclick="showPasswordModal()">Changer mot de passe</a></li>
-                        <li><a href="#" onclick="showNotificationSettings()">Notifications</a></li>
+                        <li><a href="#" data-on-click="password-modal-show">Changer mot de passe</a></li>
+                        <li><a href="#" data-on-click="notification-settings-show">Notifications</a></li>
                     </ul>
                 </li>
 
                 <!-- Déconnexion -->
                 <li style="border-top: 1px solid #3c3f44; margin-top: 20px; padding-top: 10px;">
-                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="color: #e74c3c;">
+                    <a href="#" data-on-click="submit-form-prevent" data-form="logout-form" style="color: #e74c3c;">
                         <i class="fas fa-sign-out-alt"></i>
                         <span class="sidebar-menu-text">Déconnexion</span>
                         <span class="sidebar-tooltip">Déconnexion</span>
@@ -574,7 +574,7 @@
             <!-- Top Bar -->
             <header class="acheteur-topbar">
                 <div class="topbar-left">
-                    <button type="button" class="mobile-toggle" onclick="toggleMobileSidebar()" aria-label="Ouvrir le menu" aria-controls="acheteurSidebar" aria-expanded="false">
+                    <button type="button" class="mobile-toggle" data-on-click="mobile-sidebar-toggle" aria-label="Ouvrir le menu" aria-controls="acheteurSidebar" aria-expanded="false">
                         <i class="fas fa-bars" aria-hidden="true"></i>
                     </button>
 
@@ -653,6 +653,8 @@
         @csrf
     </form>
 
+    <script src="{{ asset('js/csp-actions.js') }}" defer></script>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -704,8 +706,8 @@
             syncMobileToggle(false);
         }
 
-        function toggleSubmenu(menuId, element) {
-            event.preventDefault();
+        function toggleSubmenu(menuId, element, evt) {
+            (evt || window.event).preventDefault();
 
             const submenu = document.getElementById('submenu-' + menuId);
             const parent = element.closest('.submenu-parent');
@@ -820,7 +822,7 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                <button type="button" class="btn btn-acheteur" onclick="submitPasswordChange()">Modifier</button>
+                                <button type="button" class="btn btn-acheteur" data-on-click="password-change-submit">Modifier</button>
                             </div>
                         </div>
                     </div>
@@ -850,6 +852,19 @@
             // Modal pour les paramètres de notification
             alert('Paramètres de notification à implémenter');
         }
+
+        // ========================= ACTIONS (data-on-click, voir public/js/csp-actions.js) =========================
+        document.addEventListener('DOMContentLoaded', function() {
+            CspActions.register({
+                'sidebar-toggle': function () { toggleSidebar(); },
+                'mobile-sidebar-toggle': function () { toggleMobileSidebar(); },
+                'mobile-sidebar-close': function () { closeMobileSidebar(); },
+                'submenu-toggle': function (el, e) { toggleSubmenu(el.dataset.menu, el, e); },
+                'password-modal-show': function () { showPasswordModal(); },
+                'password-change-submit': function () { submitPasswordChange(); },
+                'notification-settings-show': function () { showNotificationSettings(); }
+            });
+        });
 
         // ========================= INITIALIZATION =========================
         document.addEventListener('DOMContentLoaded', function() {

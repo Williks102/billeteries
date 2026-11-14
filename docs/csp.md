@@ -5,9 +5,29 @@ Supprimer `'unsafe-inline'` des scripts (puis des styles) de la politique de sé
 
 ## Les 4 lots
 - **A (fait)** : nonce par requête, politique stricte en mode « rapport seulement », collecte des rapports, écran admin.
-- **B** : sortir le JavaScript inline vers des fichiers externes : surtout les ~91 attributs `onclick`/`onsubmit`/etc. (30 vues) et les blocs `<script>` (24).
+- **B (fait)** : plus aucun attribut d'événement inline (`onclick`, `onsubmit`, `onchange`, `onerror`...) dans les vues : 89 convertis en `data-*` + délégation d'événements (`public/js/csp-actions.js`). Les blocs `<script>` (24) restent inline avec leur nonce.
 - **C** : héberger jQuery et Chart.js localement (plus de CDN pour les scripts), puis activer `script-src` strict (nonce) en remplaçant la politique appliquée.
 - **D** : les styles en dernier (~47 vues avec `<style>`, attributs `style=`), puis retirer `'unsafe-inline'` de `style-src`.
+
+## Lot B : écrire un gestionnaire d'événement (règle : plus JAMAIS d'attribut inline)
+Interdit dans `resources/views` (hors e-mails) : `onclick="..."`, `onchange`, `onsubmit`, `onerror`, tout `on*=` et `href="javascript:..."`. Le test `CspNoInlineHandlersTest` échoue sinon. Tous les layouts (`app`, `acheteur`, `promoteur`, `admin`) chargent `public/js/csp-actions.js` (`defer`) : délégation d'événements au niveau du document, sans `eval`, sans `new Function`, sans appel de `window[nom]` : seuls les noms enregistrés sont appelables.
+
+Attributs `data-*` pris en charge :
+- `data-confirm="Message"` sur un bouton, un lien ou un `<form>` : `confirm(message)` au clic (ou à la soumission) ; refus = action annulée (écouteur en phase de capture, les autres écouteurs ne s'exécutent pas non plus).
+- `data-on-click="nom"`, `data-on-change="nom"`, `data-on-submit="nom"`, `data-on-input="nom"` : appelle le gestionnaire enregistré `nom(element, event)`. Nom inconnu : ignoré, avec `console.warn`. Les arguments se lisent dans `element.dataset` (ex. `data-order-id="12"` -> `el.dataset.orderId`), jamais dans du JSON évalué. L'action par défaut n'est PAS annulée (liens et formulaires normaux intacts) : appeler `e.preventDefault()` dans le gestionnaire si besoin.
+- `data-img-fallback="hide"` (masque l'image en erreur) ou `"placeholder"` (la remplace par un `<span>` de même classe). Écouteur `error` en phase de capture, plus un contrôle des images déjà en échec au chargement du DOM.
+
+Actions intégrées (à utiliser avec `data-on-click`/`data-on-change`) : `history-back` (retour), `print` (impression), `reload` (recharger), `prevent` (annule l'action par défaut), `submit-form` (soumet le formulaire parent, ou celui de `data-form="id"` ; typique : `data-on-change="submit-form"` sur un `<select>`), `submit-form-prevent` (idem après `preventDefault`, pour un lien de déconnexion : `data-form="logout-form"`).
+
+Enregistrer un gestionnaire de page (les scripts de page s'exécutent avant le fichier en `defer`, d'où `DOMContentLoaded`) :
+```js
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register('order-refund', function (el, event) { refundOrder(el.dataset.orderId); });
+});
+```
+Le bloc `<script>` de page garde son `@cspNonce`. Les noms utilisés dans les vues doivent exister dans un registre (test : aucune action orpheline). Ne jamais construire du HTML contenant `onclick=` dans du JavaScript (les gabarits de chaînes comptent).
+
+Jauge restante : script-src-attr -> 0 attribut inline dans le code (mesure statique) ; il restera à vérifier l'écran « Rapports CSP » en usage réel (les 9 pages concernées doivent cesser de signaler `script-src-attr`). Reste pour l'activation stricte : lot C (jQuery, Chart.js, Bootstrap, jsQR, SortableJS hébergés localement) puis lot D (styles). Le bip du scanner (URI `data:` lue par un `Audio`) est couvert par `media-src 'self' data:`, ajouté à la politique de rapport seulement ; la politique appliquée n'a pas changé.
 
 ## Ce que le lot A fait
 - Un **nonce** aléatoire (18 octets cryptographiques, base64) est généré par requête, au début du middleware `SecurityHeaders`, conservé dans l'attribut de requête `csp_nonce` (ni session, ni cache). Aide `csp_nonce()` et directive Blade `@cspNonce` (produit `nonce="…"`). Hors requête HTTP (console, vue isolée) : chaîne vide, aucune erreur.

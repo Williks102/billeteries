@@ -57,6 +57,8 @@ final class Csp
             // Les styles viennent au lot D : 'unsafe-inline' reste admis d'ici là.
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; ".
             "img-src {$imgSrc}; ".
+            // Bip du scanner de billets : sons en URI data: lus par un élément audio.
+            "media-src 'self' data:; ".
             'font-src '.self::FONT_SRC.'; '.
             'connect-src '.self::CONNECT_SRC.'; '.
             "frame-src 'self'; ".

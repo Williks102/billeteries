@@ -23,7 +23,7 @@
                     <li><a class="dropdown-item" href="{{ route('admin.reports.export', 'commissions') }}">
                         <i class="fas fa-file-csv me-2"></i> Export CSV
                     </a></li>
-                    <li><a class="dropdown-item" href="#" onclick="window.print()">
+                    <li><a class="dropdown-item" href="#" data-on-click="print">
                         <i class="fas fa-print me-2"></i> Imprimer
                     </a></li>
                 </ul>
@@ -257,7 +257,7 @@
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
                                             <button type="button" class="dropdown-item text-secondary" 
-                                                    onclick="showNotesModal('{{ $commission->id }}', '{{ addslashes($commission->admin_notes ?? '') }}')">
+                                                    data-on-click="commission-notes" data-commission-id="{{ $commission->id }}" data-notes="{{ $commission->admin_notes ?? '' }}">
                                                 <i class="fas fa-sticky-note me-2"></i>Ajouter note
                                             </button>
                                         </li>

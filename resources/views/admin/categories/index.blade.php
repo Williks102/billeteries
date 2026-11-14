@@ -70,7 +70,7 @@
                                         </a>
                                         @if($category->events_count === 0)
                                             <form method="POST" action="{{ route('admin.categories.destroy', $category) }}"
-                                                  onsubmit="return confirm('Supprimer cette catégorie ?')">
+                                                  data-confirm="Supprimer cette catégorie ?">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Supprimer {{ $category->name }}">

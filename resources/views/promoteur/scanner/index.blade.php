@@ -23,7 +23,7 @@
         </div>
         <div class="scanner-stats">
             <span id="scan-count" class="badge bg-success fs-6 me-2">0 scannés aujourd'hui</span>
-            <button class="btn btn-outline-primary" onclick="showStats()">
+            <button class="btn btn-outline-primary" data-on-click="scanner-stats">
                 <i class="fas fa-chart-bar me-2"></i>Statistiques
             </button>
         </div>
@@ -75,7 +75,7 @@
                                    placeholder="TKT-XXXXXXXX"
                                    style="text-transform: uppercase;"
                                    maxlength="12">
-                            <button class="btn btn-success btn-lg" type="button" onclick="processTicket()">
+                            <button class="btn btn-success btn-lg" type="button" data-on-click="scanner-process-ticket">
                                 <i class="fas fa-search me-2"></i>Vérifier
                             </button>
                         </div>
@@ -84,10 +84,10 @@
 
                     <!-- Boutons caméra -->
                     <div class="text-center mb-3">
-                        <button type="button" class="btn btn-outline-info btn-lg me-2" onclick="toggleCamera()">
+                        <button type="button" class="btn btn-outline-info btn-lg me-2" data-on-click="scanner-camera-toggle">
                             <i class="fas fa-camera me-2"></i>Activer la caméra QR
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="testCameraPermissions()">
+                        <button type="button" class="btn btn-outline-secondary" data-on-click="scanner-camera-test">
                             <i class="fas fa-cog me-2"></i>Test permissions
                         </button>
                     </div>
@@ -121,7 +121,7 @@
                     </ul>
                     
                     <div class="mt-3">
-                        <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">
+                        <button class="btn btn-sm btn-outline-primary" data-on-click="reload">
                             <i class="fas fa-refresh me-1"></i>Recharger la page
                         </button>
                     </div>
@@ -154,6 +154,21 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'scanner-stats': function () { showStats(); },
+        'scanner-process-ticket': function () { processTicket(); },
+        'scanner-camera-toggle': function (el, e) { toggleCamera(e); },
+        'scanner-camera-test': function () { testCameraPermissions(); },
+        'scanner-camera-stop': function () { stopCamera(); },
+        'scanner-camera-retry': function () { retryCamera(); },
+        'scanner-camera-help': function () { showCameraHelp(); },
+        'scanner-camera-help-retry': function () { retryCamera(); bootstrap.Modal.getInstance(document.getElementById('cameraHelpModal')).hide(); }
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // Vérifier que jsQR est bien chargé
     if (typeof jsQR === 'undefined') {
@@ -170,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ========== FONCTION PRINCIPALE DE TRAITEMENT (CORRIGÉE) ==========
 async function processTicket() {
     const ticketCode = document.getElementById('ticketCode').value.trim().toUpperCase();
-    const submitButton = document.querySelector('button[onclick="processTicket()"]');
+    const submitButton = document.querySelector('button[data-on-click="scanner-process-ticket"]');
     
     if (!ticketCode) {
         showError('Veuillez saisir ou scanner un code de billet');
@@ -271,7 +286,7 @@ async function startCamera() {
             <video id="cameraFeed" width="100%" height="300" style="border-radius: 10px;" autoplay playsinline></video>
             <canvas id="cameraCanvas" style="display: none;"></canvas>
             <div class="mt-2 text-center">
-                <button type="button" class="btn btn-danger btn-sm" onclick="stopCamera()">
+                <button type="button" class="btn btn-danger btn-sm" data-on-click="scanner-camera-stop">
                     <i class="fas fa-stop me-1"></i>Arrêter la caméra
                 </button>
                 <div class="alert alert-success mt-2" role="alert">
@@ -403,9 +418,9 @@ function startQRDetection() {
 }
 
 // ========== GESTION BOUTONS CAMÉRA ==========
-function toggleCamera() {
+function toggleCamera(evt) {
     const container = document.getElementById('cameraContainer');
-    const button = event.target.closest('button');
+    const button = (evt || window.event).target.closest('button');
     
     if (container.style.display === 'none' || container.style.display === '') {
         // Activer la caméra
@@ -517,10 +532,10 @@ function showCameraError(message, error = null) {
                     <h6 class="alert-heading mb-2">Problème d'accès à la caméra</h6>
                     <p class="mb-2">${message}</p>
                     <div class="mt-3">
-                        <button type="button" class="btn btn-primary btn-sm me-2" onclick="retryCamera()">
+                        <button type="button" class="btn btn-primary btn-sm me-2" data-on-click="scanner-camera-retry">
                             <i class="fas fa-redo me-1"></i>Réessayer
                         </button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showCameraHelp()">
+                        <button type="button" class="btn btn-secondary btn-sm" data-on-click="scanner-camera-help">
                             <i class="fas fa-question-circle me-1"></i>Aide
                         </button>
                     </div>
@@ -557,7 +572,7 @@ function showCameraHelp() {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                        <button type="button" class="btn btn-primary" onclick="retryCamera(); bootstrap.Modal.getInstance(document.getElementById('cameraHelpModal')).hide();">
+                        <button type="button" class="btn btn-primary" data-on-click="scanner-camera-help-retry">
                             Réessayer maintenant
                         </button>
                     </div>

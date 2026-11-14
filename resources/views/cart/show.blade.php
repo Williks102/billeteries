@@ -35,7 +35,7 @@
                     @foreach($cart as $key => $item)
                         <article class="cart-line" data-cart-key="{{ $key }}" data-unit-price="{{ (int) $item['unit_price'] }}" data-name="{{ $item['ticket_name'] }}">
                             @if(!empty($item['event_image']) && \App\Support\Media::urlIfPresent($item['event_image']))
-                                <img src="{{ \App\Support\Media::urlIfPresent($item['event_image']) }}" alt="" class="order-line__img" width="56" height="56" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'order-line__img'}))">
+                                <img src="{{ \App\Support\Media::urlIfPresent($item['event_image']) }}" alt="" class="order-line__img" width="56" height="56" loading="lazy" decoding="async" data-img-fallback="placeholder">
                             @else
                                 <span class="order-line__img" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
                             @endif

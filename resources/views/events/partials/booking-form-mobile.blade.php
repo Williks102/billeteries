@@ -5,7 +5,7 @@
     @if($event->ticketTypes->isNotEmpty())
         <button type="button"
                 class="btn-open-modal"
-                onclick="openTicketModal()"
+                data-on-click="ticket-modal-open"
                 data-event-id="{{ $event->id }}">
             <i class="fas fa-ticket-alt me-2" aria-hidden="true"></i>
             Choisir mes billets
@@ -20,7 +20,7 @@
 </div>
 
 {{-- Modal Backdrop --}}
-<div class="modal-backdrop" id="ticketModalBackdrop" onclick="closeTicketModal()"></div>
+<div class="modal-backdrop" id="ticketModalBackdrop" data-on-click="ticket-modal-close"></div>
 
 {{-- Bottom Modal Facebook Style --}}
 <div class="ticket-modal" id="ticketModal">
@@ -30,7 +30,7 @@
     {{-- Header --}}
     <div class="modal-header">
         <h3 class="modal-title">Sélectionner vos billets</h3>
-        <button class="close-btn" onclick="closeTicketModal()">
+        <button class="close-btn" data-on-click="ticket-modal-close">
             <i class="fas fa-times"></i>
         </button>
     </div>
@@ -75,11 +75,11 @@
                                     <x-ticket-availability-badge :remaining="$available" />
                                 </div>
                                 <div class="quantity-controls">
-                                    <button class="qty-btn" onclick="updateQuantity('{{ $ticketType->id }}', -1)">
+                                    <button class="qty-btn" data-on-click="ticket-quantity" data-ticket-id="{{ $ticketType->id }}" data-delta="-1">
                                         <i class="fas fa-minus"></i>
                                     </button>
                                     <span class="qty-display" id="qty-{{ $ticketType->id }}">0</span>
-                                    <button class="qty-btn" onclick="updateQuantity('{{ $ticketType->id }}', 1)">
+                                    <button class="qty-btn" data-on-click="ticket-quantity" data-ticket-id="{{ $ticketType->id }}" data-delta="1">
                                         <i class="fas fa-plus"></i>
                                     </button>
                                 </div>
@@ -120,7 +120,7 @@
                 Réserver maintenant
             </button>
         </form>
-        <button type="button" class="add-to-cart-btn" id="addToCartBtn" onclick="addToCart()" disabled>
+        <button type="button" class="add-to-cart-btn" id="addToCartBtn" data-on-click="ticket-add-to-cart" disabled>
             <i class="fas fa-shopping-cart" aria-hidden="true"></i>
             Ajouter au panier
         </button>
@@ -500,6 +500,17 @@
 {{-- Scripts --}}
 @push('scripts')
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'ticket-modal-open': function () { openTicketModal(); },
+        'ticket-modal-close': function () { closeTicketModal(); },
+        'ticket-quantity': function (el) { updateQuantity(el.dataset.ticketId, parseInt(el.dataset.delta, 10)); },
+        'ticket-add-to-cart': function () { addToCart(); }
+    });
+});
+
 // État global des billets
 let ticketQuantities = {};
 let ticketPrices = {};

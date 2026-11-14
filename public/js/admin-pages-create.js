@@ -1,3 +1,10 @@
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'page-reset-form': function () { resetForm(); }
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // Génération automatique du slug
     const titleInput = document.getElementById('title');

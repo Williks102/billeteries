@@ -585,6 +585,7 @@ $(document).ready(function() {
     window.increaseQuantity = (ticketTypeId) => bookingSystem.increaseQuantity(ticketTypeId);
     window.decreaseQuantity = (ticketTypeId) => bookingSystem.decreaseQuantity(ticketTypeId);
     window.reserveTickets = () => bookingSystem.reserveTickets();
+    CspActions.register('booking-reserve', function () { window.reserveTickets(); });
     
     console.log('✅ Système de réservation initialisé');
 });

@@ -20,6 +20,7 @@ class CspReportOnlyTest extends TestCase
         ."script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net; "
         ."style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
         ."img-src 'self' data: blob: https://res.cloudinary.com; "
+        ."media-src 'self' data:; "
         ."font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
         ."connect-src 'self' https://cdn.jsdelivr.net; "
         ."frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; "

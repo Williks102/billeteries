@@ -164,8 +164,8 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" for="name">Nom complet</label>
-                            <input id="name" type="text" name="name" class="form-control" 
+                            <label class="form-label" for="nameInput">Nom complet</label>
+                            <input type="text" name="name" class="form-control" 
                                    value="{{ $user->name }}" readonly id="nameInput">
                         </div>
                         

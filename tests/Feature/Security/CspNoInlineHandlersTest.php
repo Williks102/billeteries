@@ -84,4 +84,30 @@ class CspNoInlineHandlersTest extends TestCase
         $orphans = array_diff_key($used, array_flip($registered));
         $this->assertSame([], $orphans, 'Action data-on-* sans CspActions.register : '.json_encode($orphans));
     }
+
+    /** Un `id` en double rend le second ignoré : le profil promoteur plantait (toggleEdit lisait « nameInput » inexistant). */
+    public function test_no_element_declares_two_id_attributes(): void
+    {
+        $offenders = [];
+        $dir = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path('resources/views')));
+        foreach ($dir as $file) {
+            if (! $file->isFile() || ! str_ends_with($file->getFilename(), '.blade.php') || str_contains($file->getPathname(), '/emails/')) {
+                continue;
+            }
+            if (preg_match('/<[a-z][^<>]*\sid="[^"]*"[^<>]*\sid="[^"]*"/i', (string) file_get_contents($file->getPathname()))) {
+                $offenders[] = str_replace(base_path().'/', '', $file->getPathname());
+            }
+        }
+
+        $this->assertSame([], $offenders, 'balise avec deux attributs id');
+    }
+
+    public function test_promoter_profile_name_input_has_the_id_the_script_looks_for(): void
+    {
+        $view = (string) file_get_contents(base_path('resources/views/promoteur/profile.blade.php'));
+
+        $this->assertStringContainsString('for="nameInput"', $view);
+        $this->assertSame(1, preg_match_all('/id="nameInput"/', $view));
+        $this->assertStringContainsString("'nameInput'", $view, 'le script cible bien nameInput');
+    }
 }

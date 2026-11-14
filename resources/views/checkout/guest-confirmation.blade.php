@@ -105,6 +105,12 @@
                 
             </div>
 
+            @guest
+            <p class="text-center text-muted" data-login-reminder>
+                Pour retrouver vos billets plus tard, <a href="{{ route('login') }}">Se connecter</a> ou <a href="{{ route('register') }}">créer un compte</a>.
+            </p>
+            @endguest
+
             <!-- Navigation -->
             <div class="d-grid gap-2 d-sm-block text-sm-center mt-4">
                 <a href="{{ route('home') }}" class="btn btn-outline-primary" style="min-height: 44px;">

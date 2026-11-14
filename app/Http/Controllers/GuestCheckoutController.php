@@ -29,7 +29,11 @@ class GuestCheckoutController extends Controller
             return redirect()->route('cart.show')->with('error', 'Votre panier est vide.');
         }
 
-        // Vérifications de disponibilité...
+        // Bouton « Se connecter » de la page : après connexion, retour au tunnel connecté (URL construite côté
+        // serveur, jamais fournie par le client). La sélection (session) survit à la régénération de session.
+        if (auth()->guest()) {
+            session()->put('url.intended', route('checkout.show'));
+        }
         
         // Total recalculé côté serveur (jamais la session) : décide de l'affichage « Gratuit » / choix de paiement
         $cartTotal = app(CheckoutService::class)->serverCartTotal($cart);

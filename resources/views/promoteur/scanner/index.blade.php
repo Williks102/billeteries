@@ -10,6 +10,10 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/scanner.css') }}">
+@endpush
+
 @section('content')
 <div class="scanner-page">
     <!-- Header -->
@@ -99,6 +103,12 @@
 
                     <!-- Résultats du scan -->
                     <div id="scanResult" style="display: none;"></div>
+
+                    <!-- Derniers scans : les résultats précédents restent consultables -->
+                    <div id="scanHistoryBox" class="scan-history mt-3" hidden>
+                        <h6 class="mb-2"><i class="fas fa-history me-2"></i>Derniers scans</h6>
+                        <ul id="scanHistory" class="list-unstyled mb-0"></ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -163,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'scanner-camera-toggle': function (el, e) { toggleCamera(e); },
         'scanner-camera-test': function () { testCameraPermissions(); },
         'scanner-camera-stop': function () { stopCamera(); },
+        'scanner-next': function () { dismissScanResult(); },
         'scanner-camera-retry': function () { retryCamera(); },
         'scanner-camera-help': function () { showCameraHelp(); },
         'scanner-camera-help-retry': function () { retryCamera(); bootstrap.Modal.getInstance(document.getElementById('cameraHelpModal')).hide(); }
@@ -184,6 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ========== FONCTION PRINCIPALE DE TRAITEMENT (CORRIGÉE) ==========
 async function processTicket() {
+    ensureAudio(); // geste utilisateur (bouton Vérifier) : autorise les bips sur mobile
     const ticketCode = document.getElementById('ticketCode').value.trim().toUpperCase();
     const submitButton = document.querySelector('button[data-on-click="scanner-process-ticket"]');
     
@@ -246,6 +258,7 @@ async function processTicket() {
 
 // ========== GESTION CAMÉRA (CORRIGÉE) ==========
 async function startCamera() {
+    ensureAudio(); // geste utilisateur : autorise les bips sur mobile
     // Vérifier le support de getUserMedia
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showCameraError('Votre navigateur ne supporte pas l\'accès à la caméra. Utilisez Chrome, Firefox ou Safari récent.');
@@ -283,7 +296,15 @@ async function startCamera() {
         
         // Succès - afficher le flux vidéo
         cameraContainer.innerHTML = `
-            <video id="cameraFeed" width="100%" height="300" style="border-radius: 10px;" autoplay playsinline></video>
+            <div class="scan-stage">
+                <video id="cameraFeed" width="100%" height="300" style="border-radius: 10px;" autoplay playsinline></video>
+                <div id="scanOverlay" class="scan-overlay" role="status" aria-live="assertive" hidden>
+                    <div class="scan-overlay__icon" id="scanOverlayIcon" aria-hidden="true"></div>
+                    <div class="scan-overlay__title" id="scanOverlayTitle"></div>
+                    <div class="scan-overlay__details" id="scanOverlayDetails"></div>
+                    <button type="button" class="scan-overlay__next" data-on-click="scanner-next">Scanner le suivant</button>
+                </div>
+            </div>
             <canvas id="cameraCanvas" style="display: none;"></canvas>
             <div class="mt-2 text-center">
                 <button type="button" class="btn btn-danger btn-sm" data-on-click="scanner-camera-stop">
@@ -338,6 +359,9 @@ async function startCamera() {
 let lastScannedCode = null;
 let lastScanTime = 0;
 const SCAN_COOLDOWN = 5000; // 5 secondes de cooldown
+const SCAN_RESUME_DELAY = 1800; // pause après une vérification sans bandeau (saisie manuelle, caméra masquée)
+const SCAN_RESULT_HOLD = 4000;  // le bandeau de résultat reste affiché ce temps, ou jusqu'à « Scanner le suivant
+let scanBusy = false; // vrai pendant une vérification : la détection est suspendue
 
 function startQRDetection() {
     const video = document.getElementById('cameraFeed');
@@ -351,6 +375,9 @@ function startQRDetection() {
     const context = canvas.getContext('2d');
     
     function scanQR() {
+        if (scanBusy) {
+            return;
+        }
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
             // Ajuster la taille du canvas à la vidéo
             canvas.width = video.videoWidth || 640;
@@ -394,18 +421,13 @@ function startQRDetection() {
                     // Remplir automatiquement le champ de saisie
                     document.getElementById('ticketCode').value = ticketCode;
                     
-                    // ✅ ARRÊTER LA CAMÉRA AVANT DE TRAITER
-                    stopCamera();
+                    // La caméra RESTE allumée (à l'entrée d'un événement on enchaîne les billets) : la détection est
+                    // seulement mise en pause pendant la vérification, puis reprend toute seule. Le son (billet valide
+                    // ou refusé) est joué à la réponse du serveur, pas dès la détection.
+                    scanBusy = true;
+                    processTicket().finally(scheduleScanResume);
                     
-                    // Déclencher la vérification
-                    processTicket();
-                    
-                    // Effet visuel de succès
-                    if (typeof playSuccessSound === 'function') {
-                        playSuccessSound();
-                    }
-                    
-                    return; // Arrêter la détection
+                    return;
                 }
             } else {
                 console.warn('Bibliothèque jsQR non chargée - Scanner QR indisponible');
@@ -450,6 +472,8 @@ function stopCamera() {
         video.srcObject = null;
     }
     
+    dismissScanResult();
+
     // Arrêter la détection QR
     if (window.qrDetectionInterval) {
         clearInterval(window.qrDetectionInterval);
@@ -457,6 +481,69 @@ function stopCamera() {
     }
     
     console.log('Caméra arrêtée avec succès');
+}
+
+// ========== BANDEAU DE RÉSULTAT, HISTORIQUE, REPRISE ==========
+let scanResumeTimer = null;
+
+/** Échappe une valeur venant du serveur avant de l'insérer dans du HTML (nom d'événement, de client…). */
+function escapeHtml(value) {
+    return String(value === null || value === undefined ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
+ * Bandeau plein cadre PAR-DESSUS la caméra : vert (valide), rouge (refusé), orange (déjà utilisé). La détection reste
+ * suspendue tant qu'il est affiché (la caméra continue de tourner) : l'opérateur lit le résultat avant le billet suivant.
+ */
+function showScanOverlay(kind, title, details) {
+    const overlay = document.getElementById('scanOverlay');
+    if (!overlay) {
+        return false; // caméra non affichée (saisie manuelle) : le résultat reste dans la carte et l'historique
+    }
+    overlay.className = 'scan-overlay scan-overlay--' + kind;
+    document.getElementById('scanOverlayIcon').textContent = kind === 'ok' ? '✓' : (kind === 'used' ? '!' : '✕');
+    document.getElementById('scanOverlayTitle').textContent = title;
+    document.getElementById('scanOverlayDetails').textContent = details;
+    overlay.hidden = false;
+    return true;
+}
+
+function dismissScanResult() {
+    clearTimeout(scanResumeTimer);
+    scanResumeTimer = null;
+    const overlay = document.getElementById('scanOverlay');
+    if (overlay) {
+        overlay.hidden = true;
+    }
+    scanBusy = false;
+}
+
+/** Appelée quand la vérification est terminée : le bandeau reste SCAN_RESULT_HOLD ms, puis la détection reprend. */
+function scheduleScanResume() {
+    const overlay = document.getElementById('scanOverlay');
+    const hold = overlay && !overlay.hidden ? SCAN_RESULT_HOLD : SCAN_RESUME_DELAY;
+    clearTimeout(scanResumeTimer);
+    scanResumeTimer = setTimeout(dismissScanResult, hold);
+}
+
+/** Dernières vérifications (les plus récentes en haut) : un résultat ne disparaît plus au scan suivant. */
+function addScanHistory(kind, code, text) {
+    const box = document.getElementById('scanHistoryBox');
+    const list = document.getElementById('scanHistory');
+    if (!box || !list) {
+        return;
+    }
+    const item = document.createElement('li');
+    item.className = 'scan-history__item scan-history__item--' + kind;
+    const time = new Date().toLocaleTimeString('fr-FR');
+    item.textContent = (kind === 'ok' ? '✓ ' : (kind === 'used' ? '! ' : '✕ ')) + time + ' · ' + (code || '—') + ' · ' + text;
+    list.insertBefore(item, list.firstChild);
+    while (list.children.length > 8) {
+        list.removeChild(list.lastChild);
+    }
+    box.hidden = false;
 }
 
 // ========== AFFICHAGE DES RÉSULTATS ==========
@@ -470,9 +557,9 @@ function showSuccess(data) {
                 <i class="fas fa-check-circle fa-2x me-3"></i>
                 <div class="flex-grow-1">
                     <h5 class="alert-heading">✅ Billet Valide Scanné !</h5>
-                    <p class="mb-1"><strong>${ticket.event || 'Événement'}</strong></p>
-                    <p class="mb-1">Code: ${ticket.code} • Type: ${ticket.type || 'N/A'}</p>
-                    <p class="mb-1">Client: ${ticket.client || 'N/A'}</p>
+                    <p class="mb-1"><strong>${escapeHtml(ticket.event || 'Événement')}</strong></p>
+                    <p class="mb-1">Code: ${escapeHtml(ticket.code)} • Type: ${escapeHtml(ticket.type || 'N/A')}</p>
+                    <p class="mb-1">Client: ${escapeHtml(ticket.client || 'N/A')}</p>
                     <small>Scanné le ${new Date().toLocaleString('fr-FR')}</small>
                 </div>
             </div>
@@ -481,8 +568,11 @@ function showSuccess(data) {
     `;
     
     scanResult.style.display = 'block';
-    
-    // Son de succès (optionnel)
+
+    showScanOverlay('ok', 'BILLET VALIDE', [ticket.type, ticket.client, ticket.event].filter(Boolean).join(' · ') || ticket.code || '');
+    addScanHistory('ok', ticket.code, ticket.type || 'valide');
+
+    // Son de succès
     playSuccessSound();
 }
 
@@ -494,10 +584,10 @@ function showError(message, ticket = null) {
         if (ticket.status === 'used') {
             extraInfo = `<p class="mb-1">⚠️ Billet déjà utilisé</p>`;
             if (ticket.used_at) {
-                extraInfo += `<small>Utilisé le ${ticket.used_at}</small>`;
+                extraInfo += `<small>Utilisé le ${escapeHtml(ticket.used_at)}</small>`;
             }
         } else {
-            extraInfo = `<p class="mb-1">Statut: ${ticket.status}</p>`;
+            extraInfo = `<p class="mb-1">Statut: ${escapeHtml(ticket.status)}</p>`;
         }
     }
     
@@ -507,7 +597,7 @@ function showError(message, ticket = null) {
                 <i class="fas fa-times-circle fa-2x me-3"></i>
                 <div class="flex-grow-1">
                     <h5 class="alert-heading">❌ Erreur de scan</h5>
-                    <p class="mb-1">${message}</p>
+                    <p class="mb-1">${escapeHtml(message)}</p>
                     ${extraInfo}
                 </div>
             </div>
@@ -516,8 +606,13 @@ function showError(message, ticket = null) {
     `;
     
     scanResult.style.display = 'block';
-    
-    // Son d'erreur (optionnel)
+
+    const used = !!(ticket && ticket.status === 'used');
+    const kind = used ? 'used' : 'error';
+    showScanOverlay(kind, used ? 'DÉJÀ UTILISÉ' : 'REFUSÉ', used && ticket.used_at ? 'Utilisé le ' + ticket.used_at : message);
+    addScanHistory(kind, ticket && ticket.code ? ticket.code : '', used ? 'déjà utilisé' : message);
+
+    // Son d'erreur
     playErrorSound();
 }
 
@@ -530,7 +625,7 @@ function showCameraError(message, error = null) {
                 <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
                 <div class="flex-grow-1">
                     <h6 class="alert-heading mb-2">Problème d'accès à la caméra</h6>
-                    <p class="mb-2">${message}</p>
+                    <p class="mb-2">${escapeHtml(message)}</p>
                     <div class="mt-3">
                         <button type="button" class="btn btn-primary btn-sm me-2" data-on-click="scanner-camera-retry">
                             <i class="fas fa-redo me-1"></i>Réessayer
@@ -625,7 +720,7 @@ async function testCameraPermissions() {
         const testResult = document.createElement('div');
         testResult.className = `alert ${alertClass} alert-dismissible fade show mt-2`;
         testResult.innerHTML = `
-            ${message}
+            ${escapeHtml(message)}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
@@ -678,27 +773,71 @@ function showStats() {
     alert('Fonctionnalité statistiques en cours de développement');
 }
 
-// ========== EFFETS SONORES (OPTIONNEL) ==========
-function playSuccessSound() {
+// ========== EFFETS SONORES ==========
+// Bips générés par l'API Web Audio : aucun fichier son (les anciens sons intégrés en data: étaient tronqués, donc
+// illisibles, et la CSP les bloquait). Le contexte audio doit être créé/relancé pendant un geste de l'utilisateur
+// (touche « Activer la caméra » ou « Vérifier ») : les navigateurs mobiles refusent de jouer un son sinon.
+let audioCtx = null;
+
+function ensureAudio() {
     try {
-        // Son de succès court
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+Xwt');
-        audio.volume = 0.3;
-        audio.play().catch(e => console.log('Son indisponible'));
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                audioCtx = new AudioContextClass();
+            }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
     } catch (e) {
         // Son non critique
+    }
+    return audioCtx;
+}
+
+function beep(frequency, delay, duration, waveform) {
+    const ctx = ensureAudio();
+    if (!ctx) {
+        return;
+    }
+    const start = ctx.currentTime + delay;
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = waveform || 'sine';
+    oscillator.frequency.value = frequency;
+    // Enveloppe courte : évite le « clic » de début et de fin
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.5, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
+}
+
+function vibrate(pattern) {
+    try {
+        if (navigator.vibrate) {
+            navigator.vibrate(pattern);
+        }
+    } catch (e) {
+        // Non critique
     }
 }
 
+// Billet valide : deux notes montantes courtes + une vibration brève
+function playSuccessSound() {
+    beep(880, 0, 0.12, 'sine');
+    beep(1320, 0.13, 0.16, 'sine');
+    vibrate(80);
+}
+
+// Billet refusé : deux tons graves, plus longs + vibration en deux temps
 function playErrorSound() {
-    try {
-        // Son d'erreur court
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+Xwt');
-        audio.volume = 0.3;
-        audio.play().catch(e => console.log('Son indisponible'));
-    } catch (e) {
-        // Son non critique
-    }
+    beep(220, 0, 0.2, 'square');
+    beep(220, 0.26, 0.2, 'square');
+    vibrate([120, 60, 120]);
 }
 
 // ========== INITIALISATION ==========

@@ -20,7 +20,6 @@ class CspReportOnlyTest extends TestCase
         ."script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net; "
         ."style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
         ."img-src 'self' data: blob: https://res.cloudinary.com; "
-        ."media-src 'self' data:; "
         ."font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
         ."connect-src 'self' https://cdn.jsdelivr.net; "
         ."frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; "
@@ -51,7 +50,8 @@ class CspReportOnlyTest extends TestCase
         $this->assertStringContainsString("default-src 'self'", $header);
         $this->assertMatchesRegularExpression("/script-src 'self' 'nonce-[A-Za-z0-9+\/=]{24,}' https:\/\/code\.jquery\.com https:\/\/cdn\.jsdelivr\.net;/", $header);
         $this->assertStringContainsString("script-src-attr 'none'", $header);
-        $this->assertStringContainsString("media-src 'self' data:;", $header);
+        // Plus aucun son intégré en data: (le scanner utilise l'API Web Audio) : pas de media-src à autoriser.
+        $this->assertStringNotContainsString('media-src', $header);
         $this->assertStringContainsString('report-uri /csp-report', $header);
         $this->assertStringContainsString("object-src 'none'", $header);
         $this->assertStringNotContainsString("script-src 'self' 'unsafe-inline'", $header);

@@ -1,0 +1,32 @@
+/* Scanner de billets du promoteur : résultat en PLEIN ÉCRAN (lisible d'un coup d'œil, même quand la caméra est plus
+   bas que l'écran sur un petit téléphone) et historique des derniers scans. */
+.scan-stage { position: relative; }
+
+.scan-overlay {
+    position: fixed; inset: 0; z-index: 1080; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--space-3, .75rem); padding: var(--space-5, 1.5rem); text-align: center; color: #fff;
+    padding-bottom: calc(var(--space-5, 1.5rem) + env(safe-area-inset-bottom));
+}
+.scan-overlay[hidden] { display: none; }
+.scan-overlay--ok { background: rgba(21, 128, 61, .97); }
+.scan-overlay--error { background: rgba(185, 28, 28, .97); }
+.scan-overlay--used { background: rgba(194, 65, 12, .97); }
+
+.scan-overlay__icon { font-size: 6rem; line-height: 1; font-weight: 700; }
+.scan-overlay__title { font-size: 2.1rem; font-weight: 800; letter-spacing: .04em; }
+.scan-overlay__details { font-size: 1.2rem; overflow-wrap: anywhere; }
+.scan-overlay__next {
+    margin-top: var(--space-2, .5rem); min-height: 48px; padding: 0 1.5rem; border: 2px solid #fff; border-radius: 8px;
+    background: transparent; color: #fff; font-size: 1rem; font-weight: 700;
+}
+.scan-overlay__next:active { background: rgba(255, 255, 255, .2); }
+
+.scan-history__item { padding: .35rem .6rem; border-left: 4px solid #cbd5e1; background: #f8fafc; margin-bottom: .25rem; font-size: .9rem; overflow-wrap: anywhere; }
+.scan-history__item--ok { border-left-color: #15803d; }
+.scan-history__item--error { border-left-color: #b91c1c; }
+.scan-history__item--used { border-left-color: #c2410c; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .scan-overlay { animation: scan-overlay-in .15s ease-out; }
+}
+@keyframes scan-overlay-in { from { opacity: 0; } to { opacity: 1; } }

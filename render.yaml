@@ -65,7 +65,7 @@ services:
       - key: DB_PASSWORD
         sync: false
 
-      # --- Sessions, cache, files : pas de worker ni de Redis sur l'offre gratuite ---
+      # --- Sessions, cache, files : tout en base ; le worker de file (e-mails) tourne dans le conteneur (docker/entrypoint.sh) ---
       - key: SESSION_DRIVER
         value: database
       - key: SESSION_LIFETIME
@@ -75,7 +75,7 @@ services:
       - key: CACHE_STORE
         value: database
       - key: QUEUE_CONNECTION
-        value: sync
+        value: database
       - key: FILESYSTEM_DISK
         value: local
 

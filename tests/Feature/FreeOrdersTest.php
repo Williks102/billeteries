@@ -386,7 +386,7 @@ class FreeOrdersTest extends TestCase
     public function test_email_failure_does_not_cancel_the_free_order(): void
     {
         $type = $this->freeType();
-        Mail::shouldReceive('to')->andThrow(new \RuntimeException('smtp indisponible'));
+        Mail::shouldReceive('queue')->andThrow(new \RuntimeException('smtp indisponible'));
 
         $r = $this->guestPost($this->cart($type, 1));
 

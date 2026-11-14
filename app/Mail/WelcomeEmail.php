@@ -6,17 +6,12 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
 use App\Models\User;
 
-class WelcomeEmail extends Mailable
+class WelcomeEmail extends \App\Mail\Concerns\TransactionalMail
 {
-    use Queueable, SerializesModels;
-
     public User $user;
 
     public function __construct(User $user)
@@ -24,9 +19,20 @@ class WelcomeEmail extends Mailable
         $this->user = $user;
     }
 
+    public function recipientEmail(): ?string
+    {
+        return $this->user->email;
+    }
+
+    protected function logContext(): array
+    {
+        return ['user_id' => $this->user->id];
+    }
+
     public function envelope(): Envelope
     {
         return new Envelope(
+            to: $this->recipients(),
             subject: '🎉 Bienvenue sur ClicBillet CI - Votre compte est activé !',
         );
     }

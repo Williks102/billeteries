@@ -22,6 +22,24 @@
         </div>
     @endif
 
+    <div class="row g-3 mb-3" id="queue-counters">
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">E-mails en attente</div>
+                <div class="h3 mb-0" id="queue-pending">{{ $queueCounts['pending'] ?? '—' }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">E-mails en échec</div>
+                <div class="h3 mb-0" id="queue-failed">{{ $queueCounts['failed'] ?? '—' }}</div>
+            </div></div>
+        </div>
+        <div class="col-lg-6 d-flex align-items-center">
+            <p class="text-muted small mb-0">Les e-mails partent en arrière-plan. Un e-mail en échec ne bloque jamais une commande : le paiement et les billets sont déjà enregistrés. Les échecs sont purgés automatiquement après 72 heures.</p>
+        </div>
+    </div>
+
     <div class="row g-3">
         <div class="col-lg-6">
             <div class="card h-100">

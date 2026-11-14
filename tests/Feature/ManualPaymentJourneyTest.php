@@ -62,8 +62,8 @@ class ManualPaymentJourneyTest extends TestCase
         $this->assertSame(2, Ticket::where('status', 'reserved')->count());
         $this->assertSame(2, $type->fresh()->quantity_sold);
         $this->assertSame(1, Commission::where('order_id', $order->id)->count());
-        Mail::assertSent(ManualPaymentInstructions::class, 1);
-        Mail::assertNotSent(PaymentConfirmation::class);
+        Mail::assertQueued(ManualPaymentInstructions::class, 1);
+        Mail::assertNotQueued(PaymentConfirmation::class);
 
         // 2. L'admin confirme
         $this->actingAs($admin)
@@ -78,7 +78,7 @@ class ManualPaymentJourneyTest extends TestCase
         $this->assertSame(2, $type->fresh()->quantity_sold); // pas de double comptage
         $this->assertSame(1, Commission::where('order_id', $order->id)->count());
         $this->assertSame(1, Payment::where('order_id', $order->id)->count());
-        Mail::assertSent(PaymentConfirmation::class, 1);
+        Mail::assertQueued(PaymentConfirmation::class, 1);
     }
 
     public function test_guest_journey_session_proof_and_other_visitor_is_locked_out(): void
@@ -151,6 +151,6 @@ class ManualPaymentJourneyTest extends TestCase
         $this->assertSame(1, Commission::where('order_id', $order->id)->count());
         $this->assertSame(2, Ticket::where('status', 'sold')->count());
         $this->assertSame(2, $type->fresh()->quantity_sold);
-        Mail::assertSent(PaymentConfirmation::class, 1);
+        Mail::assertQueued(PaymentConfirmation::class, 1);
     }
 }

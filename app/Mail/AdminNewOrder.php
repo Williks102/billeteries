@@ -2,23 +2,30 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
 use App\Models\Order;
+use App\Models\User;
 
-class AdminNewOrder extends Mailable
+class AdminNewOrder extends \App\Mail\Concerns\TransactionalMail
 {
-    use Queueable, SerializesModels;
-
     /**
      * Create a new message instance.
      */
     public function __construct(
-        public Order $order
+        public Order $order,
+        public ?User $admin = null,
     ) {}
+
+    public function recipientEmail(): ?string
+    {
+        return $this->admin?->email;
+    }
+
+    protected function logContext(): array
+    {
+        return ['order_id' => $this->order->id];
+    }
 
     /**
      * Get the message envelope.
@@ -26,6 +33,7 @@ class AdminNewOrder extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
+            to: $this->recipients(),
             subject: '🔔 [ClicBillet] Nouvelle commande #' . $this->order->order_number,
         );
     }

@@ -67,7 +67,7 @@ Variables déjà fixées dans `render.yaml` (en clair, sans danger) :
 | DB_SSL_CA | `/etc/ssl/certs/ca-certificates.crt` (certificats racine du conteneur ; TiDB utilise Let's Encrypt) |
 | DB_SSL_VERIFY | `true` (vérifie le certificat du serveur) |
 | SESSION_DRIVER / CACHE_STORE | `database` |
-| QUEUE_CONNECTION | `sync` (pas de worker gratuit) |
+| QUEUE_CONNECTION | `database` : les e-mails partent en arrière-plan, traités par un worker lancé dans le conteneur (voir « File d'attente et e-mails »). |
 | MAIL_MAILER | `log` par défaut (les emails sont écrits dans les journaux, pas envoyés). Pour tester de vrais envois : `docs/smtp-gmail-test.md` (variables `MAIL_*` saisies dans Render, jamais dans le dépôt). |
 | SESSION_SECURE_COOKIE | `true` |
 | TRUSTED_PROXIES | `*` : acceptable ici parce que l'application n'est joignable que via le proxy de Render. À ne pas copier ailleurs. |
@@ -156,10 +156,22 @@ Autre point de vigilance, non vérifié sur TiDB : les verrous `SELECT … FOR U
 
 **Images qui disparaissent** : normal (fichiers éphémères). Retéléversez-les, ou passez à un stockage externe : le code est prêt pour Cloudflare R2, guide pas à pas dans [stockage-images.md](stockage-images.md).
 
+## File d'attente et e-mails
+
+Les e-mails transactionnels (confirmation de commande, confirmation de paiement avec le PDF des billets, instructions de paiement manuel, notifications promoteur et admin, bienvenue) ne sont plus envoyés pendant la requête de l'acheteur : ils sont enregistrés comme tâches dans la table `jobs`, puis envoyés par un worker (`queue:work`) que `docker/entrypoint.sh` relance automatiquement s'il s'arrête (même conteneur que le planificateur, aucun service payant). Le PDF des billets est lui aussi généré par le worker. Le paiement, les billets et le stock restent traités tout de suite, dans la requête : un e-mail en retard ou en échec ne change jamais une commande.
+
+- **Vérifier qu'un e-mail est parti** : dans les journaux Render, cherchez la ligne « mis en file d'attente » (commande concernée) puis, quelques secondes plus tard, l'envoi (avec `MAIL_MAILER=log`, le message complet apparaît dans les journaux). Dans l'administration, page **Emails** : « E-mails en attente » doit revenir à 0 et « E-mails en échec » rester à 0.
+- **`jobs`** : e-mails en attente ou en cours. Ne contient que des identifiants (commande, utilisateur), pas d'adresse e-mail.
+- **`failed_jobs`** : e-mails abandonnés après 3 tentatives (attentes de 1 puis 5 minutes). Le texte de l'erreur y est conservé, expurgé des adresses et identifiants ; la table est purgée chaque nuit au-delà de 72 heures (`queue:prune-failed --hours=72`, planifié).
+- **Délai SMTP** : `MAIL_TIMEOUT` (secondes, 10 par défaut). Sur l'offre gratuite de Render les ports SMTP 25, 465 et 587 sont bloqués : un envoi SMTP y échouera (en 10 secondes, sans jamais faire attendre l'acheteur) ; utilisez un service d'envoi par API/HTTPS ou un hébergement qui autorise le SMTP.
+- **`MAIL_MAILER=log`** reste le réglage de la démo : les e-mails sont « envoyés » dans les journaux.
+- **Rejouer les échecs** après correction de la configuration : `php artisan queue:retry all` (shell Render) ; les vider : `php artisan queue:flush`.
+- **Mémoire** (offre gratuite, 512 Mo) : un worker au repos occupe environ 60 à 65 Mo ; `--memory=128` le fait redémarrer au-delà de 128 Mo, `--max-time=3600` toutes les heures. Si `QUEUE_CONNECTION=sync`, aucun worker n'est lancé et les e-mails repartent dans la requête.
+
 ## F. Passer ensuite à un hébergement durable
 
 - Stockage externe des images (Cloudflare R2, code prêt) au lieu du disque local : voir [stockage-images.md](stockage-images.md).
-- Vrai cron (`* * * * * php artisan schedule:run`) ou service planifié, plus un vrai worker de file (QUEUE_CONNECTION=database ou redis).
+- Vrai cron (`* * * * * php artisan schedule:run`) ou service planifié, et un worker de file séparé (ou Redis) au lieu de celui du conteneur web.
 - Vrai SMTP (MAIL_MAILER=smtp et ses variables) pour envoyer les emails.
 - TRUSTED_PROXIES réel : listez les IP/CIDR du proxy de l'hébergeur au lieu de `*`.
 - Hébergement sans veille, base MySQL standard ou TiDB payant.

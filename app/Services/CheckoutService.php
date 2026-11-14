@@ -903,7 +903,7 @@ class CheckoutService
             } catch (\Throwable $e) {
                 Log::error('Erreur envoi instructions de paiement manuel', [
                     'order_id' => $order->id,
-                    'error' => $e->getMessage(),
+                    'error' => \App\Support\MailDiagnostic::redact($e->getMessage()),
                 ]);
             }
         }

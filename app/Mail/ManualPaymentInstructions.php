@@ -4,21 +4,27 @@ namespace App\Mail;
 
 use App\Models\Order;
 use App\Services\CheckoutService;
-use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
 
-class ManualPaymentInstructions extends Mailable
+class ManualPaymentInstructions extends \App\Mail\Concerns\TransactionalMail
 {
-    use Queueable, SerializesModels;
-
     public function __construct(public Order $order) {}
+
+    public function recipientEmail(): ?string
+    {
+        return $this->order->billing_email ?: $this->order->user?->email;
+    }
+
+    protected function logContext(): array
+    {
+        return ['order_id' => $this->order->id];
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
+            to: $this->recipients(),
             subject: 'Instructions de paiement - commande #' . $this->order->order_number,
         );
     }

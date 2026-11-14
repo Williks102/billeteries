@@ -111,7 +111,7 @@ class RenderDeploymentTest extends TestCase
         $this->assertSame('mysql', $v('DB_CONNECTION'));
         $this->assertSame('4000', $v('DB_PORT'));
         $this->assertSame('/etc/ssl/certs/ca-certificates.crt', $v('DB_SSL_CA'));
-        $this->assertSame('sync', $v('QUEUE_CONNECTION'));
+        $this->assertSame('database', $v('QUEUE_CONNECTION'));
         // MAIL_MAILER : jamais une valeur d'envoi réel écrite en dur dans le dépôt. Soit absente (sync: false, saisie dans
         // Render ; sans valeur l'application retombe sur « log »), soit « log ».
         $this->assertContains($v('MAIL_MAILER'), [null, 'log']);
@@ -189,6 +189,27 @@ class RenderDeploymentTest extends TestCase
             exec('sh -n '.escapeshellarg($path).' 2>&1', $out, $code);
             $this->assertSame(0, $code, implode("\n", $out));
         }
+    }
+
+    public function test_entrypoint_supervises_a_queue_worker_as_www_data(): void
+    {
+        $script = $this->read('docker/entrypoint.sh');
+
+        // Boucle de relance (le worker est relancé 5 s après son arrêt), sous www-data, avec durée de vie et mémoire
+        // bornées, lancée en arrière-plan.
+        $this->assertMatchesRegularExpression(
+            '/runuser -u www-data -- php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --memory=128\s*&/',
+            $script
+        );
+        $this->assertStringContainsString('while true; do', $script);
+        $this->assertStringContainsString('sleep 5 &', $script);
+        $this->assertStringContainsString('queue_loop &', $script);
+        // L'arrêt du conteneur est relayé à queue:work (sinon il resterait orphelin, un job en cours coupé).
+        $this->assertMatchesRegularExpression('/trap \'\[ -n "\$child" \] && kill -TERM "\$child"[^\n]*exit 0\' TERM INT/', $script);
+        // Pas de worker quand la file est synchrone, et le worker démarre avant Apache sans changer l'attente finale.
+        $this->assertStringContainsString('QUEUE_CONNECTION:-database}" != "sync"', $script);
+        $this->assertLessThan(strpos($script, 'apache2-foreground &'), strpos($script, 'queue:work'));
+        $this->assertStringContainsString('wait -n "$SCHED_PID" "$WEB_PID"', $script);
     }
 
     public function test_demo_seed_command_enforces_a_minimum_password_length_of_12(): void

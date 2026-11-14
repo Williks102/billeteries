@@ -11,19 +11,20 @@ use App\Mail\PromoteurNewSale;
 use App\Mail\AdminNewOrder;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Support\MailDiagnostic;
 
 class EmailService
 {
     /**
-     * Envoyer email de confirmation de commande
+     * Mettre en file l'e-mail de confirmation de commande (retourne true = job enregistré, pas « envoyé »)
      */
     public function sendOrderConfirmation(Order $order)
     {
         try {
-            Mail::to($order->user->email)
-                ->send(new OrderConfirmation($order));
+            // Mis en file : le destinataire est résolu par le Mailable au moment de l'envoi (job).
+            Mail::queue(new OrderConfirmation($order));
 
-            Log::info("Email confirmation commande envoyé", [
+            Log::info("Email confirmation commande mis en file d'attente", [
                 'order_id' => $order->id,
             ]);
 
@@ -31,39 +32,31 @@ class EmailService
         } catch (\Exception $e) {
             Log::error("Erreur envoi email confirmation commande", [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error' => MailDiagnostic::redact($e->getMessage())
             ]);
             return false;
         }
     }
 
     /**
-     * Envoyer email de confirmation de paiement avec billets
+     * Mettre en file l'e-mail de confirmation de paiement (PDF des billets généré dans le job)
      */
     public function sendPaymentConfirmation(Order $order)
 {
     try {
-        Mail::to($order->user->email)
-            ->send(new PaymentConfirmation($order));
+        // Mis en file : le PDF des billets est généré dans le job, jamais pendant la requête.
+        Mail::queue(new PaymentConfirmation($order));
 
-        // Nettoyer le PDF temporaire après envoi
-        $this->cleanupTempPDF($order->order_number);
-
-        Log::info("Email confirmation paiement avec PDF envoyé", [
+        Log::info("Email confirmation paiement mis en file d'attente", [
             'order_id' => $order->id,
-            'is_guest' => $order->user->is_guest,
-            'pdf_attached' => true
         ]);
 
         return true;
     } catch (\Exception $e) {
         Log::error("Erreur envoi email confirmation paiement", [
             'order_id' => $order->id,
-            'error' => $e->getMessage()
+            'error' => MailDiagnostic::redact($e->getMessage())
         ]);
-        
-        // Nettoyer quand même en cas d'erreur
-        $this->cleanupTempPDF($order->order_number);
         return false;
     }
 }
@@ -76,10 +69,9 @@ class EmailService
     public function sendManualPaymentInstructions(Order $order)
     {
         try {
-            Mail::to($order->billing_email ?: $order->user->email)
-                ->send(new ManualPaymentInstructions($order));
+            Mail::queue(new ManualPaymentInstructions($order));
 
-            Log::info('Instructions de paiement manuel envoyées', [
+            Log::info('Instructions de paiement manuel mises en file d\'attente', [
                 'order_id' => $order->id,
                 'payment_method' => $order->payment_method,
             ]);
@@ -88,7 +80,7 @@ class EmailService
         } catch (\Exception $e) {
             Log::error('Erreur envoi instructions de paiement manuel', [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error' => MailDiagnostic::redact($e->getMessage())
             ]);
             return false;
         }
@@ -110,10 +102,9 @@ class EmailService
         try {
             $promoteur = $order->event->promoteur;
 
-            Mail::to($promoteur->email)
-                ->send(new PromoteurNewSale($order));
+            Mail::queue(new PromoteurNewSale($order));
 
-            Log::info("Email promoteur nouvelle vente envoyé", [
+            Log::info("Email promoteur nouvelle vente mis en file d'attente", [
                 'order_id' => $order->id,
                 'promoteur_id' => $promoteur->id,
             ]);
@@ -122,7 +113,7 @@ class EmailService
         } catch (\Exception $e) {
             Log::error("Erreur envoi email promoteur", [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error' => MailDiagnostic::redact($e->getMessage())
             ]);
             return false;
         }
@@ -137,11 +128,10 @@ class EmailService
             $admins = User::where('role', 'admin')->get();
 
             foreach ($admins as $admin) {
-                Mail::to($admin->email)
-                    ->send(new AdminNewOrder($order));
+                Mail::queue(new AdminNewOrder($order, $admin));
             }
 
-            Log::info("Email admin nouvelle commande envoyé", [
+            Log::info("Email admin nouvelle commande mis en file d'attente", [
                 'order_id' => $order->id,
                 'admin_count' => $admins->count()
             ]);
@@ -150,7 +140,7 @@ class EmailService
         } catch (\Exception $e) {
             Log::error("Erreur envoi email admin", [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error' => MailDiagnostic::redact($e->getMessage())
             ]);
             return false;
         }
@@ -283,9 +273,9 @@ public function cleanupOldTempPDFs()
 public function sendWelcomeEmail(User $user)
 {
     try {
-        Mail::to($user->email)->send(new \App\Mail\WelcomeEmail($user));
+        Mail::queue(new \App\Mail\WelcomeEmail($user));
 
-        Log::info("Email bienvenue envoyé", [
+        Log::info("Email bienvenue mis en file d'attente", [
             'user_id' => $user->id,
             'role' => $user->role
         ]);
@@ -294,7 +284,7 @@ public function sendWelcomeEmail(User $user)
     } catch (\Exception $e) {
         Log::error("Erreur envoi email bienvenue", [
             'user_id' => $user->id,
-            'error' => $e->getMessage()
+            'error' => MailDiagnostic::redact($e->getMessage())
         ]);
         return false;
     }

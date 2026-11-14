@@ -165,11 +165,10 @@ class RegisterController extends Controller
     protected function sendWelcomeEmail(User $user)
 {
     try {
-        Mail::to($user->email)->send(new WelcomeEmail($user));
+        Mail::queue(new WelcomeEmail($user));
         
-        \Log::info("Email de bienvenue envoyé", [
+        \Log::info("Email de bienvenue mis en file d'attente", [
             'user_id' => $user->id,
-            'email' => $user->email,
             'role' => $user->role
         ]);
         

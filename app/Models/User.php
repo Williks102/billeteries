@@ -33,7 +33,20 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_guest' => 'boolean',
+            'guest_converted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Lien de réinitialisation : un compte INVITÉ (achat sans compte) reçoit le message d'activation,
+     * les autres comptes la notification standard. Le jeton et l'expiration sont ceux du broker.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify($this->is_guest
+            ? new \App\Notifications\ActivateGuestAccount($token)
+            : new \Illuminate\Auth\Notifications\ResetPassword($token));
     }
 
     /**

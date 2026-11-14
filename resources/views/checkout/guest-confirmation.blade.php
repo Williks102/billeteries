@@ -9,6 +9,10 @@
 @endpush
 
 @section('content')
+@php
+    // Pas de promesse d'e-mail tant que l'envoi réel n'est pas actif (pilote « log » ou « array » : démo).
+    $emailsDelivered = ! in_array((string) config('mail.default'), ['log', 'array'], true);
+@endphp
 <div class="container py-4 py-md-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
@@ -25,7 +29,7 @@
                     <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
                 </div>
                 <h1 class="text-success">Paiement confirmé !</h1>
-                <p class="lead">Vos billets vous ont été envoyés par email</p>
+                <p class="lead">{{ $emailsDelivered ? 'Vos billets vous sont envoyés par email' : 'Vos billets sont affichés ci-dessous' }}</p>
                 @if(!empty($demoSimulatedPayment))
                     <p class="badge bg-dark fs-6 text-wrap">MODE DÉMO : paiement simulé</p>
                 @endif
@@ -91,14 +95,21 @@
                     <div class="card text-center">
                         <div class="card-body">
                             <i class="fas fa-envelope fa-2x text-primary mb-3"></i>
-                            <h6>Vérifiez votre email</h6>
-                            <p class="text-muted small">
-                                @if($order->payment_status === 'paid')
-                                    Vos billets ont été envoyés à {{ $order->billing_email }}
-                                @else
-                                    Les instructions de paiement ont été envoyées à {{ $order->billing_email }}. Vos billets suivront après confirmation du paiement.
-                                @endif
-                            </p>
+                            @if($emailsDelivered)
+                                <h6>Vérifiez votre email</h6>
+                                <p class="text-muted small">
+                                    @if($order->payment_status === 'paid')
+                                        Vos billets vous sont envoyés à {{ $order->billing_email }}
+                                    @else
+                                        Les instructions de paiement vous sont envoyées à {{ $order->billing_email }}. Vos billets suivront après confirmation du paiement.
+                                    @endif
+                                </p>
+                            @else
+                                <h6>E-mails non activés</h6>
+                                <p class="text-muted small">
+                                    Sur cette démonstration, aucun e-mail n'est envoyé. Notez votre numéro de commande et, pour retrouver vos billets plus tard, connectez-vous ou créez un compte.
+                                </p>
+                            @endif
                         </div>
                     </div>
                 </div>

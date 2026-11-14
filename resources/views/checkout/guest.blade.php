@@ -10,8 +10,24 @@
 @section('content')
 <div class="container parcours-page">
     <h1>Commande express</h1>
-    <p class="text-muted">Achetez sans créer de compte : vos billets vous sont envoyés par email.</p>
+    @php($emailActive = ! in_array(config('mail.default'), ['log', 'array'], true))
+    <p class="text-muted">
+        @if($emailActive)
+            Achetez sans créer de compte : vos billets vous sont envoyés par email.
+        @else
+            Achetez sans créer de compte : vos billets s'affichent à la fin de la commande.
+        @endif
+    </p>
     <x-checkout-steps :current="2" />
+
+    @guest
+    <section class="parcours-card login-prompt" aria-labelledby="login-prompt-title" data-login-prompt>
+        <h2 class="parcours-card__title" id="login-prompt-title"><i class="fas fa-user-circle" aria-hidden="true"></i>Vous avez déjà un compte ?</h2>
+        <p>Connectez-vous : vos billets restent disponibles à tout moment dans votre espace. Votre sélection est conservée.</p>
+        <a href="{{ route('login') }}" class="btn btn-primary btn-block-touch">Se connecter</a>
+        <p class="login-prompt__alt"><a href="{{ route('register') }}">Créer un compte</a></p>
+    </section>
+    @endguest
 
     <form action="{{ route('checkout.guest.process') }}" method="POST" id="guest-checkout-form">
         @csrf

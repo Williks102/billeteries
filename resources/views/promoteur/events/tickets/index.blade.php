@@ -202,7 +202,7 @@ var(--brand);">
                                                                 class="btn {{ $ticketType->is_active ? 'btn-outline-warning' : 'btn-outline-success' }}"
                                                                 data-bs-toggle="tooltip" 
                                                                 title="{{ $ticketType->is_active ? 'Désactiver' : 'Activer' }}"
-                                                                onclick="return confirm('Êtes-vous sûr de vouloir {{ $ticketType->is_active ? 'désactiver' : 'activer' }} ce type de billet ?')">
+                                                                data-confirm="Êtes-vous sûr de vouloir {{ $ticketType->is_active ? 'désactiver' : 'activer' }} ce type de billet ?">
                                                             <i class="fas {{ $ticketType->is_active ? 'fa-eye-slash' : 'fa-eye' }}"></i>
                                                         </button>
                                                     </form>
@@ -218,7 +218,7 @@ var(--brand);">
                                                                     class="btn btn-outline-danger"
                                                                     data-bs-toggle="tooltip" 
                                                                     title="Supprimer"
-                                                                    onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce type de billet ?')">
+                                                                    data-confirm="Êtes-vous sûr de vouloir supprimer ce type de billet ?">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
                                                         </form>
@@ -325,7 +325,7 @@ var(--brand);">
                             <form method="POST" action="{{ route('promoteur.events.unpublish', $event) }}" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-warning btn-sm" 
-                                        onclick="return confirm('Êtes-vous sûr de vouloir dépublier cet événement ?')">
+                                        data-confirm="Êtes-vous sûr de vouloir dépublier cet événement ?">
                                     <i class="fas fa-eye-slash me-1"></i>Dépublier l'événement
                                 </button>
                             </form>

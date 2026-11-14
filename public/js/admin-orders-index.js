@@ -1,3 +1,12 @@
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'order-resend-email': function (el) { resendEmail(el.dataset.orderId); },
+        'order-update-status': function (el) { updateStatus(el.dataset.orderId, el.dataset.status); },
+        'order-refund': function (el) { refundOrder(el.dataset.orderId); }
+    });
+});
+
 // Sélection multiple
 document.getElementById('select-all').addEventListener('change', function() {
     const checkboxes = document.querySelectorAll('.order-checkbox');

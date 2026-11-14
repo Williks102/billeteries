@@ -19,7 +19,7 @@
             <p class="text-muted mb-0">Gérez et scannez vos billets facilement</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-acheteur" onclick="refreshQRCodes()">
+            <button class="btn btn-outline-acheteur" data-on-click="qr-refresh">
                 <i class="fas fa-sync me-2"></i>Actualiser QR
             </button>
             <a href="{{ route('home') }}" class="btn btn-acheteur">
@@ -34,7 +34,7 @@
             <form method="GET" action="{{ route('acheteur.tickets.index') }}" class="row g-3 align-items-center">
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Statut</label>
-                    <select name="status" class="form-select" onchange="this.form.submit()">
+                    <select name="status" class="form-select" data-on-change="submit-form">
                         <option value="">Tous les billets</option>
                         <option value="upcoming" {{ request('status') == 'upcoming' ? 'selected' : '' }}>À venir</option>
                         <option value="past" {{ request('status') == 'past' ? 'selected' : '' }}>Passés</option>
@@ -109,7 +109,7 @@
                                              alt="QR Code" 
                                              class="qr-code"
                                              style="width: 120px; height: 120px; cursor: pointer;"
-                                             data-qr-src="{{ $qrBase64 }}" data-ticket-code="{{ $ticket->ticket_code }}" onclick="showLargeQR(this)">
+                                             data-qr-src="{{ $qrBase64 }}" data-ticket-code="{{ $ticket->ticket_code }}" data-on-click="qr-show-large">
                                     @else
                                         <div class="qr-placeholder" 
                                              style="width: 120px; height: 120px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
@@ -169,7 +169,7 @@
                             <div class="ticket-actions">
                                 @if($qrBase64)
                                 <button type="button" class="btn btn-qr btn-sm" 
-                                        data-qr-src="{{ $qrBase64 }}" data-ticket-code="{{ $ticket->ticket_code }}" onclick="showLargeQR(this)">
+                                        data-qr-src="{{ $qrBase64 }}" data-ticket-code="{{ $ticket->ticket_code }}" data-on-click="qr-show-large">
                                     <i class="fas fa-expand me-1"></i>Agrandir QR
                                 </button>
                                 @endif
@@ -560,6 +560,15 @@
 
 @push('scripts')
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'qr-refresh': function () { refreshQRCodes(); },
+        'qr-show-large': function (el) { showLargeQR(el); }
+    });
+});
+
     function showLargeQR(el) {
         document.getElementById('modalQRImage').src = el.dataset.qrSrc;
         document.getElementById('modalTicketCode').textContent = el.dataset.ticketCode;

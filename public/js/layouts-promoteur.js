@@ -177,6 +177,16 @@
             }, 5000);
         });
         
+        // Actions data-on-click des menus (voir public/js/csp-actions.js)
+        document.addEventListener('DOMContentLoaded', function() {
+            CspActions.register({
+                'sidebar-toggle': function () { toggleSidebar(); },
+                'mobile-sidebar-toggle': function () { toggleMobileSidebar(); },
+                'mobile-sidebar-close': function () { closeMobileSidebar(); },
+                'submenu-toggle': function (el) { toggleSubmenu(el.dataset.menu, el); }
+            });
+        });
+
         // ========================= UTILITY FUNCTIONS =========================
         
         // Smooth scroll to top

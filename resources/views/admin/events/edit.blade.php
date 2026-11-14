@@ -358,7 +358,7 @@ use Illuminate\Support\Facades\Storage;
                                      class="image-preview d-block">
                                 <button type="button" 
                                         class="remove-image-btn" 
-                                        onclick="removeCurrentImage()"
+                                        data-on-click="event-image-remove"
                                         title="Supprimer l'image actuelle">
                                     <i class="fas fa-times"></i>
                                 </button>
@@ -377,7 +377,7 @@ use Illuminate\Support\Facades\Storage;
                                id="image" 
                                name="image" 
                                accept="image/*"
-                               onchange="previewNewImage(this)">
+                               data-on-change="event-image-preview">
                         <div class="form-text">
                             Formats acceptés: JPG, PNG, GIF. Taille maximale: 2MB. 
                             Dimensions recommandées: 800x600px.
@@ -536,6 +536,15 @@ use Illuminate\Support\Facades\Storage;
 
 @push('scripts')
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'event-image-remove': function () { removeCurrentImage(); },
+        'event-image-preview': function (el) { previewNewImage(el); }
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // Validation du formulaire
     const form = document.getElementById('eventEditForm');
@@ -614,5 +623,6 @@ function autoSave() {
 document.querySelectorAll('input, textarea, select').forEach(function(element) {
     element.addEventListener('change', autoSave);
 });
+
 </script>
 @endpush

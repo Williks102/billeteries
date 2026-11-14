@@ -43,7 +43,7 @@
                         <i class="fas fa-undo me-2"></i>Rembourser
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteOrder({{ $order->id }})">
+                    <li><a class="dropdown-item text-danger" href="#" data-on-click="order-delete" data-order-id="{{ $order->id }}">
                         <i class="fas fa-trash me-2"></i>Supprimer
                     </a></li>
                 </ul>
@@ -263,12 +263,12 @@
                             <i class="fas fa-envelope me-2"></i>Envoyer email
                         </button>
                         
-                        <button class="btn btn-outline-info btn-sm" onclick="printOrder()">
+                        <button class="btn btn-outline-info btn-sm" data-on-click="print">
                             <i class="fas fa-print me-2"></i>Imprimer
                         </button>
                         
                         @if($order->status == 'pending')
-                        <button class="btn btn-outline-success btn-sm" onclick="confirmOrder({{ $order->id }})">
+                        <button class="btn btn-outline-success btn-sm" data-on-click="order-confirm" data-order-id="{{ $order->id }}">
                             <i class="fas fa-check me-2"></i>Confirmer
                         </button>
                         @endif
@@ -374,6 +374,15 @@
 
 @push('scripts')
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'order-delete': function (el) { deleteOrder(el.dataset.orderId); },
+        'order-confirm': function (el) { confirmOrder(el.dataset.orderId); }
+    });
+});
+
     function deleteOrder(orderId) {
         if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
             // Logique de suppression
@@ -391,5 +400,6 @@
     function printOrder() {
         window.print();
     }
+
 </script>
 @endpush

@@ -83,7 +83,7 @@
                     id="reserveBtnDesktop"
                     class="btn btn-outline-primary w-100 mt-2"
                     style="min-height: 48px;"
-                    onclick="reserveTickets()"
+                    data-on-click="booking-reserve"
                     disabled>
                 <i class="fas fa-shopping-cart me-2" aria-hidden="true"></i>
                 Ajouter au panier

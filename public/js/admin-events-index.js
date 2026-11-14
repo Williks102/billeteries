@@ -1,3 +1,10 @@
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'events-clear-selection': function () { window.clearSelection(); }
+    });
+});
+
 // Gestion des sélections en lot
 document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('select-all');

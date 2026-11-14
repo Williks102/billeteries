@@ -298,7 +298,7 @@ use Illuminate\Support\Facades\Storage;
                     @if($event->status === 'draft')
                         <div class="d-grid">
                             <form method="POST" action="{{ route('promoteur.events.publish', $event) }}" 
-                                  onsubmit="return confirm('Publier cet événement ?')">
+                                  data-confirm="Publier cet événement ?">
                                 @csrf
                                 <button type="submit" class="btn btn-success">
                                     <i class="fas fa-upload me-2"></i>Publier l'événement
@@ -308,7 +308,7 @@ use Illuminate\Support\Facades\Storage;
                     @else
                         <div class="d-grid">
                             <form method="POST" action="{{ route('promoteur.events.unpublish', $event) }}" 
-                                  onsubmit="return confirm('Dépublier cet événement ?')">
+                                  data-confirm="Dépublier cet événement ?">
                                 @csrf
                                 <button type="submit" class="btn btn-warning">
                                     <i class="fas fa-download me-2"></i>Dépublier

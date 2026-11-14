@@ -159,7 +159,7 @@
                                         @if(!in_array($page->slug, ['about', 'terms', 'privacy', 'contact']))
                                         <form method="POST" action="{{ route('admin.pages.destroy', $page) }}" 
                                               class="d-inline" 
-                                              onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette page ?')">
+                                              data-confirm="Êtes-vous sûr de vouloir supprimer cette page ?">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-outline-danger" title="Supprimer">

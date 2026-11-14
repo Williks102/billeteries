@@ -1,3 +1,10 @@
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'commission-notes': function (el) { showNotesModal(el.dataset.commissionId, el.dataset.notes || ''); }
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('select-all');
     const commissionCheckboxes = document.querySelectorAll('.commission-checkbox');

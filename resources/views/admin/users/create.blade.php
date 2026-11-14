@@ -255,7 +255,7 @@
                             <button type="submit" name="action" value="save" class="btn btn-outline-primary">
                                 <i class="fas fa-save me-2"></i>Enregistrer
                             </button>
-                            <button type="button" class="btn btn-outline-secondary action-bar__cancel" onclick="history.back()">
+                            <button type="button" class="btn btn-outline-secondary action-bar__cancel" data-on-click="history-back">
                                 <i class="fas fa-times me-2"></i>Annuler
                             </button>
                         </div>

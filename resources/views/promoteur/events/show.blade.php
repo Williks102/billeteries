@@ -201,7 +201,7 @@ use Illuminate\Support\Facades\Storage;
     <form action="{{ route('promoteur.events.unpublish', $event) }}" method="POST" class="d-inline">
         @csrf
         <button type="submit" class="btn btn-secondary btn-lg" 
-                onclick="return confirm('Voulez-vous retirer cet événement de la publication ?')">
+                data-confirm="Voulez-vous retirer cet événement de la publication ?">
             <i class="fas fa-eye-slash me-2"></i>Dépublier
         </button>
     </form>

@@ -194,7 +194,7 @@
                                             @if($order->payment_status === 'paid')
                                                 <button type="button" 
                                                         class="btn btn-sm btn-outline-success" 
-                                                        onclick="resendEmail({{ $order->id }})" 
+                                                        data-on-click="order-resend-email" data-order-id="{{ $order->id }}" 
                                                         title="Renvoyer email">
                                                     <i class="fas fa-envelope"></i>
                                                 </button>
@@ -209,12 +209,12 @@
                                                 <ul class="dropdown-menu">
                                                     @if($order->payment_status === 'pending')
                                                         <li>
-                                                            <button class="dropdown-item" onclick="updateStatus({{ $order->id }}, 'paid')">
+                                                            <button class="dropdown-item" data-on-click="order-update-status" data-order-id="{{ $order->id }}" data-status="paid">
                                                                 <i class="fas fa-check text-success me-2"></i>Marquer comme payé
                                                             </button>
                                                         </li>
                                                         <li>
-                                                            <button class="dropdown-item" onclick="updateStatus({{ $order->id }}, 'failed')">
+                                                            <button class="dropdown-item" data-on-click="order-update-status" data-order-id="{{ $order->id }}" data-status="failed">
                                                                 <i class="fas fa-times text-danger me-2"></i>Marquer comme échoué
                                                             </button>
                                                         </li>
@@ -222,7 +222,7 @@
                                                     
                                                     @if($order->payment_status === 'paid')
                                                         <li>
-                                                            <button class="dropdown-item text-danger" onclick="refundOrder({{ $order->id }})">
+                                                            <button class="dropdown-item text-danger" data-on-click="order-refund" data-order-id="{{ $order->id }}">
                                                                 <i class="fas fa-undo me-2"></i>Rembourser
                                                             </button>
                                                         </li>

@@ -131,7 +131,7 @@
                 </a>
                 
                 @if($ticket->status === 'sold')
-                    <button onclick="window.print()" class="btn btn-primary">
+                    <button data-on-click="print" class="btn btn-primary">
                         <i class="fas fa-print me-2"></i>Imprimer
                     </button>
                 @endif

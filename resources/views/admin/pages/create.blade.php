@@ -125,7 +125,7 @@
                             <button type="submit" name="action" value="save_and_continue" class="btn btn-outline-orange">
                                 <i class="fas fa-save me-2"></i>Sauvegarder et continuer
                             </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                            <button type="button" class="btn btn-outline-secondary" data-on-click="page-reset-form">
                                 <i class="fas fa-undo me-2"></i>Réinitialiser
                             </button>
                         </div>

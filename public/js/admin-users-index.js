@@ -1,3 +1,12 @@
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'users-bulk-action': function (el) { bulkAction(el.dataset.bulkAction); },
+        'user-toggle-email': function (el) { toggleEmailVerification(el.dataset.userId); },
+        'user-delete': function (el) { deleteUser(el.dataset.userId, el.dataset.userName); }
+    });
+});
+
 // Gestion de la sélection multiple
 document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('select-all');

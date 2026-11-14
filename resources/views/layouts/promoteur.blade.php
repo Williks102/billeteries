@@ -181,7 +181,7 @@
     @include('partials.demo-banner')
     <div class="promoteur-wrapper">
         <!-- Mobile Overlay -->
-        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()" aria-hidden="true"></div>
+        <div class="mobile-overlay" id="mobileOverlay" data-on-click="mobile-sidebar-close" aria-hidden="true"></div>
         
         <!-- Sidebar -->
         <nav class="promoteur-sidebar" id="promoteurSidebar" aria-label="Menu promoteur">
@@ -191,7 +191,7 @@
                     <i class="fas fa-ticket-alt"></i>
                     <span class="sidebar-brand-text">Espace Promoteur</span>
                 </a>
-                <button type="button" class="sidebar-toggle d-none d-lg-block" onclick="toggleSidebar()" aria-label="Réduire ou déployer le menu">
+                <button type="button" class="sidebar-toggle d-none d-lg-block" data-on-click="sidebar-toggle" aria-label="Réduire ou déployer le menu">
                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
             </div>
@@ -209,7 +209,7 @@
 
                 <!-- Mes Événements -->
                 <li class="submenu-parent {{ request()->routeIs('promoteur.events.*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('events', this)" class="{{ request()->routeIs('promoteur.events.*') ? 'active' : '' }}">
+                    <a href="#" data-on-click="submenu-toggle" data-menu="events" class="{{ request()->routeIs('promoteur.events.*') ? 'active' : '' }}">
                         <i class="fas fa-calendar-alt"></i>
                         <span class="sidebar-menu-text">Mes Événements</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -225,7 +225,7 @@
 
                 <!-- Billets & Scanner -->
                 <li class="submenu-parent {{ request()->routeIs('promoteur.scanner*') || request()->routeIs('promoteur.tickets.*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('tickets', this)" class="{{ request()->routeIs('promoteur.scanner*') || request()->routeIs('promoteur.tickets.*') ? 'active' : '' }}">
+                    <a href="#" data-on-click="submenu-toggle" data-menu="tickets" class="{{ request()->routeIs('promoteur.scanner*') || request()->routeIs('promoteur.tickets.*') ? 'active' : '' }}">
                         <i class="fas fa-qrcode"></i>
                         <span class="sidebar-menu-text">Billets</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -239,7 +239,7 @@
 
                 <!-- Ventes -->
                 <li class="submenu-parent {{ request()->routeIs('promoteur.sales*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('sales', this)" class="{{ request()->routeIs('promoteur.sales*') ? 'active' : '' }}">
+                    <a href="#" data-on-click="submenu-toggle" data-menu="sales" class="{{ request()->routeIs('promoteur.sales*') ? 'active' : '' }}">
                         <i class="fas fa-chart-line"></i>
                         <span class="sidebar-menu-text">Ventes</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -255,7 +255,7 @@
 
                 <!-- Rapports -->
                 <li class="submenu-parent {{ request()->routeIs('promoteur.reports*') ? 'open' : '' }}">
-                    <a href="#" onclick="toggleSubmenu('reports', this)" class="{{ request()->routeIs('promoteur.reports*') ? 'active' : '' }}">
+                    <a href="#" data-on-click="submenu-toggle" data-menu="reports" class="{{ request()->routeIs('promoteur.reports*') ? 'active' : '' }}">
                         <i class="fas fa-chart-pie"></i>
                         <span class="sidebar-menu-text">Rapports</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
@@ -279,7 +279,7 @@
 
                 <!-- Déconnexion -->
                 <li class="mt-auto">
-                    <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <a href="{{ route('logout') }}" data-on-click="submit-form-prevent" data-form="logout-form">
                         <i class="fas fa-sign-out-alt"></i>
                         <span class="sidebar-menu-text">Déconnexion</span>
                         <span class="sidebar-tooltip">Déconnexion</span>
@@ -293,7 +293,7 @@
             <!-- Top Bar -->
             <header class="promoteur-topbar">
                 <div class="topbar-left">
-                    <button type="button" class="mobile-toggle" onclick="toggleMobileSidebar()" aria-label="Ouvrir le menu" aria-controls="promoteurSidebar" aria-expanded="false">
+                    <button type="button" class="mobile-toggle" data-on-click="mobile-sidebar-toggle" aria-label="Ouvrir le menu" aria-controls="promoteurSidebar" aria-expanded="false">
                         <i class="fas fa-bars" aria-hidden="true"></i>
                     </button>
 
@@ -392,6 +392,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <script src="{{ asset('js/csp-actions.js') }}" defer></script>
     <script src="{{ asset('js/layouts-promoteur.js') }}" defer></script>
     
     @stack('scripts')

@@ -50,6 +50,7 @@ class CspReportOnlyTest extends TestCase
         $this->assertStringContainsString("default-src 'self'", $header);
         $this->assertMatchesRegularExpression("/script-src 'self' 'nonce-[A-Za-z0-9+\/=]{24,}' https:\/\/code\.jquery\.com https:\/\/cdn\.jsdelivr\.net;/", $header);
         $this->assertStringContainsString("script-src-attr 'none'", $header);
+        $this->assertStringContainsString("media-src 'self' data:;", $header);
         $this->assertStringContainsString('report-uri /csp-report', $header);
         $this->assertStringContainsString("object-src 'none'", $header);
         $this->assertStringNotContainsString("script-src 'self' 'unsafe-inline'", $header);

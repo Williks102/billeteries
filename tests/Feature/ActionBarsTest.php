@@ -112,7 +112,7 @@ class ActionBarsTest extends TestCase
         $src = $this->view('admin/users/create.blade.php');
         $this->assertStringContainsString('name="action" value="save_and_notify"', $src);
         $this->assertStringContainsString('name="action" value="save"', $src);
-        $this->assertStringContainsString('onclick="history.back()"', $src);
+        $this->assertStringContainsString('data-on-click="history-back"', $src);
         $this->assertStringContainsString('action-bar action-bar--split', $src);
 
         $events = $this->view('events/_form.blade.php'); // le formulaire admin de création délègue au partial partagé

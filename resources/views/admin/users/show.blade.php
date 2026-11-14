@@ -54,7 +54,7 @@
                                         <i class="fas fa-edit me-2"></i>Modifier
                                     </a>
                                     <button class="btn btn-outline-danger" 
-                                            onclick="confirmDelete()">
+                                            data-on-click="user-confirm-delete">
                                         <i class="fas fa-trash me-2"></i>Supprimer
                                     </button>
                                 @else
@@ -224,17 +224,17 @@
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         @if(!$user->email_verified_at)
-                            <button class="btn btn-outline-success btn-sm" onclick="verifyEmail()">
+                            <button class="btn btn-outline-success btn-sm" data-on-click="user-verify-email">
                                 <i class="fas fa-check me-2"></i>Vérifier l'email
                             </button>
                         @endif
                         
                         @if($user->id !== auth()->id())
-                            <button class="btn btn-outline-warning btn-sm" onclick="resetPassword()">
+                            <button class="btn btn-outline-warning btn-sm" data-on-click="user-reset-password">
                                 <i class="fas fa-key me-2"></i>Réinitialiser mot de passe
                             </button>
                             
-                            <button class="btn btn-outline-danger btn-sm" onclick="suspendAccount()">
+                            <button class="btn btn-outline-danger btn-sm" data-on-click="user-suspend">
                                 <i class="fas fa-ban me-2"></i>Suspendre le compte
                             </button>
                         @endif
@@ -437,6 +437,17 @@
 
 @push('scripts')
 <script @cspNonce>
+
+// Actions data-on-* (voir public/js/csp-actions.js)
+document.addEventListener('DOMContentLoaded', function () {
+    CspActions.register({
+        'user-confirm-delete': function () { confirmDelete(); },
+        'user-verify-email': function () { verifyEmail(); },
+        'user-reset-password': function () { resetPassword(); },
+        'user-suspend': function () { suspendAccount(); }
+    });
+});
+
 // Fonction de confirmation de suppression
 function confirmDelete() {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {
@@ -496,5 +507,6 @@ function suspendAccount() {
         console.log('Fonctionnalité à implémenter');
     }
 }
+
 </script>
 @endpush

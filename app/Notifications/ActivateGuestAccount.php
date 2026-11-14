@@ -23,7 +23,8 @@ class ActivateGuestAccount extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        $url = route('password.reset', ['token' => $this->token, 'email' => $notifiable->getEmailForPasswordReset()]);
+        // Toujours sur APP_URL (jamais sur le Host de la requête : voir App\Support\AuthLinks)
+        $url = \App\Support\AuthLinks::resetUrl($this->token, $notifiable->getEmailForPasswordReset());
         $minutes = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60);
 
         return (new MailMessage)

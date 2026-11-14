@@ -340,4 +340,43 @@ class GuestAccountActivationTest extends TestCase
         $this->assertStringNotContainsString('frais de service', mb_strtolower($page->getContent()));
         $this->assertDoesNotMatchRegularExpression('/\son(click|input|change|submit)=/i', $page->getContent());
     }
+
+    // ===== Lien construit sur APP_URL, jamais sur le Host de la requête (audit : empoisonnement de l'en-tête Host) =====
+
+    public function test_activation_link_uses_app_url_even_when_the_request_host_is_forged(): void
+    {
+        config(['app.url' => 'https://billetterie.example']);
+
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.9.9'])
+            ->call('POST', 'http://evil.example/register', [
+                'name' => 'Pirate', 'email' => self::GUEST, 'phone' => '0712345678', 'role' => 'acheteur',
+                'password' => 'Pirate-mdp-123', 'password_confirmation' => 'Pirate-mdp-123',
+            ], [], [], ['HTTP_HOST' => 'evil.example', 'HTTP_X_FORWARDED_HOST' => 'evil.example']);
+        $this->forgetTerminatingCallbacks();
+
+        $notification = Notification::sent(User::find(20), ActivateGuestAccount::class)->first();
+        $this->assertNotNull($notification);
+        $url = $notification->toMail(User::find(20))->actionUrl;
+
+        $this->assertStringStartsWith('https://billetterie.example/password/reset/', $url);
+        $this->assertStringNotContainsString('evil.example', $url);
+    }
+
+    public function test_standard_password_reset_link_also_uses_app_url(): void
+    {
+        config(['app.url' => 'https://billetterie.example']);
+        $user = User::find(21);
+
+        $url = (new ResetPassword('un-jeton'))->toMail($user)->actionUrl;
+
+        $this->assertStringStartsWith('https://billetterie.example/password/reset/un-jeton', $url);
+        $this->assertStringContainsString('email=vrai%40example.test', $url);
+    }
+
+    public function test_the_link_helper_never_reads_the_request(): void
+    {
+        $this->app['request']->headers->set('HOST', 'evil.example');
+
+        $this->assertStringNotContainsString('evil.example', \App\Support\AuthLinks::resetUrl('t', 'a@b.test'));
+    }
 }

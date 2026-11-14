@@ -84,7 +84,12 @@ class RegisterController extends Controller
      */
     private function requestGuestActivation(Request $request, string $email)
     {
-        $allowed = PasswordResetThrottle::attempt($request, 'forgot') === null;
+        try {
+            $allowed = PasswordResetThrottle::attempt($request, 'forgot') === null;
+        } catch (\Throwable $e) {
+            // Limiteur indisponible (cache en panne) : on n'envoie rien (échec fermé) mais la réponse reste identique.
+            $allowed = false;
+        }
         $emailHash = hash_hmac('sha256', mb_strtolower(trim($email)), (string) config('app.key'));
 
         if ($allowed) {

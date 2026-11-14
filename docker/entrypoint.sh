@@ -92,7 +92,20 @@ SCHED_PID=$!
 # (rien à traiter). Tourne sous www-data comme le planificateur ; sortie vers les journaux du conteneur.
 if [ "${QUEUE_CONNECTION:-database}" != "sync" ]; then
     log "Démarrage du worker de file d'attente (queue:work)…"
-    while true; do runuser -u www-data -- php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --memory=128 || true; sleep 5; done &
+    queue_loop() {
+        local child=""
+        # À l'arrêt du conteneur on relaie le signal à queue:work (sinon il resterait orphelin, un job en cours coupé)
+        trap '[ -n "$child" ] && kill -TERM "$child" 2>/dev/null; exit 0' TERM INT
+        while true; do
+            runuser -u www-data -- php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --memory=128 &
+            child=$!
+            wait "$child" || true
+            child=""
+            sleep 5 &
+            wait $! || true
+        done
+    }
+    queue_loop &
     QUEUE_PID=$!
 else
     log "QUEUE_CONNECTION=sync : pas de worker de file."

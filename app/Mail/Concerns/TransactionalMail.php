@@ -31,10 +31,19 @@ abstract class TransactionalMail extends Mailable implements ShouldQueueAfterCom
     public $backoff = [60, 300];
 
     /** Durée maximale d'un job (génération du PDF des billets comprise). */
-    public $timeout = 120;
+    public $timeout = 120;  // < queue.connections.database.retry_after (180) : un job lent n'est pas repris en double
 
     /** Adresse du destinataire, calculée à l'envoi (jamais stockée dans le job). */
     abstract public function recipientEmail(): ?string;
+
+    /**
+     * Vérifié AU MOMENT DE L'ENVOI (état frais en base, pas celui de la mise en file). Faux = le message est abandonné
+     * sans échec ni nouvelle tentative.
+     */
+    protected function shouldSend(): bool
+    {
+        return true;
+    }
 
     /** Contexte non personnel pour le journal : identifiants seulement. */
     protected function logContext(): array
@@ -58,6 +67,14 @@ abstract class TransactionalMail extends Mailable implements ShouldQueueAfterCom
     public function send($mailer)
     {
         try {
+            // Entre la mise en file et l'envoi la commande a pu changer (remboursement, annulation) : on n'envoie
+            // alors rien plutôt qu'un message devenu faux.
+            if (! $this->shouldSend()) {
+                Log::info('E-mail non envoyé : la commande n\'est plus dans l\'état attendu', $this->logContext() + ['mail' => class_basename($this)]);
+
+                return null;
+            }
+
             return parent::send($mailer);
         } catch (\Throwable $e) {
             throw new MailDeliveryFailed(

@@ -195,11 +195,17 @@ class RenderDeploymentTest extends TestCase
     {
         $script = $this->read('docker/entrypoint.sh');
 
-        // Boucle de relance, sous www-data, avec durée de vie et mémoire bornées, en arrière-plan.
+        // Boucle de relance (le worker est relancé 5 s après son arrêt), sous www-data, avec durée de vie et mémoire
+        // bornées, lancée en arrière-plan.
         $this->assertMatchesRegularExpression(
-            '/while true; do runuser -u www-data -- php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --memory=128[^\n]*; sleep 5; done &/',
+            '/runuser -u www-data -- php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --memory=128\s*&/',
             $script
         );
+        $this->assertStringContainsString('while true; do', $script);
+        $this->assertStringContainsString('sleep 5 &', $script);
+        $this->assertStringContainsString('queue_loop &', $script);
+        // L'arrêt du conteneur est relayé à queue:work (sinon il resterait orphelin, un job en cours coupé).
+        $this->assertMatchesRegularExpression('/trap \'\[ -n "\$child" \] && kill -TERM "\$child"[^\n]*exit 0\' TERM INT/', $script);
         // Pas de worker quand la file est synchrone, et le worker démarre avant Apache sans changer l'attente finale.
         $this->assertStringContainsString('QUEUE_CONNECTION:-database}" != "sync"', $script);
         $this->assertLessThan(strpos($script, 'apache2-foreground &'), strpos($script, 'queue:work'));

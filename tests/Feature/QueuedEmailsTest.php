@@ -206,6 +206,45 @@ class QueuedEmailsTest extends TestCase
 
     // (c) renvoi admin ---------------------------------------------------------------------------------------
 
+    public function test_payment_confirmation_is_dropped_when_the_order_is_refunded_before_the_job_runs(): void
+    {
+        config(['queue.default' => 'database', 'mail.default' => 'array']);
+        $order = $this->paidOrder();
+
+        Mail::to('acheteur@example.test')->queue(new PaymentConfirmation($order));
+        $this->assertSame(1, DB::table('jobs')->count());
+
+        // Remboursée entre la mise en file et l'envoi : le message « paiement confirmé » serait devenu faux
+        $order->update(['payment_status' => 'refunded']);
+        Artisan::call('queue:work', ['--once' => true, '--stop-when-empty' => true]);
+
+        $this->assertCount(0, Mail::mailer('array')->getSymfonyTransport()->messages(), 'rien ne doit partir');
+        $this->assertSame(0, DB::table('jobs')->count(), 'le job est consommé, pas retenté');
+        $this->assertSame(0, DB::table('failed_jobs')->count(), 'ce n\'est pas un échec');
+    }
+
+    public function test_should_send_is_true_only_while_the_order_is_paid(): void
+    {
+        $order = $this->paidOrder();
+        $check = fn () => (new \ReflectionMethod(PaymentConfirmation::class, 'shouldSend'))->invoke(new PaymentConfirmation($order));
+
+        $this->assertTrue($check());
+
+        $order->update(['payment_status' => 'refunded']);
+        $this->assertFalse($check());
+    }
+
+    public function test_a_pdf_generation_failure_is_not_swallowed_so_the_job_is_retried(): void
+    {
+        $order = $this->paidOrder();
+        $this->mock(\App\Services\TicketPdfService::class, function ($mock) {
+            $mock->shouldReceive('forOrder')->andThrow(new \RuntimeException('dompdf en panne'));
+        });
+
+        $this->expectException(\RuntimeException::class);
+        (new PaymentConfirmation($order))->attachments();
+    }
+
     public function test_admin_resend_answers_queued_json_and_enqueues_a_job(): void
     {
         config(['queue.default' => 'database']);

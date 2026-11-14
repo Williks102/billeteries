@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Validator;
 use App\Services\EmailService;
 use App\Mail\WelcomeEmail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rule;
+use App\Http\Middleware\PasswordResetThrottle;
 
 
 class RegisterController extends Controller
@@ -47,6 +52,69 @@ class RegisterController extends Controller
     }
 
     /**
+     * Inscription. Si l'e-mail appartient à un compte INVITÉ (achat sans compte), on ne crée rien, on ne modifie
+     * rien et on ne connecte personne : on envoie un lien d'activation à l'adresse (preuve de possession).
+     */
+    public function register(Request $request)
+    {
+        $this->validator($request->all())->validate();
+
+        $email = (string) $request->input('email');
+        $guest = User::where('email', $email)->where('is_guest', true)->exists();
+
+        if ($guest) {
+            return $this->requestGuestActivation($request, $email);
+        }
+
+        event(new \Illuminate\Auth\Events\Registered($user = $this->create($request->all())));
+
+        $this->guard()->login($user);
+
+        if ($response = $this->registered($request, $user)) {
+            return $response;
+        }
+
+        return $request->wantsJson() ? new \Illuminate\Http\JsonResponse([], 201) : redirect($this->redirectPath());
+    }
+
+    /**
+     * Demande d'activation : mêmes protections que « mot de passe oublié » (IP + couple e-mail/IP, délai du broker),
+     * envoi APRÈS la réponse, réponse identique que le lien parte ou non, journal sans donnée personnelle.
+     * Les valeurs saisies (nom, mot de passe…) sont jetées : le mot de passe se choisit à l'activation.
+     */
+    private function requestGuestActivation(Request $request, string $email)
+    {
+        try {
+            $allowed = PasswordResetThrottle::attempt($request, 'forgot') === null;
+        } catch (\Throwable $e) {
+            // Limiteur indisponible (cache en panne) : on n'envoie rien (échec fermé) mais la réponse reste identique.
+            $allowed = false;
+        }
+        $emailHash = hash_hmac('sha256', mb_strtolower(trim($email)), (string) config('app.key'));
+
+        if ($allowed) {
+            $broker = Password::broker();
+            app()->terminating(function () use ($broker, $email, $emailHash) {
+                try {
+                    $response = $broker->sendResetLink(['email' => $email]);
+                    Log::info('Demande d\'activation de compte invité', [
+                        'email_hash' => $emailHash,
+                        'sent' => $response === Password::RESET_LINK_SENT,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('Erreur lors de la demande d\'activation de compte invité', ['email_hash' => $emailHash]);
+                }
+            });
+        }
+
+        $message = in_array(config('mail.default'), ['log', 'array'], true)
+            ? 'Cet e-mail a déjà servi pour un achat sans compte. L\'envoi d\'e-mails n\'est pas activé sur cette démonstration : le lien d\'activation ne peut pas être reçu.'
+            : 'Cet e-mail a déjà servi pour un achat sans compte. Nous vous envoyons un lien pour activer votre compte et retrouver vos billets. Ouvrez-le depuis votre boîte e-mail.';
+
+        return redirect()->route('register')->with('status', $message);
+    }
+
+    /**
      * Get a validator for an incoming registration request.
      *
      * @param  array  $data
@@ -56,7 +124,7 @@ class RegisterController extends Controller
     {
         return Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->where('is_guest', 0)],
             'phone' => ['required', 'string', 'max:20'],
             'role' => ['required', 'in:acheteur,promoteur'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],

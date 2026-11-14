@@ -298,6 +298,10 @@
             </div>
         </div>
 
+        @if (session('status'))
+            <div class="alert alert-info" role="status">{{ session('status') }}</div>
+        @endif
+
         <!-- Messages d'erreur -->
         @if ($errors->any())
             <div class="alert alert-danger" role="alert">
@@ -338,7 +342,8 @@
                        value="{{ old('email') }}" 
                        required 
                        autocomplete="email"
-                       aria-describedby="@error('email') email-error @enderror" @error('email') aria-invalid="true" @enderror>
+                       aria-describedby="email-help @error('email') email-error @enderror" @error('email') aria-invalid="true" @enderror>
+                <div id="email-help" class="form-text">Vous avez déjà acheté sans compte avec cet e-mail ? Inscrivez-vous avec la même adresse : nous vous enverrons un lien pour retrouver vos billets.</div>
                 <x-field-error name="email" />
             </div>
 

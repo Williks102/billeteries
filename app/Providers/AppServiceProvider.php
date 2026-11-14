@@ -27,6 +27,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Lien de « mot de passe oublié » : construit sur APP_URL, jamais sur le Host de la requête (empoisonnement de l'en-tête Host)
+        \Illuminate\Auth\Notifications\ResetPassword::createUrlUsing(
+            fn ($notifiable, string $token) => \App\Support\AuthLinks::resetUrl($token, $notifiable->getEmailForPasswordReset())
+        );
+
         // Journal d'activité : modifications d'événements, de billets (prix, stock, dates) et de rôles
         \App\Models\Event::observe(\App\Observers\EventActivityObserver::class);
         \App\Models\TicketType::observe(\App\Observers\TicketTypeActivityObserver::class);

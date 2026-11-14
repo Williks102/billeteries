@@ -56,6 +56,33 @@ class ResetPasswordController extends Controller
     }
 
     /**
+     * Mot de passe défini via un lien valide (preuve de possession de l'e-mail). Pour un compte INVITÉ, c'est
+     * l'activation : le compte devient un vrai compte (rôle inchangé, nom et téléphone conservés) et ses
+     * commandes, déjà reliées par orders.user_id, apparaissent dans l'espace acheteur. Autre compte : inchangé.
+     */
+    protected function resetPassword($user, $password)
+    {
+        $this->setUserPassword($user, $password);
+        $user->setRememberToken(\Illuminate\Support\Str::random(60));
+
+        $activated = (bool) $user->is_guest;
+        if ($activated) {
+            $user->is_guest = false;
+            $user->guest_converted_at = now();
+            $user->email_verified_at = now();
+        }
+
+        $user->save();
+
+        event(new \Illuminate\Auth\Events\PasswordReset($user));
+
+        $this->guard()->login($user);
+        if ($activated && request()->hasSession()) {
+            request()->session()->regenerate();
+        }
+    }
+
+    /**
      * Échec NEUTRE : même message que l'e-mail existe ou non (pas d'énumération de comptes).
      */
     protected function sendResetFailedResponse(Request $request, $response)

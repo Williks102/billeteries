@@ -25,6 +25,20 @@ class PasswordResetThrottle
 
     public function handle(Request $request, Closure $next, string $scope = 'forgot'): Response
     {
+        $retryAfter = self::attempt($request, $scope);
+        if ($retryAfter !== null) {
+            return $this->tooMany($request, $retryAfter);
+        }
+
+        return $next($request);
+    }
+
+    /**
+     * Contrôle puis compte une demande (IP + couple e-mail/IP). Retourne null si elle est autorisée,
+     * sinon le nombre de secondes d'attente. Réutilisé par l'inscription d'un e-mail « invité » (activation).
+     */
+    public static function attempt(Request $request, string $scope = 'forgot'): ?int
+    {
         $ipKey = 'pwreset:'.$scope.':ip:'.CheckoutService::ipHash((string) $request->ip());
         $perMinute = max(1, (int) config('payments.password_reset_throttle_per_minute', 5));
 
@@ -43,14 +57,14 @@ class PasswordResetThrottle
         // Contrôle de TOUTES les limites avant de compter : une demande refusée ne consomme pas l'autre compteur.
         foreach ($keys as [$key, $max]) {
             if (RateLimiter::tooManyAttempts($key, $max)) {
-                return $this->tooMany($request, RateLimiter::availableIn($key));
+                return RateLimiter::availableIn($key);
             }
         }
         foreach ($keys as [$key, , $decay]) {
             RateLimiter::hit($key, $decay);
         }
 
-        return $next($request);
+        return null;
     }
 
     /** 429 en français (la page d'erreur par défaut du framework est en anglais et ignore le message). */

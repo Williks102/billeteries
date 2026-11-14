@@ -184,6 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ========== FONCTION PRINCIPALE DE TRAITEMENT (CORRIGÉE) ==========
 async function processTicket() {
+    ensureAudio(); // geste utilisateur (bouton Vérifier) : autorise les bips sur mobile
     const ticketCode = document.getElementById('ticketCode').value.trim().toUpperCase();
     const submitButton = document.querySelector('button[data-on-click="scanner-process-ticket"]');
     
@@ -246,6 +247,7 @@ async function processTicket() {
 
 // ========== GESTION CAMÉRA (CORRIGÉE) ==========
 async function startCamera() {
+    ensureAudio(); // geste utilisateur : autorise les bips sur mobile
     // Vérifier le support de getUserMedia
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showCameraError('Votre navigateur ne supporte pas l\'accès à la caméra. Utilisez Chrome, Firefox ou Safari récent.');
@@ -338,6 +340,8 @@ async function startCamera() {
 let lastScannedCode = null;
 let lastScanTime = 0;
 const SCAN_COOLDOWN = 5000; // 5 secondes de cooldown
+const SCAN_RESUME_DELAY = 1800; // pause après chaque vérification, le temps de lire le résultat
+let scanBusy = false; // vrai pendant une vérification : la détection est suspendue
 
 function startQRDetection() {
     const video = document.getElementById('cameraFeed');
@@ -351,6 +355,9 @@ function startQRDetection() {
     const context = canvas.getContext('2d');
     
     function scanQR() {
+        if (scanBusy) {
+            return;
+        }
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
             // Ajuster la taille du canvas à la vidéo
             canvas.width = video.videoWidth || 640;
@@ -394,18 +401,15 @@ function startQRDetection() {
                     // Remplir automatiquement le champ de saisie
                     document.getElementById('ticketCode').value = ticketCode;
                     
-                    // ✅ ARRÊTER LA CAMÉRA AVANT DE TRAITER
-                    stopCamera();
+                    // La caméra RESTE allumée (à l'entrée d'un événement on enchaîne les billets) : la détection est
+                    // seulement mise en pause pendant la vérification, puis reprend toute seule. Le son (billet valide
+                    // ou refusé) est joué à la réponse du serveur, pas dès la détection.
+                    scanBusy = true;
+                    processTicket().finally(() => {
+                        setTimeout(() => { scanBusy = false; }, SCAN_RESUME_DELAY);
+                    });
                     
-                    // Déclencher la vérification
-                    processTicket();
-                    
-                    // Effet visuel de succès
-                    if (typeof playSuccessSound === 'function') {
-                        playSuccessSound();
-                    }
-                    
-                    return; // Arrêter la détection
+                    return;
                 }
             } else {
                 console.warn('Bibliothèque jsQR non chargée - Scanner QR indisponible');
@@ -678,27 +682,71 @@ function showStats() {
     alert('Fonctionnalité statistiques en cours de développement');
 }
 
-// ========== EFFETS SONORES (OPTIONNEL) ==========
-function playSuccessSound() {
+// ========== EFFETS SONORES ==========
+// Bips générés par l'API Web Audio : aucun fichier son (les anciens sons intégrés en data: étaient tronqués, donc
+// illisibles, et la CSP les bloquait). Le contexte audio doit être créé/relancé pendant un geste de l'utilisateur
+// (touche « Activer la caméra » ou « Vérifier ») : les navigateurs mobiles refusent de jouer un son sinon.
+let audioCtx = null;
+
+function ensureAudio() {
     try {
-        // Son de succès court
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+Xwt');
-        audio.volume = 0.3;
-        audio.play().catch(e => console.log('Son indisponible'));
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                audioCtx = new AudioContextClass();
+            }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
     } catch (e) {
         // Son non critique
+    }
+    return audioCtx;
+}
+
+function beep(frequency, delay, duration, waveform) {
+    const ctx = ensureAudio();
+    if (!ctx) {
+        return;
+    }
+    const start = ctx.currentTime + delay;
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = waveform || 'sine';
+    oscillator.frequency.value = frequency;
+    // Enveloppe courte : évite le « clic » de début et de fin
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.5, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
+}
+
+function vibrate(pattern) {
+    try {
+        if (navigator.vibrate) {
+            navigator.vibrate(pattern);
+        }
+    } catch (e) {
+        // Non critique
     }
 }
 
+// Billet valide : deux notes montantes courtes + une vibration brève
+function playSuccessSound() {
+    beep(880, 0, 0.12, 'sine');
+    beep(1320, 0.13, 0.16, 'sine');
+    vibrate(80);
+}
+
+// Billet refusé : deux tons graves, plus longs + vibration en deux temps
 function playErrorSound() {
-    try {
-        // Son d'erreur court
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+XwtmMcBjiR2O/NeSsFJHfH8N2QQAoUXrTp66hVFApGn+Xwt');
-        audio.volume = 0.3;
-        audio.play().catch(e => console.log('Son indisponible'));
-    } catch (e) {
-        // Son non critique
-    }
+    beep(220, 0, 0.2, 'square');
+    beep(220, 0.26, 0.2, 'square');
+    vibrate([120, 60, 120]);
 }
 
 // ========== INITIALISATION ==========

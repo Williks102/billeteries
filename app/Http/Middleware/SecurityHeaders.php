@@ -25,9 +25,6 @@ class SecurityHeaders
                "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net; " . 
                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " .
                "img-src ".$imgSrc."; " .
-               // Le bip du scanner de billets est un son en URI data: ; sans media-src, default-src 'self' le bloquait déjà
-               // (constaté par le rapport CSP) : on l'autorise explicitement, sans autre élargissement.
-               "media-src 'self' data:; " .
                "font-src ".Csp::FONT_SRC."; " .
                "connect-src ".Csp::CONNECT_SRC."; " .
                "frame-src 'self'; " .

@@ -522,6 +522,11 @@ class AdminController extends Controller
             ['email.required' => 'Indiquez une adresse e-mail.', 'email.email' => 'Cette adresse e-mail n\'est pas valide.']
         );
 
+        // Oubli de configuration évident (hôte non défini, identifiants vides) : on le dit sans tenter l'envoi.
+        if ($configHint = \App\Support\MailDiagnostic::configurationHint()) {
+            return response()->json(['success' => false, 'message' => $configHint], 422);
+        }
+
         try {
             $to = (string) $request->input('email');
             Mail::raw('Message de test envoyé depuis l\'administration - ' . now()->format('d/m/Y H:i'), function ($message) use ($to) {
@@ -537,11 +542,18 @@ class AdminController extends Controller
                     : 'Message de test envoyé.',
             ]);
         } catch (\Throwable $e) {
-            \Log::error('Erreur test email', ['exception' => get_class($e)]);
+            // Journal : type + extrait sans adresse ni identifiant (jamais de mot de passe dans un message SMTP).
+            \Log::error('Erreur test email', [
+                'exception' => get_class($e),
+                'detail' => \App\Support\MailDiagnostic::redact($e->getMessage()),
+            ]);
+
+            // Écran : consigne choisie dans une liste fixe, jamais le texte de l'exception.
+            $hint = \App\Support\MailDiagnostic::explain($e);
 
             return response()->json([
                 'success' => false,
-                'message' => 'L\'envoi a échoué. Vérifiez la configuration d\'envoi du serveur (détail dans le journal du serveur).',
+                'message' => 'L\'envoi a échoué. '.($hint ?? 'Vérifiez la configuration d\'envoi du serveur (détail dans le journal du serveur).'),
             ], 500);
         }
     }

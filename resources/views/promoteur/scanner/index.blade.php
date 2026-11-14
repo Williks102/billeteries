@@ -10,6 +10,10 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/scanner.css') }}">
+@endpush
+
 @section('content')
 <div class="scanner-page">
     <!-- Header -->
@@ -99,6 +103,12 @@
 
                     <!-- Résultats du scan -->
                     <div id="scanResult" style="display: none;"></div>
+
+                    <!-- Derniers scans : les résultats précédents restent consultables -->
+                    <div id="scanHistoryBox" class="scan-history mt-3" hidden>
+                        <h6 class="mb-2"><i class="fas fa-history me-2"></i>Derniers scans</h6>
+                        <ul id="scanHistory" class="list-unstyled mb-0"></ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -163,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'scanner-camera-toggle': function (el, e) { toggleCamera(e); },
         'scanner-camera-test': function () { testCameraPermissions(); },
         'scanner-camera-stop': function () { stopCamera(); },
+        'scanner-next': function () { dismissScanResult(); },
         'scanner-camera-retry': function () { retryCamera(); },
         'scanner-camera-help': function () { showCameraHelp(); },
         'scanner-camera-help-retry': function () { retryCamera(); bootstrap.Modal.getInstance(document.getElementById('cameraHelpModal')).hide(); }
@@ -285,7 +296,15 @@ async function startCamera() {
         
         // Succès - afficher le flux vidéo
         cameraContainer.innerHTML = `
-            <video id="cameraFeed" width="100%" height="300" style="border-radius: 10px;" autoplay playsinline></video>
+            <div class="scan-stage">
+                <video id="cameraFeed" width="100%" height="300" style="border-radius: 10px;" autoplay playsinline></video>
+                <div id="scanOverlay" class="scan-overlay" role="status" aria-live="assertive" hidden>
+                    <div class="scan-overlay__icon" id="scanOverlayIcon" aria-hidden="true"></div>
+                    <div class="scan-overlay__title" id="scanOverlayTitle"></div>
+                    <div class="scan-overlay__details" id="scanOverlayDetails"></div>
+                    <button type="button" class="scan-overlay__next" data-on-click="scanner-next">Scanner le suivant</button>
+                </div>
+            </div>
             <canvas id="cameraCanvas" style="display: none;"></canvas>
             <div class="mt-2 text-center">
                 <button type="button" class="btn btn-danger btn-sm" data-on-click="scanner-camera-stop">
@@ -340,7 +359,8 @@ async function startCamera() {
 let lastScannedCode = null;
 let lastScanTime = 0;
 const SCAN_COOLDOWN = 5000; // 5 secondes de cooldown
-const SCAN_RESUME_DELAY = 1800; // pause après chaque vérification, le temps de lire le résultat
+const SCAN_RESUME_DELAY = 1800; // pause après une vérification sans bandeau (saisie manuelle, caméra masquée)
+const SCAN_RESULT_HOLD = 4000;  // le bandeau de résultat reste affiché ce temps, ou jusqu'à « Scanner le suivant
 let scanBusy = false; // vrai pendant une vérification : la détection est suspendue
 
 function startQRDetection() {
@@ -405,9 +425,7 @@ function startQRDetection() {
                     // seulement mise en pause pendant la vérification, puis reprend toute seule. Le son (billet valide
                     // ou refusé) est joué à la réponse du serveur, pas dès la détection.
                     scanBusy = true;
-                    processTicket().finally(() => {
-                        setTimeout(() => { scanBusy = false; }, SCAN_RESUME_DELAY);
-                    });
+                    processTicket().finally(scheduleScanResume);
                     
                     return;
                 }
@@ -454,6 +472,8 @@ function stopCamera() {
         video.srcObject = null;
     }
     
+    dismissScanResult();
+
     // Arrêter la détection QR
     if (window.qrDetectionInterval) {
         clearInterval(window.qrDetectionInterval);
@@ -461,6 +481,69 @@ function stopCamera() {
     }
     
     console.log('Caméra arrêtée avec succès');
+}
+
+// ========== BANDEAU DE RÉSULTAT, HISTORIQUE, REPRISE ==========
+let scanResumeTimer = null;
+
+/** Échappe une valeur venant du serveur avant de l'insérer dans du HTML (nom d'événement, de client…). */
+function escapeHtml(value) {
+    return String(value === null || value === undefined ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
+ * Bandeau plein cadre PAR-DESSUS la caméra : vert (valide), rouge (refusé), orange (déjà utilisé). La détection reste
+ * suspendue tant qu'il est affiché (la caméra continue de tourner) : l'opérateur lit le résultat avant le billet suivant.
+ */
+function showScanOverlay(kind, title, details) {
+    const overlay = document.getElementById('scanOverlay');
+    if (!overlay) {
+        return false; // caméra non affichée (saisie manuelle) : le résultat reste dans la carte et l'historique
+    }
+    overlay.className = 'scan-overlay scan-overlay--' + kind;
+    document.getElementById('scanOverlayIcon').textContent = kind === 'ok' ? '✓' : (kind === 'used' ? '!' : '✕');
+    document.getElementById('scanOverlayTitle').textContent = title;
+    document.getElementById('scanOverlayDetails').textContent = details;
+    overlay.hidden = false;
+    return true;
+}
+
+function dismissScanResult() {
+    clearTimeout(scanResumeTimer);
+    scanResumeTimer = null;
+    const overlay = document.getElementById('scanOverlay');
+    if (overlay) {
+        overlay.hidden = true;
+    }
+    scanBusy = false;
+}
+
+/** Appelée quand la vérification est terminée : le bandeau reste SCAN_RESULT_HOLD ms, puis la détection reprend. */
+function scheduleScanResume() {
+    const overlay = document.getElementById('scanOverlay');
+    const hold = overlay && !overlay.hidden ? SCAN_RESULT_HOLD : SCAN_RESUME_DELAY;
+    clearTimeout(scanResumeTimer);
+    scanResumeTimer = setTimeout(dismissScanResult, hold);
+}
+
+/** Dernières vérifications (les plus récentes en haut) : un résultat ne disparaît plus au scan suivant. */
+function addScanHistory(kind, code, text) {
+    const box = document.getElementById('scanHistoryBox');
+    const list = document.getElementById('scanHistory');
+    if (!box || !list) {
+        return;
+    }
+    const item = document.createElement('li');
+    item.className = 'scan-history__item scan-history__item--' + kind;
+    const time = new Date().toLocaleTimeString('fr-FR');
+    item.textContent = (kind === 'ok' ? '✓ ' : (kind === 'used' ? '! ' : '✕ ')) + time + ' · ' + (code || '—') + ' · ' + text;
+    list.insertBefore(item, list.firstChild);
+    while (list.children.length > 8) {
+        list.removeChild(list.lastChild);
+    }
+    box.hidden = false;
 }
 
 // ========== AFFICHAGE DES RÉSULTATS ==========
@@ -474,9 +557,9 @@ function showSuccess(data) {
                 <i class="fas fa-check-circle fa-2x me-3"></i>
                 <div class="flex-grow-1">
                     <h5 class="alert-heading">✅ Billet Valide Scanné !</h5>
-                    <p class="mb-1"><strong>${ticket.event || 'Événement'}</strong></p>
-                    <p class="mb-1">Code: ${ticket.code} • Type: ${ticket.type || 'N/A'}</p>
-                    <p class="mb-1">Client: ${ticket.client || 'N/A'}</p>
+                    <p class="mb-1"><strong>${escapeHtml(ticket.event || 'Événement')}</strong></p>
+                    <p class="mb-1">Code: ${escapeHtml(ticket.code)} • Type: ${escapeHtml(ticket.type || 'N/A')}</p>
+                    <p class="mb-1">Client: ${escapeHtml(ticket.client || 'N/A')}</p>
                     <small>Scanné le ${new Date().toLocaleString('fr-FR')}</small>
                 </div>
             </div>
@@ -485,8 +568,11 @@ function showSuccess(data) {
     `;
     
     scanResult.style.display = 'block';
-    
-    // Son de succès (optionnel)
+
+    showScanOverlay('ok', 'BILLET VALIDE', [ticket.type, ticket.client, ticket.event].filter(Boolean).join(' · ') || ticket.code || '');
+    addScanHistory('ok', ticket.code, ticket.type || 'valide');
+
+    // Son de succès
     playSuccessSound();
 }
 
@@ -498,10 +584,10 @@ function showError(message, ticket = null) {
         if (ticket.status === 'used') {
             extraInfo = `<p class="mb-1">⚠️ Billet déjà utilisé</p>`;
             if (ticket.used_at) {
-                extraInfo += `<small>Utilisé le ${ticket.used_at}</small>`;
+                extraInfo += `<small>Utilisé le ${escapeHtml(ticket.used_at)}</small>`;
             }
         } else {
-            extraInfo = `<p class="mb-1">Statut: ${ticket.status}</p>`;
+            extraInfo = `<p class="mb-1">Statut: ${escapeHtml(ticket.status)}</p>`;
         }
     }
     
@@ -511,7 +597,7 @@ function showError(message, ticket = null) {
                 <i class="fas fa-times-circle fa-2x me-3"></i>
                 <div class="flex-grow-1">
                     <h5 class="alert-heading">❌ Erreur de scan</h5>
-                    <p class="mb-1">${message}</p>
+                    <p class="mb-1">${escapeHtml(message)}</p>
                     ${extraInfo}
                 </div>
             </div>
@@ -520,8 +606,13 @@ function showError(message, ticket = null) {
     `;
     
     scanResult.style.display = 'block';
-    
-    // Son d'erreur (optionnel)
+
+    const used = !!(ticket && ticket.status === 'used');
+    const kind = used ? 'used' : 'error';
+    showScanOverlay(kind, used ? 'DÉJÀ UTILISÉ' : 'REFUSÉ', used && ticket.used_at ? 'Utilisé le ' + ticket.used_at : message);
+    addScanHistory(kind, ticket && ticket.code ? ticket.code : '', used ? 'déjà utilisé' : message);
+
+    // Son d'erreur
     playErrorSound();
 }
 
@@ -534,7 +625,7 @@ function showCameraError(message, error = null) {
                 <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
                 <div class="flex-grow-1">
                     <h6 class="alert-heading mb-2">Problème d'accès à la caméra</h6>
-                    <p class="mb-2">${message}</p>
+                    <p class="mb-2">${escapeHtml(message)}</p>
                     <div class="mt-3">
                         <button type="button" class="btn btn-primary btn-sm me-2" data-on-click="scanner-camera-retry">
                             <i class="fas fa-redo me-1"></i>Réessayer
@@ -629,7 +720,7 @@ async function testCameraPermissions() {
         const testResult = document.createElement('div');
         testResult.className = `alert ${alertClass} alert-dismissible fade show mt-2`;
         testResult.innerHTML = `
-            ${message}
+            ${escapeHtml(message)}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         

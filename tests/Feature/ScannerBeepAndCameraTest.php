@@ -56,7 +56,40 @@ class ScannerBeepAndCameraTest extends TestCase
 
         $this->assertStringNotContainsString('stopCamera()', $detection, 'la caméra ne doit pas être coupée à chaque scan');
         $this->assertStringContainsString('scanBusy = true', $detection);
-        $this->assertStringContainsString('SCAN_RESUME_DELAY', $detection);
+        $this->assertStringContainsString('scheduleScanResume', $detection, 'la reprise se fait après l\'affichage du résultat');
         $this->assertStringContainsString('if (scanBusy)', $detection, 'la détection est suspendue pendant la vérification');
+    }
+
+    public function test_the_result_is_shown_over_the_camera_and_detection_waits_for_it(): void
+    {
+        $view = $this->source();
+
+        // Bandeau superposé à la caméra, bouton « Scanner le suivant », durée d'affichage
+        $this->assertStringContainsString('id="scanOverlay"', $view);
+        $this->assertStringContainsString('data-on-click="scanner-next"', $view);
+        $this->assertStringContainsString('SCAN_RESULT_HOLD', $view);
+        $this->assertStringContainsString("'scanner-next': function () { dismissScanResult(); }", $view);
+        // Le bandeau est affiché par les deux chemins de résultat
+        $this->assertStringContainsString("showScanOverlay('ok'", substr($view, strpos($view, 'function showSuccess')));
+        $this->assertStringContainsString('showScanOverlay(kind', substr($view, strpos($view, 'function showError')));
+        // Les résultats précédents restent consultables
+        $this->assertStringContainsString('id="scanHistory"', $view);
+        $this->assertStringContainsString('function addScanHistory', $view);
+        // La feuille de style dédiée existe et définit les trois états
+        $css = (string) file_get_contents(public_path('css/scanner.css'));
+        foreach (['.scan-overlay--ok', '.scan-overlay--error', '.scan-overlay--used'] as $selector) {
+            $this->assertStringContainsString($selector, $css);
+        }
+    }
+
+    public function test_server_values_are_escaped_before_being_put_in_html(): void
+    {
+        $view = $this->source();
+
+        $this->assertStringContainsString('function escapeHtml', $view);
+        // Aucune valeur issue du serveur n'est injectée brute dans innerHTML
+        foreach (['${message}', '${ticket.client ||', '${ticket.event ||', '${ticket.code}', '${ticket.type ||', '${ticket.status}', '${ticket.used_at}'] as $raw) {
+            $this->assertStringNotContainsString($raw, $view, 'valeur non échappée : '.$raw);
+        }
     }
 }

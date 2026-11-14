@@ -578,3 +578,19 @@ body.nav-drawer-open { overflow: hidden; }
 .commission-rate-input { min-height: var(--touch-min); font-size: 16px; }
 .commission-rate-submit { min-height: var(--touch-min); width: 100%; }
 @media (min-width: 768px) { .commission-rate-submit { width: auto; } }
+
+/* ===== Rapports CSP (admin) : cartes mobile d'abord ===== */
+.csp-entry {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-2);
+    overflow-wrap: anywhere;
+}
+.csp-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); }
+.csp-directive { font-weight: 600; color: var(--ink); }
+.csp-hits { color: var(--ink-muted); font-size: 14px; }
+.csp-details { margin: var(--space-1) 0 0; }
+.csp-details dt { color: var(--ink-muted); font-size: 14px; font-weight: 400; }
+.csp-details dd { margin: 0 0 var(--space-1); color: var(--ink); }

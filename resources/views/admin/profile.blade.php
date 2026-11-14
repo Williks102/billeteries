@@ -357,7 +357,7 @@
 @endpush
 
 @push('scripts')
-<script>
+<script @cspNonce>
     // Auto-hide success alert after 5 seconds
     document.addEventListener('DOMContentLoaded', function() {
         const successAlert = document.querySelector('.alert-success');

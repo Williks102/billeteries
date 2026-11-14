@@ -373,7 +373,7 @@
 @endpush
 
 @push('scripts')
-<script>
+<script @cspNonce>
     function deleteOrder(orderId) {
         if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
             // Logique de suppression

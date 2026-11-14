@@ -368,7 +368,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script @cspNonce>
 function toggleEdit() {
     const inputs = ['nameInput', 'emailInput', 'phoneInput', 'bioInput'];
     const saveButtons = document.getElementById('saveButtons');

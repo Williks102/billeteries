@@ -45,7 +45,7 @@ Billetterie en ligne pour la Côte d'Ivoire : Laravel 12, PHP 8.3, vues Blade et
 **Avant la mise en production** (hébergement définitif à choisir par le propriétaire) :
 1. **Vérification d'e-mail** (ou captcha) : inscriptions et surtout billets gratuits.
 2. **Journal d'activité** : **fait** (branche `claude/journal-activite`, à relire et fusionner). Voir §5 et `docs/journal-activite.md`. `event_audit_logs` est conservée intacte (liée à un événement avec cascade, donc inadaptée comme journal général). Reste : durée de conservation illimitée pour l'instant ; ajout seul appliqué par le code seulement (en production, retirer `UPDATE`/`DELETE` sur `activity_logs` à l'utilisateur SQL de l'application) ; non journalisés : scans de billets, paiement des commissions.
-3. **CSP stricte** : la politique actuelle autorise `'unsafe-inline'` pour les scripts (26 vues avec un bloc `<script>`, 91 attributs `onclick`/équivalents dans 32 vues, 51 vues avec `<style>`). Plan : jeton (nonce) par page + mode « rapport seulement », déplacer le JavaScript dans des fichiers, héberger jQuery et Chart.js, puis activer ; les styles en dernier.
+3. **CSP stricte** : la politique appliquée autorise encore `'unsafe-inline'` pour les scripts (24 blocs `<script>` inline, tous avec nonce depuis le lot A ; 91 attributs `onclick`/équivalents dans 30 vues ; 47 vues avec `<style>`). Lot A fait (nonce + rapport seulement, voir §7 « Plan sécurité » et `docs/csp.md`) ; restent B (JavaScript inline), C (jQuery/Chart.js locaux puis activation), D (styles).
 4. **Test sur la vraie base MySQL** : `composer run test:mysql` sur une base jetable dont le nom finit par `_test` (concurrence sur les derniers billets, plafonds, verrous). Tout a tourné sous SQLite jusqu'ici.
 5. **Réglages de production** : `APP_ENV=production`, `APP_DEBUG=false`, **nouvelle** `APP_KEY` (celle de la démo a transité en clair dans une conversation : à régénérer), `SESSION_SECURE_COOKIE=true`, `TRUSTED_PROXIES` à définir selon l'hébergeur et à tester avec un en-tête `X-Forwarded-For` falsifié (le plafond par IP en dépend ; derrière un CDN il bloquerait tout le monde).
 6. **Images persistantes** : le disque de Render est éphémère (images et avatars perdus à chaque déploiement). **Statut : code prêt, activation = actions du propriétaire.** Toutes les images passent par `App\Support\Media` (`config('filesystems.media_disk')`, variable `MEDIA_DISK`, défaut `public` = comportement inchangé) ; disque `r2` (Cloudflare R2, compatible S3) piloté par `R2_*`. Guide pas à pas : `docs/stockage-images.md` (créer le bucket, jeton, 6 variables dans Render, redéployer). Commande de reprise : `php artisan media:migrate-to-r2 --dry-run`. Jamais testé contre un vrai bucket. Garde-fou : `tests/Feature/MediaDiskTest.php` (interdit `disk('public')` et `Storage::url()` dans `app/` et les vues).
@@ -67,14 +67,14 @@ Branche `claude/securite-phase1` (13/11/2026) : volets non bloqués de la phase 
 | 7 | Routes et limitation de débit | Partiel | Nouveaux throttles : `PASSWORD_RESET_THROTTLE_PER_MINUTE` (IP) + 3 demandes / 10 min par e-mail. |
 | 8 | CSRF | Appliqué | |
 | 9 | Uploads | Appliqué | |
-| 10 | En-têtes | Partiel | `Permissions-Policy` ajoutée (caméra autorisée pour le scanner), HSTS sans `preload`. CSP à faire. |
+| 10 | En-têtes | Partiel | `Permissions-Policy` ajoutée (caméra autorisée pour le scanner), HSTS sans `preload`. CSP : lot A fait (rapport seulement, rien de bloqué) ; lots B, C, D à faire. |
 | 11 | Dépendances | Appliqué | 0 avis, mises à jour faites ; `composer audit` avant chaque déploiement. |
 | 12 | Monitoring | Partiel | Journal d'activité + échecs de connexion ; pas d'alerte ni de suivi d'erreurs. |
 | 13 | Sauvegardes | Non vérifié | |
 
 Phases restantes :
 1. **Vérification d'e-mail** : **BLOQUÉE** tant que le propriétaire n'a pas choisi un SMTP réel (avec `MAIL_MAILER=log` aucun e-mail n'est livré).
-2. **CSP stricte, en 4 lots** : A) nonce + mode « rapport seulement » ; B) sortir le JavaScript inline des 26 vues avec `<script>` et des 91 attributs `onclick` de 32 vues ; C) héberger jQuery et Chart.js localement puis activer `script-src` strict ; D) styles en dernier.
+2. **CSP stricte, en 4 lots** (détail : `docs/csp.md`) : **A) FAIT** (branche `claude/csp-lot-a`, à relire et fusionner) : nonce par requête (`csp_nonce()`, `@cspNonce`), en-tête `Content-Security-Policy-Report-Only` avec la politique stricte, `POST /csp-report`, table `csp_violations`, écran admin « Rapports CSP » ; la politique appliquée est inchangée ; variable `CSP_REPORT_ONLY`. Restent : **B)** sortir le JavaScript inline : 91 attributs `onclick`/équivalents dans 30 vues (les 24 blocs `<script>` ont déjà un nonce) ; **C)** héberger jQuery et Chart.js localement puis activer `script-src` strict ; **D)** styles en dernier (47 vues avec `<style>`).
 3. **MFA admin**.
 4. **Monitoring** (Sentry ou équivalent).
 5. **Sauvegardes TiDB** : vérifier la rétention, tester une restauration.

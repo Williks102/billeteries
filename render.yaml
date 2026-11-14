@@ -47,6 +47,11 @@ services:
       - key: TRUSTED_PROXIES
         value: "*"
 
+      # CSP stricte en mode « rapport seulement » (ne bloque rien ; rapports visibles dans Admin > Paramètres > Rapports CSP).
+      # Mettre "false" pour désactiver l'en-tête de rapport. Voir docs/csp.md.
+      - key: CSP_REPORT_ONLY
+        value: "true"
+
       # --- Base de données TiDB Cloud Starter (MySQL, TLS obligatoire, port 4000) ---
       - key: DB_CONNECTION
         value: mysql

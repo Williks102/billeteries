@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\EmailAvailabilityController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GuestCheckoutController;
@@ -53,6 +54,19 @@ Route::get('/promoter-guide', [PageController::class, 'promoterGuide'])->name('p
 Route::get('/pricing', [PageController::class, 'pricing'])->name('pages.pricing');
 Route::get('/support', [PageController::class, 'support'])->name('pages.support');
 Route::post('/support', [PageController::class, 'submitSupport'])->name('pages.support.submit');
+
+// Rapports CSP envoyés par le navigateur (public, sans CSRF, 204 toujours). Pas de session ni de cookie :
+// un rapport anonyme ne doit pas créer de ligne de session. Débit : 30/min par IP (+ plafond global dans le service).
+Route::post('/csp-report', [CspReportController::class, 'store'])
+    ->middleware('throttle:30,1,csp-report')
+    ->withoutMiddleware([
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        // (le jeton CSRF est déjà exempté dans bootstrap/app.php ; ce middleware ajouterait sinon un cookie XSRF, donc une session)
+        \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+    ])
+    ->name('csp.report');
 
 // Authentification
 Auth::routes();

@@ -114,7 +114,7 @@
 @if(count($dailySales['rows']) > 0)
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function () {
     var canvas = document.getElementById('dailySalesChart');
     if (!canvas || typeof Chart === 'undefined') { return; }

@@ -159,7 +159,7 @@
         </div>
     </div>
 
-    <script>
+    <script @cspNonce>
         // Validation en temps réel
         document.addEventListener('DOMContentLoaded', function() {
             const password = document.getElementById('password');

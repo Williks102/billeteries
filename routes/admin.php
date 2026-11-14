@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CspReportController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PageController;
@@ -35,6 +36,9 @@ Route::prefix('finances')->name('finances.')->group(function () {
 
 // ===== Journal d'activité (lecture seule) =====
 Route::get('activity', [ActivityLogController::class, 'index'])->name('activity.index');
+
+// ===== Rapports CSP (lecture seule) =====
+Route::get('csp', [CspReportController::class, 'index'])->name('csp.index');
 
 // ===== Rapports =====
 Route::controller(AdminController::class)->prefix('reports')->name('reports.')->group(function () {

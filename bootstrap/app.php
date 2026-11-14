@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SetExecutionTime::class);
         $middleware->append(\App\Http\Middleware\SetLayoutMiddleware::class);
         
+        // CSRF : exception étroite et unique pour /csp-report. Le navigateur envoie les rapports CSP tout seul, sans
+        // jeton ; la route ne fait qu'incrémenter des compteurs anonymes (limitée en débit, corps borné, 204 toujours).
+        $middleware->validateCsrfTokens(except: ['csp-report']);
+
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->append(\App\Http\Middleware\NoStoreAuthPages::class);
 

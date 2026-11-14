@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Csp;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -10,6 +11,10 @@ class SecurityHeaders
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Nonce CSP : un par requête, généré AVANT le rendu des vues (elles l'affichent via @cspNonce).
+        $nonce = Csp::generateNonce();
+        $request->attributes->set(Csp::REQUEST_ATTRIBUTE, $nonce);
+
         $response = $next($request);
 
         // Images hébergées hors du site (R2, CDN) : le domaine du disque média doit être autorisé dans img-src.
@@ -20,8 +25,8 @@ class SecurityHeaders
                "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net; " . 
                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " .
                "img-src ".$imgSrc."; " .
-               "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " .
-               "connect-src 'self' https://cdn.jsdelivr.net; " .
+               "font-src ".Csp::FONT_SRC."; " .
+               "connect-src ".Csp::CONNECT_SRC."; " .
                "frame-src 'self'; " .
                "object-src 'none'; " .
                "base-uri 'self'; " .
@@ -35,6 +40,10 @@ class SecurityHeaders
 
 
         $response->headers->set('Content-Security-Policy', $csp);
+        // Politique stricte cible, en rapport seulement (ne bloque rien) ; coexiste avec la politique appliquée.
+        if (config('security.csp_report_only', true)) {
+            $response->headers->set('Content-Security-Policy-Report-Only', Csp::reportOnlyPolicy($nonce, $imgSrc));
+        }
         $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('X-Frame-Options', 'DENY');

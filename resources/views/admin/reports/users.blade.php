@@ -85,7 +85,7 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+<script @cspNonce>
 // Graphique des inscriptions
 const ctx = document.getElementById('registrationChart').getContext('2d');
 new Chart(ctx, {

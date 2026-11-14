@@ -175,7 +175,7 @@
 
 {{-- JavaScript pour les actions de scan --}}
 @if($ticket && $info['can_be_used'] && $can_scan)
-<script>
+<script @cspNonce>
 function scanTicket() {
     if (!confirm('Confirmer le scan de ce billet ? Cette action est irréversible.')) {
         return;

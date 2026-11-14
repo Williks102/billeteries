@@ -261,7 +261,7 @@ use Illuminate\Support\Facades\Storage;
 @endsection
 
 @push('scripts')
-<script>
+<script @cspNonce>
 // Auto-submit du formulaire de filtre quand on change le statut
 document.getElementById('payment_status').addEventListener('change', function() {
     this.form.submit();

@@ -535,7 +535,7 @@ use Illuminate\Support\Facades\Storage;
 @endsection
 
 @push('scripts')
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function() {
     // Validation du formulaire
     const form = document.getElementById('eventEditForm');

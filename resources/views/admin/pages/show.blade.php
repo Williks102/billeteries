@@ -371,7 +371,7 @@ html {
 @endif
 
 @if($page->template === 'landing')
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function() {
     // Smooth scroll pour le bouton "Découvrir"
     const discoverBtn = document.querySelector('a[href="#content"]');

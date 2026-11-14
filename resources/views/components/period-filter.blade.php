@@ -42,7 +42,7 @@
     <div class="alert alert-danger py-2" role="alert">{{ $message }}</div>
 @enderror
 <p class="period-active" data-period-active>Période affichée : <strong>{{ $period->label }}</strong></p>
-<script>
+<script @cspNonce>
     (function () {
         var f = document.getElementById(@json($uid));
         if (!f) return;

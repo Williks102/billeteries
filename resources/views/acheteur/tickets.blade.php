@@ -559,7 +559,7 @@
 @endpush
 
 @push('scripts')
-<script>
+<script @cspNonce>
     function showLargeQR(el) {
         document.getElementById('modalQRImage').src = el.dataset.qrSrc;
         document.getElementById('modalTicketCode').textContent = el.dataset.ticketCode;

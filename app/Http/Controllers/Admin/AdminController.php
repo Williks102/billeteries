@@ -509,6 +509,7 @@ class AdminController extends Controller
             'fromAddress' => (string) config('mail.from.address'),
             'fromName' => (string) config('mail.from.name'),
             'templateCount' => count(EmailTemplates::all()),
+            'queueCounts' => \App\Support\QueueStats::counts(),
         ]);
     }
 

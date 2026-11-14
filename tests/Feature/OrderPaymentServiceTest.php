@@ -64,7 +64,7 @@ class OrderPaymentServiceTest extends TestCase
         $this->assertSame(99, $payment->provider_response['confirmed_by']);
         $this->assertNotNull($payment->completed_at);
 
-        Mail::assertSent(PaymentConfirmation::class, 1);
+        Mail::assertQueued(PaymentConfirmation::class, 1);
     }
 
     public function test_confirmation_is_idempotent(): void
@@ -80,7 +80,7 @@ class OrderPaymentServiceTest extends TestCase
         $this->assertEquals($paidAt, $order->fresh()->paid_at);
         $this->assertSame('A', $order->fresh()->payment_reference);
         $this->assertSame(1, Payment::count());
-        Mail::assertSent(PaymentConfirmation::class, 1);
+        Mail::assertQueued(PaymentConfirmation::class, 1);
     }
 
     public function test_failed_order_is_reclaimed_when_stock_is_available(): void
@@ -114,7 +114,7 @@ class OrderPaymentServiceTest extends TestCase
         $this->assertSame('failed', $order->fresh()->payment_status);
         $this->assertSame(2, $type->fresh()->quantity_sold);
         $this->assertSame(0, Payment::count());
-        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 
     public function test_refunded_order_is_refused(): void

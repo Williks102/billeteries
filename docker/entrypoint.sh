@@ -1,6 +1,6 @@
 #!/bin/bash
 # Démarrage du conteneur de démo (Render) : migrations, caches de production, seed de démo optionnel,
-# puis planificateur Laravel (arrière-plan) + Apache (premier plan). Si l'un des deux s'arrête, le conteneur
+# puis planificateur Laravel + worker de file (arrière-plan) + Apache (premier plan). Si l'un des deux s'arrête, le conteneur
 # s'arrête (Render le redémarre). Aucun secret n'est écrit ni affiché par ce script.
 set -eu
 
@@ -70,11 +70,13 @@ art view:cache
 # 8. Planificateur (pas de cron gratuit sur Render) + serveur web ; le conteneur s'arrête si l'un des deux meurt.
 SCHED_PID=""
 WEB_PID=""
+QUEUE_PID=""
 
 stop_all() {
     trap - TERM INT
     log "Signal reçu, arrêt en cours…"
     [ -n "$SCHED_PID" ] && kill -TERM "$SCHED_PID" 2>/dev/null || true
+    [ -n "$QUEUE_PID" ] && kill -TERM "$QUEUE_PID" 2>/dev/null || true
     [ -n "$WEB_PID" ] && kill -TERM "$WEB_PID" 2>/dev/null || true
     wait 2>/dev/null || true
     exit 0
@@ -84,6 +86,17 @@ trap stop_all TERM INT
 log "Démarrage du planificateur (schedule:work)…"
 runuser -u www-data -- php artisan schedule:work &
 SCHED_PID=$!
+
+# Worker de la file d'attente (e-mails transactionnels). Boucle de supervision : si queue:work s'arrête (limite de
+# durée --max-time, mémoire --memory, plantage), il est relancé 5 s plus tard. Non démarré si QUEUE_CONNECTION=sync
+# (rien à traiter). Tourne sous www-data comme le planificateur ; sortie vers les journaux du conteneur.
+if [ "${QUEUE_CONNECTION:-database}" != "sync" ]; then
+    log "Démarrage du worker de file d'attente (queue:work)…"
+    while true; do runuser -u www-data -- php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --memory=128 || true; sleep 5; done &
+    QUEUE_PID=$!
+else
+    log "QUEUE_CONNECTION=sync : pas de worker de file."
+fi
 
 log "Démarrage d'Apache…"
 apache2-foreground &
@@ -97,5 +110,6 @@ set -e
 
 log "Un processus s'est arrêté (code $STATUS) : arrêt du conteneur pour redémarrage par Render."
 kill -TERM "$SCHED_PID" "$WEB_PID" 2>/dev/null || true
+[ -n "$QUEUE_PID" ] && kill -TERM "$QUEUE_PID" 2>/dev/null || true
 wait 2>/dev/null || true
 exit "$([ "$STATUS" -eq 0 ] && echo 1 || echo "$STATUS")"

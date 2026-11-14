@@ -113,7 +113,7 @@ class ManualCheckoutTest extends TestCase
         $this->assertEqualsWithDelta(now()->addMinutes(1440)->timestamp, $order->expires_at->timestamp, 5); // invité : 24 h (E2)
         $this->assertSame($order->guest_token, session('guest_order_tokens.' . $order->id)); // C1
         $this->assertNull(session('cart'));
-        Mail::assertSent(ManualPaymentInstructions::class, 1);
+        Mail::assertQueued(ManualPaymentInstructions::class, 1);
 
         // Page de confirmation : numéro, montant, instructions, date limite
         $page = $this->get(route('checkout.guest.confirmation', $order->guest_token));
@@ -140,7 +140,7 @@ class ManualCheckoutTest extends TestCase
         $response->assertRedirect(route('checkout.confirmation', $order));
         $this->assertSame('pending', $order->payment_status);
         $this->assertSame('cash', $order->payment_method);
-        Mail::assertSent(ManualPaymentInstructions::class, 1);
+        Mail::assertQueued(ManualPaymentInstructions::class, 1);
     }
 
     public function test_instructions_come_from_config_without_hardcoded_account(): void

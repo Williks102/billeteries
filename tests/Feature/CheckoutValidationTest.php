@@ -55,7 +55,7 @@ class CheckoutValidationTest extends TestCase
         $this->assertSame(0, Ticket::count());
         $this->assertSame(0, Commission::count());
         $this->assertSame(0, $type->fresh()->quantity_sold);
-        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 
     public static function invalidFieldsProvider(): array

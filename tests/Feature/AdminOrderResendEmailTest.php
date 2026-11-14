@@ -37,7 +37,7 @@ class AdminOrderResendEmailTest extends TestCase
         return Order::find($order->id);
     }
 
-    public function test_admin_gets_json_success_and_the_mail_is_sent(): void
+    public function test_admin_gets_json_success_and_the_mail_is_queued(): void
     {
         $order = $this->order('paid');
 
@@ -46,7 +46,7 @@ class AdminOrderResendEmailTest extends TestCase
             ->assertOk()
             ->assertJson(['success' => true]);
 
-        Mail::assertSent(PaymentConfirmation::class, 1);
+        Mail::assertQueued(PaymentConfirmation::class, 1);
     }
 
     public function test_unpaid_order_is_refused_in_json_and_nothing_is_sent(): void
@@ -58,7 +58,7 @@ class AdminOrderResendEmailTest extends TestCase
             ->assertStatus(422)
             ->assertJson(['success' => false]);
 
-        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 
     public function test_a_classic_form_post_still_redirects_back_with_a_flash(): void
@@ -79,7 +79,7 @@ class AdminOrderResendEmailTest extends TestCase
         $this->actingAs(\App\Models\User::find(2))->postJson(route('admin.orders.resend-email', $order))->assertStatus(403);
         auth()->logout();
         $this->postJson(route('admin.orders.resend-email', $order))->assertStatus(401);
-        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 
     public function test_the_button_script_asks_for_json(): void

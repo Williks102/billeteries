@@ -2,17 +2,12 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
 use App\Models\Order;
 
-class PaymentConfirmation extends Mailable
+class PaymentConfirmation extends \App\Mail\Concerns\TransactionalMail
 {
-    use Queueable, SerializesModels;
-
     /**
      * Create a new message instance.
      */
@@ -20,12 +15,23 @@ class PaymentConfirmation extends Mailable
         public Order $order
     ) {}
 
+    public function recipientEmail(): ?string
+    {
+        return $this->order->user?->email;
+    }
+
+    protected function logContext(): array
+    {
+        return ['order_id' => $this->order->id];
+    }
+
     /**
      * Get the message envelope.
      */
     public function envelope(): Envelope
     {
         return new Envelope(
+            to: $this->recipients(),
             subject: ($this->order->isFree() ? '✅ Réservation confirmée' : '✅ Paiement confirmé') . ' - Vos billets #' . $this->order->order_number,
         );
     }

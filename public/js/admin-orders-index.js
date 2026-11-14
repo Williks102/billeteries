@@ -63,7 +63,7 @@ function resendEmail(orderId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Email renvoyé avec succès !');
+            alert(data.message || 'Email mis en file d\'attente.');
         } else {
             alert('Erreur : ' + (data.message || 'Impossible d\'envoyer l\'email'));
         }

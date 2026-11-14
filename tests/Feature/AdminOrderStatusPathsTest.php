@@ -39,7 +39,7 @@ class AdminOrderStatusPathsTest extends TestCase
         $this->assertSame(1, Commission::where('order_id', $order->id)->count());
         $this->assertSame(1, Payment::where('order_id', $order->id)->count());
         $this->assertSame($tickets, Ticket::where('status', 'sold')->count());
-        Mail::assertSent(PaymentConfirmation::class, 1);
+        Mail::assertQueued(PaymentConfirmation::class, 1);
     }
 
     public function test_update_status_to_paid_goes_through_service_once(): void
@@ -83,7 +83,7 @@ class AdminOrderStatusPathsTest extends TestCase
         $this->assertSame(2, Commission::count());
         $this->assertSame(2, Ticket::where('status', 'sold')->count());
         $this->assertSame(2, $type->fresh()->quantity_sold);
-        Mail::assertSent(PaymentConfirmation::class, 2);
+        Mail::assertQueued(PaymentConfirmation::class, 2);
     }
 
     public function test_update_status_paid_on_refunded_order_is_refused(): void

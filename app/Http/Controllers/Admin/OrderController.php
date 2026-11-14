@@ -288,7 +288,8 @@ class OrderController extends Controller
     }
 
     /**
-     * Renvoyer l'email de confirmation (billets en pièce jointe).
+     * Renvoyer l'email de confirmation (billets en pièce jointe) : l'e-mail est MIS EN FILE D'ATTENTE (le PDF est généré
+     * et l'envoi tenté par le worker) ; on ne peut plus affirmer qu'il est « envoyé ».
      * Répond en JSON pour le bouton de la liste (fetch) et par une redirection pour un envoi de formulaire classique.
      */
     public function resendEmail(Request $request, Order $order)
@@ -309,15 +310,15 @@ class OrderController extends Controller
             $success = app(\App\Services\EmailService::class)->sendPaymentConfirmation($order);
 
             if (! $success) {
-                return $reply(false, "Erreur lors de l'envoi de l'email. Consultez les journaux du serveur.", 500);
+                return $reply(false, "Impossible de mettre l'email en file d'attente. Consultez les journaux du serveur.", 500);
             }
 
-            Log::info('Email renvoyé par admin', [
+            Log::info('Email renvoyé (mis en file) par admin', [
                 'admin_id' => auth()->id(),
                 'order_id' => $order->id,
             ]);
 
-            return $reply(true, 'Email de confirmation renvoyé avec succès !');
+            return $reply(true, 'Email de confirmation mis en file d\'attente : il sera envoyé dans quelques instants.');
         } catch (\Throwable $e) {
             $this->logFailure('Erreur renvoi email commande', $e, $order);
 

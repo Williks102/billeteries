@@ -98,6 +98,10 @@ class AppServiceProvider extends ServiceProvider
             echo \"@extends('\" . \$layout . \"')\";
         ?>";
     });
+    // @cspNonce : `nonce="…"` de la requête (CSP), à placer dans chaque <script> inline : <script @cspNonce>
+    Blade::directive('cspNonce', function () {
+        return '<?php echo \\App\\Support\\Csp::attribute(); ?>';
+    });
      // Directive pour sidebar conditionnelle
     Blade::directive('adminSidebar', function () {
         return "<?php if(auth()->check() && auth()->user()->isAdmin()): ?>

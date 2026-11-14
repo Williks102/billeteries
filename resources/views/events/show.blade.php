@@ -176,7 +176,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- SYSTÈME UNIFIÉ DE RÉSERVATION - SCRIPT CORRIGÉ -->
-<script>
+<script @cspNonce>
 // ===== CLASSE PRINCIPALE DE GESTION DES RÉSERVATIONS =====
 // ===== CLASSE PRINCIPALE DE GESTION DES RÉSERVATIONS =====
 class BookingSystem {

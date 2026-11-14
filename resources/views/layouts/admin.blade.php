@@ -251,16 +251,17 @@
                 </li>
 
                 <!-- Paramètres -->
-                <li class="submenu-parent {{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.activity.*') || request()->routeIs('admin.emails.*') || request()->routeIs('admin.backups.*') ? 'open' : '' }}">
-                    <a href="#" data-action="toggle-submenu" data-menu="settings" class="{{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.activity.*') || request()->routeIs('admin.emails.*') || request()->routeIs('admin.backups.*') ? 'active' : '' }}">
+                <li class="submenu-parent {{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.activity.*') || request()->routeIs('admin.csp.*') || request()->routeIs('admin.emails.*') || request()->routeIs('admin.backups.*') ? 'open' : '' }}">
+                    <a href="#" data-action="toggle-submenu" data-menu="settings" class="{{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.activity.*') || request()->routeIs('admin.csp.*') || request()->routeIs('admin.emails.*') || request()->routeIs('admin.backups.*') ? 'active' : '' }}">
                         <i class="fas fa-cog"></i>
                         <span class="sidebar-menu-text">Paramètres</span>
                         <i class="fas fa-chevron-down menu-chevron"></i>
                         <span class="sidebar-tooltip">Paramètres</span>
                     </a>
-                    <ul class="sidebar-submenu {{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.activity.*') || request()->routeIs('admin.emails.*') || request()->routeIs('admin.backups.*') ? 'open' : '' }}" id="submenu-settings">
+                    <ul class="sidebar-submenu {{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.activity.*') || request()->routeIs('admin.csp.*') || request()->routeIs('admin.emails.*') || request()->routeIs('admin.backups.*') ? 'open' : '' }}" id="submenu-settings">
                         <li><a href="{{ route('admin.profile') }}" class="{{ request()->routeIs('admin.profile') ? 'active' : '' }}">Mon profil</a></li>
                         <li><a href="{{ route('admin.activity.index') }}" class="{{ request()->routeIs('admin.activity.*') ? 'active' : '' }}">Journal d'activité</a></li>
+                        <li><a href="{{ route('admin.csp.index') }}" class="{{ request()->routeIs('admin.csp.*') ? 'active' : '' }}">Rapports CSP</a></li>
                         <li><a href="{{ route('admin.emails.dashboard') }}" class="{{ request()->routeIs('admin.emails.*') ? 'active' : '' }}">Emails</a></li>
                         <li><a href="{{ route('admin.settings.index') }}" class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">Configuration</a></li>
                         <li><a href="{{ route('admin.backups.index') }}" class="{{ request()->routeIs('admin.backups.*') ? 'active' : '' }}">Sauvegardes</a></li>

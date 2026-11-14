@@ -563,7 +563,7 @@
 @endpush
 
 @push('scripts')
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function() {
     // Gestion de l'affichage des informations de rôle
     const roleSelect = document.getElementById('role');

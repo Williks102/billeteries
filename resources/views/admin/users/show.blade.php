@@ -436,7 +436,7 @@
 @endpush
 
 @push('scripts')
-<script>
+<script @cspNonce>
 // Fonction de confirmation de suppression
 function confirmDelete() {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {

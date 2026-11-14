@@ -334,7 +334,7 @@ use Illuminate\Support\Facades\Storage;
 </div>
 
 @push('scripts')
-<script>
+<script @cspNonce>
     // Initialiser les tooltips
     document.addEventListener('DOMContentLoaded', function() {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

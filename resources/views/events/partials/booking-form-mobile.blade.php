@@ -499,7 +499,7 @@
 
 {{-- Scripts --}}
 @push('scripts')
-<script>
+<script @cspNonce>
 // État global des billets
 let ticketQuantities = {};
 let ticketPrices = {};

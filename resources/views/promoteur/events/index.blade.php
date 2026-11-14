@@ -284,7 +284,7 @@ use Illuminate\Support\Facades\Storage;
 @endsection
 
 @push('scripts')
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function() {
     // Animation des cartes
     const cards = document.querySelectorAll('.event-card');

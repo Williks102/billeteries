@@ -153,7 +153,7 @@
 <!-- Bibliothèque jsQR (CORRECTION PRINCIPALE) -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function() {
     // Vérifier que jsQR est bien chargé
     if (typeof jsQR === 'undefined') {

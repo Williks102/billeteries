@@ -22,6 +22,11 @@
     @elseif($report['rows'] === [])
         <div class="alert alert-info" role="status">Aucun rapport reçu pour l'instant.</div>
     @else
+        <form method="POST" action="{{ route('admin.csp.clear') }}" class="mb-3">
+            @csrf
+            <button type="submit" class="btn btn-outline-secondary">Remettre les compteurs à zéro</button>
+        </form>
+
         <p class="text-muted">{{ count($report['rows']) }} point(s) distinct(s), {{ $report['total_hits'] }} signalement(s) au total, du plus fréquent au moins fréquent.</p>
 
         @foreach($report['rows'] as $row)

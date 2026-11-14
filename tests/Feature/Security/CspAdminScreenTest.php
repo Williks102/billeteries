@@ -63,6 +63,30 @@ class CspAdminScreenTest extends TestCase
         $this->assertStringContainsString('90 fois', $html);
     }
 
+    public function test_admin_can_reset_the_counters_and_others_cannot(): void
+    {
+        $this->migrate();
+        $this->seedRow('script-src-attr', 'inline', '/login', 7);
+
+        $this->post(route('admin.csp.clear'))->assertRedirect(route('login'));
+        $this->actingAs(\App\Models\User::find(2))->post(route('admin.csp.clear'))->assertForbidden();
+        $this->actingAs(\App\Models\User::find(3))->post(route('admin.csp.clear'))->assertForbidden();
+        $this->assertSame(1, DB::table('csp_violations')->count());
+
+        $this->actingAs(\App\Models\User::find(10))->post(route('admin.csp.clear'))->assertRedirect();
+        $this->assertSame(0, DB::table('csp_violations')->count());
+    }
+
+    public function test_reset_is_a_csrf_protected_post_only(): void
+    {
+        $this->migrate();
+
+        $this->actingAs(\App\Models\User::find(10))->get(route('admin.csp.clear'))->assertStatus(405);
+        $page = $this->actingAs(\App\Models\User::find(10));
+        $this->seedRow('script-src-attr', 'inline', '/login', 1);
+        $page->get(route('admin.csp.index'))->assertOk()->assertSee('Remettre les compteurs à zéro');
+    }
+
     public function test_missing_table_shows_a_dash_message_without_exception(): void
     {
         $this->assertFalse(Schema::hasTable('csp_violations'));

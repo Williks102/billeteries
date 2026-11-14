@@ -28,6 +28,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // jeton ; la route ne fait qu'incrémenter des compteurs anonymes (limitée en débit, corps borné, 204 toujours).
         $middleware->validateCsrfTokens(except: ['csp-report']);
 
+        // Un corps « application/reports+json » est analysé en entier par ces deux middlewares globaux AVANT le plafond
+        // de 16 Ko du service de rapports (et sans borne en transfert fragmenté). On les saute pour cette seule route :
+        // le service lit alors le corps de façon bornée (jugement de l'audit sécurité du lot A).
+        \Illuminate\Foundation\Http\Middleware\TrimStrings::skipWhen(fn (\Illuminate\Http\Request $request) => $request->is('csp-report'));
+        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::skipWhen(fn (\Illuminate\Http\Request $request) => $request->is('csp-report'));
+
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->append(\App\Http\Middleware\NoStoreAuthPages::class);
 

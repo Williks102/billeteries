@@ -51,6 +51,43 @@ class CspReportEndpointTest extends TestCase
         $this->assertSame('', $this->send($this->legacy())->getContent());
     }
 
+    public function test_unknown_directives_are_grouped_so_an_attacker_cannot_fill_the_table_with_invented_rows(): void
+    {
+        foreach (['inventee-1', 'inventee-2', '<script>x</script>', str_repeat('a', 30)] as $fake) {
+            $this->send($this->legacy($fake, 'inline'))->assertNoContent();
+        }
+        $this->send($this->legacy('script-src-attr', 'inline'))->assertNoContent();
+
+        $directives = DB::table('csp_violations')->pluck('directive')->all();
+        sort($directives);
+        $this->assertSame(['inconnue', 'script-src-attr'], $directives, 'toutes les directives inventées tiennent dans UNE ligne');
+        $this->assertSame(4, (int) DB::table('csp_violations')->where('directive', 'inconnue')->value('hits'));
+    }
+
+    public function test_the_body_is_never_parsed_by_the_global_trim_and_null_middlewares_on_this_route(): void
+    {
+        // Un corps « +json » est lu en entier par TrimStrings / ConvertEmptyStringsToNull avant le plafond du service,
+        // sauf si la route est exclue de leur traitement.
+        foreach ([\Illuminate\Foundation\Http\Middleware\TrimStrings::class, \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class] as $class) {
+            $ref = new \ReflectionProperty($class, 'skipCallbacks');
+            $ref->setAccessible(true);
+            $skips = $ref->getValue();
+
+            $this->assertTrue(
+                collect($skips)->contains(fn ($cb) => $cb(\Illuminate\Http\Request::create('/csp-report', 'POST'))),
+                class_basename($class).' doit sauter /csp-report'
+            );
+            $this->assertFalse(
+                collect($skips)->contains(fn ($cb) => $cb(\Illuminate\Http\Request::create('/login', 'POST'))),
+                class_basename($class).' ne doit sauter AUCUNE autre route'
+            );
+        }
+
+        // Un énorme corps « reports+json » reste sans effet et sans erreur
+        $this->send(str_repeat('{"a":', 3000).'1'.str_repeat('}', 3000), 'application/reports+json')->assertNoContent();
+        $this->assertSame(0, DB::table('csp_violations')->count());
+    }
+
     public function test_no_csrf_token_and_no_session_are_needed(): void
     {
         $response = $this->send($this->legacy());
@@ -94,14 +131,14 @@ class CspReportEndpointTest extends TestCase
     public function test_row_cap_blocks_new_keys_but_still_increments_existing_ones(): void
     {
         config(['security.csp_report_max_rows' => 2]);
-        $this->send($this->legacy('a-src'))->assertNoContent();
-        $this->send($this->legacy('b-src'))->assertNoContent();
-        $this->send($this->legacy('c-src'))->assertNoContent();
-        $this->send($this->legacy('a-src'))->assertNoContent();
+        $this->send($this->legacy('script-src', 'inline'))->assertNoContent();
+        $this->send($this->legacy('img-src', 'inline'))->assertNoContent();
+        $this->send($this->legacy('font-src', 'inline'))->assertNoContent();
+        $this->send($this->legacy('script-src', 'inline'))->assertNoContent();
 
         $this->assertSame(2, DB::table('csp_violations')->count());
-        $this->assertSame(0, DB::table('csp_violations')->where('directive', 'c-src')->count());
-        $this->assertSame(2, (int) DB::table('csp_violations')->where('directive', 'a-src')->value('hits'));
+        $this->assertSame(0, DB::table('csp_violations')->where('directive', 'font-src')->count());
+        $this->assertSame(2, (int) DB::table('csp_violations')->where('directive', 'script-src')->value('hits'));
     }
 
     public function test_oversized_body_is_refused_without_storing_and_without_error(): void

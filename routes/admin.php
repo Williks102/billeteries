@@ -39,6 +39,7 @@ Route::get('activity', [ActivityLogController::class, 'index'])->name('activity.
 
 // ===== Rapports CSP (lecture seule) =====
 Route::get('csp', [CspReportController::class, 'index'])->name('csp.index');
+Route::post('csp/clear', [CspReportController::class, 'clear'])->name('csp.clear');
 
 // ===== Rapports =====
 Route::controller(AdminController::class)->prefix('reports')->name('reports.')->group(function () {

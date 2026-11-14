@@ -24,6 +24,14 @@ class CspReportRecorder
     /** Plafond global d'écritures par minute (toutes IP confondues). */
     public const GLOBAL_PER_MINUTE = 120;
 
+    /** Directives CSP reconnues (le reste est regroupé sous « inconnue »). */
+    public const KNOWN_DIRECTIVES = [
+        'default-src', 'script-src', 'script-src-elem', 'script-src-attr', 'style-src', 'style-src-elem', 'style-src-attr',
+        'img-src', 'font-src', 'connect-src', 'frame-src', 'child-src', 'worker-src', 'manifest-src', 'media-src',
+        'object-src', 'prefetch-src', 'base-uri', 'form-action', 'frame-ancestors', 'navigate-to', 'sandbox',
+        'require-trusted-types-for', 'trusted-types', 'upgrade-insecure-requests',
+    ];
+
     /** Rapports lus par requête (un rapport « reports+json » peut en contenir plusieurs). */
     private const MAX_REPORTS_PER_REQUEST = 10;
 
@@ -110,7 +118,8 @@ class CspReportRecorder
     {
         $first = strtolower(trim(explode(' ', is_string($value) ? trim($value) : '')[0]));
 
-        return preg_match('/^[a-z-]{1,40}$/', $first) === 1 ? $first : 'inconnue';
+        // Liste blanche des directives CSP connues : un attaquant ne peut pas remplir le tableau de lignes inventées.
+        return in_array($first, self::KNOWN_DIRECTIVES, true) ? $first : 'inconnue';
     }
 
     /** Hôte seulement, ou inline / eval / data / blob ; jamais de chemin, de query string ni d'échantillon. */

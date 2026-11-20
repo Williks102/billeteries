@@ -390,7 +390,7 @@
     </form>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('vendor/bootstrap.bundle.min.js') }}"></script>
     
     <script src="{{ asset('js/csp-actions.js') }}" defer></script>
     <script src="{{ asset('js/layouts-promoteur.js') }}" defer></script>

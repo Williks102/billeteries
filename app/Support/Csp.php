@@ -14,7 +14,17 @@ final class Csp
     /** Directives communes à la politique appliquée et à la politique de rapport (une seule source). */
     public const FONT_SRC = "'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net";
 
-    public const CONNECT_SRC = "'self' https://cdn.jsdelivr.net";
+    public const CONNECT_SRC = "'self'";
+
+    /**
+     * Directives de scripts (lot C), communes à la politique appliquée et à celle de rapport : uniquement le site lui-même
+     * (jQuery, Chart.js, Bootstrap, jsQR et SortableJS sont hébergés dans public/vendor) et les scripts inline portant le nonce.
+     * Ni `'unsafe-inline'`, ni CDN, ni attribut d'événement (`script-src-attr 'none'`).
+     */
+    public static function scriptDirectives(string $nonce): string
+    {
+        return "script-src 'self' 'nonce-{$nonce}'; script-src-attr 'none'; ";
+    }
 
     /** 18 octets aléatoires cryptographiques -> 24 caractères base64, sans remplissage « = ». */
     public static function generateNonce(): string
@@ -50,10 +60,7 @@ final class Csp
     public static function reportOnlyPolicy(string $nonce, string $imgSrc): string
     {
         return "default-src 'self'; ".
-            // Les CDN restent listés jusqu'au lot C (jQuery et Chart.js hébergés localement).
-            "script-src 'self' 'nonce-{$nonce}' https://code.jquery.com https://cdn.jsdelivr.net; ".
-            // Signale les attributs onclick / onsubmit… : c'est ce que mesure le lot B.
-            "script-src-attr 'none'; ".
+            self::scriptDirectives($nonce).
             // Les styles viennent au lot D : 'unsafe-inline' reste admis d'ici là.
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; ".
             "img-src {$imgSrc}; ".

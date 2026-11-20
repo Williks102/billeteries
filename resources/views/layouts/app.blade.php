@@ -675,7 +675,7 @@ footer .col-lg-2:nth-child(5) { animation: slideInUp 0.6s ease 0.4s both; }
     
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('vendor/bootstrap.bundle.min.js') }}"></script>
     
     <!-- Script global pour les notifications -->
     <script src="{{ asset('js/csp-actions.js') }}" defer></script>

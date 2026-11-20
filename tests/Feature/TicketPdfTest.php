@@ -35,8 +35,8 @@ class TicketPdfTest extends TestCase
             $t->string('end_time')->nullable();
         });
         DB::table('events')->where('id', 1)->update([
-            'address' => 'Treichville, Abidjan', 'event_date' => '2026-11-15', 'event_time' => '2026-11-15 12:00:00',
-            'end_time' => '2026-11-15 15:00:00',
+            'address' => 'Treichville, Abidjan', 'event_date' => '2030-11-17', 'event_time' => '2030-11-17 12:00:00',
+            'end_time' => '2030-11-17 15:00:00',
         ]);
         DB::table('users')->where('id', 1)->update(['name' => 'Aïcha Koné', 'phone' => '0700112233', 'email' => 'aicha.prive@example.test']);
         DB::table('users')->insert(['id' => 2, 'name' => 'Organisateur Lagune', 'email' => 'orga@example.test', 'role' => 'promoteur']);
@@ -75,7 +75,7 @@ class TicketPdfTest extends TestCase
         $html = $this->html($this->order());
 
         $this->assertStringContainsString('TKT-ABC1', $html);
-        $this->assertStringContainsString('Dimanche 15 novembre 2026', $html);
+        $this->assertStringContainsString('Dimanche 17 novembre 2030', $html);
         $this->assertStringContainsString('12h00 – 15h00', $html);
         $this->assertStringContainsString('Organisé par Organisateur Lagune', $html);
         $this->assertStringContainsString('Billet 1 sur 3', $html);

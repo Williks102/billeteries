@@ -24,7 +24,7 @@ class SecurityHeadersPolicyTest extends TestCase
         $this->assertStringNotContainsString('preload', $hsts);
 
         // la CSP n'est pas touchée par ce chantier
-        $this->assertStringContainsString("script-src 'self' 'unsafe-inline'", (string) $response->headers->get('Content-Security-Policy'));
+        $this->assertMatchesRegularExpression("/script-src 'self' 'nonce-[A-Za-z0-9+\\/=]+'; script-src-attr 'none';/", (string) $response->headers->get('Content-Security-Policy'));
     }
 
     public function test_public_page_has_the_headers(): void

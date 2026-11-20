@@ -15,13 +15,13 @@ class CspReportOnlyTest extends TestCase
 {
     use BuildsOrderSchema;
 
-    /** Politique appliquée AVANT le lot A (disque média local) : elle ne doit pas changer d'un caractère. */
+    /** Politique appliquée depuis le lot C (disque média local), nonce mis à part : elle ne doit pas changer d'un caractère. */
     private const APPLIED = "default-src 'self'; "
-        ."script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net; "
+        ."script-src 'self' 'nonce-NONCE'; script-src-attr 'none'; "
         ."style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
         ."img-src 'self' data: blob: https://res.cloudinary.com; "
         ."font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
-        ."connect-src 'self' https://cdn.jsdelivr.net; "
+        ."connect-src 'self'; "
         ."frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; "
         .'upgrade-insecure-requests;';
 
@@ -40,7 +40,24 @@ class CspReportOnlyTest extends TestCase
 
     public function test_applied_policy_is_unchanged(): void
     {
-        $this->assertSame(self::APPLIED, $this->get('/login')->headers->get('Content-Security-Policy'));
+        $this->assertSame(self::APPLIED, $this->enforced($this->get('/login')));
+    }
+
+    /** Politique appliquée, avec son nonce remplacé par le marqueur NONCE (le nonce change à chaque requête). */
+    private function enforced($response): string
+    {
+        return preg_replace("/'nonce-[A-Za-z0-9+\/=]+'/", "'nonce-NONCE'", (string) $response->headers->get('Content-Security-Policy'));
+    }
+
+    public function test_applied_policy_is_strict_for_scripts_and_the_nonce_is_the_one_of_the_report_policy(): void
+    {
+        $response = $this->get('/login');
+        $header = (string) $response->headers->get('Content-Security-Policy');
+
+        $this->assertStringNotContainsString("script-src 'self' 'unsafe-inline'", $header);
+        $this->assertDoesNotMatchRegularExpression('/script-src[^;]*(unsafe-inline|unsafe-eval|https:)/', $header);
+        $this->assertStringContainsString("script-src-attr 'none'", $header);
+        $this->assertStringContainsString("'nonce-".$this->nonceOf($response)."'", $header);
     }
 
     public function test_report_only_header_has_the_strict_policy(): void
@@ -48,7 +65,7 @@ class CspReportOnlyTest extends TestCase
         $header = (string) $this->get('/login')->assertOk()->headers->get('Content-Security-Policy-Report-Only');
 
         $this->assertStringContainsString("default-src 'self'", $header);
-        $this->assertMatchesRegularExpression("/script-src 'self' 'nonce-[A-Za-z0-9+\/=]{24,}' https:\/\/code\.jquery\.com https:\/\/cdn\.jsdelivr\.net;/", $header);
+        $this->assertMatchesRegularExpression("/script-src 'self' 'nonce-[A-Za-z0-9+\/=]{24,}'; script-src-attr 'none';/", $header);
         $this->assertStringContainsString("script-src-attr 'none'", $header);
         // Plus aucun son intégré en data: (le scanner utilise l'API Web Audio) : pas de media-src à autoriser.
         $this->assertStringNotContainsString('media-src', $header);
@@ -79,7 +96,7 @@ class CspReportOnlyTest extends TestCase
 
         $response = $this->get('/login');
         $this->assertNull($response->headers->get('Content-Security-Policy-Report-Only'));
-        $this->assertSame(self::APPLIED, $response->headers->get('Content-Security-Policy'));
+        $this->assertSame(self::APPLIED, $this->enforced($response));
     }
 
     public function test_each_request_gets_a_different_nonce(): void

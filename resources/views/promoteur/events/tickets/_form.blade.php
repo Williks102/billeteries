@@ -95,7 +95,7 @@
 </form>
 
 @push('styles')
-<style>
+<style @cspNonce>
     .tt-page { max-width: 880px; }
     .tt-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.08); border-left: 4px solid var(--brand); padding: 1rem; margin-bottom: 1rem; }
     .tt-card > summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }

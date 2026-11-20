@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 @section('title', 'Modifier l\'événement - ' . $event->title)
 
 @push('styles')
-<style>
+<style @cspNonce>
     .form-card {
         background: white;
         border-radius: 15px;

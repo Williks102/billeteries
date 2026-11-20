@@ -135,7 +135,7 @@
 
 {{-- Styles --}}
 @push('styles')
-<style>
+<style @cspNonce>
 /* Styles de base */
 * {
     box-sizing: border-box;

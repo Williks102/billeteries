@@ -6,7 +6,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/event-detail.css') }}">
-<style>
+<style @cspNonce>
 /* ===== SYSTÈME UNIFIÉ - MOBILE FIRST ===== */
 
 .hero-content {

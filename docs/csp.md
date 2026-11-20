@@ -7,7 +7,7 @@ Supprimer `'unsafe-inline'` des scripts (puis des styles) de la politique de sé
 - **A (fait)** : nonce par requête, politique stricte en mode « rapport seulement », collecte des rapports, écran admin.
 - **B (fait)** : plus aucun attribut d'événement inline (`onclick`, `onsubmit`, `onchange`, `onerror`...) dans les vues : 89 convertis en `data-*` + délégation d'événements (`public/js/csp-actions.js`). Les blocs `<script>` (24) restent inline avec leur nonce.
 - **C (fait)** : jQuery, Chart.js, Bootstrap (JS), jsQR et SortableJS hébergés dans `public/vendor/` (versions figées, plus de CDN pour les scripts) ; la politique APPLIQUÉE passe à `script-src 'self' 'nonce-…'` + `script-src-attr 'none'`, sans `'unsafe-inline'`. Voir « Lot C » ci-dessous.
-- **D** : les styles en dernier (~47 vues avec `<style>`, attributs `style=`), puis retirer `'unsafe-inline'` de `style-src`.
+- **D (fait)** : les 46 blocs `<style>` des vues portent `@cspNonce` ; la politique appliquée n'a plus `'unsafe-inline'` dans `style-src` (blocs et feuilles). Les ~220 attributs `style="…"` restent admis par `style-src-attr 'unsafe-inline'` (voir « Lot D »).
 
 ## Lot C : scripts stricts (appliqués)
 Politique appliquée pour les scripts : `script-src 'self' 'nonce-<nonce de la requête>'; script-src-attr 'none'` (source unique : `Csp::scriptDirectives()`, partagée avec la politique de rapport). Conséquences :
@@ -16,6 +16,14 @@ Politique appliquée pour les scripts : `script-src 'self' 'nonce-<nonce de la r
 - Bibliothèques hébergées (`public/vendor/`) : Bootstrap 5.3.0 (bundle JS), jQuery 3.6.0, Chart.js 4.4.7 (`chart.umd.js`), SortableJS 1.15.6, jsQR 1.4.0. Elles remplacent des CDN dont deux n'étaient pas figés (`chart.js`, `sortablejs@latest`). Pour mettre à jour : `npm pack <paquet>@<version>`, copier le fichier `dist`, supprimer la ligne `sourceMappingURL`, adapter la vue et ce document.
 - `connect-src` ne liste plus de CDN. Les feuilles de style et polices (Bootstrap CSS, Font Awesome) restent sur CDN jusqu'au lot D.
 - Retour arrière d'urgence : remettre l'ancienne ligne `script-src 'self' 'unsafe-inline' …` dans `SecurityHeaders` (déploiement requis).
+
+## Lot D : styles (appliqués)
+Politique : `style-src 'self' 'nonce-…' + CDN (Google Fonts, Font Awesome, Bootstrap CSS) ; style-src-attr 'unsafe-inline'` (source unique : `Csp::styleDirectives()`).
+- Tout `<style>` de vue doit porter `@cspNonce` (garde-fou : `CspLocalScriptsTest::test_every_style_block_in_views_has_a_nonce`). E-mails exclus (les clients de messagerie ignorent la CSP).
+- Les modifications de style par JavaScript (`element.style.x = …`) sont autorisées ; ne PAS injecter de `<style>` en JS sans nonce.
+- Reste volontairement ouvert : les attributs `style="…"` (non exécutables : ils ne permettent pas de lancer du script ; ils ne servent qu'à de l'exfiltration par CSS dans des scénarios rares). Les convertir en classes (~220 occurrences) est un chantier optionnel à part (lot E).
+- Bootstrap CSS et Font Awesome restent sur CDN, sans contrôle d'intégrité (SRI) : à héberger ou à protéger par `integrity` plus tard.
+- Retour arrière d'urgence : remettre `'unsafe-inline'` dans `style-src` (`Csp::styleDirectives`) et redéployer.
 
 ## Lot B : écrire un gestionnaire d'événement (règle : plus JAMAIS d'attribut inline)
 Interdit dans `resources/views` (hors e-mails) : `onclick="..."`, `onchange`, `onsubmit`, `onerror`, tout `on*=` et `href="javascript:..."`. Le test `CspNoInlineHandlersTest` échoue sinon. Tous les layouts (`app`, `acheteur`, `promoteur`, `admin`) chargent `public/js/csp-actions.js` (`defer`) : délégation d'événements au niveau du document, sans `eval`, sans `new Function`, sans appel de `window[nom]` : seuls les noms enregistrés sont appelables.

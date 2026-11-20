@@ -106,7 +106,7 @@ class CharteVisuelleTest extends TestCase
             $charte = strpos($src, "asset('css/charte.css')");
             $this->assertNotFalse($charte, "layouts.$layout n'inclut pas charte.css");
             $this->assertGreaterThan(strpos($src, 'bootstrap.min.css'), $charte, "layouts.$layout : charte.css avant Bootstrap");
-            $this->assertLessThan(strpos($src, '<style>'), $charte, "layouts.$layout : charte.css après les styles propres");
+            $this->assertLessThan(strpos($src, '<style @cspNonce>'), $charte, "layouts.$layout : charte.css après les styles propres");
         }
     }
 

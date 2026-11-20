@@ -207,7 +207,7 @@
 @endsection
 
 @push('styles')
-<style>
+<style @cspNonce>
     .stat-item {
         padding: 10px;
         border-radius: 8px;

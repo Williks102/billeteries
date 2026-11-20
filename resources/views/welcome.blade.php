@@ -263,7 +263,7 @@ use Illuminate\Support\Facades\Storage;
 </section>
 
 @push('styles')
-<style>
+<style @cspNonce>
 .home-page {
     background: #ffffff;
 }

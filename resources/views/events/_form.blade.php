@@ -211,7 +211,7 @@
 </form>
 
 @push('styles')
-<style>
+<style @cspNonce>
     .ev-form { max-width: 880px; margin-inline: auto; }
     .ev-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); margin-bottom: var(--space-4); min-width: 0; }
     .ev-title { font-size: 1.15rem; font-weight: 600; margin: 0 0 var(--space-3); }

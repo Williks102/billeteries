@@ -1,7 +1,7 @@
 {{-- Bandeau « mode démo » : affiché seulement si $demoMode (variable partagée par AppServiceProvider).
      Fixé en bas de l'écran pour ne jamais masquer la navigation ; ne capte aucun clic. --}}
 @if(!empty($demoMode))
-    <style>
+    <style @cspNonce>
         body { padding-bottom: 44px; }
         .demo-banner {
             position: fixed; left: 0; right: 0; bottom: 0; z-index: 2000;

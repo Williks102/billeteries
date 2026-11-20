@@ -125,7 +125,7 @@
 </div>
 
 @push('styles')
-<style>
+<style @cspNonce>
 .bg-gradient-primary {
     background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
 }

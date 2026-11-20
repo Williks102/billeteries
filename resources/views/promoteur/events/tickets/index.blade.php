@@ -350,7 +350,7 @@ var(--brand);">
 @endpush
 
 @push('styles')
-<style>
+<style @cspNonce>
     .btn-orange {
         background-color: 
 var(--brand);

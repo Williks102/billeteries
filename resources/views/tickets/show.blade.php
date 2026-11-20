@@ -141,7 +141,7 @@
 </div>
 
 @push('styles')
-<style>
+<style @cspNonce>
 /* Ticket Styles */
 .ticket-container {
     background: white;

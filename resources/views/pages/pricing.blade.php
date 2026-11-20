@@ -4,7 +4,7 @@
 @section('title', 'Tarifs - ClicBillet CI')
 
 @push('styles')
-<style>
+<style @cspNonce>
     :root {
         --primary-orange: var(--brand);
         --primary-dark: var(--brand-hover);

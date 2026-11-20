@@ -12,7 +12,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
     
-    <style>
+    <style @cspNonce>
         body { 
             background: linear-gradient(135deg, #ffffffff 0%, #ffffffff 100%);
             min-height: 100vh;

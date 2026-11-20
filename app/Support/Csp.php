@@ -26,6 +26,17 @@ final class Csp
         return "script-src 'self' 'nonce-{$nonce}'; script-src-attr 'none'; ";
     }
 
+    /**
+     * Directives de styles (lot D) : blocs `<style>` avec nonce, feuilles du site et CDN de Bootstrap / Font Awesome / Google Fonts.
+     * Pas de `'unsafe-inline'` pour les BLOCS ni les feuilles. Les attributs `style="…"` (non exécutables, risque faible)
+     * restent admis via `style-src-attr 'unsafe-inline'` ; leur conversion en classes est un chantier à part.
+     */
+    public static function styleDirectives(string $nonce): string
+    {
+        return "style-src 'self' 'nonce-{$nonce}' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+            ."style-src-attr 'unsafe-inline'; ";
+    }
+
     /** 18 octets aléatoires cryptographiques -> 24 caractères base64, sans remplissage « = ». */
     public static function generateNonce(): string
     {
@@ -61,8 +72,7 @@ final class Csp
     {
         return "default-src 'self'; ".
             self::scriptDirectives($nonce).
-            // Les styles viennent au lot D : 'unsafe-inline' reste admis d'ici là.
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; ".
+            self::styleDirectives($nonce).
             "img-src {$imgSrc}; ".
             // Bip du scanner de billets : sons en URI data: lus par un élément audio.
             'font-src '.self::FONT_SRC.'; '.

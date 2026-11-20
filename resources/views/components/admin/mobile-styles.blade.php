@@ -1,7 +1,7 @@
 {{-- Styles mobile-first communs aux pages admin (champs 16px pour éviter le zoom iOS, cibles tactiles 44px). --}}
 @once
     @push('styles')
-        <style>
+        <style @cspNonce>
             .admin-page .form-control,
             .admin-page .form-select { font-size: 16px; min-height: 44px; }
             .admin-page .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; }

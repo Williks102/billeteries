@@ -201,7 +201,7 @@ use Illuminate\Support\Facades\Storage;
 @endsection
 
 @push('styles')
-<style>
+<style @cspNonce>
     .event-card {
         transition: all 0.3s ease;
         border: 1px solid #e9ecef !important;

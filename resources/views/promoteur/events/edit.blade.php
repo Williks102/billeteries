@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Storage;
 @endphp
 
 @push('styles')
-<style>
+<style @cspNonce>
     .form-card {
         background: white;
         border-radius: 15px;

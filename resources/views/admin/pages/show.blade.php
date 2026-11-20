@@ -198,7 +198,7 @@
 </div>
 
 <!-- Styles pour le contenu des pages -->
-<style>
+<style @cspNonce>
 .page-content {
     font-size: 1.1rem;
     line-height: 1.7;

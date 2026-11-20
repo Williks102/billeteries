@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
     <link rel="stylesheet" href="{{ asset('css/event-images.css') }}">
     <!-- Styles personnalisés -->
-    <style>
+    <style @cspNonce>
         :root {
             --primary-orange: var(--brand);
             --secondary-orange: var(--brand-decor);

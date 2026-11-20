@@ -14,7 +14,7 @@
     
     <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
 
-    <style>
+    <style @cspNonce>
         /* Barre du haut, menu latéral, tiroir mobile, gouttières et jetons : public/css/charte.css (section « Barres de navigation »).
            Ici seulement ce qui est propre à l'admin. */
         :root {

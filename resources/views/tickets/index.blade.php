@@ -346,7 +346,7 @@ use Illuminate\Support\Facades\Storage;
 @endpush
 
 @push('styles')
-<style>
+<style @cspNonce>
     .btn-orange {
         background-color: var(--brand);
         border-color: var(--brand);

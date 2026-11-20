@@ -370,7 +370,7 @@
 @endpush
 
 @push('styles')
-<style>
+<style @cspNonce>
 .table th {
     border-top: none;
     font-weight: 600;

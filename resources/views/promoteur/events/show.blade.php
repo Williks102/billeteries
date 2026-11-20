@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Storage;
 @endphp
 
 @push('styles')
-<style>
+<style @cspNonce>
     .event-header {
         background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5)), 
                     url('{{ $event->image ? \App\Support\Media::url($event->image) : "" }}') center/cover;

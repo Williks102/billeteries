@@ -52,4 +52,35 @@ class CspLocalScriptsTest extends TestCase
             }
         }
     }
+
+    /** CSP lot D : tout bloc <style> des vues (hors e-mails) porte le nonce, sinon il est bloqué par la politique. */
+    public function test_every_style_block_in_views_has_a_nonce(): void
+    {
+        $offenders = [];
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(resource_path('views'))) as $file) {
+            if (! str_ends_with($file->getFilename(), '.blade.php') || str_contains($file->getPathname(), '/emails/')) {
+                continue;
+            }
+            if (preg_match('/<style(?![^>]*@cspNonce)[\s>]/i', file_get_contents($file->getPathname()))) {
+                $offenders[] = $file->getPathname();
+            }
+        }
+
+        $this->assertSame([], $offenders);
+    }
+
+    public function test_applied_policy_has_no_unsafe_inline_for_style_blocks(): void
+    {
+        $this->buildStyleHeaders();
+    }
+
+    private function buildStyleHeaders(): void
+    {
+        config(['app.key' => 'base64:'.base64_encode(str_repeat('k', 32))]);
+        $header = (string) $this->get('/login')->headers->get('Content-Security-Policy');
+
+        $this->assertMatchesRegularExpression("/style-src 'self' 'nonce-[A-Za-z0-9+\/=]+' https:/", $header);
+        $this->assertStringContainsString("style-src-attr 'unsafe-inline'", $header);
+        $this->assertDoesNotMatchRegularExpression("/style-src 'self'[^;]*unsafe-inline/", $header);
+    }
 }

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Storage;
 @endphp
 
 @push('styles')
-<style>
+<style @cspNonce>
     .event-card {
         border: none;
         border-radius: 15px;

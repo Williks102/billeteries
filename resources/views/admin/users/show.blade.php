@@ -246,7 +246,7 @@
 @endsection
 
 @push('styles')
-<style>
+<style @cspNonce>
 /* Avatar utilisateur */
 .user-avatar-lg {
     width: 80px;

@@ -4,7 +4,7 @@
 @section('title', 'Conditions Générales de Vente - ClicBillet CI')
 
 @push('styles')
-<style>
+<style @cspNonce>
     .terms-container {
         background: white;
         border-radius: 15px;

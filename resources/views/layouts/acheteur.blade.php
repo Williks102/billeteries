@@ -14,7 +14,7 @@
 
     <link rel="stylesheet" href="{{ asset('css/charte.css') }}">
 
-    <style>
+    <style @cspNonce>
         :root {
             --primary-orange: var(--brand);
             --primary-dark: var(--brand-hover);

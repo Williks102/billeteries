@@ -341,7 +341,7 @@ use Illuminate\Support\Facades\Storage;
 </div>
 
 @push('styles')
-<style>
+<style @cspNonce>
 .events-page {
     background-color: #f8f9fa;
 }

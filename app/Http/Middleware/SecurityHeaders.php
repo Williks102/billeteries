@@ -23,7 +23,7 @@ class SecurityHeaders
 
                         $csp = "default-src 'self'; " .
                Csp::scriptDirectives($nonce) .
-               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " .
+               Csp::styleDirectives($nonce) .
                "img-src ".$imgSrc."; " .
                "font-src ".Csp::FONT_SRC."; " .
                "connect-src ".Csp::CONNECT_SRC."; " .

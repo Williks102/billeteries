@@ -55,7 +55,7 @@
     </div>
 </div>
 
-<style>
+<style @cspNonce>
 .commission-widget .progress-bar {
     display: flex;
     align-items: center;

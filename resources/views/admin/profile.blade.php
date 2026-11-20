@@ -225,7 +225,7 @@
 @endsection
 
 @push('styles')
-<style>
+<style @cspNonce>
     .user-avatar-xl {
         width: 100px;
         height: 100px;

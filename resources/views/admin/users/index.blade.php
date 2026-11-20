@@ -208,7 +208,7 @@
 @push('scripts')
 <script src="{{ asset('js/admin-users-index.js') }}" defer></script>
 
-<style>
+<style @cspNonce>
 .avatar-sm {
     width: 40px;
     height: 40px;

@@ -109,7 +109,7 @@
     </div>
 </div>
 
-<style>
+<style @cspNonce>
 .earnings-calculator .progress-bar {
     display: flex;
     align-items: center;

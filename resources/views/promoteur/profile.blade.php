@@ -3,7 +3,7 @@
 @section('breadcrumb', 'Mon profil')
 
 @push('styles')
-<style>
+<style @cspNonce>
     .profile-card {
         background: white;
         border-radius: 15px;

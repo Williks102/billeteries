@@ -253,7 +253,7 @@
 @endsection
 
 @push('styles')
-<style>
+<style @cspNonce>
 .stat-card {
     transition: all 0.3s ease;
     cursor: pointer;

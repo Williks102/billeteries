@@ -355,7 +355,7 @@
 @endsection
 
 @push('styles')
-<style>
+<style @cspNonce>
     .avatar-circle {
         width: 60px;
         height: 60px;

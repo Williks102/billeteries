@@ -372,7 +372,7 @@
 @endpush
 
 @push('styles')
-<style>
+<style @cspNonce>
 .role-info {
     padding: 0.75rem;
     border: 1px solid #e9ecef;

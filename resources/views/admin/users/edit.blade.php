@@ -363,7 +363,7 @@
 @endsection
 
 @push('styles')
-<style>
+<style @cspNonce>
 /* Avatar utilisateur */
 .user-avatar {
     width: 50px;

@@ -287,7 +287,7 @@
 </div>
 
 <!-- Styles CSS -->
-<style>
+<style @cspNonce>
 :root {
     --primary-orange: var(--brand);
     --secondary-orange: var(--brand-decor);

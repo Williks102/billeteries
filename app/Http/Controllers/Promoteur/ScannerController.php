@@ -26,39 +26,11 @@ class ScannerController extends Controller
     /**
      * Page principale du scanner QR
      */
-    public function index()
+    public function index(\App\Services\Stats\ScannerStats $stats)
     {
-        $promoteurId = Auth::id();
-        
-        // Statistiques récentes - CORRIGÉ pour BDD existante
-        $recentScans = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                $query->where('promoter_id', $promoteurId);
-            })
-            ->where('status', 'used')
-            ->where('updated_at', '>=', now()->subDays(7))
-            ->count();
-
-        $todayScans = Ticket::whereHas('ticketType.event', function($query) use ($promoteurId) {
-                $query->where('promoter_id', $promoteurId);
-            })
-            ->where('status', 'used')
-            ->whereDate('updated_at', today())
-            ->count();
-
-        // Événements actifs avec billets non utilisés
-        $activeEvents = Event::where('promoter_id', $promoteurId)
-            ->where('status', 'published')
-            ->where('event_date', '>=', now())
-            ->withCount(['tickets as unused_tickets' => function($query) {
-                $query->where('status', 'sold'); // Vendus mais pas encore utilisés
-            }])
-            ->get();
-
-        return view('promoteur.scanner.index', compact(
-            'recentScans', 
-            'todayScans', 
-            'activeEvents'
-        ));
+        return view('promoteur.scanner.index', [
+            'stats' => $stats->forPromoter((int) Auth::id()),
+        ]);
     }
 
     /**

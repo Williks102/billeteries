@@ -194,7 +194,7 @@ class EventController extends Controller
 
             $wanted = $request->validated()['status'];
             $oldStart = $event->startsAt();
-            $realigned = ['realigned' => 0, 'inconsistent' => 0];
+            $realigned = ['realigned' => 0, 'inconsistent' => 0, 'closed' => 0];
 
             try {
                 DB::transaction(function () use ($event, $data, $wanted, $oldStart, $realign, &$realigned) {
@@ -225,12 +225,7 @@ class EventController extends Controller
                     $message .= ' Il n\'est pas publié : '.implode(' ', $result->checklist['blocking']);
                 }
             }
-            if ($realigned['realigned'] > 0) {
-                $message .= " Fins de vente recalées pour {$realigned['realigned']} billet(s).";
-            }
-            if ($realigned['inconsistent'] > 0) {
-                $message .= " {$realigned['inconsistent']} billet(s) ont une période de vente incohérente : vérifiez-les.";
-            }
+            $message .= RealignSalePeriodsAction::notes($realigned);
 
             return redirect()->route('admin.events.index')->with($level, $message);
 

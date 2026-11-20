@@ -26,10 +26,7 @@
             <p class="text-muted">Scannez ou saisissez le code des billets pour validation</p>
         </div>
         <div class="scanner-stats">
-            <span id="scan-count" class="badge bg-success fs-6 me-2">0 scannés aujourd'hui</span>
-            <button class="btn btn-outline-primary" data-on-click="scanner-stats">
-                <i class="fas fa-chart-bar me-2"></i>Statistiques
-            </button>
+            <span id="scan-count" class="badge bg-success fs-6 me-2">{{ $stats['today'] }} scanné{{ $stats['today'] > 1 ? 's' : '' }} aujourd'hui</span>
         </div>
     </div>
 
@@ -146,11 +143,19 @@
                     </h6>
                 </div>
                 <div class="card-body" id="quickStats">
-                    <div class="text-center">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                            <span class="visually-hidden">Chargement...</span>
+                    <div class="row text-center g-2">
+                        <div class="col-4">
+                            <h5 class="text-primary mb-0">{{ $stats['today'] }}</h5>
+                            <small class="text-muted">Aujourd'hui</small>
                         </div>
-                        <p class="mt-2 small text-muted">Chargement des statistiques...</p>
+                        <div class="col-4">
+                            <h5 class="text-success mb-0">{{ $stats['week'] }}</h5>
+                            <small class="text-muted">7 derniers jours</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="text-secondary mb-0">{{ $stats['unscanned'] }}</h5>
+                            <small class="text-muted">Vendus, pas encore scannés</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -168,7 +173,6 @@
 // Actions data-on-* (voir public/js/csp-actions.js)
 document.addEventListener('DOMContentLoaded', function () {
     CspActions.register({
-        'scanner-stats': function () { showStats(); },
         'scanner-process-ticket': function () { processTicket(); },
         'scanner-camera-toggle': function (el, e) { toggleCamera(e); },
         'scanner-camera-test': function () { testCameraPermissions(); },
@@ -188,14 +192,10 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('jsQR chargé avec succès');
     }
-    
-    // Charger les statistiques
-    loadQuickStats();
 });
 
 // ========== FONCTION PRINCIPALE DE TRAITEMENT (CORRIGÉE) ==========
 async function processTicket() {
-    ensureAudio(); // geste utilisateur (bouton Vérifier) : autorise les bips sur mobile
     const ticketCode = document.getElementById('ticketCode').value.trim().toUpperCase();
     const submitButton = document.querySelector('button[data-on-click="scanner-process-ticket"]');
     
@@ -258,7 +258,6 @@ async function processTicket() {
 
 // ========== GESTION CAMÉRA (CORRIGÉE) ==========
 async function startCamera() {
-    ensureAudio(); // geste utilisateur : autorise les bips sur mobile
     // Vérifier le support de getUserMedia
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showCameraError('Votre navigateur ne supporte pas l\'accès à la caméra. Utilisez Chrome, Firefox ou Safari récent.');
@@ -422,8 +421,8 @@ function startQRDetection() {
                     document.getElementById('ticketCode').value = ticketCode;
                     
                     // La caméra RESTE allumée (à l'entrée d'un événement on enchaîne les billets) : la détection est
-                    // seulement mise en pause pendant la vérification, puis reprend toute seule. Le son (billet valide
-                    // ou refusé) est joué à la réponse du serveur, pas dès la détection.
+                    // seulement mise en pause pendant la vérification, puis reprend toute seule. Le retour (bandeau,
+                    // vibration) est donné à la réponse du serveur, pas dès la détection.
                     scanBusy = true;
                     processTicket().finally(scheduleScanResume);
                     
@@ -572,8 +571,8 @@ function showSuccess(data) {
     showScanOverlay('ok', 'BILLET VALIDE', [ticket.type, ticket.client, ticket.event].filter(Boolean).join(' · ') || ticket.code || '');
     addScanHistory('ok', ticket.code, ticket.type || 'valide');
 
-    // Son de succès
-    playSuccessSound();
+    // Retour haptique (pas de son)
+    feedbackSuccess();
 }
 
 function showError(message, ticket = null) {
@@ -612,8 +611,7 @@ function showError(message, ticket = null) {
     showScanOverlay(kind, used ? 'DÉJÀ UTILISÉ' : 'REFUSÉ', used && ticket.used_at ? 'Utilisé le ' + ticket.used_at : message);
     addScanHistory(kind, ticket && ticket.code ? ticket.code : '', used ? 'déjà utilisé' : message);
 
-    // Son d'erreur
-    playErrorSound();
+    feedbackError();
 }
 
 function showCameraError(message, error = null) {
@@ -737,85 +735,19 @@ async function testCameraPermissions() {
     }
 }
 
-// ========== STATISTIQUES ==========
-function loadQuickStats() {
-    const statsContainer = document.getElementById('quickStats');
-    
-    // Simulation de chargement des stats (remplacez par votre API)
-    setTimeout(() => {
-        statsContainer.innerHTML = `
-            <div class="row text-center">
-                <div class="col-6">
-                    <div class="border-end">
-                        <h5 class="text-primary mb-0">24</h5>
-                        <small class="text-muted">Aujourd'hui</small>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <h5 class="text-success mb-0">156</h5>
-                    <small class="text-muted">Cette semaine</small>
-                </div>
-            </div>
-        `;
-    }, 1000);
-}
-
+// ========== COMPTEUR DU JOUR ==========
 function updateScanCount() {
     const scanCountElement = document.getElementById('scan-count');
     if (scanCountElement) {
         const currentCount = parseInt(scanCountElement.textContent.match(/\d+/)[0]) || 0;
-        scanCountElement.textContent = `${currentCount + 1} scannés aujourd'hui`;
+        const total = currentCount + 1;
+        scanCountElement.textContent = `${total} scanné${total > 1 ? 's' : ''} aujourd'hui`;
     }
 }
 
-function showStats() {
-    // Implementer l'affichage des statistiques détaillées
-    alert('Fonctionnalité statistiques en cours de développement');
-}
-
-// ========== EFFETS SONORES ==========
-// Bips générés par l'API Web Audio : aucun fichier son (les anciens sons intégrés en data: étaient tronqués, donc
-// illisibles, et la CSP les bloquait). Le contexte audio doit être créé/relancé pendant un geste de l'utilisateur
-// (touche « Activer la caméra » ou « Vérifier ») : les navigateurs mobiles refusent de jouer un son sinon.
-let audioCtx = null;
-
-function ensureAudio() {
-    try {
-        if (!audioCtx) {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (AudioContextClass) {
-                audioCtx = new AudioContextClass();
-            }
-        }
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-    } catch (e) {
-        // Son non critique
-    }
-    return audioCtx;
-}
-
-function beep(frequency, delay, duration, waveform) {
-    const ctx = ensureAudio();
-    if (!ctx) {
-        return;
-    }
-    const start = ctx.currentTime + delay;
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.type = waveform || 'sine';
-    oscillator.frequency.value = frequency;
-    // Enveloppe courte : évite le « clic » de début et de fin
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.5, start + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.start(start);
-    oscillator.stop(start + duration + 0.02);
-}
-
+// ========== RETOUR HAPTIQUE ==========
+// Pas de son (décision du propriétaire) : le résultat se lit sur le bandeau plein écran. Une courte vibration
+// accompagne le résultat sur les téléphones qui la gèrent (Android) ; ailleurs elle est simplement ignorée.
 function vibrate(pattern) {
     try {
         if (navigator.vibrate) {
@@ -826,17 +758,11 @@ function vibrate(pattern) {
     }
 }
 
-// Billet valide : deux notes montantes courtes + une vibration brève
-function playSuccessSound() {
-    beep(880, 0, 0.12, 'sine');
-    beep(1320, 0.13, 0.16, 'sine');
+function feedbackSuccess() {
     vibrate(80);
 }
 
-// Billet refusé : deux tons graves, plus longs + vibration en deux temps
-function playErrorSound() {
-    beep(220, 0, 0.2, 'square');
-    beep(220, 0.26, 0.2, 'square');
+function feedbackError() {
     vibrate([120, 60, 120]);
 }
 

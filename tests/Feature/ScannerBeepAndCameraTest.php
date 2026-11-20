@@ -19,34 +19,23 @@ class ScannerBeepAndCameraTest extends TestCase
         return (string) file_get_contents(base_path('resources/views/promoteur/scanner/index.blade.php'));
     }
 
-    public function test_no_embedded_data_uri_sound_remains(): void
-    {
-        $this->assertStringNotContainsString('data:audio', $this->source());
-        $this->assertDoesNotMatchRegularExpression('/new Audio\(/', $this->source());
-    }
-
-    public function test_beeps_use_web_audio_and_the_context_is_started_by_a_user_gesture(): void
+    public function test_the_scanner_has_no_sound_and_only_a_short_vibration(): void
     {
         $view = $this->source();
 
-        $this->assertStringContainsString('AudioContext', $view);
-        $this->assertStringContainsString('createOscillator', $view);
-        // Le contexte est créé/relancé dans les fonctions appelées par un clic (démarrage caméra, bouton Vérifier)
-        $this->assertMatchesRegularExpression('/async function startCamera\(\) \{\s*ensureAudio\(\)/', $view);
-        $this->assertMatchesRegularExpression('/async function processTicket\(\) \{\s*ensureAudio\(\)/', $view);
-        // Deux sons distincts : valide et refusé
-        $this->assertStringContainsString('function playSuccessSound()', $view);
-        $this->assertStringContainsString('function playErrorSound()', $view);
-    }
-
-    public function test_sound_is_played_from_the_server_answer_not_on_detection(): void
-    {
-        $view = $this->source();
+        // Décision du propriétaire : pas de son (le résultat se lit sur le bandeau plein écran)
+        $this->assertStringNotContainsString('data:audio', $view);
+        $this->assertDoesNotMatchRegularExpression('/new Audio\(/', $view);
+        $this->assertStringNotContainsString('AudioContext', $view);
+        $this->assertStringNotContainsString('createOscillator', $view);
+        // Un retour haptique distinct pour « valide » et « refusé », donné à la réponse du serveur
+        $this->assertStringContainsString('function feedbackSuccess()', $view);
+        $this->assertStringContainsString('function feedbackError()', $view);
+        $this->assertStringContainsString('navigator.vibrate', $view);
+        $this->assertStringContainsString('feedbackSuccess();', substr($view, strpos($view, 'function showSuccess')));
+        $this->assertStringContainsString('feedbackError();', substr($view, strpos($view, 'function showError')));
         $detection = substr($view, strpos($view, 'function startQRDetection'), strpos($view, '// ========== GESTION BOUTONS CAMÉRA') - strpos($view, 'function startQRDetection'));
-
-        $this->assertStringNotContainsString('playSuccessSound', $detection, 'un billet refusé ne doit pas sonner comme un billet valide');
-        $this->assertStringContainsString('playSuccessSound();', substr($view, strpos($view, 'function showSuccess')));
-        $this->assertStringContainsString('playErrorSound();', substr($view, strpos($view, 'function showError')));
+        $this->assertStringNotContainsString('feedbackSuccess', $detection, 'un billet refusé ne doit pas vibrer comme un billet valide');
     }
 
     public function test_camera_stays_on_after_a_detection_and_detection_resumes_by_itself(): void

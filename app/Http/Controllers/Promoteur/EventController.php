@@ -203,7 +203,7 @@ class EventController extends Controller
             }
 
             $oldStart = $event->startsAt();
-            $realigned = ['realigned' => 0, 'inconsistent' => 0];
+            $realigned = ['realigned' => 0, 'inconsistent' => 0, 'closed' => 0];
 
             try {
                 DB::transaction(function () use ($event, $data, $oldStart, $realign, &$realigned) {
@@ -223,12 +223,7 @@ class EventController extends Controller
             }
 
             $message = 'Événement mis à jour avec succès !';
-            if ($realigned['realigned'] > 0) {
-                $message .= " Fins de vente recalées pour {$realigned['realigned']} billet(s).";
-            }
-            if ($realigned['inconsistent'] > 0) {
-                $message .= " {$realigned['inconsistent']} billet(s) ont une période de vente incohérente : vérifiez-les.";
-            }
+            $message .= RealignSalePeriodsAction::notes($realigned);
 
             return redirect()->route('promoteur.events.show', $event)
                 ->with('success', $message);

@@ -610,6 +610,17 @@ class EventCreationTest extends TestCase
         $response->assertSessionHas('success', fn ($m) => str_contains($m, '1 billet(s) ont une période de vente incohérente : vérifiez-les.'));
     }
 
+    public function test_closed_sale_is_reported_when_the_event_is_still_to_come(): void
+    {
+        [$event, $first, $custom] = $this->rescheduleEvent();
+        $custom->update(['sale_end_date' => Carbon::parse('2026-11-05 10:00')]); // vente déjà terminée (choix du promoteur)
+
+        $response = $this->reschedule($event, '2026-11-27', '19:00');
+
+        $this->assertSame('2026-11-05 10:00:00', $custom->fresh()->sale_end_date->format('Y-m-d H:i:s')); // jamais modifiée
+        $response->assertSessionHas('success', fn ($m) => str_contains($m, 'la vente de 1 billet(s) est déjà terminée alors que l\'événement est à venir'));
+    }
+
     public function test_nothing_is_realigned_when_date_and_time_are_unchanged(): void
     {
         [$event, $first, $custom, $late] = $this->rescheduleEvent();

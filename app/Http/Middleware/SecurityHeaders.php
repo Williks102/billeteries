@@ -22,7 +22,7 @@ class SecurityHeaders
         $imgSrc = "'self' data: blob: https://res.cloudinary.com".($mediaOrigin ? ' '.$mediaOrigin : '');
 
                         $csp = "default-src 'self'; " .
-               "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net; " . 
+               Csp::scriptDirectives($nonce) .
                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " .
                "img-src ".$imgSrc."; " .
                "font-src ".Csp::FONT_SRC."; " .

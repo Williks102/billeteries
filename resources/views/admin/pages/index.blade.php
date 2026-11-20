@@ -237,7 +237,7 @@
 </div>
 
 <!-- Script pour le tri des pages -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src="{{ asset('vendor/Sortable.min.js') }}"></script>
 <script @cspNonce>
 document.addEventListener('DOMContentLoaded', function() {
     const sortable = Sortable.create(document.getElementById('sortable-pages'), {

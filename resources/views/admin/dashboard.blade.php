@@ -231,7 +231,7 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ asset('vendor/chart.umd.js') }}"></script>
 <script @cspNonce>
 // Graphique des revenus
 const ctx = document.getElementById('revenueChart').getContext('2d');

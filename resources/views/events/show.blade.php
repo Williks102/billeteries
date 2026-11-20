@@ -173,7 +173,7 @@
 <script src="{{ asset('js/bfcache-reset.js') }}"></script>
 <script src="{{ asset('js/event-buy-bar.js') }}" defer></script>
 <!-- Charger jQuery AVANT le script de réservation -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{{ asset('vendor/jquery.min.js') }}"></script>
 
 <!-- SYSTÈME UNIFIÉ DE RÉSERVATION - SCRIPT CORRIGÉ -->
 <script @cspNonce>

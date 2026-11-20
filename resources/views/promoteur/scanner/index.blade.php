@@ -166,7 +166,7 @@
 
 @push('scripts')
 <!-- Bibliothèque jsQR (CORRECTION PRINCIPALE) -->
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="{{ asset('vendor/jsQR.js') }}"></script>
 
 <script @cspNonce>
 

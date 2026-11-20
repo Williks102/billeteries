@@ -442,7 +442,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('vendor/bootstrap.bundle.min.js') }}"></script>
     <script @cspNonce>
         // Validation en temps réel du téléphone
         document.getElementById('phone').addEventListener('input', function(e) {
